@@ -109,8 +109,8 @@ class ReplayPropertyTest {
   @Test
   void p3_connectivity_unreachableOpIsSkipped() {
     // INSERT t0 -> UPDATE t1(prev t0) -> UPDATE t2(prev t1). Drop t1 so t2 dangles off t1.
-    RedoOp t0 = new RedoOp("t0", 1, write(0, null, 10));
-    RedoOp t2 = new RedoOp("t2", 3, write(0, "t1", 30));
+    RedoOp t0 = new RedoOp("t0", write(0, null, 10));
+    RedoOp t2 = new RedoOp("t2", write(0, "t1", 30));
     List<RedoOp> withGap = new ArrayList<>(ImmutableList.of(t0, t2));
 
     RecordState result = new RecordApplier(ABSENT).replayKey(t0.key(), withGap);

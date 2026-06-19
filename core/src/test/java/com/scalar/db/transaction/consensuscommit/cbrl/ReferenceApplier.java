@@ -1,26 +1,26 @@
 package com.scalar.db.transaction.consensuscommit.cbrl;
 
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * The oracle: computes the expected final state per key by applying ops in commit order ({@code
- * createdAtMillis}), sequentially, with no chain machinery, bucketing, or insert queue.
- * Deliberately independent of the replay primitive (plain maps, not {@link RecordState.Builder}) so
- * a bug shared with the applier can't hide. Used to check that the cursor-driven replay reaches the
- * same state regardless of input order.
+ * The oracle: computes the expected final state per key by applying that key's ops in the order
+ * supplied — the caller passes them in commit order — sequentially, with no chain machinery,
+ * bucketing, or insert queue. Deliberately independent of the replay primitive (plain maps, not
+ * {@link RecordState.Builder}) so a bug shared with the applier can't hide. Used to check that the
+ * cursor-driven replay reaches the same state regardless of input order.
  */
 final class ReferenceApplier {
 
   Map<RecordKey, RecordState> finalStates(List<RedoOp> ops) {
     Map<RecordKey, List<RedoOp>> byKey = new LinkedHashMap<>();
     for (RedoOp op : ops) {
-      byKey.computeIfAbsent(op.key(), k -> new java.util.ArrayList<>()).add(op);
+      byKey.computeIfAbsent(op.key(), k -> new ArrayList<>()).add(op);
     }
     Map<RecordKey, RecordState> result = new LinkedHashMap<>();
     for (Map.Entry<RecordKey, List<RedoOp>> entry : byKey.entrySet()) {
@@ -30,7 +30,6 @@ final class ReferenceApplier {
   }
 
   private RecordState apply(List<RedoOp> keyOps) {
-    keyOps.sort(Comparator.comparingLong(RedoOp::createdAtMillis));
     Map<String, Column> columns = new TreeMap<>();
     boolean present = false;
     String lastTxId = null;

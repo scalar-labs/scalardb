@@ -5,9 +5,9 @@ import javax.annotation.Nullable;
 
 /**
  * One record-level write in the redo stream: a single {@link Entry} tagged with the transaction
- * that produced it ({@code txId}) and when ({@code createdAtMillis}). The replay core consumes only
- * {@code RedoOp}s and never how they were sourced — the integration test builds them from real
- * coordinator {@code tx_write_set} rows, the property tests from a generator.
+ * that produced it ({@code txId}). The replay core consumes only {@code RedoOp}s and never how they
+ * were sourced — the integration test builds them from real coordinator {@code tx_write_set} rows,
+ * the property tests from a generator.
  *
  * <p>Operation type is derived (decision A in the PoC plan): a {@code WRITE} entry with no {@code
  * prev_tx_id} is an INSERT (chain root); with a {@code prev_tx_id} it is an UPDATE; a {@code
@@ -18,14 +18,12 @@ public final class RedoOp {
   private final RecordKey key;
   private final String txId;
   @Nullable private final String prevTxId;
-  private final long createdAtMillis;
   private final Entry entry;
 
-  public RedoOp(String txId, long createdAtMillis, Entry entry) {
+  public RedoOp(String txId, Entry entry) {
     this.key = RecordKey.from(entry);
     this.txId = txId;
     this.prevTxId = entry.hasPrevTxId() ? entry.getPrevTxId() : null;
-    this.createdAtMillis = createdAtMillis;
     this.entry = entry;
   }
 
@@ -40,10 +38,6 @@ public final class RedoOp {
   @Nullable
   String prevTxId() {
     return prevTxId;
-  }
-
-  long createdAtMillis() {
-    return createdAtMillis;
   }
 
   Entry entry() {

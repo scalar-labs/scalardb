@@ -10,10 +10,10 @@ import java.util.Random;
 
 /**
  * Deterministic, seeded generator of legal per-key redo histories: INSERT -> UPDATE* -> DELETE ->
- * (re-INSERT as a new root) -> ... Each op gets a unique tx id and an increasing {@code
- * createdAtMillis} (commit order). UPDATEs set only a subset of columns so the merge path is
- * exercised; INSERTs set all columns. The expected final state is computed separately by {@link
- * ReferenceApplier}, never here.
+ * (re-INSERT as a new root) -> ... Each op gets a unique tx id, and ops are emitted in commit order
+ * (list order). UPDATEs set only a subset of columns so the merge path is exercised; INSERTs set
+ * all columns. The expected final state is computed separately by {@link ReferenceApplier}, never
+ * here.
  */
 final class RedoLogGenerator {
   static final String NAMESPACE = "ns";
@@ -24,7 +24,6 @@ final class RedoLogGenerator {
 
   private final Random random;
   private int txCounter;
-  private long clock;
   private int valueCounter;
 
   RedoLogGenerator(long seed) {
@@ -46,42 +45,41 @@ final class RedoLogGenerator {
     int events = 1 + random.nextInt(7);
     for (int e = 0; e < events; e++) {
       String txId = "tx-" + txCounter++;
-      long createdAt = ++clock;
       if (!present) {
-        ops.add(insert(keyIndex, txId, createdAt));
+        ops.add(insert(keyIndex, txId));
         present = true;
       } else if (random.nextInt(100) < 30) {
-        ops.add(delete(keyIndex, txId, createdAt, lastTxId));
+        ops.add(delete(keyIndex, txId, lastTxId));
         present = false;
       } else {
-        ops.add(update(keyIndex, txId, createdAt, lastTxId));
+        ops.add(update(keyIndex, txId, lastTxId));
       }
       lastTxId = txId;
     }
   }
 
-  private RedoOp insert(int keyIndex, String txId, long createdAt) {
+  private RedoOp insert(int keyIndex, String txId) {
     Entry entry =
         baseEntry(keyIndex, Entry.EntryType.ENTRY_TYPE_WRITE)
             .addColumns(intColumn(COL_V, valueCounter++))
             .addColumns(intColumn(COL_W, valueCounter++))
             .build();
-    return new RedoOp(txId, createdAt, entry);
+    return new RedoOp(txId, entry);
   }
 
-  private RedoOp update(int keyIndex, String txId, long createdAt, String prevTxId) {
+  private RedoOp update(int keyIndex, String txId, String prevTxId) {
     Entry entry =
         baseEntry(keyIndex, Entry.EntryType.ENTRY_TYPE_WRITE)
             .setPrevTxId(prevTxId)
             .addColumns(intColumn(COL_V, valueCounter++)) // partial: only COL_V
             .build();
-    return new RedoOp(txId, createdAt, entry);
+    return new RedoOp(txId, entry);
   }
 
-  private RedoOp delete(int keyIndex, String txId, long createdAt, String prevTxId) {
+  private RedoOp delete(int keyIndex, String txId, String prevTxId) {
     Entry entry =
         baseEntry(keyIndex, Entry.EntryType.ENTRY_TYPE_DELETE).setPrevTxId(prevTxId).build();
-    return new RedoOp(txId, createdAt, entry);
+    return new RedoOp(txId, entry);
   }
 
   private static Entry.Builder baseEntry(int keyIndex, Entry.EntryType type) {

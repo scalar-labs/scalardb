@@ -38,6 +38,7 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -83,26 +84,31 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * the PREPARED state, to a clean committed-or-absent state — using the backed-up coordinator, never
  * the live one, which has diverged past the consistency point — before replay anchors on them); and
  * the committed redo is replayed <b>forward from each record's copied version</b> onto the copy via
- * the §5 core — not a full rebuild. Each transaction writes a shared {@code token} to {@code
- * table_a[i]} and {@code table_b[i]} (or deletes both), so a consistent image has matching presence
- * and equal tokens per key.
+ * the §5 core — not a full rebuild.
  *
- * <p>Because pre-window state is never logged, the copy is the <b>only</b> source for it — it is
- * genuinely <b>load-bearing</b>, not merely an anchor. This is asserted directly: pre-window-only
- * keys (untouched in the window) have zero redo yet restore to their seeded value, and mid-chain
- * keys (seeded pre-window, updated once in-window) have redo with <b>no insert root</b> yet restore
- * correctly — proof the chain anchored on the copy. {@link #copyIsLoadBearing_negativeControl()}
- * restores the same backup <b>without</b> the copy and shows the pre-window data is then
- * unrecoverable.
+ * <p>Two complementary workloads exercise the restore:
  *
- * <p>Validated: consistency (the two tables never disagree), correctness (matches an independent
- * reference: the pre-window seed the test recorded, overlaid with the in-window redo),
- * point-in-time (post-backup tokens absent), idempotency, load-bearing copy, partial-column updates
- * (untouched columns carried forward, not nulled), the backup-window-start ≤ copy precondition (an
- * alignment key whose copied version is itself an in-window version, repaired forward to the
- * consistency point), and that the backup ran without pausing the workload. {@link
+ * <ul>
+ *   <li>{@link #disjointOwnerWorkload_restoresLatestValuePerColumn()} — each key is owned by one
+ *       worker writing a monotonically increasing token, with column values derived from that token
+ *       and a {@code token % 6} subset written per transaction. The coordinator is backed up
+ *       <b>live</b> (non-pausing); the oracle is each key's recorded ops applied up to the backup's
+ *       captured prefix, and every restored column must equal the value of its last-in-prefix
+ *       writer. This proves window-consistency, that no older write overwrites a newer one, that
+ *       partial after-images MERGE (untouched columns carried forward), and — via keys untouched
+ *       in-window — that the copy is load-bearing.
+ *   <li>{@link #concurrentSameKeyTransfers_restorePreservesConservation()} — many workers run
+ *       balance-preserving transfers on shared accounts, so the same record is written concurrently
+ *       and conflicts. This is the same-key contention that leaves the copy with in-flight PREPARED
+ *       records (recovered forward) and conflict-aborted records (recovered back); the conservation
+ *       invariant (total balance and per-account cross-table equality) must survive restore. The
+ *       backup is taken WHILE the workload runs, proving it does not pause.
+ * </ul>
+ *
+ * <p>The two negative controls keep the checks honest: {@link
  * #consistencyCheckDetectsInconsistentImage_negativeControl()} proves the consistency check has
- * teeth.
+ * teeth, and {@link #copyIsLoadBearing_negativeControl()} restores the same backup <b>without</b>
+ * the copy and shows the pre-window data is then unrecoverable.
  *
  * <p>This is an abstract base; concrete subclasses select the config axis — {@code
  * CbrlBackupRestoreWithoutGroupCommitIntegrationTest} and {@code
@@ -164,22 +170,23 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           .build();
 
   private static final int RECORD_COUNT = 40;
-  // Key partitions (disjoint, in order) used to exercise and assert the windowed property:
-  //   [0, PRE_WINDOW_ONLY)                       seeded pre-window, never touched in-window —
-  //                                              zero redo, restored from the copy alone.
-  //   [PRE_WINDOW_ONLY, MID_CHAIN_END)           seeded pre-window, updated once in-window AFTER
-  // the
-  //                                              copy — copy holds the pre-window version, redo (an
-  //                                              UPDATE, no insert root) anchors on it (mid-chain).
-  //   [MID_CHAIN_END, ALIGNMENT_END)             seeded pre-window, updated in-window BEFORE the
-  //                                              copy (copy holds that in-window version) and again
-  //                                              AFTER — exercises backup-window-start <= copy: the
-  //                                              copied version is itself logged and repaired
-  //                                              forward to the consistency point.
-  //   [ALIGNMENT_END, RECORD_COUNT)              the random concurrent in-window workload.
+  // Keys [0, PRE_WINDOW_ONLY_KEYS) are seeded pre-window and never touched in-window: zero redo,
+  // restored from the copy alone (the load-bearing proof). The rest are split into one disjoint
+  // range per worker in the disjoint-owner test.
   private static final int PRE_WINDOW_ONLY_KEYS = 4;
-  private static final int MID_CHAIN_END = PRE_WINDOW_ONLY_KEYS + 4;
-  private static final int ALIGNMENT_END = MID_CHAIN_END + 4;
+
+  // Per-column tracking for the disjoint-owner test: a column index per user column of table_a,
+  // used
+  // both as the keysState slot and as the bit in the token % 6 write-selection mask. table_b
+  // carries
+  // the shared columns (token, text).
+  private static final int COL_TOKEN = 0;
+  private static final int COL_INT = 1;
+  private static final int COL_TEXT = 2;
+  private static final int COL_BOOL = 3;
+  private static final int COL_BLOB = 4;
+  private static final int USER_COLUMN_COUNT = 5;
+  private static final int ALL_COLUMNS = 0b11111;
   private static final int WORKLOAD_THREADS = 4;
   private static final int DELETE_PERCENTAGE = 30;
   private static final Duration WORKLOAD_WARMUP = Duration.ofMillis(400);
@@ -205,19 +212,13 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private static final class CoordinatorBackupRow {
     private final String txId;
     private final int state;
-    private final long createdAtMillis;
     private final List<String> childIds; // non-empty only for normal group-commit parent rows
     @Nullable private final WriteSet writeSet;
 
     private CoordinatorBackupRow(
-        String txId,
-        int state,
-        long createdAtMillis,
-        List<String> childIds,
-        @Nullable WriteSet writeSet) {
+        String txId, int state, List<String> childIds, @Nullable WriteSet writeSet) {
       this.txId = txId;
       this.state = state;
-      this.createdAtMillis = createdAtMillis;
       this.childIds = childIds;
       this.writeSet = writeSet;
     }
@@ -292,155 +293,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     }
   }
 
-  /** CBRL acceptance test (§6.1): non-pausing backup + windowed repair of a load-bearing copy. */
-  @Test
-  void liveBackup_windowedRepairReconstructsConsistentPointInTimeImage() throws Exception {
-    // Seed a pre-window base with redo logging OFF: these commits carry no redo, so the copy
-    // is the only source for this state.
-    Map<Integer, Long> preWindowSeed = seedPreWindowBase();
-
-    // Open the backup window: redo logging ON. Only in-window commits are logged from here.
-    manager.enableRedoLogging();
-
-    // Alignment keys: a first in-window update BEFORE the copy, so the copy captures an in-window
-    // version (strictly earlier than the consistency point). This exercises the precondition that
-    // the backup window opens no later than the copy: the copied version is itself logged and the
-    // redo can repair it forward — impossible had the window opened after the copy.
-    Map<Integer, Long> alignmentPreCopy = applyInWindowUpdates(MID_CHAIN_END, ALIGNMENT_END);
-
-    // In-window workload on the random partition, concurrent with the copy.
-    AtomicBoolean stop = new AtomicBoolean(false);
-    List<Future<?>> workload = startWorkload(stop);
-    Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
-
-    // Non-snapshot-consistent copy of the user tables, taken WHILE the workload commits — the base.
-    copyUserTables();
-    // The alignment keys' copied versions: each must be the in-window pre-copy version.
-    Map<Integer, Long> copyAlignmentTokens = readCopyTokens(MID_CHAIN_END, ALIGNMENT_END);
-    Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY); // copy falls behind the source
-
-    // Mid-chain keys: exactly one in-window update each, AFTER the copy, so the copy holds
-    // their pre-window version and the redo (an UPDATE with no insert root) must anchor on it.
-    Map<Integer, Long> midChainTokens = applyMidChainUpdates();
-    // Alignment keys: a second in-window update AFTER the copy, so the copied (in-window) version
-    // is
-    // strictly earlier than the consistency point and must be repaired forward by the redo.
-    Map<Integer, Long> alignmentPostCopy = applyInWindowUpdates(MID_CHAIN_END, ALIGNMENT_END);
-
-    // Back up the coordinator WHILE live; closed over the chain at backup time (self-contained).
-    long commitsBeforeBackup = committedCount.get();
-    Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
-
-    // Prove the backup did not pause the workload: commits keep advancing across it.
-    long deadlineMillis = System.currentTimeMillis() + 5_000;
-    while (committedCount.get() <= commitsBeforeBackup
-        && System.currentTimeMillis() < deadlineMillis) {
-      Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(5));
-    }
-    assertThat(committedCount.get())
-        .as("non-pausing: workload kept committing across the backup")
-        .isGreaterThan(commitsBeforeBackup);
-
-    // Drain, then commit MORE with fresh tokens so the source diverges past the backup point.
-    stop.set(true);
-    for (Future<?> future : workload) {
-      future.get();
-    }
-    Set<Long> postBackupTokens = runPostBackupUpdates();
-
-    // Restore: C4: PREPARED-record recovery, then replay the redo forward onto it (windowed
-    // repair).
-    restore(coordinatorBackup);
-
-    assertThat(findConsistencyViolations()).as("consistency").isEmpty();
-    assertThat(presentKeyCount()).as("restored some records").isGreaterThan(0);
-    assertThat(findCorrectnessViolations(coordinatorBackup, preWindowSeed))
-        .as("correctness vs reference")
-        .isEmpty();
-    assertThat(readRestoredTokens().values())
-        .as("point-in-time: post-backup tokens excluded")
-        .doesNotContainAnyElementsOf(postBackupTokens);
-
-    assertCopyLoadBearing(coordinatorBackup, preWindowSeed, midChainTokens);
-    assertAlignmentRepairedForward(
-        coordinatorBackup, preWindowSeed, alignmentPreCopy, copyAlignmentTokens, alignmentPostCopy);
-
-    Map<Integer, Long> image = readRestoredTokens();
-    restore(coordinatorBackup);
-    assertThat(readRestoredTokens()).as("idempotent restore").isEqualTo(image);
-  }
-
-  /**
-   * Asserts the copy is genuinely load-bearing, not just an anchor: pre-window-only keys carry no
-   * redo yet are restored from the copy, and mid-chain keys have redo with no insert root yet are
-   * restored — both impossible without the copy supplying the base.
-   */
-  private void assertCopyLoadBearing(
-      Map<String, CoordinatorBackupRow> backup,
-      Map<Integer, Long> preWindowSeed,
-      Map<Integer, Long> midChainTokens) {
-    Map<Integer, RedoStat> stats = redoStatsForTableA(backup);
-    Map<Integer, Long> restored = readRestoredTokens();
-
-    for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
-      assertThat(stats.containsKey(i))
-          .as("pre-window-only key %d has no redo in the backup", i)
-          .isFalse();
-      assertThat(restored.get(i))
-          .as("pre-window-only key %d restored from the copy alone", i)
-          .isEqualTo(preWindowSeed.get(i));
-    }
-
-    for (int i = PRE_WINDOW_ONLY_KEYS; i < MID_CHAIN_END; i++) {
-      RedoStat stat = stats.get(i);
-      assertThat(stat).as("mid-chain key %d has in-window redo", i).isNotNull();
-      assertThat(stat.count).as("mid-chain key %d in-window redo op count", i).isPositive();
-      assertThat(stat.hasInsertRoot)
-          .as("mid-chain key %d redo has no insert root (its base is pre-window)", i)
-          .isFalse();
-      assertThat(restored.get(i))
-          .as("mid-chain key %d restored via the copy anchor", i)
-          .isEqualTo(midChainTokens.get(i));
-    }
-  }
-
-  /**
-   * Asserts the backup-window-start ≤ copy precondition is exercised, not passed trivially: each
-   * alignment key's copied version is an in-window version (written after the window opened but
-   * before the copy), strictly earlier than its consistency-point value, and the redo repairs it
-   * forward. Had the window opened after the copy, the copied version's producing op would be
-   * unlogged and this repair impossible.
-   */
-  private void assertAlignmentRepairedForward(
-      Map<String, CoordinatorBackupRow> backup,
-      Map<Integer, Long> preWindowSeed,
-      Map<Integer, Long> alignmentPreCopy,
-      Map<Integer, Long> copyAlignmentTokens,
-      Map<Integer, Long> alignmentPostCopy) {
-    Map<Integer, RedoStat> stats = redoStatsForTableA(backup);
-    Map<Integer, Long> restored = readRestoredTokens();
-
-    for (int i = MID_CHAIN_END; i < ALIGNMENT_END; i++) {
-      assertThat(copyAlignmentTokens.get(i))
-          .as("alignment key %d: copy holds the in-window pre-copy version", i)
-          .isEqualTo(alignmentPreCopy.get(i));
-      assertThat(alignmentPreCopy.get(i))
-          .as("alignment key %d: the copied version is in-window, not the pre-window seed", i)
-          .isNotEqualTo(preWindowSeed.get(i));
-      RedoStat stat = stats.get(i);
-      assertThat(stat).as("alignment key %d has in-window redo", i).isNotNull();
-      assertThat(stat.count)
-          .as("alignment key %d redo carries both the pre- and post-copy updates", i)
-          .isGreaterThanOrEqualTo(2);
-      assertThat(stat.hasInsertRoot)
-          .as("alignment key %d redo has no insert root (its base is pre-window)", i)
-          .isFalse();
-      assertThat(restored.get(i))
-          .as("alignment key %d repaired forward to the consistency-point value", i)
-          .isEqualTo(alignmentPostCopy.get(i));
-    }
-  }
-
   /** Negative control: proves the consistency check detects an inconsistent image. */
   @Test
   void consistencyCheckDetectsInconsistentImage_negativeControl() {
@@ -491,132 +343,450 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     assertThat(seed).hasSize(PRE_WINDOW_ONLY_KEYS); // sanity: the keys were in fact seeded
   }
 
+  /** One committed in-window write on an owned key, recorded for the prefix oracle. */
+  private static final class OwnedOp {
+    private final String txId;
+    private final boolean delete;
+    private final int mask; // columns written (unused for a delete)
+    private final long token;
+
+    private OwnedOp(String txId, boolean delete, int mask, long token) {
+      this.txId = txId;
+      this.delete = delete;
+      this.mask = mask;
+      this.token = token;
+    }
+  }
+
   /**
-   * Partial-column coverage: a transaction that writes only SOME columns of a key logs a partial
-   * after-image (just those columns — confirmed against the backup), and restore must MERGE it onto
-   * the copied version, carrying the untouched columns forward rather than overwriting them with
-   * nulls. {@code ReplayCoreTest.partialColumnMerge} covers the merge on synthetic input; this
-   * proves a real partial {@code Put} produces a partial redo entry and the end-to-end merge holds.
+   * Disjoint-owner test: ordering, partial-column merge, and the load-bearing copy in one, with a
+   * <b>non-pausing</b> backup (Flow steps 3→4). Each key is written by exactly one worker thread;
+   * every column value is a deterministic function of the writing token, and each transaction
+   * writes the subset of columns selected by {@code token % 6} (all, or a single column), so a
+   * key's columns are written at different times and replay must MERGE partial after-images onto
+   * the copied version rather than replace it. The coordinator is backed up <b>while the workload
+   * runs</b>; that live backup captures a committed prefix of each key's op history. The oracle is
+   * independent of the replay: the test records each key's ops with their {@code txId}, and the
+   * expected state is the seed base with that key's ops applied up to the last one whose {@code
+   * txId} is in the backup's captured set (a clean prefix, since one owner commits a key
+   * sequentially). Every restored column must equal the value derived from its last-in-prefix
+   * writer — proving window-consistency, that replay never lets an older write overwrite a newer
+   * one (a regression yields a smaller token), that untouched columns are carried forward (a
+   * replace-not-merge bug nulls them), and that post-backup writes do not leak in (their ids are
+   * not in the captured set). Keys in {@code [0, PRE_WINDOW_ONLY_KEYS)} are seeded but never
+   * touched in-window, so they also prove the copy is load-bearing (restored with no redo).
    */
   @Test
-  void partialColumnUpdate_mergesUnchangedColumnsForward() throws Exception {
-    int key = 0;
-
-    // Seed a full row pre-window (logging off); capture its non-token columns to assert
-    // carry-forward.
-    long seedToken = tokenCounter.incrementAndGet();
-    withRetry(
-        tx -> {
-          tx.put(putForTableA(SRC_NAMESPACE, key, seedToken));
-          tx.put(putForTableB(SRC_NAMESPACE, key, seedToken));
-        });
-    Result seedA =
-        storage.get(getForTableA(SRC_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
-    int seedInt = seedA.getInt(A_INT);
-    String seedText = seedA.getText(A_TEXT);
-    boolean seedBool = seedA.getBoolean(A_BOOL);
-    byte[] seedBlob = seedA.getBlobAsBytes(A_BLOB);
-    String seedTextB =
-        storage
-            .get(getForTableB(SRC_NAMESPACE, key))
-            .orElseThrow(IllegalStateException::new)
-            .getText(B_TEXT);
-
-    // Open the window, copy the full seed, then a PARTIAL in-window update: only the token column.
-    manager.enableRedoLogging();
-    copyUserTables();
-    long newToken = tokenCounter.incrementAndGet();
-    withRetry(
-        tx -> {
-          tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links to the seed
-          tx.get(getForTableB(SRC_NAMESPACE, key));
-          tx.put(tokenOnlyPutForTableA(SRC_NAMESPACE, key, newToken));
-          tx.put(tokenOnlyPutForTableB(SRC_NAMESPACE, key, newToken));
-        });
-
-    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
-    assertThat(loggedColumnNamesForTableA(backup, key))
-        .as("the partial put logs only the changed column, not the whole row")
-        .containsExactly(A_TOKEN);
-
-    restore(backup);
-
-    Result restoredA =
-        getWithRetry(getForTableA(RESTORE_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
-    assertThat(restoredA.getBigInt(A_TOKEN)).as("token updated").isEqualTo(newToken);
-    assertThat(restoredA.getInt(A_INT)).as("int carried forward").isEqualTo(seedInt);
-    assertThat(restoredA.getText(A_TEXT)).as("text carried forward").isEqualTo(seedText);
-    assertThat(restoredA.getBoolean(A_BOOL)).as("bool carried forward").isEqualTo(seedBool);
-    assertThat(restoredA.getBlobAsBytes(A_BLOB)).as("blob carried forward").isEqualTo(seedBlob);
-
-    Result restoredB =
-        getWithRetry(getForTableB(RESTORE_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
-    assertThat(restoredB.getBigInt(B_TOKEN)).as("token_b updated").isEqualTo(newToken);
-    assertThat(restoredB.getText(B_TEXT)).as("text_b carried forward").isEqualTo(seedTextB);
-  }
-
-  private Put tokenOnlyPutForTableA(String namespace, int i, long token) {
-    return Put.newBuilder()
-        .namespace(namespace)
-        .table(TABLE_A)
-        .partitionKey(Key.ofInt(A_PK, i))
-        .bigIntValue(A_TOKEN, token)
-        .build();
-  }
-
-  private Put tokenOnlyPutForTableB(String namespace, int i, long token) {
-    return Put.newBuilder()
-        .namespace(namespace)
-        .table(TABLE_B)
-        .partitionKey(Key.ofInt(B_PK, i))
-        .clusteringKey(Key.ofInt(B_CK, i))
-        .bigIntValue(B_TOKEN, token)
-        .build();
-  }
-
-  /** User-column names logged in the backup's redo entries for table_a + the given key. */
-  private static List<String> loggedColumnNamesForTableA(
-      Map<String, CoordinatorBackupRow> backup, int key) {
-    List<String> names = new ArrayList<>();
-    for (CoordinatorBackupRow row : backup.values()) {
-      if (row.writeSet == null) {
-        continue;
-      }
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
-        for (Entry entry : group.getEntriesList()) {
-          if (entry.getTableName().equals(TABLE_A)
-              && entry.getPartitionKey().getColumns(0).getIntValue().getValue() == key) {
-            for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
-                entry.getColumnsList()) {
-              names.add(column.getName());
-            }
-          }
-        }
-      }
+  void disjointOwnerWorkload_restoresLatestValuePerColumn() throws Exception {
+    long[] seedToken = new long[RECORD_COUNT];
+    boolean[] present = new boolean[RECORD_COUNT];
+    Map<Integer, List<OwnedOp>> history = new HashMap<>();
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      long token = tokenCounter.incrementAndGet();
+      int key = i;
+      seedToken[i] = token;
+      present[i] = true;
+      history.put(i, new ArrayList<>());
+      withRetry(
+          tx -> {
+            tx.put(deterministicPutForTableA(key, token, ALL_COLUMNS));
+            tx.put(
+                deterministicPutForTableB(key, token, ALL_COLUMNS)
+                    .orElseThrow(IllegalStateException::new));
+          });
     }
-    return names;
+
+    manager.enableRedoLogging(); // Open the backup window.
+
+    AtomicBoolean stop = new AtomicBoolean(false);
+    List<Future<?>> workload = startDisjointWorkload(stop, present, history);
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
+    copyUserTables(); // Live, non-snapshot-consistent base; catches in-flight records to recover.
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
+
+    // Back up the coordinator WHILE the workload runs (Flow: back up, THEN stop) — non-pausing.
+    long commitsBeforeBackup = committedCount.get();
+    Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
+    long deadlineMillis = System.currentTimeMillis() + 5_000;
+    while (committedCount.get() <= commitsBeforeBackup
+        && System.currentTimeMillis() < deadlineMillis) {
+      Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(5));
+    }
+    assertThat(committedCount.get())
+        .as("non-pausing: workload kept committing across the backup")
+        .isGreaterThan(commitsBeforeBackup);
+
+    // Stop the workload; transactions that committed after the backup scan are the divergence —
+    // excluded from the expected state because their ids are not in the captured set.
+    stop.set(true);
+    for (Future<?> future : workload) {
+      future.get();
+    }
+    Set<String> committedInBackup = committedFullIdsIn(coordinatorBackup);
+
+    restore(coordinatorBackup);
+
+    assertThat(findConsistencyViolations()).as("consistency").isEmpty();
+    assertThat(findDisjointViolations(seedToken, history, committedInBackup))
+        .as(
+            "every restored column == its last in-backup writer (merged, no regression, point-in-time)")
+        .isEmpty();
+
+    Map<Integer, Long> image = readRestoredTokens();
+    restore(coordinatorBackup);
+    assertThat(readRestoredTokens()).as("idempotent restore").isEqualTo(image);
   }
 
-  private List<Future<?>> startWorkload(AtomicBoolean stop) {
+  private List<Future<?>> startDisjointWorkload(
+      AtomicBoolean stop, boolean[] present, Map<Integer, List<OwnedOp>> history) {
     List<Future<?>> futures = new ArrayList<>(WORKLOAD_THREADS);
-    int randomKeyCount = RECORD_COUNT - ALIGNMENT_END;
+    int workedKeys = RECORD_COUNT - PRE_WINDOW_ONLY_KEYS;
+    int chunk = (workedKeys + WORKLOAD_THREADS - 1) / WORKLOAD_THREADS;
     for (int t = 0; t < WORKLOAD_THREADS; t++) {
+      int from = PRE_WINDOW_ONLY_KEYS + t * chunk;
+      int to = Math.min(from + chunk, RECORD_COUNT);
+      if (from >= to) {
+        break;
+      }
+      int ownedFrom = from;
+      int ownedTo = to;
       futures.add(
           workerExecutor.submit(
               () -> {
                 while (!stop.get()) {
-                  // Restricted to the random partition so the pre-window-only, mid-chain, and
-                  // alignment keys stay untouched by the workload.
-                  mutateOnce(ALIGNMENT_END + ThreadLocalRandom.current().nextInt(randomKeyCount));
+                  // Single owner per key: the only writer of these keys, their present flag, and
+                  // their op history, so a key's commit order is its token order, with no race.
+                  int key = ownedFrom + ThreadLocalRandom.current().nextInt(ownedTo - ownedFrom);
+                  mutateOwnedKey(key, present, history);
                 }
               }));
     }
     return futures;
   }
 
-  /** Seeds all keys with a pre-window base (redo logging OFF). Returns key -> seeded token. */
-  private Map<Integer, Long> seedPreWindowBase() {
-    return seedPreWindowBase(RECORD_COUNT);
+  /**
+   * One transaction on an owned key: a full insert if absent, else a delete or a partial update of
+   * the columns selected by {@code token % 6}. Appends the committed op (with its {@code txId}) to
+   * the key's history for the prefix oracle.
+   */
+  private void mutateOwnedKey(int key, boolean[] present, Map<Integer, List<OwnedOp>> history) {
+    long token = tokenCounter.incrementAndGet();
+    boolean delete = present[key] && rollDelete();
+    int mask =
+        present[key] ? columnMask(token) : ALL_COLUMNS; // absent -> full deterministic insert
+    String txId = commitOwnedOp(key, token, delete, mask);
+    history.get(key).add(new OwnedOp(txId, delete, mask, token));
+    present[key] = !delete;
+    committedCount.incrementAndGet();
+  }
+
+  /**
+   * Commits one owned-key op (read-then-write so partial writes chain); returns its transaction id.
+   */
+  private String commitOwnedOp(int key, long token, boolean delete, int mask) {
+    RuntimeException last = null;
+    for (int retry = 0; retry < 100; retry++) {
+      DistributedTransaction tx = null;
+      try {
+        tx = manager.begin();
+        tx.get(getForTableA(SRC_NAMESPACE, key)); // Read both so partial writes chain (merge).
+        tx.get(getForTableB(SRC_NAMESPACE, key));
+        if (delete) {
+          tx.delete(deleteForTableA(SRC_NAMESPACE, key));
+          tx.delete(deleteForTableB(SRC_NAMESPACE, key));
+        } else {
+          tx.put(deterministicPutForTableA(key, token, mask));
+          Optional<Put> putB = deterministicPutForTableB(key, token, mask);
+          if (putB.isPresent()) {
+            tx.put(putB.get());
+          }
+        }
+        tx.commit();
+        return tx.getId();
+      } catch (Exception e) {
+        last = e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
+        abortQuietly(tx);
+      }
+    }
+    throw last;
+  }
+
+  /** Full transaction ids whose writes the backup carries (the consistency-point committed set). */
+  private Set<String> committedFullIdsIn(Map<String, CoordinatorBackupRow> backup) {
+    Set<String> ids = new HashSet<>();
+    for (CoordinatorBackupRow row : backup.values()) {
+      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+        ids.add(
+            group.getChildId().isEmpty()
+                ? row.txId
+                : keyManipulator.fullKey(row.txId, group.getChildId()));
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * Every restored column compared against the prefix oracle: the seed base with each key's
+   * recorded ops applied up to the last one whose transaction is in the backup's captured set.
+   */
+  private List<String> findDisjointViolations(
+      long[] seedToken, Map<Integer, List<OwnedOp>> history, Set<String> committedInBackup) {
+    List<String> violations = new ArrayList<>();
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      boolean present = true;
+      long[] cols = new long[USER_COLUMN_COUNT];
+      Arrays.fill(cols, seedToken[i]);
+      for (OwnedOp op : history.get(i)) {
+        if (!committedInBackup.contains(op.txId)) {
+          continue; // Committed after the cut (divergence) — not in the restored image.
+        }
+        if (op.delete) {
+          present = false;
+        } else {
+          present = true;
+          for (int c = 0; c < USER_COLUMN_COUNT; c++) {
+            if ((op.mask & (1 << c)) != 0) {
+              cols[c] = op.token;
+            }
+          }
+        }
+      }
+      Optional<Result> a = getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
+      Optional<Result> b = getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+      if (a.isPresent() != present || b.isPresent() != present) {
+        violations.add(
+            String.format(
+                "key %d presence: a=%s b=%s expected=%s",
+                i, a.isPresent(), b.isPresent(), present));
+        continue;
+      }
+      if (!present) {
+        continue;
+      }
+      Result ra = a.get();
+      Result rb = b.get();
+      checkColumn(violations, i, "a.token", ra.getBigInt(A_TOKEN) == cols[COL_TOKEN]);
+      checkColumn(violations, i, "a.int", ra.getInt(A_INT) == deriveInt(cols[COL_INT]));
+      checkColumn(violations, i, "a.text", ra.getText(A_TEXT).equals(deriveText(cols[COL_TEXT])));
+      checkColumn(violations, i, "a.bool", ra.getBoolean(A_BOOL) == deriveBool(cols[COL_BOOL]));
+      checkColumn(
+          violations,
+          i,
+          "a.blob",
+          Arrays.equals(ra.getBlobAsBytes(A_BLOB), deriveBlob(cols[COL_BLOB])));
+      checkColumn(violations, i, "b.token", rb.getBigInt(B_TOKEN) == cols[COL_TOKEN]);
+      checkColumn(violations, i, "b.text", rb.getText(B_TEXT).equals(deriveText(cols[COL_TEXT])));
+    }
+    return violations;
+  }
+
+  private static void checkColumn(List<String> violations, int key, String what, boolean ok) {
+    if (!ok) {
+      violations.add(String.format("key %d %s mismatch", key, what));
+    }
+  }
+
+  // Column values are deterministic functions of the writing token, so the oracle can reconstruct
+  // any column's expected value from the token that last wrote it.
+  private static int deriveInt(long token) {
+    return (int) token;
+  }
+
+  private static String deriveText(long token) {
+    return Long.toString(token);
+  }
+
+  private static boolean deriveBool(long token) {
+    return (token & 1L) == 0L;
+  }
+
+  private static byte[] deriveBlob(long token) {
+    return ByteBuffer.allocate(Long.BYTES).putLong(token).array();
+  }
+
+  /** Columns of table_a to write, as a bitmask over the COL_* indices, selected by token % 6. */
+  private static int columnMask(long token) {
+    switch ((int) (token % 6)) {
+      case 0:
+        return ALL_COLUMNS;
+      case 1:
+        return 1 << COL_INT;
+      case 2:
+        return 1 << COL_TEXT;
+      case 3:
+        return 1 << COL_BOOL;
+      case 4:
+        return 1 << COL_BLOB;
+      default:
+        return 1 << COL_TOKEN;
+    }
+  }
+
+  /**
+   * A table_a Put with exactly the columns in {@code mask}, each set to its token-derived value.
+   */
+  private Put deterministicPutForTableA(int i, long token, int mask) {
+    PutBuilder.Buildable builder =
+        Put.newBuilder().namespace(SRC_NAMESPACE).table(TABLE_A).partitionKey(Key.ofInt(A_PK, i));
+    if ((mask & (1 << COL_TOKEN)) != 0) {
+      builder.bigIntValue(A_TOKEN, token);
+    }
+    if ((mask & (1 << COL_INT)) != 0) {
+      builder.intValue(A_INT, deriveInt(token));
+    }
+    if ((mask & (1 << COL_TEXT)) != 0) {
+      builder.textValue(A_TEXT, deriveText(token));
+    }
+    if ((mask & (1 << COL_BOOL)) != 0) {
+      builder.booleanValue(A_BOOL, deriveBool(token));
+    }
+    if ((mask & (1 << COL_BLOB)) != 0) {
+      builder.blobValue(A_BLOB, deriveBlob(token));
+    }
+    return builder.build();
+  }
+
+  /** A table_b Put with its columns (token, text) that are in {@code mask}; empty if none are. */
+  private Optional<Put> deterministicPutForTableB(int i, long token, int mask) {
+    PutBuilder.Buildable builder =
+        Put.newBuilder()
+            .namespace(SRC_NAMESPACE)
+            .table(TABLE_B)
+            .partitionKey(Key.ofInt(B_PK, i))
+            .clusteringKey(Key.ofInt(B_CK, i));
+    boolean any = false;
+    if ((mask & (1 << COL_TOKEN)) != 0) {
+      builder.bigIntValue(B_TOKEN, token);
+      any = true;
+    }
+    if ((mask & (1 << COL_TEXT)) != 0) {
+      builder.textValue(B_TEXT, deriveText(token));
+      any = true;
+    }
+    return any ? Optional.of(builder.build()) : Optional.empty();
+  }
+
+  /**
+   * Concurrent same-key consistency check, in the conservation-invariant (bank-transfer) style.
+   * Many workers run balance-preserving transfers between random accounts, so the same accounts are
+   * written concurrently and conflict — the contention disjoint-owner avoids, and the contention
+   * that leaves the copy with in-flight PREPARED records (recovered forward) and conflict-aborted
+   * records (recovered back). Each account's balance lives in both tables and the total is
+   * invariant, so a transactionally-consistent restored image must conserve it: a torn transfer
+   * (debit without credit, or one table updated and not the other) breaks the sum or the
+   * cross-table equality. The backup is taken WHILE the workload runs (non-pausing); conservation
+   * holds for whatever consistent cut it captures.
+   */
+  @Test
+  void concurrentSameKeyTransfers_restorePreservesConservation() throws Exception {
+    long initialBalance = 1_000L;
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      int key = i;
+      withRetry(
+          tx -> {
+            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
+            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
+          });
+    }
+    long total = (long) RECORD_COUNT * initialBalance;
+
+    manager.enableRedoLogging(); // Open the backup window.
+
+    AtomicBoolean stop = new AtomicBoolean(false);
+    List<Future<?>> workload = startTransferWorkload(stop);
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
+    copyUserTables();
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
+
+    // Back up the coordinator WHILE the workload runs — conservation tolerates a fuzzy cut.
+    long commitsBeforeBackup = committedCount.get();
+    Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
+    long deadlineMillis = System.currentTimeMillis() + 5_000;
+    while (committedCount.get() <= commitsBeforeBackup
+        && System.currentTimeMillis() < deadlineMillis) {
+      Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(5));
+    }
+    assertThat(committedCount.get())
+        .as("non-pausing: workload kept committing across the backup")
+        .isGreaterThan(commitsBeforeBackup);
+
+    stop.set(true);
+    for (Future<?> future : workload) {
+      future.get();
+    }
+
+    restore(coordinatorBackup);
+
+    assertThat(findConsistencyViolations())
+        .as("cross-table consistency: both tables hold the same balance per account")
+        .isEmpty();
+    assertThat(presentKeyCount())
+        .as("no deletes: every account is present")
+        .isEqualTo(RECORD_COUNT);
+    assertThat(sumRestoredBalances(TABLE_A, A_TOKEN))
+        .as("table_a total balance conserved")
+        .isEqualTo(total);
+    assertThat(sumRestoredBalances(TABLE_B, B_TOKEN))
+        .as("table_b total balance conserved")
+        .isEqualTo(total);
+  }
+
+  private List<Future<?>> startTransferWorkload(AtomicBoolean stop) {
+    List<Future<?>> futures = new ArrayList<>(WORKLOAD_THREADS);
+    for (int t = 0; t < WORKLOAD_THREADS; t++) {
+      futures.add(
+          workerExecutor.submit(
+              () -> {
+                while (!stop.get()) {
+                  transferOnce();
+                }
+              }));
+    }
+    return futures;
+  }
+
+  /** One balance-preserving transfer between two random accounts, atomic across both tables. */
+  private void transferOnce() {
+    int from = ThreadLocalRandom.current().nextInt(RECORD_COUNT);
+    int to = ThreadLocalRandom.current().nextInt(RECORD_COUNT);
+    if (from == to) {
+      return;
+    }
+    long amount = 1 + ThreadLocalRandom.current().nextLong(100);
+    withRetry(
+        tx -> {
+          long fromBalance = readBalance(tx, from);
+          long toBalance = readBalance(tx, to);
+          writeBalance(tx, from, fromBalance - amount);
+          writeBalance(tx, to, toBalance + amount);
+        });
+    committedCount.incrementAndGet();
+  }
+
+  /** Reads an account's balance, pulling both tables into the read set so its writes chain. */
+  private long readBalance(DistributedTransaction tx, int i) throws Exception {
+    Result a = tx.get(getForTableA(SRC_NAMESPACE, i)).orElseThrow(IllegalStateException::new);
+    tx.get(getForTableB(SRC_NAMESPACE, i)); // Read so the table_b write links to its prior version.
+    return a.getBigInt(A_TOKEN);
+  }
+
+  private void writeBalance(DistributedTransaction tx, int i, long balance) throws Exception {
+    tx.put(putForTableA(SRC_NAMESPACE, i, balance));
+    tx.put(putForTableB(SRC_NAMESPACE, i, balance));
+  }
+
+  private long sumRestoredBalances(String table, String balanceColumn) {
+    long sum = 0;
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      Optional<Result> result =
+          table.equals(TABLE_A)
+              ? getWithRetry(getForTableA(RESTORE_NAMESPACE, i))
+              : getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+      if (result.isPresent()) {
+        sum += result.get().getBigInt(balanceColumn);
+      }
+    }
+    return sum;
   }
 
   private Map<Integer, Long> seedPreWindowBase(int keyCount) {
@@ -632,57 +802,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           });
     }
     return seed;
-  }
-
-  /** One in-window UPDATE per mid-chain key (read-then-put). Returns key -> in-window token. */
-  private Map<Integer, Long> applyMidChainUpdates() {
-    return applyInWindowUpdates(PRE_WINDOW_ONLY_KEYS, MID_CHAIN_END);
-  }
-
-  /** One in-window UPDATE per key in [from, to) (read-then-put). Returns key -> in-window token. */
-  private Map<Integer, Long> applyInWindowUpdates(int from, int to) {
-    Map<Integer, Long> tokens = new HashMap<>();
-    for (int i = from; i < to; i++) {
-      long token = tokenCounter.incrementAndGet();
-      int key = i;
-      tokens.put(i, token);
-      withRetry(
-          tx -> {
-            tx.get(getForTableA(SRC_NAMESPACE, key)); // read first so prev_tx_id links to the prior
-            tx.get(getForTableB(SRC_NAMESPACE, key));
-            tx.put(putForTableA(SRC_NAMESPACE, key, token));
-            tx.put(putForTableB(SRC_NAMESPACE, key, token));
-          });
-    }
-    return tokens;
-  }
-
-  /** Raw-reads the table_a token of each present key in [from, to) from the copy (cbrl_restore). */
-  private Map<Integer, Long> readCopyTokens(int from, int to) throws Exception {
-    Map<Integer, Long> tokens = new HashMap<>();
-    for (int i = from; i < to; i++) {
-      Optional<Result> result = storage.get(getForTableA(RESTORE_NAMESPACE, i));
-      if (result.isPresent() && !result.get().isNull(A_TOKEN)) {
-        tokens.put(i, result.get().getBigInt(A_TOKEN));
-      }
-    }
-    return tokens;
-  }
-
-  /** One transaction that atomically writes a shared token to both tables, or deletes both. */
-  private void mutateOnce(int i) {
-    long token = tokenCounter.incrementAndGet();
-    withRetry(
-        tx -> {
-          if (tx.get(getForTableA(SRC_NAMESPACE, i)).isPresent() && rollDelete()) {
-            tx.delete(deleteForTableA(SRC_NAMESPACE, i));
-            tx.delete(deleteForTableB(SRC_NAMESPACE, i));
-          } else {
-            tx.put(putForTableA(SRC_NAMESPACE, i, token));
-            tx.put(putForTableB(SRC_NAMESPACE, i, token));
-          }
-        });
-    committedCount.incrementAndGet();
   }
 
   private boolean rollDelete() {
@@ -746,8 +865,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private static CoordinatorBackupRow toBackupRow(Result result) throws Exception {
     String txId = result.getText(Attribute.ID);
     int state = result.isNull(Attribute.STATE) ? 0 : result.getInt(Attribute.STATE);
-    long createdAt =
-        result.isNull(Attribute.CREATED_AT) ? 0 : result.getBigInt(Attribute.CREATED_AT);
     String childIdsStr =
         result.isNull(Attribute.CHILD_IDS) ? null : result.getText(Attribute.CHILD_IDS);
     List<String> childIds =
@@ -758,7 +875,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         result.isNull(Attribute.WRITE_SET)
             ? null
             : WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
-    return new CoordinatorBackupRow(txId, state, createdAt, childIds, writeSet);
+    return new CoordinatorBackupRow(txId, state, childIds, writeSet);
   }
 
   /**
@@ -787,7 +904,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
             // copy carries that state instead.
             continue;
           }
-          redoOps.add(new RedoOp(txId, row.createdAtMillis, entry));
+          redoOps.add(new RedoOp(txId, entry));
         }
       }
     }
@@ -1148,23 +1265,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     return count;
   }
 
-  private Set<Long> runPostBackupUpdates() {
-    Set<Long> tokens = new HashSet<>();
-    for (int i = 0; i < RECORD_COUNT; i++) {
-      long token = tokenCounter.incrementAndGet();
-      int key = i;
-      tokens.add(token);
-      withRetry(
-          tx -> {
-            tx.get(getForTableA(SRC_NAMESPACE, key));
-            tx.get(getForTableB(SRC_NAMESPACE, key));
-            tx.put(putForTableA(SRC_NAMESPACE, key, token));
-            tx.put(putForTableB(SRC_NAMESPACE, key, token));
-          });
-    }
-    return tokens;
-  }
-
   private Map<Integer, Long> readRestoredTokens() {
     Map<Integer, Long> tokens = new HashMap<>();
     for (int i = 0; i < RECORD_COUNT; i++) {
@@ -1174,97 +1274,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       }
     }
     return tokens;
-  }
-
-  private List<String> findCorrectnessViolations(
-      Map<String, CoordinatorBackupRow> backup, Map<Integer, Long> preWindowSeed) {
-    Map<Integer, Long> expected = expectedTableATokens(backup, preWindowSeed);
-    List<String> violations = new ArrayList<>();
-    for (int i = 0; i < RECORD_COUNT; i++) {
-      Optional<Result> a = getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
-      Long expectedToken = expected.get(i);
-      if (a.isPresent() != (expectedToken != null)) {
-        violations.add(
-            String.format(
-                "key %d presence: restored=%s expected=%s",
-                i, a.isPresent(), expectedToken != null));
-      } else if (a.isPresent() && a.get().getBigInt(A_TOKEN) != expectedToken) {
-        violations.add(
-            String.format(
-                "key %d token: restored=%d expected=%d",
-                i, a.get().getBigInt(A_TOKEN), expectedToken));
-      }
-    }
-    return violations;
-  }
-
-  /**
-   * Independent reference for {@code table_a}: the pre-window seed the test recorded (the base the
-   * copy must carry), overlaid with the in-window redo applied in commit order. Deliberately
-   * derived from the test's own ground truth plus the backup's redo entries — not from the restore
-   * path — so a bug in the applier cannot hide.
-   */
-  private Map<Integer, Long> expectedTableATokens(
-      Map<String, CoordinatorBackupRow> backup, Map<Integer, Long> preWindowSeed) {
-    Map<Integer, Long> latestCreatedAt = new HashMap<>();
-    Map<Integer, Long> token = new HashMap<>(preWindowSeed); // base: the unlogged pre-window state
-    for (CoordinatorBackupRow row : backup.values()) {
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
-        for (Entry entry : group.getEntriesList()) {
-          if (!entry.hasTxVersion() || !entry.getTableName().equals(TABLE_A)) {
-            continue; // Only in-window redo entries (logged) overlay the seed.
-          }
-          int pk = entry.getPartitionKey().getColumns(0).getIntValue().getValue();
-          Long prev = latestCreatedAt.get(pk);
-          if (prev != null && prev >= row.createdAtMillis) {
-            continue;
-          }
-          latestCreatedAt.put(pk, row.createdAtMillis);
-          if (entry.getEntryType() == Entry.EntryType.ENTRY_TYPE_WRITE) {
-            token.put(pk, tokenOf(entry));
-          } else {
-            token.remove(pk);
-          }
-        }
-      }
-    }
-    return token;
-  }
-
-  /** Per-key redo summary for {@code table_a} computed from the backup (in-window entries only). */
-  private static final class RedoStat {
-    private int count;
-    private boolean hasInsertRoot;
-  }
-
-  private Map<Integer, RedoStat> redoStatsForTableA(Map<String, CoordinatorBackupRow> backup) {
-    Map<Integer, RedoStat> stats = new HashMap<>();
-    for (CoordinatorBackupRow row : backup.values()) {
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
-        for (Entry entry : group.getEntriesList()) {
-          if (!entry.hasTxVersion() || !entry.getTableName().equals(TABLE_A)) {
-            continue;
-          }
-          int pk = entry.getPartitionKey().getColumns(0).getIntValue().getValue();
-          RedoStat stat = stats.computeIfAbsent(pk, k -> new RedoStat());
-          stat.count++;
-          if (entry.getEntryType() == Entry.EntryType.ENTRY_TYPE_WRITE && !entry.hasPrevTxId()) {
-            stat.hasInsertRoot = true;
-          }
-        }
-      }
-    }
-    return stats;
-  }
-
-  private static long tokenOf(Entry entry) {
-    for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
-        entry.getColumnsList()) {
-      if (column.getName().equals(A_TOKEN)) {
-        return column.getBigintValue().getValue();
-      }
-    }
-    throw new IllegalStateException("table_a WRITE entry has no token column: " + entry);
   }
 
   private void withRetry(TxBody body) {

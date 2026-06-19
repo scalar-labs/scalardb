@@ -275,9 +275,9 @@ replay decision** — both are only *carried* on the final record so post-restor
 
 ### 6.1 Integration test — `CbrlBackupRestoreIntegrationTest`
 
-Modeled on `replication:e2e` `E2ETest`/`E2ETestEnv`: type-rich source tables (reuse E2ETest's
-TABLE1 no-CK / TABLE2 multi-PK / TABLE3 with-CK schemas), a `withRetry(manager, tx -> …)`
-helper, and a worker thread pool. Differences from SSR's e2e: **no backup site, no
+Modeled on `replication:e2e` `E2ETest`/`E2ETestEnv` for its ergonomics: two type-rich source tables
+(`table_a` no clustering key, `table_b` with one), a `withRetry(manager, tx -> …)` helper, and a
+worker thread pool. Differences from SSR's e2e: **no backup site, no
 `LogApplier`, no `transaction_groups`, no repl-record tables** — CBRL replays the coordinator's
 own `tx_write_set`.
 
@@ -287,9 +287,7 @@ own `tx_write_set`.
 `withCoordinatorGroupCommit()` hook (`E2ETestEnv` maps it to `COORDINATOR_GROUP_COMMIT_ENABLED`). So
 `CbrlBackupRestoreIntegrationTest` is abstract; a `withCoordinatorGroupCommit()` hook feeds the
 **single** `manager`'s properties; two thin subclasses select with/without group commit. The same
-scenarios run under **both** configs — no second manager, no GC-only test. (The shipped code does
-**not** yet follow this — it uses a bespoke `groupCommitManager` + a dedicated `groupCommit_*` test;
-see the group-commit open question for the rework.)
+scenarios run under **both** configs — no second manager, no GC-only test.
 
 **Fixtures.** One ScalarDB primary on JDBC/Postgres with the Coordinator, window logging on and
 `includeColumns=true` (D1′). Source tables in namespace `cbrl_src`; restore-target tables
@@ -310,16 +308,25 @@ see the group-commit open question for the rework.)
 6. **compare** — assert `cbrl_restore` equals the expected state at the consistency point, per-key `Get` on
    both sides (cf. `assertPrimaryAndBackupDbTables`).
 
-**The comparison oracle.** "Expected state at the consistency point" needs a deterministic reference. Take the
-coordinator backup *after* the workload quiesces (consistency point = everything committed), then **compare
-`cbrl_restore` to the live `cbrl_src`**: the non-snapshot-consistent user-DB copy is repaired by chain replay up
-to the consistency point, so it must equal the fully-committed source. Workload is unconstrained
-(multi-write keys, delete→re-insert, like E2ETest), so this exercises the real chain (needs
-the D1 + D1′ decisions).
+**The comparison oracle.** "Expected state at the consistency point" needs a deterministic reference
+independent of the replay under test. Per the Flow the coordinator backup is taken **while the
+workload runs** (step 3, before the stop in step 4), so the consistency point is the committed set
+that backup captured — the live `cbrl_src` keeps diverging past it and is *not* the reference; the
+oracle must describe *that prefix*. Two independent oracles cover it:
 
-(A mid-flight consistency point — coordinator backup taken *before* stop, so the live primary later diverges
-from the consistency point — is deferred: it needs an independent oracle for "state at a prefix," which is
-its own mini-project. Not in the first test.)
+- **Per-key prefix (disjoint-owner test).** Each key is written by a single worker with a
+  monotonically increasing token, and every column value is a deterministic function of the writing
+  token. The test records each key's op history tagged with its `txId`; the expected state is that
+  history applied up to the last op whose `txId` is in the backup — a clean committed prefix, since
+  one owner commits a key sequentially. Every restored column must equal the value derived from its
+  last-in-prefix writer, which also catches older-overwrites-newer and partial-column-merge
+  regressions, and (via keys untouched in-window) that the copy is load-bearing. This is the
+  independent "state at a prefix" reference a non-pausing backup needs.
+- **Conservation invariant (shared-account test).** An unconstrained workload of balance-preserving
+  transfers on shared accounts (multi-writer keys, real contention, like E2ETest). The restored
+  image must conserve the total balance and keep both tables equal per account — a property true of
+  *any* consistent cut, so it needs no per-key reference and tolerates the fuzzy live boundary. The
+  contention is also what exercises both directions of lazy recovery. Needs the D1 + D1′ decisions.
 
 ### 6.2 Replay-core unit & property tests
 
@@ -538,11 +545,11 @@ remain open.
 
   The shipped design — derive the writing-txn id from the coordinator row id + `EntryGroup.child_id` rather than a per-`Entry` `tx_id` field — is sound; only §7's wording is stale. The real design question it gestures at (group-commit child-id chain-linking) is the item below.
 
-- **Group commit: chain-linking fix landed, but the IT structure is wrong and the in-doubt child abort is buggy/untested** — restore core / §6.1 (design/impl + IT test, P1)
+- **Group commit: chain-linking + config-transparent IT done; only the in-doubt child abort remains (latent)** — restore core / §6.1 (design/impl + IT test, P1)
 
   **Landed (2026-06-18) — keep.** The redo→`RedoOp` explosion derives the writing transaction's **full id** — `keyManipulator.fullKey(parentRowId, childId)` for a normal group-commit child (row keyed by the parent, `child_id` set), else the row key itself (non-group-commit, or a delayed group commit keyed by the full id) — so `RedoOp.txId` matches the full id records store and other ops' `prev_tx_id` chains to. `closeOverChain` resolves a child's full `prev_tx_id` to its parent-keyed row; the `#1` reload preserves a parent row's `child_ids`. This chain-linking fix is correct.
 
-  **OPEN — the IT structure violates the config-transparent convention (investigation 2026-06-19).** The shipped IT enables group commit with a **bespoke** second manager (`groupCommitManager`) and a **dedicated** `groupCommit_windowedRepairLinksChainAcrossGroupRows` test. With/without group commit must instead be the **same** scenarios under different config. Reference patterns (read from latest main): `replication:e2e` is an abstract `E2ETest` holding the test methods (no `@EnabledIf`, no GC-specific test) plus two ~12-line subclasses (`E2EWith…`/`E2EWithoutCoordinatorGroupCommit…Test`) that override only `withCoordinatorGroupCommit()`/`getCompressionType()`, which `E2ETestEnv` maps to `COORDINATOR_GROUP_COMMIT_ENABLED`; the in-repo `ConsensusCommitSpecificIntegrationTestBase` keys `isGroupCommitEnabled()` off `ConsensusCommitConfig`, loads `scalardb.consensus_commit.coordinator.group_commit.*` via `ConsensusCommitTestUtils.loadConsensusCommitProperties`, and gates GC-only assertions with `@EnabledIf("isGroupCommitEnabled")`. **Rework:** make `CbrlBackupRestoreIntegrationTest` abstract with a `withCoordinatorGroupCommit()` hook feeding the single `manager`; add two thin subclasses (with/without GC); delete `groupCommitManager`/`commitGroupBatch`/`groupCommit_*`. The existing scenarios then exercise full-child-id chain-linking transparently under the GC-on subclass (the concurrent workload forms groups and spreads delete→re-insert across group rows).
+  ✅ **RESOLVED (2026-06-19, commit `9eef2a872`) — config-transparent IT structure.** With/without group commit is now the **same** scenarios under different config, not a bespoke manager + a dedicated test. Reference patterns (read from latest main): `replication:e2e` is an abstract `E2ETest` holding the test methods (no `@EnabledIf`, no GC-specific test) plus two ~12-line subclasses (`E2EWith…`/`E2EWithoutCoordinatorGroupCommit…Test`) that override only `withCoordinatorGroupCommit()`/`getCompressionType()`, which `E2ETestEnv` maps to `COORDINATOR_GROUP_COMMIT_ENABLED`; the in-repo `ConsensusCommitSpecificIntegrationTestBase` keys `isGroupCommitEnabled()` off `ConsensusCommitConfig`, loads `scalardb.consensus_commit.coordinator.group_commit.*` via `ConsensusCommitTestUtils.loadConsensusCommitProperties`, and gates GC-only assertions with `@EnabledIf("isGroupCommitEnabled")`. **Done:** `CbrlBackupRestoreIntegrationTest` is now abstract with a `withCoordinatorGroupCommit()` hook feeding the single `manager`; two thin subclasses `CbrlBackupRestoreWith[out]GroupCommitIntegrationTest` run the same scenarios with GC off and on; the bespoke `groupCommitManager`/`groupCommitProperties`/`commitGroupBatch`/`hasGroupCommitChild` and the dedicated `groupCommit_*` test were deleted. Full-child-id chain-linking and delete→re-insert across group rows are exercised transparently under the GC-on subclass — both subclasses pass.
 
   **OPEN — in-doubt group-commit child abort is buggy and untested.** `#1`'s `inDoubtCopyTxIds` aborts an in-flight copy record via `putState(new State(fullChildId, ABORTED))`, but recovery resolves a child through `getStateForGroupCommit` (the **parent** row), so a full-id-keyed abort is never found → recovery throws `UncommittedRecordException`. Found by code reading, **not** by a failing test — the in-doubt abort branch is exercised by **no** current scenario (the group-commit test uses a clean copy; in the main test every PREPARED-at-copy transaction commits before the backup, so they all roll forward). **Per critical rule 3, do not touch the abort impl speculatively.** First write a deterministic test that **forces** an in-doubt record — e.g., a group-commit transaction that blocks in `commit()` during its group window, so the copy captures it PREPARED while the backup (taken before it commits) excludes it. Only if that test **fails** is an impl change justified, and then only the minimal fix that makes it pass (likely `Coordinator.putStateForLazyRecoveryRollback(txId)`, which writes the parent-id + full-id abort markers the group-commit way). Until such a test exists, the in-doubt-abort code added in `#1` is unexercised — keep it minimal, and treat its current group-commit incorrectness as latent, not a live failure.
 
