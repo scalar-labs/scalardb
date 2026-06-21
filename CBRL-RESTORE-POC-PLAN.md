@@ -205,12 +205,18 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
 - **Checkpoint:** record per-bucket completion so a crashed re-run skips done buckets
   (idempotency requirement). PoC: an in-memory `Set<Integer> completedBuckets` + a re-run test.
 
-### 4.4 `IntegrityChecker`
-- Per key: every `RedoOp` with non-null `prevTxId` must have its `prevTxId` equal to the
-  current record's `txId` (from §4.5 `RestoredRecordReader`) **or** to some other op's `txId` on the
-  same key. Any dangling link ⇒ throw fail-loud (`CbrlReplayException`). INSERT roots
-  (`prevTxId == null`) apply only when the current record is absent or deleted (the loop polls
-  `insertOperations` exactly when `currentTxId == null || deleted`).
+### 4.4 Connectivity & the fork check (in `RecordApplier`, no separate checker)
+- **No fail-loud integrity checker** (an earlier `IntegrityChecker` idea was dropped — it would be
+  *wrong* here). Under window-scoped logging a `RedoOp` whose `prevTxId` points to a version the
+  backup never captured (a pre-window or deleted base) is legitimate and indistinguishable from a
+  genuinely dropped mid-chain op, so — like SSR — replay **tolerates** it: the unreachable op is
+  skipped (left unapplied), no exception. Completeness is the backup capture's responsibility (full
+  coordinator scan + chain closure), not this primitive's.
+- The one structural anomaly still rejected is a **fork** — two ops on a key sharing a `prevTxId`,
+  which serializable commit cannot produce — thrown fail-loud as `CbrlReplayException`. INSERT roots
+  (`prevTxId == null`) apply only when the current record (from §4.5 `RestoredRecordReader`) is
+  absent or deleted (the loop polls `insertOperations` exactly when `currentTxId == null ||
+  deleted`).
 
 ### 4.5 `RestoredRecordReader` (seam for C4: PREPARED-record recovery)
 - `RecordState get(RecordKey)` → the key's current `RecordState` in the **database being
@@ -342,14 +348,15 @@ state** sequentially (the oracle).
   replayed state per key equals the reference state.
 - **P2 Idempotency:** run replay twice (second run from the first run's output as the current state) ⇒
   identical state; also re-run with `completedBuckets` pre-seeded ⇒ no change.
-- **P3 Connectivity fail-loud:** drop one mid-chain op ⇒ `IntegrityChecker` throws; assert the
-  message names the dangling `prevTxId` and key.
+- **P3 Connectivity (SSR-tolerant):** drop one mid-chain op ⇒ its successor is unreachable from the
+  base and is **skipped** (left unapplied), no exception; the reachable prefix still applies.
 - **P4 Single-owner:** assert every key's ops occupy exactly one bucket across random `N`.
 
 **Unit tests** (boundary values per the project's testing rule):
 - empty window; single INSERT root; INSERT→DELETE net-zero (unapplied, key absent); partial
   column merge across two UPDATEs; delete→re-insert chain continuity; record-present vs.
-  record-absent roots; `N=1`, `N=K`, `M=1`, `M=N`.
+  record-absent roots; **fork rejected** (two ops sharing a `prevTxId` ⇒ `CbrlReplayException`
+  naming the shared id and key); `N=1`, `N=K`, `M=1`, `M=N`.
 
 ### 6.3 Performance evaluation — write-set logging overhead
 
@@ -449,14 +456,13 @@ This is on the logging side (§10 out of scope for this spike); listed so it isn
 
 ```
 core/src/main/java/com/scalar/db/transaction/consensuscommit/cbrl/   // the replay core
-  RedoOp.java                  // unit: txId, prevTxId, createdAtMillis, Entry
+  RedoOp.java                  // unit: txId, prevTxId, Entry (chain-only; no created_at/tx_version)
   RecordKey.java               // (ns, table, pk, ck) value type
   RecordState.java             // present, txId, mergedColumns, deleted, insertTxIds
   RestoredRecordReader.java    // C4: PREPARED-record recovery seam: RecordState get(RecordKey)
   RecordShuffler.java          // pass 1
-  RecordApplier.java           // pass 2 (thread-per-bucket) + checkpoint
-  IntegrityChecker.java        // chain-connectivity fail-loud
-  CbrlReplayException.java
+  RecordApplier.java           // pass 2 (thread-per-bucket) + checkpoint; SSR-tolerant + fork check
+  CbrlReplayException.java     // fork hard-fail
 
 core/src/test/java/com/scalar/db/transaction/consensuscommit/cbrl/    // replay-core tests
   RedoLogGenerator.java        // seeded: Stream<RedoOp>, chain-consistent
@@ -480,7 +486,7 @@ core/src/integration-test/java/com/scalar/db/transaction/consensuscommit/cbrl/
    replay; if in-window overhead is unacceptable, revisit compression/window/`includeColumns`
    first.
 3. **Chain replay, end-to-end (§6.2 + §6.1 green)** — replay core (`RecordShuffler`,
-   `RecordApplier`, `IntegrityChecker`, `RestoredRecordReader`) plus the chain metadata it orders
+   `RecordApplier`, `RestoredRecordReader`) plus the chain metadata it orders
    by (`prev_tx_id`/`tx_id` on `Entry`, populated in `WriteSetEncoder` from the read-set result —
    D1a, **already implemented on this branch**); `RedoLogGenerator`/`ReferenceApplier` + property
    tests P1/P2/P4 + connectivity P3 + unit boundary list (§6.2); then the §6.1 e2e green —
