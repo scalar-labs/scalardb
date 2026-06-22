@@ -1,7 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -42,6 +44,8 @@ import org.mockito.MockitoAnnotations;
  */
 public class CommitHandlerTest {
   private static final String ANY_ID = "id";
+  private static final long ANY_PREPARED_AT = 1000;
+  private static final long ANY_COMMITTED_AT = 2000;
 
   @Mock protected ParticipantCommitHandler participantCommitHandler;
   @Mock protected CoordinatorCommitHandler coordinatorCommitHandler;
@@ -135,14 +139,33 @@ public class CommitHandlerTest {
 
     // Assert
     InOrder inOrder = inOrder(participantCommitHandler, coordinatorCommitHandler);
-    inOrder.verify(participantCommitHandler).prepareRecords(context);
+    inOrder.verify(participantCommitHandler).prepareRecords(eq(context), anyLong());
     inOrder.verify(participantCommitHandler).validateRecords(context);
     inOrder.verify(coordinatorCommitHandler).commitState(context);
-    inOrder.verify(participantCommitHandler).commitRecords(context);
+    inOrder.verify(participantCommitHandler).commitRecords(eq(context), anyLong());
     verify(participantCommitHandler, never()).rollbackRecords(any());
     verify(coordinatorCommitHandler, never()).abortState(any());
     verifyBeforePreparationHook(withBeforePreparationHook, context);
     verify(handler, never()).onFailureBeforeCommit(any());
+  }
+
+  @Test
+  public void commit_WithWrites_ShouldUseSameCommittedAtForCommitStateAndCommitRecords()
+      throws Exception {
+    // The orchestrator must generate committedAt once and pass the same value to commitState (the
+    // COMMITTED coordinator row) and commitRecords (the committed data rows).
+    // Arrange
+    Snapshot snapshot = snapshotWithWrites();
+    TransactionContext context =
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+    long committedAt = 1234567890123L;
+    doReturn(committedAt).when(coordinatorCommitHandler).commitState(context);
+
+    // Act
+    handler.commit(context);
+
+    // Assert: the orchestrator must pass commitState's returned committedAt to commitRecords.
+    verify(participantCommitHandler).commitRecords(context, committedAt);
   }
 
   // =========================================================================
@@ -162,8 +185,8 @@ public class CommitHandlerTest {
 
     // Assert
     verify(participantCommitHandler).validateRecords(context);
-    verify(participantCommitHandler, never()).prepareRecords(any());
-    verify(participantCommitHandler, never()).commitRecords(any());
+    verify(participantCommitHandler, never()).prepareRecords(any(), anyLong());
+    verify(participantCommitHandler, never()).commitRecords(any(), anyLong());
     verify(coordinatorCommitHandler, never()).commitState(any());
     verify(coordinatorCommitHandler, never()).abortState(any());
     verify(handler, never()).onFailureBeforeCommit(any());
@@ -183,8 +206,8 @@ public class CommitHandlerTest {
 
     // Assert
     verify(participantCommitHandler).validateRecords(context);
-    verify(participantCommitHandler, never()).prepareRecords(any());
-    verify(participantCommitHandler, never()).commitRecords(any());
+    verify(participantCommitHandler, never()).prepareRecords(any(), anyLong());
+    verify(participantCommitHandler, never()).commitRecords(any(), anyLong());
     verify(coordinatorCommitHandler, never()).commitState(any());
     verify(coordinatorCommitHandler, never()).abortState(any());
   }
@@ -205,8 +228,8 @@ public class CommitHandlerTest {
     // Assert
     verify(participantCommitHandler).validateRecords(context);
     verify(coordinatorCommitHandler).commitState(context);
-    verify(participantCommitHandler, never()).prepareRecords(any());
-    verify(participantCommitHandler, never()).commitRecords(any());
+    verify(participantCommitHandler, never()).prepareRecords(any(), anyLong());
+    verify(participantCommitHandler, never()).commitRecords(any(), anyLong());
     verify(coordinatorCommitHandler, never()).abortState(any());
   }
 
@@ -221,7 +244,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = snapshotWithWrites();
     doThrow(new PreparationConflictException("conflict", anyId()))
         .when(participantCommitHandler)
-        .prepareRecords(any());
+        .prepareRecords(any(), anyLong());
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -229,11 +252,11 @@ public class CommitHandlerTest {
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
 
     InOrder inOrder = inOrder(participantCommitHandler, coordinatorCommitHandler);
-    inOrder.verify(participantCommitHandler).prepareRecords(context);
+    inOrder.verify(participantCommitHandler).prepareRecords(eq(context), anyLong());
     inOrder.verify(coordinatorCommitHandler).abortState(context);
     inOrder.verify(participantCommitHandler).rollbackRecords(context);
     verify(coordinatorCommitHandler, never()).commitState(any());
-    verify(participantCommitHandler, never()).commitRecords(any());
+    verify(participantCommitHandler, never()).commitRecords(any(), anyLong());
     verify(handler).onFailureBeforeCommit(context);
   }
 
@@ -244,7 +267,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = snapshotWithWrites();
     doThrow(new PreparationException("prep failed", anyId()))
         .when(participantCommitHandler)
-        .prepareRecords(any());
+        .prepareRecords(any(), anyLong());
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
@@ -253,7 +276,7 @@ public class CommitHandlerTest {
         .isInstanceOf(CommitException.class)
         .isNotInstanceOf(CommitConflictException.class);
 
-    verify(participantCommitHandler).prepareRecords(context);
+    verify(participantCommitHandler).prepareRecords(eq(context), anyLong());
     verify(coordinatorCommitHandler).abortState(context);
     verify(participantCommitHandler).rollbackRecords(context);
     verify(handler).onFailureBeforeCommit(context);
@@ -281,7 +304,7 @@ public class CommitHandlerTest {
     verify(coordinatorCommitHandler).abortState(context);
     verify(participantCommitHandler).rollbackRecords(context);
     verify(coordinatorCommitHandler, never()).commitState(any());
-    verify(participantCommitHandler, never()).commitRecords(any());
+    verify(participantCommitHandler, never()).commitRecords(any(), anyLong());
     verify(handler).onFailureBeforeCommit(context);
   }
 
@@ -310,8 +333,7 @@ public class CommitHandlerTest {
   public void commit_CommitStateThrowsConflict_WithWrites_ShouldRollbackRecordsAndThrowConflict()
       throws Exception {
     // The Coordinator-side handler only reports the commit-state putState conflict; the
-    // orchestrator
-    // owns the records, so it rolls them back here before surfacing the conflict.
+    // orchestrator owns the records, so it rolls them back here before surfacing the conflict.
 
     // Arrange
     Snapshot snapshot = snapshotWithWrites();
@@ -326,7 +348,7 @@ public class CommitHandlerTest {
 
     verify(coordinatorCommitHandler).commitState(context);
     verify(participantCommitHandler).rollbackRecords(context);
-    verify(participantCommitHandler, never()).commitRecords(any());
+    verify(participantCommitHandler, never()).commitRecords(any(), anyLong());
   }
 
   @Test
@@ -389,10 +411,10 @@ public class CommitHandlerTest {
     assertThatThrownBy(() -> handler.commit(context))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
-    verify(participantCommitHandler).prepareRecords(context);
+    verify(participantCommitHandler).prepareRecords(eq(context), anyLong());
     verify(participantCommitHandler).validateRecords(context);
     verify(coordinatorCommitHandler).commitState(context);
-    verify(participantCommitHandler, never()).commitRecords(any());
+    verify(participantCommitHandler, never()).commitRecords(any(), anyLong());
     verify(participantCommitHandler, never()).rollbackRecords(any());
     verify(handler, never()).onFailureBeforeCommit(any());
   }
@@ -417,7 +439,7 @@ public class CommitHandlerTest {
 
     verify(coordinatorCommitHandler).abortState(context);
     verify(participantCommitHandler).rollbackRecords(context);
-    verify(participantCommitHandler, never()).prepareRecords(any());
+    verify(participantCommitHandler, never()).prepareRecords(any(), anyLong());
     verify(handler).onFailureBeforeCommit(context);
   }
 
@@ -436,7 +458,7 @@ public class CommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
 
-    verify(participantCommitHandler).prepareRecords(context);
+    verify(participantCommitHandler).prepareRecords(eq(context), anyLong());
     verify(coordinatorCommitHandler).abortState(context);
     verify(participantCommitHandler).rollbackRecords(context);
     verify(coordinatorCommitHandler, never()).commitState(any());
@@ -549,7 +571,7 @@ public class CommitHandlerTest {
     // Assert
     verify(handler).canOnePhaseCommit(context);
     verify(handler).onePhaseCommitRecords(context);
-    verify(participantCommitHandler, never()).prepareRecords(any());
+    verify(participantCommitHandler, never()).prepareRecords(any(), anyLong());
     verify(coordinatorCommitHandler, never()).commitState(any());
     verify(beforePreparationHook, never()).handle(any());
   }
@@ -583,9 +605,9 @@ public class CommitHandlerTest {
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
-    handler.prepareRecords(context);
+    handler.prepareRecords(context, ANY_PREPARED_AT);
 
-    verify(participantCommitHandler).prepareRecords(context);
+    verify(participantCommitHandler).prepareRecords(context, ANY_PREPARED_AT);
   }
 
   @Test
@@ -605,9 +627,9 @@ public class CommitHandlerTest {
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
-    handler.commitRecords(context);
+    handler.commitRecords(context, ANY_COMMITTED_AT);
 
-    verify(participantCommitHandler).commitRecords(context);
+    verify(participantCommitHandler).commitRecords(context, ANY_COMMITTED_AT);
   }
 
   @Test
@@ -648,10 +670,12 @@ public class CommitHandlerTest {
     Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+    when(coordinatorCommitHandler.commitState(context)).thenReturn(ANY_COMMITTED_AT);
 
-    handler.commitState(context);
+    long result = handler.commitState(context);
 
     verify(coordinatorCommitHandler).commitState(context);
+    assertThat(result).isEqualTo(ANY_COMMITTED_AT);
   }
 
   @Test
@@ -659,10 +683,12 @@ public class CommitHandlerTest {
     Snapshot snapshot = snapshotWithoutWrites();
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+    when(coordinatorCommitHandler.commitStateWithoutWriteSet(context)).thenReturn(ANY_COMMITTED_AT);
 
-    handler.commitStateWithoutWriteSet(context);
+    long result = handler.commitStateWithoutWriteSet(context);
 
     verify(coordinatorCommitHandler).commitStateWithoutWriteSet(context);
+    assertThat(result).isEqualTo(ANY_COMMITTED_AT);
   }
 
   @Test
