@@ -172,7 +172,7 @@ public class CommitHandler {
 
     if (hasWritesOrDeletesInSnapshot) {
       try {
-        prepareRecords(context);
+        prepareRecords(context, System.currentTimeMillis());
       } catch (PreparationException e) {
         safelyCallOnFailureBeforeCommit(context);
         abortState(context);
@@ -207,8 +207,12 @@ public class CommitHandler {
         context, beforePreparationHookFuture.orElse(null), hasWritesOrDeletesInSnapshot);
 
     if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+      long committedAt;
       try {
-        commitState(context);
+        // commitState writes the COMMITTED Coordinator state row and returns the committedAt it
+        // stamped (in group commit, the emit-time value shared across the batch). The data records
+        // are then committed with the same value so the row and the records share one timestamp.
+        committedAt = commitState(context);
       } catch (CommitConflictException e) {
         // The COMMITTED-state write lost a putState race that resolved to ABORTED (or absent): the
         // transaction is aborted. The Coordinator-side handler only reports the conflict; the
@@ -219,9 +223,9 @@ public class CommitHandler {
         }
         throw e;
       }
-    }
-    if (hasWritesOrDeletesInSnapshot) {
-      commitRecords(context);
+      if (hasWritesOrDeletesInSnapshot) {
+        commitRecords(context, committedAt);
+      }
     }
   }
 
@@ -251,16 +255,17 @@ public class CommitHandler {
   //
   // TODO: revisit this if/when the Two-phase Commit I/F is removed.
 
-  public void prepareRecords(TransactionContext context) throws PreparationException {
-    participantCommitHandler.prepareRecords(context);
+  public void prepareRecords(TransactionContext context, long preparedAt)
+      throws PreparationException {
+    participantCommitHandler.prepareRecords(context, preparedAt);
   }
 
   public void validateRecords(TransactionContext context) throws ValidationException {
     participantCommitHandler.validateRecords(context);
   }
 
-  public void commitRecords(TransactionContext context) {
-    participantCommitHandler.commitRecords(context);
+  public void commitRecords(TransactionContext context, long committedAt) {
+    participantCommitHandler.commitRecords(context, committedAt);
   }
 
   public void rollbackRecords(TransactionContext context) {
@@ -285,14 +290,14 @@ public class CommitHandler {
     participantCommitHandler.onePhaseCommitRecords(context);
   }
 
-  public void commitState(TransactionContext context)
+  public long commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    coordinatorCommitHandler.commitState(context);
+    return coordinatorCommitHandler.commitState(context);
   }
 
-  public void commitStateWithoutWriteSet(TransactionContext context)
+  public long commitStateWithoutWriteSet(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    coordinatorCommitHandler.commitStateWithoutWriteSet(context);
+    return coordinatorCommitHandler.commitStateWithoutWriteSet(context);
   }
 
   public TransactionState abortState(TransactionContext context)

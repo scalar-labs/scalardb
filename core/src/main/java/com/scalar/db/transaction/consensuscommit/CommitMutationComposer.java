@@ -5,7 +5,6 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -31,14 +30,9 @@ import org.slf4j.LoggerFactory;
 public class CommitMutationComposer extends AbstractMutationComposer {
   private static final Logger logger = LoggerFactory.getLogger(CommitMutationComposer.class);
 
-  public CommitMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, tableMetadataManager);
-  }
-
-  @VisibleForTesting
-  CommitMutationComposer(
-      String id, long current, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, current, tableMetadataManager);
+  public CommitMutationComposer(
+      String id, long timestamp, TransactionTableMetadataManager tableMetadataManager) {
+    super(id, timestamp, tableMetadataManager);
   }
 
   @Override
@@ -95,7 +89,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
                         ConditionBuilder.column(STATE)
                             .isEqualToInt(TransactionState.PREPARED.get()))
                     .build())
-            .bigIntValue(COMMITTED_AT, current)
+            .bigIntValue(COMMITTED_AT, timestamp)
             .intValue(STATE, TransactionState.COMMITTED.get())
             .consistency(Consistency.LINEARIZABLE);
     getClusteringKey(base, result).ifPresent(putBuilder::clusteringKey);
