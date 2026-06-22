@@ -22,6 +22,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -125,6 +126,22 @@ class CoordinatorCommitHandlerTest {
   }
 
   @Test
+  void commitState_ShouldStampReturnedCommittedAtOnState() throws Exception {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithWrite();
+    TransactionContext context = createTransactionContext(snapshot);
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+
+    // Act
+    long committedAt = handler.commitState(context);
+
+    // Assert: the COMMITTED coordinator row carries the committedAt that is returned.
+    ArgumentCaptor<Coordinator.State> captor = ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinator).putState(captor.capture());
+    assertThat(captor.getValue().getCreatedAt()).isEqualTo(committedAt);
+  }
+
+  @Test
   void commitState_WhenCoordinatorConflictAndAbortedReturnedInGetState_ShouldThrowConflict()
       throws Exception {
     // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
@@ -166,15 +183,15 @@ class CoordinatorCommitHandlerTest {
             argThat(
                 stateMatcher(
                     anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.COMMITTED)));
-    doReturn(
-            Optional.of(
-                new Coordinator.State(
-                    anyId(), TransactionState.COMMITTED, System.currentTimeMillis())))
+    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.COMMITTED, 999L)))
         .when(coordinator)
         .getState(anyId());
 
-    // Act Assert (must not throw — the transaction is already committed)
-    handler.commitState(context);
+    // Act (must not throw) — the persisted COMMITTED row's committedAt is returned.
+    long committedAt = handler.commitState(context);
+
+    // Assert
+    assertThat(committedAt).isEqualTo(999L);
   }
 
   @Test
@@ -226,6 +243,22 @@ class CoordinatorCommitHandlerTest {
 
     // Assert — writeSet absent (null in matcher).
     verify(coordinator).putState(argThat(stateMatcher(anyId(), null, TransactionState.COMMITTED)));
+  }
+
+  @Test
+  void commitStateWithoutWriteSet_ShouldStampReturnedCommittedAtOnState() throws Exception {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithWrite();
+    TransactionContext context = createTransactionContext(snapshot);
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+
+    // Act
+    long committedAt = handler.commitStateWithoutWriteSet(context);
+
+    // Assert: the COMMITTED coordinator row carries the committedAt that is returned.
+    ArgumentCaptor<Coordinator.State> captor = ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinator).putState(captor.capture());
+    assertThat(captor.getValue().getCreatedAt()).isEqualTo(committedAt);
   }
 
   // ---------- abortState ----------

@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.common.StorageInfoImpl;
@@ -32,10 +33,13 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -53,6 +57,8 @@ class ParticipantCommitHandlerTest {
   private static final String ANY_ID = "id";
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
+  private static final long ANY_PREPARED_AT = 1000;
+  private static final long ANY_COMMITTED_AT = 2000;
 
   @Mock private DistributedStorage storage;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
@@ -152,10 +158,35 @@ class ParticipantCommitHandlerTest {
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act
-    handler.prepareRecords(context);
+    handler.prepareRecords(context, ANY_PREPARED_AT);
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void prepareRecords_ShouldStampPassedPreparedAtOnEveryPreparedRow()
+      throws ExecutionException, PreparationException, CrudException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothing().when(storage).mutate(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act
+    handler.prepareRecords(context, ANY_PREPARED_AT);
+
+    // Assert: every prepared row carries the single preparedAt passed in.
+    ArgumentCaptor<List<Mutation>> captor = ArgumentCaptor.forClass(List.class);
+    verify(storage, times(2)).mutate(captor.capture());
+    List<Mutation> preparedRows =
+        captor.getAllValues().stream().flatMap(List::stream).collect(Collectors.toList());
+    assertThat(preparedRows).hasSize(2);
+    for (Mutation mutation : preparedRows) {
+      Put put = (Put) mutation;
+      assertThat(put.getColumns().get(Attribute.PREPARED_AT).getBigIntValue())
+          .isEqualTo(ANY_PREPARED_AT);
+    }
   }
 
   @Test
@@ -167,7 +198,7 @@ class ParticipantCommitHandlerTest {
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.prepareRecords(context))
+    assertThatThrownBy(() -> handler.prepareRecords(context, ANY_PREPARED_AT))
         .isInstanceOf(PreparationConflictException.class)
         .hasCauseInstanceOf(NoMutationException.class);
   }
@@ -182,7 +213,7 @@ class ParticipantCommitHandlerTest {
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.prepareRecords(context))
+    assertThatThrownBy(() -> handler.prepareRecords(context, ANY_PREPARED_AT))
         .isInstanceOf(PreparationConflictException.class)
         .hasCauseInstanceOf(RetriableExecutionException.class);
   }
@@ -196,7 +227,7 @@ class ParticipantCommitHandlerTest {
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert
-    assertThatThrownBy(() -> handler.prepareRecords(context))
+    assertThatThrownBy(() -> handler.prepareRecords(context, ANY_PREPARED_AT))
         .isInstanceOf(PreparationException.class)
         .hasCauseInstanceOf(ExecutionException.class);
   }
@@ -258,10 +289,35 @@ class ParticipantCommitHandlerTest {
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act
-    handler.commitRecords(context);
+    handler.commitRecords(context, ANY_COMMITTED_AT);
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void commitRecords_ShouldStampPassedCommittedAtOnEveryCommittedRow()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    doNothing().when(storage).mutate(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act
+    handler.commitRecords(context, ANY_COMMITTED_AT);
+
+    // Assert: every committed row carries the single committedAt passed in.
+    ArgumentCaptor<List<Mutation>> captor = ArgumentCaptor.forClass(List.class);
+    verify(storage, times(2)).mutate(captor.capture());
+    List<Mutation> committedRows =
+        captor.getAllValues().stream().flatMap(List::stream).collect(Collectors.toList());
+    assertThat(committedRows).hasSize(2);
+    for (Mutation mutation : committedRows) {
+      Put put = (Put) mutation;
+      assertThat(put.getColumns().get(Attribute.COMMITTED_AT).getBigIntValue())
+          .isEqualTo(ANY_COMMITTED_AT);
+    }
   }
 
   @Test
@@ -274,7 +330,7 @@ class ParticipantCommitHandlerTest {
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act (must not throw)
-    handler.commitRecords(context);
+    handler.commitRecords(context, ANY_COMMITTED_AT);
   }
 
   // ---------- rollbackRecords ----------
