@@ -90,7 +90,7 @@ jobs:
     if: ${{ !inputs.INTEGRATION_TEST_ONLY }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 8
         uses: actions/setup-java@v5
@@ -151,7 +151,7 @@ jobs:
     if: ${{ !inputs.INTEGRATION_TEST_ONLY }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 8
         uses: actions/setup-java@v5
@@ -182,7 +182,7 @@ jobs:
     outputs:
       test_matrix: ${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Groovy
         run: |
@@ -256,7 +256,7 @@ jobs:
       matrix: ${{ fromJSON(needs.integration-test-jobs-planner.outputs.test_matrix) }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download test configuration
         uses: actions/download-artifact@v8
