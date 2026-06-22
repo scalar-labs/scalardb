@@ -58,7 +58,7 @@ public final class RecordApplier {
       if (cause instanceof CbrlReplayException) {
         throw (CbrlReplayException) cause;
       }
-      throw new CbrlReplayException("Replay failed: " + cause);
+      throw new CbrlReplayException("Replay failed", cause);
     } finally {
       executor.shutdownNow();
     }

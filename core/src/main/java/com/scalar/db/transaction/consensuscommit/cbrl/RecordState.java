@@ -2,11 +2,11 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
 
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import javax.annotation.Nullable;
 
 /**
@@ -55,20 +55,12 @@ public final class RecordState {
     return currentTxId;
   }
 
-  boolean deleted() {
-    return deleted;
-  }
-
   boolean present() {
     return currentTxId != null && !deleted;
   }
 
   Map<String, Column> columns() {
     return columns;
-  }
-
-  Set<String> insertTxIds() {
-    return insertTxIds;
   }
 
   /** Mutable working copy used while replaying a key's chain. */
@@ -90,7 +82,7 @@ public final class RecordState {
       this.currentTxId = currentTxId;
       this.deleted = deleted;
       this.columns = new LinkedHashMap<>(columns);
-      this.insertTxIds = new TreeSet<>(insertTxIds);
+      this.insertTxIds = new HashSet<>(insertTxIds);
     }
 
     /** INSERT: the record is (re)created, so its columns become exactly the insert's. */
