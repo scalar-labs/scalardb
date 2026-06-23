@@ -205,8 +205,17 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
   locks, physical delete allowed — the design's core simplification vs. SSR).
 - Per key within a bucket: `divideWriteOperations` into `insertOperations` / `nonInsertOperations`,
   then walk the chain (§5).
-- **Checkpoint:** record per-bucket completion so a crashed re-run skips done buckets
-  (idempotency requirement). PoC: an in-memory `Set<Integer> completedBuckets` + a re-run test.
+- **Checkpoint:** record per-bucket completion so a re-run skips done buckets — the
+  idempotent-re-run / restart requirement of §9 M4. **What the PoC delivers vs. what M4 needs:**
+  the PoC keeps `completedBuckets` (and `RecordState.insertTxIds`) **in memory**, which gives only
+  *algorithmic* idempotency — re-running replay from its output yields the same state (§6.2 P2,
+  §6.1 double-restore). It does **NOT** survive a process crash: a restarted restore starts with an
+  empty checkpoint and re-runs every bucket from the persisted record state. (The PoC's
+  single-transaction write-back keeps that safe — a crash leaves either the copy or the
+  fully-applied image, so the re-run still converges — but a real incrementally-writing restore
+  would not be safe without durable state.) Durable crash-restart is **in scope (M4) and an open
+  gap**: closing it needs the checkpoint and `insertTxIds` persisted alongside the restored data,
+  as SSR persists `insertTxIds` on the repl-record.
 
 ### 4.4 Connectivity & the fork check (in `RecordApplier`, no separate checker)
 - **No fail-loud integrity checker** (an earlier `IntegrityChecker` idea was dropped — it would be
