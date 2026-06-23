@@ -51,7 +51,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final int ANY_INT_1 = 100;
 
-  @Mock private Coordinator coordinator;
+  @Mock private CoordinatorStateAccessor coordinator;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private ConsensusCommitConfig config;
 
@@ -257,7 +257,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   void emitter_emitNormalGroup_WithMultipleWritingChildren_ShouldAggregatePerChild()
       throws Exception {
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
+    CoordinatorStateAccessor coordinatorMock = mock(CoordinatorStateAccessor.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
         new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock);
 
@@ -271,11 +271,11 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
             parentId, Arrays.asList(valueWithWrite(fullTxId1), valueWithWrite(fullTxId2)));
 
     // Assert
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
+    ArgumentCaptor<CoordinatorStateAccessor.State> stateCaptor =
+        ArgumentCaptor.forClass(CoordinatorStateAccessor.State.class);
     verify(coordinatorMock).putState(stateCaptor.capture());
 
-    Coordinator.State capturedState = stateCaptor.getValue();
+    CoordinatorStateAccessor.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(parentId);
     assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(capturedState.getChildIds()).containsExactly("child-1", "child-2");
@@ -296,7 +296,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   void emitter_emitNormalGroup_WithReadOnlyChildMixed_ShouldOmitReadOnlyEntryGroups()
       throws Exception {
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
+    CoordinatorStateAccessor coordinatorMock = mock(CoordinatorStateAccessor.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
         new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock);
 
@@ -310,10 +310,10 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
     // Assert — only the writing child contributes an EntryGroup; the read-only child carries no
     // entries so its (empty) write set adds nothing.
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
+    ArgumentCaptor<CoordinatorStateAccessor.State> stateCaptor =
+        ArgumentCaptor.forClass(CoordinatorStateAccessor.State.class);
     verify(coordinatorMock).putState(stateCaptor.capture());
-    Coordinator.State capturedState = stateCaptor.getValue();
+    CoordinatorStateAccessor.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(parentId);
     // The read-only child contributes no EntryGroup but is still recorded as a parent-row member
     // (child_ids), so its committed state stays resolvable during recovery.
@@ -329,7 +329,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   void emitter_emitNormalGroup_WithAllReadOnlyChildren_ShouldStillSetSchemaVersion()
       throws Exception {
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
+    CoordinatorStateAccessor coordinatorMock = mock(CoordinatorStateAccessor.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
         new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock);
 
@@ -340,10 +340,10 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     emitter.emitNormalGroup(parentId, Collections.singletonList(valueReadOnly(fullTxId)));
 
     // Assert
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
+    ArgumentCaptor<CoordinatorStateAccessor.State> stateCaptor =
+        ArgumentCaptor.forClass(CoordinatorStateAccessor.State.class);
     verify(coordinatorMock).putState(stateCaptor.capture());
-    Coordinator.State capturedState = stateCaptor.getValue();
+    CoordinatorStateAccessor.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(parentId);
     assertThat(capturedState.getWriteSet()).isPresent();
 
@@ -355,7 +355,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   @Test
   void emitter_emitNormalGroup_WithEmptyValues_ShouldNotCallPutState() throws Exception {
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
+    CoordinatorStateAccessor coordinatorMock = mock(CoordinatorStateAccessor.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
         new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock);
 
@@ -369,13 +369,13 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // written. The null return is the contract that commitState's `assert committedAt != null`
     // guard relies on.
     assertThat(committedAt).isNull();
-    verify(coordinatorMock, never()).putState(any(Coordinator.State.class));
+    verify(coordinatorMock, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
   void emitter_emitDelayedGroup_WithWritingValue_ShouldPersistStateWithWriteSet() throws Exception {
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
+    CoordinatorStateAccessor coordinatorMock = mock(CoordinatorStateAccessor.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
         new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock);
 
@@ -386,11 +386,11 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     Long committedAt = emitter.emitDelayedGroup(fullTxId, valueWithWrite(fullTxId));
 
     // Assert
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
+    ArgumentCaptor<CoordinatorStateAccessor.State> stateCaptor =
+        ArgumentCaptor.forClass(CoordinatorStateAccessor.State.class);
     verify(coordinatorMock).putState(stateCaptor.capture());
 
-    Coordinator.State capturedState = stateCaptor.getValue();
+    CoordinatorStateAccessor.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(fullTxId);
     assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
     // The emit returns the committedAt it stamped on the row.
@@ -410,7 +410,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   void emitter_emitDelayedGroup_WithReadOnlyValue_ShouldPersistStateWithEmptyWriteSet()
       throws Exception {
     // Arrange
-    Coordinator coordinatorMock = mock(Coordinator.class);
+    CoordinatorStateAccessor coordinatorMock = mock(CoordinatorStateAccessor.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
         new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock);
 
@@ -421,11 +421,11 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     Long committedAt = emitter.emitDelayedGroup(fullTxId, valueReadOnly(fullTxId));
 
     // Assert
-    ArgumentCaptor<Coordinator.State> stateCaptor =
-        ArgumentCaptor.forClass(Coordinator.State.class);
+    ArgumentCaptor<CoordinatorStateAccessor.State> stateCaptor =
+        ArgumentCaptor.forClass(CoordinatorStateAccessor.State.class);
     verify(coordinatorMock).putState(stateCaptor.capture());
 
-    Coordinator.State capturedState = stateCaptor.getValue();
+    CoordinatorStateAccessor.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(fullTxId);
     assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(committedAt).isEqualTo(capturedState.getCreatedAt());

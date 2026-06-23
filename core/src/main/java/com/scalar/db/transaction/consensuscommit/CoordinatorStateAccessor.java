@@ -103,7 +103,7 @@ import org.slf4j.LoggerFactory;
  * ID), the two-step {@link #forceAbort} must be used instead.
  */
 @ThreadSafe
-public class Coordinator {
+public class CoordinatorStateAccessor {
   public static final String NAMESPACE = "coordinator";
   public static final String TABLE = "state";
   public static final TableMetadata TABLE_METADATA =
@@ -118,7 +118,7 @@ public class Coordinator {
 
   private static final int MAX_RETRY_COUNT = 5;
   private static final long SLEEP_BASE_MILLIS = 50;
-  private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
+  private static final Logger logger = LoggerFactory.getLogger(CoordinatorStateAccessor.class);
   private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
       new CoordinatorGroupCommitKeyManipulator();
 
@@ -131,13 +131,13 @@ public class Coordinator {
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Deprecated
-  public Coordinator(DistributedStorage storage) {
+  public CoordinatorStateAccessor(DistributedStorage storage) {
     this.storage = storage;
     coordinatorNamespace = NAMESPACE;
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
+  public CoordinatorStateAccessor(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
   }
@@ -151,7 +151,7 @@ public class Coordinator {
    * @return the coordinator state
    * @throws CoordinatorException if the coordinator state cannot be retrieved
    */
-  public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
+  public Optional<CoordinatorStateAccessor.State> getState(String id) throws CoordinatorException {
     if (KEY_MANIPULATOR.isFullKey(id)) {
       return getStateForGroupCommit(id);
     }
@@ -169,7 +169,8 @@ public class Coordinator {
    * @throws CoordinatorException if the coordinator state cannot be retrieved
    */
   @VisibleForTesting
-  Optional<Coordinator.State> getStateForGroupCommit(String fullId) throws CoordinatorException {
+  Optional<CoordinatorStateAccessor.State> getStateForGroupCommit(String fullId)
+      throws CoordinatorException {
     // Scan with the parent ID for a normal group that contains multiple transactions.
     Keys<String, String, String> idForGroupCommit = KEY_MANIPULATOR.keysFromFullKey(fullId);
 
@@ -195,12 +196,13 @@ public class Coordinator {
     return getStateInternal(fullId);
   }
 
-  private Optional<Coordinator.State> getStateInternal(String id) throws CoordinatorException {
+  private Optional<CoordinatorStateAccessor.State> getStateInternal(String id)
+      throws CoordinatorException {
     Get get = createGetWith(id);
     return get(get, id);
   }
 
-  public void putState(Coordinator.State state) throws CoordinatorException {
+  public void putState(CoordinatorStateAccessor.State state) throws CoordinatorException {
     Put put = createPutWith(state);
     put(put, state.getId());
   }
@@ -211,7 +213,9 @@ public class Coordinator {
       return;
     }
 
-    putState(new Coordinator.State(id, TransactionState.ABORTED, System.currentTimeMillis()));
+    putState(
+        new CoordinatorStateAccessor.State(
+            id, TransactionState.ABORTED, System.currentTimeMillis()));
   }
 
   private void forceAbortForGroupCommit(String id) throws CoordinatorException {
@@ -313,7 +317,9 @@ public class Coordinator {
     }
 
     // This record is to intend the transaction is aborted.
-    putState(new Coordinator.State(id, TransactionState.ABORTED, System.currentTimeMillis()));
+    putState(
+        new CoordinatorStateAccessor.State(
+            id, TransactionState.ABORTED, System.currentTimeMillis()));
   }
 
   @VisibleForTesting
@@ -326,7 +332,8 @@ public class Coordinator {
         .build();
   }
 
-  private Optional<Coordinator.State> get(Get get, String id) throws CoordinatorException {
+  private Optional<CoordinatorStateAccessor.State> get(Get get, String id)
+      throws CoordinatorException {
     int counter = 0;
     Exception exception = null;
     while (true) {
@@ -360,7 +367,7 @@ public class Coordinator {
   }
 
   @VisibleForTesting
-  Put createPutWith(Coordinator.State state) {
+  Put createPutWith(CoordinatorStateAccessor.State state) {
     String childIds = state.getChildIdsAsString();
     PutBuilder.Buildable builder =
         Put.newBuilder()

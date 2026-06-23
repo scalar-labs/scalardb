@@ -4,7 +4,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitNullMetadataIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -40,7 +40,7 @@ public class ConsensusCommitNullMetadataIntegrationTestWithMultiStorage
 
     // Define namespace mapping from namespace1 to cassandra, from namespace2 to jdbc, and from
     // the coordinator namespace (with the test-name suffix) to cassandra
-    String coordinatorNamespace = Coordinator.NAMESPACE + "_" + testName;
+    String coordinatorNamespace = CoordinatorStateAccessor.NAMESPACE + "_" + testName;
     properties.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
         namespace1 + ":cassandra," + namespace2 + ":jdbc," + coordinatorNamespace + ":cassandra");

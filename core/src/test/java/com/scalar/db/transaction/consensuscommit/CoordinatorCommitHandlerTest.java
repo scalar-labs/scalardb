@@ -30,7 +30,7 @@ import org.mockito.MockitoAnnotations;
 class CoordinatorCommitHandlerTest {
   private static final String ANY_ID = "id";
 
-  @Mock private Coordinator coordinator;
+  @Mock private CoordinatorStateAccessor coordinator;
 
   private CoordinatorCommitHandler handler;
 
@@ -50,8 +50,9 @@ class CoordinatorCommitHandlerTest {
     handler = new CoordinatorCommitHandler(coordinator);
   }
 
-  // Mockito matcher that compares Coordinator.State by id + writeSet + state (ignores createdAt).
-  private static ArgumentMatcher<Coordinator.State> stateMatcher(
+  // Mockito matcher that compares CoordinatorStateAccessor.State by id + writeSet + state (ignores
+  // createdAt).
+  private static ArgumentMatcher<CoordinatorStateAccessor.State> stateMatcher(
       String id, WriteSet writeSet, TransactionState state) {
     return actual ->
         actual != null
@@ -66,7 +67,7 @@ class CoordinatorCommitHandlerTest {
   void commitState_WhenSuccessful_ShouldPutCommittedStateWithGivenWriteSet() throws Exception {
     // Arrange
     WriteSet writeSet = anyWriteSet();
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
 
     // Act
     handler.commitState(anyId(), writeSet);
@@ -79,7 +80,7 @@ class CoordinatorCommitHandlerTest {
   @Test
   void commitState_WhenWriteSetNull_ShouldPutCommittedStateWithoutWriteSet() throws Exception {
     // Arrange
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
 
     // Act
     handler.commitState(anyId(), null);
@@ -91,14 +92,15 @@ class CoordinatorCommitHandlerTest {
   @Test
   void commitState_ShouldStampGeneratedCommittedAtAndReturnIt() throws Exception {
     // Arrange
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
 
     // Act
     long committedAt = handler.commitState(anyId(), anyWriteSet());
 
     // Assert — the handler generates the committedAt, stamps it on the COMMITTED row, and returns
     // that same value.
-    ArgumentCaptor<Coordinator.State> captor = ArgumentCaptor.forClass(Coordinator.State.class);
+    ArgumentCaptor<CoordinatorStateAccessor.State> captor =
+        ArgumentCaptor.forClass(CoordinatorStateAccessor.State.class);
     verify(coordinator).putState(captor.capture());
     assertThat(captor.getValue().getCreatedAt()).isEqualTo(committedAt);
   }
@@ -111,10 +113,10 @@ class CoordinatorCommitHandlerTest {
     // Arrange
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(any(Coordinator.State.class));
+        .putState(any(CoordinatorStateAccessor.State.class));
     doReturn(
             Optional.of(
-                new Coordinator.State(
+                new CoordinatorStateAccessor.State(
                     anyId(), TransactionState.ABORTED, System.currentTimeMillis())))
         .when(coordinator)
         .getState(anyId());
@@ -134,8 +136,10 @@ class CoordinatorCommitHandlerTest {
     // Arrange
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(any(Coordinator.State.class));
-    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.COMMITTED, 999L)))
+        .putState(any(CoordinatorStateAccessor.State.class));
+    doReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(anyId(), TransactionState.COMMITTED, 999L)))
         .when(coordinator)
         .getState(anyId());
 
@@ -154,7 +158,7 @@ class CoordinatorCommitHandlerTest {
     // Arrange
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(any(Coordinator.State.class));
+        .putState(any(CoordinatorStateAccessor.State.class));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act Assert
@@ -165,7 +169,9 @@ class CoordinatorCommitHandlerTest {
   @Test
   void commitState_WhenCoordinatorExceptionThrown_ShouldThrowUnknown() throws Exception {
     // Arrange
-    doThrow(CoordinatorException.class).when(coordinator).putState(any(Coordinator.State.class));
+    doThrow(CoordinatorException.class)
+        .when(coordinator)
+        .putState(any(CoordinatorStateAccessor.State.class));
 
     // Act Assert
     assertThatThrownBy(() -> handler.commitState(anyId(), anyWriteSet()))
@@ -178,7 +184,7 @@ class CoordinatorCommitHandlerTest {
   void abortState_WhenSuccessful_ShouldPutAbortedStateAndReturnAborted() throws Exception {
     // Arrange
     WriteSet writeSet = anyWriteSet();
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
 
     // Act
     TransactionState result = handler.abortState(anyId(), writeSet);
@@ -192,7 +198,7 @@ class CoordinatorCommitHandlerTest {
   @Test
   void abortState_WhenWriteSetNull_ShouldPutAbortedStateWithoutWriteSet() throws Exception {
     // Arrange
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
 
     // Act
     TransactionState result = handler.abortState(anyId(), null);
@@ -207,10 +213,10 @@ class CoordinatorCommitHandlerTest {
     // Arrange
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(any(Coordinator.State.class));
+        .putState(any(CoordinatorStateAccessor.State.class));
     doReturn(
             Optional.of(
-                new Coordinator.State(
+                new CoordinatorStateAccessor.State(
                     anyId(), TransactionState.COMMITTED, System.currentTimeMillis())))
         .when(coordinator)
         .getState(anyId());
@@ -233,7 +239,7 @@ class CoordinatorCommitHandlerTest {
     // Arrange
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(any(Coordinator.State.class));
+        .putState(any(CoordinatorStateAccessor.State.class));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act
@@ -247,7 +253,9 @@ class CoordinatorCommitHandlerTest {
   @Test
   void abortState_WhenCoordinatorExceptionThrown_ShouldThrowUnknown() throws Exception {
     // Arrange
-    doThrow(CoordinatorException.class).when(coordinator).putState(any(Coordinator.State.class));
+    doThrow(CoordinatorException.class)
+        .when(coordinator)
+        .putState(any(CoordinatorStateAccessor.State.class));
 
     // Act Assert
     assertThatThrownBy(() -> handler.abortState(anyId(), null))
@@ -278,7 +286,7 @@ class CoordinatorCommitHandlerTest {
     doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyId());
     doReturn(
             Optional.of(
-                new Coordinator.State(
+                new CoordinatorStateAccessor.State(
                     anyId(), TransactionState.COMMITTED, System.currentTimeMillis())))
         .when(coordinator)
         .getState(anyId());
@@ -325,7 +333,7 @@ class CoordinatorCommitHandlerTest {
     // Arrange
     doReturn(
             Optional.of(
-                new Coordinator.State(
+                new CoordinatorStateAccessor.State(
                     anyId(), TransactionState.ABORTED, System.currentTimeMillis())))
         .when(coordinator)
         .getState(anyId());
@@ -341,7 +349,9 @@ class CoordinatorCommitHandlerTest {
   void handleCommitConflict_WhenCommittedStatePersisted_ShouldReturnPersistedCommittedAt()
       throws Exception {
     // Arrange
-    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.COMMITTED, 999L)))
+    doReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(anyId(), TransactionState.COMMITTED, 999L)))
         .when(coordinator)
         .getState(anyId());
 
