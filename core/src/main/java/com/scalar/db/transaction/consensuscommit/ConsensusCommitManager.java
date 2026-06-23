@@ -76,6 +76,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  // CBRL PoC: backup-window state. enable/disableRedoLogging() flip it; begin() captures it
+  // into each transaction's context, so the logging mode is decided once, at transaction start.
+  private final AtomicBoolean redoLoggingEnabled = new AtomicBoolean(false);
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -225,9 +228,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
               config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
               config.isOnePhaseCommitEnabled());
     }
-    // CBRL PoC: set the initial redo-logging mode from config so a benchmark can pick the mode
-    // without code. The runtime enable/disableRedoLogging() can still flip it afterward.
-    handler.setRedoLoggingEnabled(config.isRedoLoggingEnabled());
+    // CBRL PoC: seed the backup-window state from config so a benchmark can pick the mode without
+    // code. The runtime enable/disableRedoLogging() can still flip it afterward.
+    redoLoggingEnabled.set(config.isRedoLoggingEnabled());
     return handler;
   }
 
@@ -319,7 +322,13 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
         new TransactionContext(
-            txId, snapshot, isolation, readOnly, oneOperation, groupCommitSlotReserved);
+            txId,
+            snapshot,
+            isolation,
+            readOnly,
+            oneOperation,
+            groupCommitSlotReserved,
+            redoLoggingEnabled.get());
     DistributedTransaction transaction =
         new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
     if (readOnly) {
@@ -813,12 +822,12 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public void enableRedoLogging() {
-    commit.setRedoLoggingEnabled(true);
+    redoLoggingEnabled.set(true);
   }
 
   @Override
   public void disableRedoLogging() {
-    commit.setRedoLoggingEnabled(false);
+    redoLoggingEnabled.set(false);
   }
 
   @Override

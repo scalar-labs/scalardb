@@ -31,6 +31,12 @@ public class TransactionContext {
   // whether the reserved slot must be released.
   public final boolean groupCommitSlotReserved;
 
+  // Whether full-write-set (redo) logging is on for this transaction (the CBRL backup window).
+  // Captured at begin from the manager's window state and immutable for the transaction's life,
+  // so the whole transaction logs consistently regardless of a mid-flight flip. When true, the
+  // commit/abort/group-emit paths record full after-image columns; when false, only primary keys.
+  public final boolean redoLoggingEnabled;
+
   // A list of scanners opened in the transaction
   public final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
@@ -45,12 +51,25 @@ public class TransactionContext {
       boolean readOnly,
       boolean oneOperation,
       boolean groupCommitSlotReserved) {
+    this(
+        transactionId, snapshot, isolation, readOnly, oneOperation, groupCommitSlotReserved, false);
+  }
+
+  public TransactionContext(
+      String transactionId,
+      Snapshot snapshot,
+      Isolation isolation,
+      boolean readOnly,
+      boolean oneOperation,
+      boolean groupCommitSlotReserved,
+      boolean redoLoggingEnabled) {
     this.transactionId = transactionId;
     this.snapshot = snapshot;
     this.isolation = isolation;
     this.readOnly = readOnly;
     this.oneOperation = oneOperation;
     this.groupCommitSlotReserved = groupCommitSlotReserved;
+    this.redoLoggingEnabled = redoLoggingEnabled;
   }
 
   @VisibleForTesting

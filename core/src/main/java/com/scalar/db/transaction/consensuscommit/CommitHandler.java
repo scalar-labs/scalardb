@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -48,10 +47,6 @@ public class CommitHandler {
   final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   private final boolean onePhaseCommitEnabled;
-  // CBRL PoC: runtime toggle for full-write-set (redo) logging, flipped via the manager's
-  // enable/disableRedoLogging(). Read per commit, so it can change at runtime — unlike a static
-  // config that is fixed for the manager's lifetime.
-  final AtomicBoolean redoLoggingEnabled = new AtomicBoolean(false);
 
   @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
 
@@ -72,14 +67,6 @@ public class CommitHandler {
     this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
-  }
-
-  /**
-   * Enables or disables full-write-set (redo) logging at runtime (CBRL PoC). When enabled, commits
-   * record full after-image columns in {@code tx_write_set}; when disabled, only primary keys.
-   */
-  void setRedoLoggingEnabled(boolean enabled) {
-    redoLoggingEnabled.set(enabled);
   }
 
   /**
@@ -392,8 +379,7 @@ public class CommitHandler {
    */
   public void commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    commitStateInternal(
-        context, writeSetEncoder.encodeSingleGroupWriteSet(context, redoLoggingEnabled.get()));
+    commitStateInternal(context, writeSetEncoder.encodeSingleGroupWriteSet(context));
   }
 
   /**
@@ -459,8 +445,7 @@ public class CommitHandler {
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
     return abortStateInternal(
-        context.transactionId,
-        writeSetEncoder.encodeSingleGroupWriteSet(context, redoLoggingEnabled.get()));
+        context.transactionId, writeSetEncoder.encodeSingleGroupWriteSet(context));
   }
 
   /**

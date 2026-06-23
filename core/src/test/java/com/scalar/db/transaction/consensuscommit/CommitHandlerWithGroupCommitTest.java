@@ -580,9 +580,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock,
-            new WriteSetEncoder(tableMetadataManager),
-            new java.util.concurrent.atomic.AtomicBoolean(false));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId1 = keyManipulator.fullKey(parentId, "child-1");
@@ -630,9 +628,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock,
-            new WriteSetEncoder(tableMetadataManager),
-            new java.util.concurrent.atomic.AtomicBoolean(false));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxIdWriting = keyManipulator.fullKey(parentId, "writing");
@@ -676,9 +672,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock,
-            new WriteSetEncoder(tableMetadataManager),
-            new java.util.concurrent.atomic.AtomicBoolean(false));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
@@ -713,9 +707,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock,
-            new WriteSetEncoder(tableMetadataManager),
-            new java.util.concurrent.atomic.AtomicBoolean(false));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
 
     String parentId = keyManipulator.generateParentKey();
 
@@ -739,9 +731,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock,
-            new WriteSetEncoder(tableMetadataManager),
-            new java.util.concurrent.atomic.AtomicBoolean(false));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
@@ -780,9 +770,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     Coordinator coordinatorMock = mock(Coordinator.class);
     CommitHandlerWithGroupCommit.Emitter emitter =
         new CommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock,
-            new WriteSetEncoder(tableMetadataManager),
-            new java.util.concurrent.atomic.AtomicBoolean(false));
+            coordinatorMock, new WriteSetEncoder(tableMetadataManager));
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");

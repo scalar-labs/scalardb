@@ -77,14 +77,16 @@ final class WriteSetEncoder {
    * storage backend, distinguishing it from a NULL column (which indicates "no info" for
    * lazy-recovery aborts or pre-feature rows).
    *
+   * <p>Whether non-key column values are included (full redo vs. keys-only) is taken from {@code
+   * context.redoLoggingEnabled}, captured at the transaction's begin.
+   *
    * @param context the transaction context
-   * @param includeColumns whether to include non-key column values for {@code Put} entries
    * @return the encoded {@link WriteSet}
    */
-  WriteSet encodeSingleGroupWriteSet(TransactionContext context, boolean includeColumns) {
+  WriteSet encodeSingleGroupWriteSet(TransactionContext context) {
     WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(1);
     if (context.snapshot.hasWritesOrDeletes()) {
-      builder.addEntryGroups(encodeEntryGroup(context.snapshot, null, includeColumns));
+      builder.addEntryGroups(encodeEntryGroup(context.snapshot, null, context.redoLoggingEnabled));
     }
     return builder.build();
   }
@@ -98,11 +100,14 @@ final class WriteSetEncoder {
    * persisted payload stays minimal. {@code schema_version} is always set even when all children
    * are read-only.
    *
+   * <p>The redo mode is taken per child from {@code context.redoLoggingEnabled} (captured at each
+   * transaction's begin), so a batch that straddles a backup-window flip records each child
+   * faithfully — restore filters per entry.
+   *
    * @param contexts the transaction contexts in the group, in the desired emit order
-   * @param includeColumns whether to include non-key column values for {@code Put} entries
    * @return the encoded {@link WriteSet}
    */
-  WriteSet encodeMultiGroupWriteSet(List<TransactionContext> contexts, boolean includeColumns) {
+  WriteSet encodeMultiGroupWriteSet(List<TransactionContext> contexts) {
     WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(1);
     for (TransactionContext context : contexts) {
       if (!context.snapshot.hasWritesOrDeletes()) {
@@ -110,7 +115,8 @@ final class WriteSetEncoder {
         continue;
       }
       String childId = KEY_MANIPULATOR.keysFromFullKey(context.transactionId).childKey;
-      builder.addEntryGroups(encodeEntryGroup(context.snapshot, childId, includeColumns));
+      builder.addEntryGroups(
+          encodeEntryGroup(context.snapshot, childId, context.redoLoggingEnabled));
     }
     return builder.build();
   }
@@ -119,8 +125,7 @@ final class WriteSetEncoder {
    * Encodes an {@link EntryGroup} from the {@link Snapshot}'s write/delete sets.
    *
    * <p>Visible for testing only — production callers go through {@link
-   * #encodeSingleGroupWriteSet(TransactionContext, boolean)} or {@link
-   * #encodeMultiGroupWriteSet(List, boolean)}.
+   * #encodeSingleGroupWriteSet(TransactionContext)} or {@link #encodeMultiGroupWriteSet(List)}.
    *
    * @param snapshot the snapshot of the transaction
    * @param childId the child id within a group commit, or {@code null} for non-group-commit

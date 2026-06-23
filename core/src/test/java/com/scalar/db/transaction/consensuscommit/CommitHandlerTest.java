@@ -241,7 +241,7 @@ public class CommitHandlerTest {
       Snapshot snapshot) {
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
-    return handler.writeSetEncoder.encodeSingleGroupWriteSet(context, false);
+    return handler.writeSetEncoder.encodeSingleGroupWriteSet(context);
   }
 
   @ParameterizedTest
