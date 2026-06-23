@@ -62,6 +62,48 @@ public class RecoveryExecutor implements AutoCloseable {
                 .build());
   }
 
+  /**
+   * Resolves the value to return for an uncommitted record encountered during a read and recovers
+   * the record asynchronously.
+   *
+   * <p>The record recovery runs on a background thread, exposed through {@link
+   * Result#recoveryFuture}, and delegates to the best-effort {@link
+   * RecoveryHandler#tryRecover(Selection, TransactionResult, Optional)}. <b>The record is not
+   * guaranteed to be recovered, even after {@link Result#recoveryFuture} completes</b>: a completed
+   * future only means the recovery attempt ran, not that the record reached a resolved physical
+   * state. Recovery is intentionally skipped when the writer has no coordinator state and has not
+   * expired (it may still be in flight), and a roll that conflicts with a concurrent actor is
+   * deferred to a subsequent read. This is acceptable on the lazy-recovery read path because a
+   * later read retries recovery. Callers that require the record to be resolved before proceeding
+   * must use {@link #executeSynchronously(Selection, TransactionResult, Optional)} instead, which
+   * guarantees the record is recovered when it returns {@code true}.
+   *
+   * <p>The {@code recoveryType} controls what value is returned and whether recovery is attempted:
+   *
+   * <ul>
+   *   <li>{@code RETURN_LATEST_RESULT_AND_RECOVER}: read the coordinator state and return the
+   *       latest result — the after-image if the writer committed, otherwise the before-image —
+   *       then recover the record. Throws {@link UncommittedRecordException} when the writer has no
+   *       coordinator state and has not expired (it may still be in flight).
+   *   <li>{@code RETURN_COMMITTED_RESULT_AND_RECOVER}: return the committed (before-image) result
+   *       immediately and recover the record on the background thread, where the coordinator state
+   *       is read and the not-expired guard is applied.
+   *   <li>{@code RETURN_COMMITTED_RESULT_AND_NOT_RECOVER}: return the committed (before-image)
+   *       result without attempting any recovery (the future completes immediately).
+   * </ul>
+   *
+   * @param key the snapshot key identifying the record
+   * @param selection the selection that read the record
+   * @param result the latest known uncommitted {@link TransactionResult} for the record
+   * @param transactionId the ID of the reading transaction (used for error reporting)
+   * @param recoveryType the recovery strategy to apply (see above)
+   * @return a {@link Result} holding the value to return, the future that completes when the
+   *     background recovery attempt finishes (completion does not imply the record was recovered;
+   *     see above), and whether the record was rolled back
+   * @throws CrudException if reading the coordinator state or table metadata fails, or if the
+   *     record is uncommitted by a writer that is still potentially in flight ({@link
+   *     UncommittedRecordException})
+   */
   public Result execute(
       Snapshot.Key key,
       Selection selection,
@@ -85,7 +127,7 @@ public class RecoveryExecutor implements AutoCloseable {
           future =
               executorService.submit(
                   () -> {
-                    recovery.recover(selection, result, state);
+                    recovery.tryRecover(selection, result, state);
                     return null;
                   });
           break;
@@ -131,7 +173,7 @@ public class RecoveryExecutor implements AutoCloseable {
           future =
               executorService.submit(
                   () -> {
-                    recovery.recover(selection, result, winnerState);
+                    recovery.tryRecover(selection, result, winnerState);
                     return null;
                   });
         }
@@ -154,7 +196,7 @@ public class RecoveryExecutor implements AutoCloseable {
                   throwUncommittedRecordExceptionIfTransactionNotExpired(
                       s, selection, result, transactionId);
 
-                  recovery.recover(selection, result, s);
+                  recovery.tryRecover(selection, result, s);
                   return null;
                 });
 
@@ -357,15 +399,13 @@ public class RecoveryExecutor implements AutoCloseable {
   }
 
   /**
-   * Recovers a single record synchronously by delegating to the underlying {@link RecoveryHandler}.
-   * The synchronous counterpart of {@link #execute(Snapshot.Key, Selection, TransactionResult,
-   * String, RecoveryType)}; callers that already know the coordinator state and want the recovery
-   * to complete inline (e.g., {@code finishTransaction}) use this entry point without leaking the
-   * {@code RecoveryHandler} dependency itself.
+   * Recovers a single record synchronously when the coordinator state is already known to be
+   * present. This is the entry point for callers that always hold a terminal coordinator state.
    *
-   * <p>Rollforward vs. rollback is decided by the supplied coordinator state, and the underlying
-   * composers absorb {@link com.scalar.db.exception.storage.NoMutationException} when the record
-   * has already been recovered by a concurrent actor.
+   * <p>It delegates to {@link RecoveryHandler#recover(Selection, TransactionResult,
+   * Coordinator.State)}, the present-state overload that always rolls the record and never touches
+   * the coordinator — so the record is guaranteed to be recovered and {@link CoordinatorException}
+   * cannot be thrown. That overload returns nothing, so this method does too.
    *
    * @param selection the selection that identifies the user record
    * @param result the latest known TransactionResult for the record
@@ -374,15 +414,30 @@ public class RecoveryExecutor implements AutoCloseable {
    */
   void executeSynchronously(Selection selection, TransactionResult result, Coordinator.State state)
       throws ExecutionException {
-    try {
-      recovery.recover(selection, result, Optional.of(state));
-    } catch (CoordinatorException e) {
-      // recover only throws CoordinatorException via abortIfExpired, which runs solely when the
-      // coordinator state is empty. This entry point requires a non-null state, so the branch is
-      // unreachable.
-      throw new AssertionError(
-          "CoordinatorException from recover with a present state should be impossible", e);
-    }
+    recovery.recover(selection, result, state);
+  }
+
+  /**
+   * Recovers a single record synchronously, blocking until the recovery completes, and reports
+   * whether the record was recovered.
+   *
+   * <p>This delegates to {@link RecoveryHandler#recover(Selection, TransactionResult, Optional)},
+   * which guarantees that when {@code true} is returned the record has been physically resolved —
+   * the entry point for the {@code recoverRecord} API. See that method for the full semantics and
+   * the meaning of the returned value.
+   *
+   * @param selection the selection that identifies the user record
+   * @param result the latest known TransactionResult for the record
+   * @param state the coordinator state for the transaction that wrote the record, if any
+   * @return {@code true} if the record was recovered (resolved to a terminal state), {@code false}
+   *     if the writer may still be in flight and the call should be retried later
+   * @throws ExecutionException if the underlying storage read or mutation fails
+   * @throws CoordinatorException if reading or updating the coordinator state fails
+   */
+  boolean executeSynchronously(
+      Selection selection, TransactionResult result, Optional<Coordinator.State> state)
+      throws ExecutionException, CoordinatorException {
+    return recovery.recover(selection, result, state);
   }
 
   @Override

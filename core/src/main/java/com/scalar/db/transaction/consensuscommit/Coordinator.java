@@ -405,9 +405,8 @@ public class Coordinator {
 
   /**
    * Deletes the coordinator state row for the given transaction id. The delete is unconditional —
-   * if the row was already removed (e.g., by a concurrent {@code finishTransaction} call), this is
-   * a benign no-op at the storage layer and no exception is propagated. Storage errors surface as
-   * {@link CoordinatorException}; the caller (typically {@code finishTransaction}) is itself a
+   * if the row was already removed, this is a benign no-op at the storage layer and no exception is
+   * propagated. Storage errors surface as {@link CoordinatorException}; the caller is itself a
    * retryable API, so no internal retry is performed here.
    *
    * @param id the transaction id whose state row should be deleted

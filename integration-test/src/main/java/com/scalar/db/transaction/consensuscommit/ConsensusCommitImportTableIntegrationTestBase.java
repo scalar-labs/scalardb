@@ -499,7 +499,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -548,7 +548,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -588,7 +588,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
@@ -645,11 +645,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     // Assert
     // With the default isolation, the read path aborts the expired transaction synchronously (its
     // ABORTED coordinator state is written) before returning the result, then rolls the record back
-    // in the background. recover() is not used on this path.
+    // in the background. tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
     verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test
@@ -691,7 +691,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -740,7 +740,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -780,7 +780,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
@@ -837,11 +837,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     // Assert
     // With the default isolation, the read path aborts the expired transaction synchronously (its
     // ABORTED coordinator state is written) before returning the result, then rolls the record back
-    // in the background. recover() is not used on this path.
+    // in the background. tryRecover() is not used on this path.
     verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
     verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test
