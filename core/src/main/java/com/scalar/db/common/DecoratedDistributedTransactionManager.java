@@ -19,9 +19,11 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 public abstract class DecoratedDistributedTransactionManager
     implements DistributedTransactionManager {
@@ -300,6 +302,13 @@ public abstract class DecoratedDistributedTransactionManager
   @Override
   public boolean finishTransaction(String txId) throws TransactionException {
     return transactionManager.finishTransaction(txId);
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey)
+      throws TransactionException {
+    return transactionManager.recoverRecord(namespace, table, partitionKey, clusteringKey);
   }
 
   @Override

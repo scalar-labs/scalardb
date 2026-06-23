@@ -37,17 +37,117 @@ public class RecoveryHandler {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
   }
 
-  public void recover(
+  /**
+   * Best-effort recovery of the given record according to the writer transaction's coordinator
+   * state. This is the entry point for lazy recovery on the read path: it advances recovery as far
+   * as it cheaply can but does not guarantee the record reaches its resolved physical state, and it
+   * returns nothing.
+   *
+   * <ul>
+   *   <li>State present {@code COMMITTED}: roll the record forward.
+   *   <li>State present otherwise (i.e. {@code ABORTED}): roll the record back.
+   *   <li>State absent and the writer expired: abort the writer and roll the record back; if a
+   *       concurrent actor already resolved the writer (the abort is conflict-absorbed), the record
+   *       is left for that actor / a subsequent lazy recovery — a later read will recover it.
+   *   <li>State absent and the writer not expired: perform no recovery, since the writer may still
+   *       be in flight.
+   * </ul>
+   *
+   * <p>Use {@link #recover(Selection, TransactionResult, Optional)} instead when the caller needs a
+   * guarantee that the record has been physically resolved on return (e.g. the synchronous {@code
+   * recoverRecord} API).
+   *
+   * @param selection the selection that identifies the record to recover
+   * @param result the latest known {@link TransactionResult} for the record
+   * @param state the coordinator state of the writer transaction, or empty if it has no state row
+   * @throws ExecutionException if the underlying storage read or mutation fails
+   * @throws CoordinatorException if reading or updating the coordinator state fails
+   */
+  public void tryRecover(
       Selection selection, TransactionResult result, Optional<Coordinator.State> state)
       throws ExecutionException, CoordinatorException {
     if (state.isPresent()) {
-      if (state.get().getState().equals(TransactionState.COMMITTED)) {
-        rollforwardRecord(selection, result);
-      } else {
-        rollbackRecord(selection, result);
-      }
+      rollRecordToState(selection, result, state.get().getState());
     } else {
-      abortIfExpired(selection, result);
+      abortIfExpired(selection, result, false);
+    }
+  }
+
+  /**
+   * Recovers the given record according to the writer transaction's coordinator state, guaranteeing
+   * that when {@code true} is returned the record has been physically resolved (rolled forward or
+   * back). This is the entry point for callers that must be able to rely on the record being
+   * recovered once the call succeeds.
+   *
+   * <ul>
+   *   <li>State present {@code COMMITTED}: roll the record forward; returns {@code true}.
+   *   <li>State present otherwise (i.e. {@code ABORTED}): roll the record back; returns {@code
+   *       true}.
+   *   <li>State absent and the writer expired: abort the writer and roll the record back; returns
+   *       {@code true}. If a concurrent actor already resolved the writer (the abort is
+   *       conflict-absorbed), the record is rolled to the winner's terminal outcome. If the
+   *       writer's state row is already gone, {@code true} is still returned — the Coordinator
+   *       state cleanup process removed the state row after the winner committed, which also
+   *       resolved this record, so the record is already consistent.
+   *   <li>State absent and the writer not expired: perform no recovery and return {@code false},
+   *       since the writer may still be in flight. This is a "not yet recoverable" outcome; the
+   *       caller can retry later.
+   * </ul>
+   *
+   * @param selection the selection that identifies the record to recover
+   * @param result the latest known {@link TransactionResult} for the record
+   * @param state the coordinator state of the writer transaction, or empty if it has no state row
+   * @return {@code true} if the record was recovered (resolved to a terminal state), {@code false}
+   *     if the writer may still be in flight and the call should be retried later
+   * @throws ExecutionException if the underlying storage read or mutation fails
+   * @throws CoordinatorException if reading or updating the coordinator state fails
+   */
+  public boolean recover(
+      Selection selection, TransactionResult result, Optional<Coordinator.State> state)
+      throws ExecutionException, CoordinatorException {
+    if (state.isPresent()) {
+      recover(selection, result, state.get());
+      return true;
+    } else {
+      return abortIfExpired(selection, result, true);
+    }
+  }
+
+  /**
+   * Recovers the given record when the writer's coordinator state is already known to be present.
+   * With a present state the record is always rolled (forward if {@code COMMITTED}, back
+   * otherwise); the coordinator is never read or written, so — unlike {@link #recover(Selection,
+   * TransactionResult, Optional)} — this neither defers the roll nor throws {@link
+   * CoordinatorException}. This is the entry point for callers that already hold a terminal
+   * coordinator state.
+   *
+   * @param selection the selection that identifies the record to recover
+   * @param result the latest known {@link TransactionResult} for the record
+   * @param state the present terminal coordinator state of the writer transaction
+   * @throws ExecutionException if the underlying storage read or mutation fails
+   */
+  public void recover(Selection selection, TransactionResult result, Coordinator.State state)
+      throws ExecutionException {
+    rollRecordToState(selection, result, state.getState());
+  }
+
+  /**
+   * Rolls the record forward (if {@code state} is {@code COMMITTED}) or back (if {@code ABORTED}).
+   *
+   * <p>{@code state} must be a terminal state. The coordinator only ever persists terminal states,
+   * so every caller passes a {@code COMMITTED} or {@code ABORTED} state. The {@code assert}
+   * documents that invariant for developers and trips on a corrupt non-terminal state when
+   * assertions are enabled (e.g. in tests); in production, where assertions are disabled, a
+   * non-terminal state is treated as a rollback.
+   */
+  private void rollRecordToState(
+      Selection selection, TransactionResult result, TransactionState state)
+      throws ExecutionException {
+    if (state.equals(TransactionState.COMMITTED)) {
+      rollforwardRecord(selection, result);
+    } else {
+      assert state.equals(TransactionState.ABORTED);
+      rollbackRecord(selection, result);
     }
   }
 
@@ -168,12 +268,29 @@ public class RecoveryHandler {
     }
   }
 
-  private void abortIfExpired(Selection selection, TransactionResult result)
+  /**
+   * Aborts the writer of an uncommitted record if it has expired, and reports whether the record
+   * was resolved.
+   *
+   * @param ensureRecordResolved when {@code true}, the targeted record is guaranteed to be
+   *     physically resolved on return even when the abort conflicts with a concurrent actor (the
+   *     {@code recover} path); when {@code false}, a conflicting abort leaves the record for the
+   *     winning actor / a subsequent lazy recovery (the best-effort {@code tryRecover} path).
+   * @return {@code true} if the record was definitely recovered (the writer was aborted and the
+   *     record rolled, or a concurrent actor's outcome was applied), {@code false} if recovery
+   *     could not be guaranteed — either the writer has not expired and may still be in flight, or
+   *     the abort conflicted in the best-effort path and the targeted record was left for the
+   *     winning actor / a subsequent lazy recovery
+   */
+  private boolean abortIfExpired(
+      Selection selection, TransactionResult result, boolean ensureRecordResolved)
       throws CoordinatorException, ExecutionException {
     assert selection.forFullTableName().isPresent();
 
     if (!isTransactionExpired(result)) {
-      return;
+      // The writer may still be in flight; do not abort it. Report that the record is not yet
+      // recoverable so callers can retry later.
+      return false;
     }
 
     try {
@@ -194,12 +311,36 @@ public class RecoveryHandler {
           result.getId(),
           e);
 
-      // This can happen when the record has already been rolled back by another transaction. In
-      // this case, we just ignore it.
-      return;
+      if (!ensureRecordResolved) {
+        // Best-effort path (tryRecover): the targeted record is left for the winning actor / a
+        // subsequent lazy recovery, so this call did not resolve it. Skip the coordinator re-read
+        // entirely — it would be wasted work — and report that recovery is not guaranteed. The
+        // return value is discarded by the caller (tryRecover is void), so this only documents the
+        // honest outcome of the best-effort path.
+        return false;
+      }
+
+      // Guaranteed path (recover): a concurrent actor already resolved the writer. Re-read the
+      // coordinator state and roll the record to the winner's outcome so it is physically resolved
+      // on return.
+      Optional<TransactionState> rereadState =
+          coordinator.getState(result.getId()).map(Coordinator.State::getState);
+
+      if (rereadState.isPresent()) {
+        // Roll the targeted record to the winner's outcome. This is idempotent: the underlying
+        // composers absorb NoMutationException if the winner already rolled the record.
+        rollRecordToState(selection, result, rereadState.get());
+        return true;
+      }
+
+      // The writer's state row is already gone — which only happens after the Coordinator state
+      // cleanup process removes the state row, and that process also resolves this record before
+      // the cleanup. The record is therefore already consistent.
+      return true;
     }
 
     rollbackRecord(selection, result);
+    return true;
   }
 
   private void mutate(List<Mutation> mutations) throws ExecutionException {

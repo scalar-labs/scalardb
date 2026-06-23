@@ -1597,4 +1597,14 @@ public class JdbcTransactionManagerTest {
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageStartingWith("DB-CORE-10289:");
   }
+
+  @Test
+  public void recoverRecord_ShouldThrowUnsupportedOperationException() {
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord("ns", "tbl", Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageStartingWith("DB-CORE-10291:");
+  }
 }

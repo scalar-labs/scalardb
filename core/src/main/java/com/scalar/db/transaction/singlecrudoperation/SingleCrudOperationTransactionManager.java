@@ -40,6 +40,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -447,6 +449,13 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED
             .buildMessage());
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

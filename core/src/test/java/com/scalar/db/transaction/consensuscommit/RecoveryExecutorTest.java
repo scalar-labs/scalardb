@@ -340,7 +340,7 @@ public class RecoveryExecutorTest {
         .isInstanceOf(CrudException.class);
 
     // Verify no recovery attempted
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -364,7 +364,7 @@ public class RecoveryExecutorTest {
         .isInstanceOf(UncommittedRecordException.class);
 
     // Verify no recovery attempted
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -393,7 +393,7 @@ public class RecoveryExecutorTest {
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
     verify(recovery).rollbackRecord(selection, transactionResult);
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -423,7 +423,7 @@ public class RecoveryExecutorTest {
     assertThat(result.recoveredResult).isEmpty();
     assertThat(result.rolledBack).isTrue();
     verify(recovery).rollbackRecord(selection, transactionResult);
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -453,7 +453,8 @@ public class RecoveryExecutorTest {
     // Assert: the committed after-image is returned -- not the stale before-image
     assertThat(result.recoveredResult).hasValue(prepareRolledForwardResult());
     assertThat(result.rolledBack).isFalse();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(committedState)));
+    verify(recovery)
+        .tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(committedState)));
   }
 
   @Test
@@ -480,7 +481,8 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+    verify(recovery)
+        .tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
   @Test
@@ -506,7 +508,7 @@ public class RecoveryExecutorTest {
 
     // Verify no recovery attempted
     verify(recovery, never()).rollbackRecord(any(), any());
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -532,7 +534,8 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+    verify(recovery)
+        .tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
   @Test
@@ -560,7 +563,8 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).isEmpty();
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+    verify(recovery)
+        .tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
   @Test
@@ -590,7 +594,7 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledForwardResult());
     assertThat(result.rolledBack).isFalse();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
+    verify(recovery).tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
   @Test
@@ -617,7 +621,7 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).isNotPresent();
     assertThat(result.rolledBack).isFalse();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
+    verify(recovery).tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
   @Test
@@ -646,7 +650,7 @@ public class RecoveryExecutorTest {
     assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -676,7 +680,7 @@ public class RecoveryExecutorTest {
     assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -703,7 +707,7 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
+    verify(recovery).tryRecover(eq(selection), eq(transactionResult), eq(Optional.empty()));
   }
 
   @Test
@@ -731,7 +735,7 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).isEmpty();
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.empty()));
+    verify(recovery).tryRecover(eq(selection), eq(transactionResult), eq(Optional.empty()));
   }
 
   @Test
@@ -757,7 +761,8 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+    verify(recovery)
+        .tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
   @Test
@@ -785,7 +790,8 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).isEmpty();
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
+    verify(recovery)
+        .tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(abortedState)));
   }
 
   @Test
@@ -815,7 +821,7 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
+    verify(recovery).tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
   @Test
@@ -842,7 +848,7 @@ public class RecoveryExecutorTest {
     // Assert
     assertThat(result.recoveredResult).hasValue(prepareRolledBackResult());
     assertThat(result.rolledBack).isTrue();
-    verify(recovery).recover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
+    verify(recovery).tryRecover(eq(selection), eq(transactionResult), eq(Optional.of(commitState)));
   }
 
   @Test
@@ -870,7 +876,7 @@ public class RecoveryExecutorTest {
     assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -897,7 +903,7 @@ public class RecoveryExecutorTest {
     assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
@@ -924,19 +930,55 @@ public class RecoveryExecutorTest {
     assertThat(result.rolledBack).isTrue();
 
     // Verify no recovery attempted
-    verify(recovery, never()).recover(any(), any(), any());
+    verify(recovery, never()).tryRecover(any(), any(), any());
   }
 
   @Test
-  public void executeSynchronously_ShouldDelegateToRecoveryHandler() throws Exception {
+  public void
+      executeSynchronously_WithOptionalPresentState_ShouldDelegateToRecoverAndReturnItsResult()
+          throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED);
+    Optional<Coordinator.State> state =
+        Optional.of(new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED));
+    when(recovery.recover(selection, transactionResult, state)).thenReturn(true);
 
     // Act
-    executor.executeSynchronously(selection, transactionResult, state);
+    boolean actual = executor.executeSynchronously(selection, transactionResult, state);
 
     // Assert
-    verify(recovery).recover(selection, transactionResult, Optional.of(state));
+    assertThat(actual).isTrue();
+    verify(recovery).recover(selection, transactionResult, state);
+  }
+
+  @Test
+  public void
+      executeSynchronously_WithOptionalEmptyState_ShouldDelegateToRecoverAndReturnItsResult()
+          throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    when(recovery.recover(selection, transactionResult, Optional.empty())).thenReturn(false);
+
+    // Act
+    boolean actual = executor.executeSynchronously(selection, transactionResult, Optional.empty());
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(recovery).recover(selection, transactionResult, Optional.empty());
+  }
+
+  @Test
+  public void executeSynchronously_WithNonOptionalPresentState_ShouldDelegateToRecover()
+      throws Exception {
+    // Arrange
+    TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
+    Coordinator.State state = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+
+    // Act — the present-state overload is used by finishTransaction and returns nothing.
+    executor.executeSynchronously(selection, transactionResult, state);
+
+    // Assert — it delegates to the present-state recover overload (which never touches the
+    // coordinator and cannot throw CoordinatorException).
+    verify(recovery).recover(selection, transactionResult, state);
   }
 }
