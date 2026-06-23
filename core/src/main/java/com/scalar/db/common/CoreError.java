@@ -1089,6 +1089,18 @@ public enum CoreError implements ScalarDbError {
       "Finishing a transaction is not supported in single CRUD operation transactions",
       "",
       ""),
+  JDBC_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0291",
+      "Recovering a record is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0292",
+      "Recovering a record is not supported in single CRUD operation transactions",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1438,7 +1450,13 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR,
       "0068",
-      "Finishing the transaction failed. Transaction ID: %s, Details: %s",
+      "Finishing the transaction failed. Transaction ID: %s; Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED(
+      Category.INTERNAL_ERROR,
+      "0069",
+      "Recovering the record failed. Table: %s; Partition Key: %s; Clustering Key: %s; Details: %s",
       "",
       ""),
 

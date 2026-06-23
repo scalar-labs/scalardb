@@ -20,10 +20,12 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /** @deprecated As of release 3.5.0. Will be removed in release 4.0.0 */
@@ -228,6 +230,13 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public boolean finishTransaction(String txId) throws TransactionException {
     return manager.finishTransaction(txId);
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey)
+      throws TransactionException {
+    return manager.recoverRecord(namespace, table, partitionKey, clusteringKey);
   }
 
   @Override

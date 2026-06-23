@@ -2,10 +2,12 @@ package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 
 public interface DistributedTransactionManager
     extends TransactionManagerCrudOperable, AutoCloseable {
@@ -479,12 +481,12 @@ public interface DistributedTransactionManager
   }
 
   /**
-   * Finishes a given terminated transaction by performing any remaining post-termination work and
-   * cleaning up the Coordinator state row. The transaction must already be in a terminal state
+   * Finishes a given terminated transaction by completing any remaining post-termination work and
+   * performing the Coordinator state cleanup. The transaction must already be in a terminal state
    * ({@code COMMITTED} or {@code ABORTED}); this method completes the per-record work that was
    * otherwise deferred to lazy recovery — rolling forward {@code PREPARED} or {@code DELETED}
    * records of a committed transaction, or rolling back {@code PREPARED} or {@code DELETED} records
-   * of an aborted one — and then removes the Coordinator state row.
+   * of an aborted one — and then performs the cleanup.
    *
    * <p>This is a best-effort, retryable cleanup API intended to be called after a transaction
    * terminates so that ScalarDB can complete per-record post-termination work eagerly and reclaim
@@ -524,6 +526,64 @@ public interface DistributedTransactionManager
    *     coordinator-level cleanup
    */
   boolean finishTransaction(String txId) throws TransactionException;
+
+  /**
+   * Recovers a single record left in an uncommitted physical state ({@code PREPARED} or {@code
+   * DELETED}) by a transaction that did not finish cleanly, identified by its key. The record is
+   * rolled forward to its after-image if the transaction that wrote it committed, or rolled back to
+   * its before-image if it aborted.
+   *
+   * <p>This is the key-scoped counterpart to {@link #finishTransaction(String)}. Unlike {@code
+   * finishTransaction}, which is transaction-ID-scoped and recovers every record of a transaction
+   * from its persisted write set, {@code recoverRecord} targets one record and does not require a
+   * write set — so it can repair records left behind by transactions that never persisted one (for
+   * example, transactions that crashed before {@link DistributedTransaction#commit()}, or that
+   * originated from binaries pre-dating the write-set column), which {@code finishTransaction}
+   * cannot reach.
+   *
+   * <p><b>Note:</b> This is a low-level operational API specific to the Consensus Commit
+   * transaction manager. Most applications should not call it directly — it is intended for
+   * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
+   * the implications of invoking this method directly.
+   *
+   * <p><b>Return value:</b> this method returns whether the record is resolved, not which terminal
+   * state it resolved to — the writer that committed (rolled forward) and the writer that aborted
+   * (rolled back) both return {@code true}. Callers that need the actual outcome should read the
+   * record after this method returns {@code true}. Reporting only resolved-or-not keeps the
+   * contract accurate in races where the writer's true outcome cannot be determined cheaply (for
+   * example, when a concurrent cleanup already removed the Coordinator state row).
+   *
+   * <p><b>Already-resolved records:</b> if the record does not exist or is already committed (no
+   * uncommitted metadata), this method is a no-op and returns {@code true}.
+   *
+   * <p><b>Expiration guard:</b> when the writer transaction has no Coordinator state row (so it
+   * cannot be told apart from a still-in-flight transaction), this method aborts the writer and
+   * rolls the record back only if the writer has expired; otherwise it performs no recovery and
+   * returns {@code false}, signaling that the writer may still be in flight and the call can be
+   * retried later. This matches the behavior of lazy recovery and prevents aborting a healthy,
+   * mid-commit transaction.
+   *
+   * <p><b>Partial recovery:</b> this method makes only the targeted record physically consistent.
+   * When it aborts a writer that spans multiple records, it writes a transaction-wide {@code
+   * ABORTED} Coordinator state, so the writer's other records are rolled back by lazy recovery on
+   * their next read — the outcome is eventually consistent (all-rollback), never a torn
+   * commit/rollback split.
+   *
+   * @param namespace the namespace of the record
+   * @param table the table of the record
+   * @param partitionKey the partition key of the record
+   * @param clusteringKey the clustering key of the record, or {@code null} if the table has no
+   *     clustering key
+   * @return {@code true} if the record was recovered (rolled forward or back, or already resolved),
+   *     or {@code false} if the writer is not yet recoverable (no Coordinator state and not
+   *     expired) and the call should be retried later
+   * @throws TransactionException if recovering the record fails
+   * @throws UnsupportedOperationException if the underlying transaction manager does not support
+   *     record-level recovery
+   */
+  boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey)
+      throws TransactionException;
 
   /**
    * Closes connections to the cluster. The connections are shared among multiple services such as
