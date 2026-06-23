@@ -187,7 +187,12 @@ public class RecoveryExecutor implements AutoCloseable {
       throws CrudException {
     TransactionResult current = result;
     for (int attempt = 0; ; attempt++) {
-      Optional<Coordinator.State> state = getCoordinatorState(current.getId());
+      // current is always an uncommitted record, so its tx_id is non-null here; getId() is
+      // @Nullable only for deemed-committed records, which are never recovered.
+      String txId = current.getId();
+      assert txId != null;
+
+      Optional<Coordinator.State> state = getCoordinatorState(txId);
 
       if (state.isPresent()) {
         boolean rolledBack = state.get().getState() == TransactionState.ABORTED;
@@ -230,7 +235,7 @@ public class RecoveryExecutor implements AutoCloseable {
         // The transaction committed and was cleaned up; the record carries the committed value.
         return new Result(key, fresh, Futures.immediateFuture(null), false);
       }
-      if (!current.getId().equals(fresh.get().getId())) {
+      if (!txId.equals(fresh.get().getId())) {
         // A different transaction re-prepared the record. Re-resolve against it.
         checkReadRetryLimit(attempt, transactionId);
         current = fresh.get();
@@ -242,7 +247,7 @@ public class RecoveryExecutor implements AutoCloseable {
       // aborted, so abort it synchronously (write its ABORTED coordinator state) first.
       boolean aborted;
       try {
-        aborted = recovery.tryAbortExpiredTransaction(current.getId());
+        aborted = recovery.tryAbortExpiredTransaction(txId);
       } catch (CoordinatorException e) {
         throw new CrudException(
             CoreError.CONSENSUS_COMMIT_RECOVERING_RECORDS_FAILED.buildMessage(e.getMessage()),
@@ -277,7 +282,7 @@ public class RecoveryExecutor implements AutoCloseable {
           // The writer committed and was cleaned up; the record carries the committed value.
           return new Result(key, afterAbort, Futures.immediateFuture(null), false);
         }
-        if (!current.getId().equals(afterAbort.get().getId())) {
+        if (!txId.equals(afterAbort.get().getId())) {
           // A different transaction re-prepared the record after we aborted the writer (the writer
           // was rolled back and, possibly through one or more intervening commits, a new writer
           // re-prepared it). current's before-image is no longer guaranteed to be the latest
