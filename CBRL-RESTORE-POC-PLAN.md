@@ -111,9 +111,12 @@ behind synthetic data.
    `hash(key) % N`. All ops for a key land in one bucket ⇒ single owner per key.
 2. **Pass 2 (replay):** thread pool `M ≤ N`; each thread owns whole buckets. Per key,
    cursor-driven chain replay; append order within a bucket irrelevant.
-3. **Integrity check:** chain connectivity — every non-null `prev_tx_id` resolves to the
-   current record or to a logged op; dangling ⇒ fail-loud. (Not "every op applied" — net-zero
-   delete-terminated runs are legitimately unapplied.)
+3. **Structural check (fork only):** replay rejects a *fork* — two ops sharing a `prev_tx_id`,
+   impossible under serializable commit — fail-loud. A dangling `prev_tx_id` is **not** failed:
+   under window-scoped logging it is legitimate (the chain root predates the window) and
+   indistinguishable from a true drop, so it is tolerated (left unapplied). Completeness is the
+   capture's responsibility, not this primitive's. (See §4.4; the earlier fail-loud-connectivity
+   `IntegrityChecker` was dropped as wrong here.)
 4. **Property tests:** confluence (random write set + random apply order ⇒ same final state),
    idempotency (re-run ⇒ same state).
 
@@ -217,6 +220,19 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
   (`prevTxId == null`) apply only when the current record (from §4.5 `RestoredRecordReader`) is
   absent or deleted (the loop polls `insertOperations` exactly when `currentTxId == null ||
   deleted`).
+- **Current vs. ideal (memo).** For the replay primitive, current *is* ideal — tolerate a dangling
+  `prevTxId`, reject a fork. Worked window-boundary cases confirm the dangling is legitimate: e.g.
+  an in-window op whose `prevTxId` is a pre-window (unlogged) version while the copy already holds
+  that op's result (skipped — the base reflects it); or a pre-window base whose only in-window
+  update committed **beyond the consistency point** (filtered as non-redo, so the base value
+  stands). The unavoidable price: a *genuine* in-window drop (a capture bug) is **indistinguishable**
+  from a legitimate dangling at replay, so replay cannot fail-loud on it — it is silently tolerated
+  too, yielding a wrong-but-plausible image. Completeness is therefore an **upstream capture
+  invariant** (full in-window coordinator scan + `closeOverChain` chain closure) that this PoC
+  *assumes but does not verify*. A possible future hardening would move some detection back into
+  replay by passing the backup's committed-tx-id set: a `prevTxId` naming an in-window **committed**
+  tx whose op is missing is a real drop (fail-loud), vs. one naming an uncaptured/pre-window tx
+  (legitimate, skip). Not implemented.
 
 ### 4.5 `RestoredRecordReader` (seam for C4: PREPARED-record recovery)
 - `RecordState get(RecordKey)` → the key's current `RecordState` in the **database being
