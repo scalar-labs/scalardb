@@ -438,12 +438,46 @@ the consistency point + `before_*` to a clean committed state **before** chain r
 `rollback` via `CommitMutationComposer`/`RollbackMutationComposer` is the concrete reference
 pattern.)
 
+**C5 — restore must replay exactly ONE backup window's redo (stale-write-set accumulation).** The
+coordinator's `tx_write_set` is a long-lived shared table that a separate cleanup worker prunes; the
+write-sets a backup captures are **not** intrinsically scoped to that backup's window. With hourly
+backups and a stuck/slow cleanup, the coordinator copy taken for the 01:00 backup can still contain
+the 00:00 window's full redo. Replaying those **stale, earlier-window** write-sets against the 01:00
+user-table copy diverges, because the copy has moved past them in the unlogged gap between windows.
+
+Sharpest failure — **a record resurrected after a logging-off-gap delete:** key K is INSERTed in
+window 00:00 (logged, full redo); deleted physically between 00:10 and 01:00 (logging off → not
+logged); absent from the 01:00 user-table copy. Restore replays K's stale 00:00 INSERT against an
+absent base, the insert root is not "reflected," so it is applied and **K is wrongly resurrected**.
+The current `restore()` filter (`entry.hasTxVersion()`) does **not** catch this: the 00:00 entries
+were logged in an active window with `includeColumns=true`, so they carry `tx_version` and look like
+legitimate redo. (This is also why the earlier "logical-delete is a non-issue" resolution holds only
+*within* the matching window; cross-window redo breaks its premise.)
+
+**Fix — a backup-window epoch/id stamped on each logged write-set, and restore replays only the
+epoch matching the backup being restored.** Robust and **independent of the cleanup worker** (stuck,
+slow, or absent cleanup can never corrupt a restore). Safe to drop the older epoch entirely:
+anything an earlier window produced that is still current is already in the copy **base** (the
+anchor), so replay never needs its write-set; every op on the forward path from a window-B base to
+window B's consistency point committed within window B (the "window-start ≤ copy" precondition, §6.1
+alignment), so it carries epoch B; and a window-B update whose `prev_tx_id` points back to an
+earlier-epoch version just becomes a below-base dangling link, already tolerated/skipped by the
+SSR-tolerant replay (§4.4). Rejected alternatives: relying on cleanup finishing first (exactly the
+stuck-worker failure); filtering by commit time `created_at` (clock-fragile, and `created_at` is
+banned from restore — see the highest rule); a per-window coordinator table (can't redirect the live
+transaction coordinator per window — reduces to "needs a discriminator" = the epoch). The epoch is a
+restore-side discriminator distinct from the logging-side window flag below. Demonstrating it in the
+IT needs a multi-window harness with a logging-off gap-delete, which the single-window harness does
+not yet do — so it is stated here as a precondition, not yet IT-exercised.
+
 **TODO (deferred) — backup-mode flag (the "is CBRL window open?" switch).** Slides 4/6–8: a
 durable, runtime-readable flag every embedded-Core process observes before DB backups start
 (Cluster can push it like pause). Open points, not decided here:
 - **One flag gating both** mutation-logging and logical-delete mode (they must flip together —
   concern #2, one fail-closed window-mode boundary), stored with a **TTL/expiry** so a crashed backup process can't pin the window
-  open (slide 10). Possibly a window epoch/id.
+  open (slide 10). The flag should carry a **window epoch/id** — and that epoch must be stamped on
+  every logged write-set, because restore needs it to replay only the matching window's redo (C5);
+  this is its primary motivation, beyond TTL bookkeeping.
 - **The hard part is fail-closed visibility, not the storage:** the slides' cache-poll + wait is
   a heuristic a GC pause/partition defeats; concern #2 requires a node that can't confirm
   window mode to not commit in a chain-breaking way. The table is necessary, not sufficient.
