@@ -75,7 +75,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
-  private Coordinator coordinator;
+  private CoordinatorStateAccessor coordinator;
   private RecoveryHandler recovery;
   private RecoveryExecutor recoveryExecutor;
   @Nullable private CoordinatorGroupCommitter groupCommitter;
@@ -124,7 +124,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   public void setUp() throws Exception {
     dropTables();
     storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
@@ -279,8 +279,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     if (coordinatorState == null) {
       return;
     }
-    Coordinator.State state =
-        new Coordinator.State(ANY_ID_1, coordinatorState, System.currentTimeMillis());
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, coordinatorState, System.currentTimeMillis());
     coordinator.putState(state);
   }
 
@@ -593,7 +593,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     // Assert
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
@@ -786,7 +786,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     // Assert
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test

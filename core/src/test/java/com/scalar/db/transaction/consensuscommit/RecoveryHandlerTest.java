@@ -57,7 +57,7 @@ public class RecoveryHandlerTest {
               .build());
 
   @Mock private DistributedStorage storage;
-  @Mock private Coordinator coordinator;
+  @Mock private CoordinatorStateAccessor coordinator;
   @Mock private TransactionTableMetadataManager transactionTableMetadataManager;
   @Mock private TransactionTableMetadata transactionTableMetadata;
   @Mock private Selection selection;
@@ -112,9 +112,9 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(
+            new CoordinatorStateAccessor.State(
                 ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     doNothing()
         .when(handler)
@@ -140,8 +140,9 @@ public class RecoveryHandlerTest {
     // Arrange
     long committedAt = 1234567890123L;
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, committedAt));
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, committedAt));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     doReturn(Collections.emptyList()).when(composer).get();
     doReturn(composer)
@@ -162,9 +163,9 @@ public class RecoveryHandlerTest {
           throws ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(
+            new CoordinatorStateAccessor.State(
                 ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
@@ -188,9 +189,9 @@ public class RecoveryHandlerTest {
           throws ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(
+            new CoordinatorStateAccessor.State(
                 ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
@@ -214,9 +215,10 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -233,9 +235,10 @@ public class RecoveryHandlerTest {
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -257,9 +260,10 @@ public class RecoveryHandlerTest {
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -282,7 +286,7 @@ public class RecoveryHandlerTest {
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(System.currentTimeMillis());
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -302,8 +306,8 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doNothing().when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -323,13 +327,13 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
     // A concurrent actor already aborted the writer; the re-read returns that ABORTED state.
     when(coordinator.getState(ANY_ID_1))
         .thenReturn(
             Optional.of(
-                new Coordinator.State(
+                new CoordinatorStateAccessor.State(
                     ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis())));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
@@ -351,14 +355,14 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
     // A concurrent commit won the race; the re-read sees COMMITTED, which must be reported
     // instead of a false ABORTED.
     when(coordinator.getState(ANY_ID_1))
         .thenReturn(
             Optional.of(
-                new Coordinator.State(
+                new CoordinatorStateAccessor.State(
                     ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis())));
     doNothing()
         .when(handler)
@@ -386,7 +390,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
     when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
 
@@ -408,7 +412,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doThrow(CoordinatorException.class).when(coordinator).forceAbort(anyString());
 
     // Act
@@ -430,7 +434,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class)))
         .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.COMMITTED, ANY_ID_1)));
 
@@ -453,7 +457,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
 
     // Act
@@ -476,7 +480,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class)))
         .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.PREPARED, ANY_ID_2)));
 
@@ -499,7 +503,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class)))
         .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.COMMITTED, ANY_ID_1)));
 
@@ -521,7 +525,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
 
     // Act
@@ -543,7 +547,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class)))
         .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.PREPARED, ANY_ID_2)));
 
@@ -565,7 +569,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class))).thenThrow(ExecutionException.class);
 
     // Act Assert
@@ -584,7 +588,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     when(storage.get(any(Get.class))).thenThrow(ExecutionException.class);
 
     // Act Assert
@@ -638,8 +642,9 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Coordinator.State state =
-        new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis());
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(
+            ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis());
     doNothing()
         .when(handler)
         .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
@@ -658,8 +663,9 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Coordinator.State state =
-        new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(
+            ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -680,9 +686,9 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(
+            new CoordinatorStateAccessor.State(
                 ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     doNothing()
         .when(handler)
@@ -700,9 +706,10 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
+    Optional<CoordinatorStateAccessor.State> state =
         Optional.of(
-            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -722,7 +729,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
 
     // Act
@@ -741,7 +748,7 @@ public class RecoveryHandlerTest {
     // Arrange — the writer has no coordinator state and has not expired, so it may still be in
     // flight; best-effort recovery must leave it untouched.
     TransactionResult result = preparePreparedResult(System.currentTimeMillis());
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
 
     // Act
     handler.tryRecover(selection, result, state);
@@ -760,7 +767,7 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doNothing().when(coordinator).forceAbort(anyString());
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
