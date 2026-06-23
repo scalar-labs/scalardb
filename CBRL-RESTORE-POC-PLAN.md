@@ -254,6 +254,49 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
   `consensuscommit.Snapshot`. Both of those are also "reading records"; the name must not blur
   into them.
 
+### 4.6 Alternative (worth revisiting) — fold recovery into the replay instead of driving core lazy recovery
+
+**Current approach (§4.5, §6.1, §7 C4):** restore delegates PREPARED/DELETED finalization to
+ScalarDB **core** lazy recovery — `reloadCoordinatorFromBackup` rebuilds the coordinator from the
+backup, then `awaitCopyRecovered` drives core recovery by reading every key transactionally (a read
+side-effect) and polls a raw scan until quiescent. `RecordApplier` then assumes a clean committed
+base and only chain-replays forward.
+
+**Alternative:** make restore a **fully self-contained offline computation** over (copy +
+coordinator backup) by having the replay finalize in-flight records itself. The committed-tx set it
+needs is already in hand — it **is** the redo ops' tx-ids (the redo is exploded from the backup's
+COMMITTED rows). For each in-flight (PREPARED/DELETED) copy record with writing tx `T`:
+- `T` is in the redo set (committed by the consistency point) → **roll forward** (apply `T`'s
+  after-image);
+- `T` is not in the redo set (aborted / beyond the consistency point) → **roll back** (restore the
+  record's `before_*` image, which the as-is copy faithfully preserves).
+
+This requires the reader to read `tx_state` + `before_*` (today `readCopyState` reads only
+`Attribute.ID` + user columns and assumes committed).
+
+**Pros**
+- Removes the dependency on *driving* core lazy recovery: no `awaitCopyRecovered` (no
+  transactional-get-triggers-recovery side effect, no quiescence polling, no 15s deadline).
+- Removes the coordinator-table reload (`reloadCoordinatorFromBackup` truncate+reload) and the
+  in-doubt `putState(ABORTED)` machinery (and its group-commit-child concern) — the replay reads the
+  backup directly as the decision source.
+- Restore becomes a pure, deterministic function of durable inputs (copy + backup) → easier to
+  reason about, test, and make crash-restartable (§4.3).
+
+**Cons**
+- The replay must **reimplement** core's rollforward/rollback (read `tx_state`/`before_*`, per-record
+  commit decision) and **exactly match** ScalarDB recovery semantics, incl. edge cases: partial
+  `before_*` images, deemed-as-committed / null-`tx_id` records, DELETED tombstones, group commit.
+- Expands the replay primitive's responsibility well beyond chain replay; more surface to get wrong
+  than reusing battle-tested core recovery, and it must track core recovery if that changes.
+
+**Status:** not implemented; a deliberate architecture choice, not a tweak. Note that "apply the redo
+for PREPARED records" alone covers only **rollforward** — correctness needs the **rollback** path
+too (an aborted/beyond-CP tx has no redo, so the record's `before_*` is the only source). Revisit if
+the coordinator-reload + recovery-driving prove too awkward for a production restore tool (e.g. when
+building durable crash-restart). Decide with a test exercising **both** rollforward and rollback
+through the replay.
+
 ---
 
 ## 5. Replay primitive (mirrors SSR `RecordApplyService`)
