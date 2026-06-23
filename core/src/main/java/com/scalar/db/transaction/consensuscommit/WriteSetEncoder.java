@@ -143,27 +143,36 @@ final class WriteSetEncoder {
     for (Map.Entry<Snapshot.Key, Put> e : snapshot.getWriteSet()) {
       Put put = e.getValue();
       TableMetadata tableMetadata = includeColumns ? getTableMetadata(put) : null;
-      Optional<TransactionResult> priorResult =
-          includeColumns ? readSetResult(snapshot, e.getKey()) : Optional.empty();
       builder.addEntries(
           encodeEntry(
-              put, Entry.EntryType.ENTRY_TYPE_WRITE, includeColumns, tableMetadata, priorResult));
+              put,
+              Entry.EntryType.ENTRY_TYPE_WRITE,
+              includeColumns,
+              tableMetadata,
+              latestTxResult(includeColumns, snapshot, e.getKey())));
     }
     for (Map.Entry<Snapshot.Key, Delete> e : snapshot.getDeleteSet()) {
       // Delete entries never carry non-key columns, so no meta-column filtering is needed; but in
       // full (redo) mode they still carry the prev_tx_id/tx_version chain metadata.
-      Optional<TransactionResult> priorResult =
-          includeColumns ? readSetResult(snapshot, e.getKey()) : Optional.empty();
       builder.addEntries(
           encodeEntry(
-              e.getValue(), Entry.EntryType.ENTRY_TYPE_DELETE, includeColumns, null, priorResult));
+              e.getValue(),
+              Entry.EntryType.ENTRY_TYPE_DELETE,
+              includeColumns,
+              null,
+              latestTxResult(includeColumns, snapshot, e.getKey())));
     }
     return builder.build();
   }
 
-  // Snapshot.getFromReadSet returns null (not Optional.empty()) when the key was never read — e.g.,
-  // a blind insert. Normalize that to an empty Optional meaning "no prior committed version".
-  private static Optional<TransactionResult> readSetResult(Snapshot snapshot, Snapshot.Key key) {
+  // The prior committed version of the key (whose tx_id becomes the entry's prev_tx_id), or empty
+  // when not logging redo, or when the key was never read — a blind insert, for which
+  // Snapshot.getFromReadSet returns null (normalized here to empty).
+  private static Optional<TransactionResult> latestTxResult(
+      boolean includeColumns, Snapshot snapshot, Snapshot.Key key) {
+    if (!includeColumns) {
+      return Optional.empty();
+    }
     Optional<TransactionResult> result = snapshot.getFromReadSet(key);
     return result == null ? Optional.empty() : result;
   }
@@ -187,7 +196,7 @@ final class WriteSetEncoder {
       Entry.EntryType type,
       boolean includeColumns,
       @Nullable TableMetadata tableMetadata,
-      Optional<TransactionResult> priorResult) {
+      Optional<TransactionResult> latestTxResult) {
     Entry.Builder builder = Entry.newBuilder().setEntryType(type);
     mutation.forNamespace().ifPresent(builder::setNamespaceName);
     mutation.forTable().ifPresent(builder::setTableName);
@@ -208,8 +217,8 @@ final class WriteSetEncoder {
       // Full (redo) mode: record the chain metadata CBRL replay needs. prev_tx_id is the prior
       // committed version's transaction id (absent for a first insert); tx_version is the
       // record's resulting version (prior version + 1, or 1 for a first insert).
-      priorResult.ifPresent(result -> builder.setPrevTxId(result.getId()));
-      builder.setTxVersion(priorResult.map(result -> result.getVersion() + 1).orElse(1));
+      latestTxResult.ifPresent(result -> builder.setPrevTxId(result.getId()));
+      builder.setTxVersion(latestTxResult.map(result -> result.getVersion() + 1).orElse(1));
     }
     return builder.build();
   }

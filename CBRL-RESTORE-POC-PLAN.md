@@ -120,7 +120,7 @@ behind synthetic data.
 **Non-goals (stubbed/synthetic for the spike).** Real window logging, real coordinator
 snapshotting, the fail-closed window flag (concern #2), logical-delete-mode wiring into the
 live read path (concern #1), and any production commit-path change. The PoC consumes a
-generated `Stream<RedoOp>` (§3, §4.1) so none of these block it.
+generated `Stream<RedoOperation>` (§3, §4.1) so none of these block it.
 
 ---
 
@@ -168,8 +168,8 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
 
 - **Reused as-is:** `com.scalar.db.transaction.consensuscommit.proto.v1.{Entry, Column, Key}`
   for `(namespace, table, partitionKey, clusteringKey, entryType, columns)`.
-- **`RedoOp` (the replay unit):** `{ txId, prevTxId (nullable), createdAtMillis, Entry entry }`.
-  `prevTxId == null` ⇔ INSERT root. The replay code depends only on `RedoOp`, never on how it
+- **`RedoOperation` (the replay unit):** `{ txId, prevTxId (nullable), Entry entry }`.
+  `prevTxId == null` ⇔ INSERT root. The replay code depends only on `RedoOperation`, never on how it
   was sourced — the integration test builds them from real coordinator `tx_write_set` rows, the
   property tests from `RedoLogGenerator`. `prevTxId` is whatever D1 (§7) lands on.
 - **`RecordKey`:** value type over `(namespace, table, partitionKey, clusteringKey)` with
@@ -185,15 +185,15 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
 ## 4. Components
 
 ### 4.1 `RedoLogGenerator` (the input)
-- Seeded; produces a `Stream<RedoOp>` for the window — random but **chain-consistent**. The
+- Seeded; produces a `Stream<RedoOperation>` for the window — random but **chain-consistent**. The
   expected final state is computed separately by the §6.2 reference applier, not here.
-- No `RedoLogSource` interface: pass 1 consumes a plain `Stream<RedoOp>`. Whatever produces it
+- No `RedoLogSource` interface: pass 1 consumes a plain `Stream<RedoOperation>`. Whatever produces it
   — the generator now, the deferred Q1 read (coordinator scan vs. dedicated log) later — just
-  yields a `Stream<RedoOp>`, so a one-method source interface today is speculative.
+  yields a `Stream<RedoOperation>`, so a one-method source interface today is speculative.
 
 ### 4.2 Pass 1 — `RecordShuffler`
-- Consumes the `Stream<RedoOp>`. For each op, compute `bucket = Math.floorMod(hash(recordKey),
-  N)`; append to that bucket. PoC backs buckets with in-memory `List<RedoOp>[N]` (file-backed
+- Consumes the `Stream<RedoOperation>`. For each op, compute `bucket = Math.floorMod(hash(recordKey),
+  N)`; append to that bucket. PoC backs buckets with in-memory `List<RedoOperation>[N]` (file-backed
   is a scaling TODO, not spike work).
 - Invariant asserted: all ops sharing a `RecordKey` land in exactly one bucket.
 
@@ -207,7 +207,7 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
 
 ### 4.4 Connectivity & the fork check (in `RecordApplier`, no separate checker)
 - **No fail-loud integrity checker** (an earlier `IntegrityChecker` idea was dropped — it would be
-  *wrong* here). Under window-scoped logging a `RedoOp` whose `prevTxId` points to a version the
+  *wrong* here). Under window-scoped logging a `RedoOperation` whose `prevTxId` points to a version the
   backup never captured (a pre-window or deleted base) is legitimate and indistinguishable from a
   genuinely dropped mid-chain op, so — like SSR — replay **tolerates** it: the unreachable op is
   skipped (left unapplied), no exception. Completeness is the backup capture's responsibility (full
@@ -242,10 +242,10 @@ key's ops:
    `WRITE` entry with `prev_tx_id == null` is an INSERT, with `prev_tx_id != null` an UPDATE; a
    `DELETE` entry is a delete. No new enum/oneof — this rests on the encoder invariant that
    `prev_tx_id` is set iff a before-image exists (true at the single `WriteSetEncoder` site).
-   - `insertOperations` — a `Deque<RedoOp>` of INSERT roots (`prev_tx_id == null`). Order is
+   - `insertOperations` — a `Deque<RedoOperation>` of INSERT roots (`prev_tx_id == null`). Order is
      irrelevant — the chain converges to the same final version — so they are **not** sorted by
      `created_at` (highest rule).
-   - `nonInsertOperations` — a `Map<String, RedoOp>` of UPDATE/DELETE ops **keyed by their
+   - `nonInsertOperations` — a `Map<String, RedoOperation>` of UPDATE/DELETE ops **keyed by their
      `prevTxId`**, so the chain is traversed by looking the current tx id up in the map.
 2. **Walk the chain** (`while (true)`):
    - if `currentTxId == null || deleted`: poll the next INSERT root, skipping any whose txId is
@@ -309,7 +309,7 @@ scenarios run under **both** configs — no second manager, no GC-only test.
    into an in-test copy, taken **after** step 2 ⇒ this defines **the consistency point** (C3).
 4. **stop workload** — quiesce; run lazy recovery so PREPARED records resolve.
 5. **restore** — for each `COMMITTED` row in the coordinator backup, explode its `WriteSet`
-   `EntryGroup`s into `RedoOp`s and replay them onto `cbrl_restore` via the §5 core
+   `EntryGroup`s into `RedoOperation`s and replay them onto `cbrl_restore` via the §5 core
    (`RecordShuffler` → `RecordApplier`), with `RestoredRecordReader` reading `cbrl_restore`.
 6. **compare** — assert `cbrl_restore` equals the expected state at the consistency point, per-key `Get` on
    both sides (cf. `assertPrimaryAndBackupDbTables`).
@@ -403,7 +403,7 @@ property tests feed `prevTxId` synthetically and don't need it).** `tx_write_set
   alone.
 - **D1c: order by commit time** — rejected: `created_at`/group commit give no reliable
   per-key total order; the design explicitly relies on the chain, not timestamps.
-The replay core depends only on `RedoOp` (D1-agnostic); the plan recommends D1a.
+The replay core depends only on `RedoOperation` (D1-agnostic); the plan recommends D1a.
 
 **Decided (A — op type modeling):** keep `ENTRY_TYPE_WRITE` and derive INSERT vs UPDATE from
 `prev_tx_id == null`. The `oneof` form (SSR's `WriteOperation`) is the type-safest but **rejected**:
@@ -422,14 +422,14 @@ whether to gate it by a window flag now or leave it always-on.
 
 **Q1 — window-log read path.** `coordinator.state` is hash-partitioned by `tx_id` with no time
 clustering, so "read every op from window start" is a full scan (concern #5 — window-log access path). In the PoC the
-shuffle just consumes a `Stream<RedoOp>`; the production choice (full coordinator scan vs.
+shuffle just consumes a `Stream<RedoOperation>`; the production choice (full coordinator scan vs.
 dedicated range-scannable log) stays open and is fed synthetic ops until decided.
 
 **C3 — the consistency point.** Coordinator snapshot must be atomic, strictly last, and group-atomic
 (all `child_ids` of a row in or out). Out of PoC scope (no real snapshotting) but the replay
 must treat an `EntryGroup` set as all-or-nothing per coordinator row (concern #8 — group commit); the PoC
 models a coordinator row as `{ txId, state, List<EntryGroup> }` and explodes children into
-`RedoOp`s only when `state == COMMITTED`.
+`RedoOperation`s only when `state == COMMITTED`.
 
 **C4: PREPARED-record recovery, before replay.** Records PREPARED in the backup image resolved via
 the consistency point + `before_*` to a clean committed state **before** chain replay anchors. Modeled as the
@@ -490,7 +490,7 @@ This is on the logging side (§10 out of scope for this spike); listed so it isn
 
 ```
 core/src/main/java/com/scalar/db/transaction/consensuscommit/cbrl/   // the replay core
-  RedoOp.java                  // unit: txId, prevTxId, Entry (chain-only; no created_at/tx_version)
+  RedoOperation.java                  // unit: txId, prevTxId, Entry (chain-only; no created_at/tx_version)
   RecordKey.java               // (ns, table, pk, ck) value type
   RecordState.java             // present, txId, mergedColumns, deleted, insertTxIds
   RestoredRecordReader.java    // C4: PREPARED-record recovery seam: RecordState get(RecordKey)
@@ -499,7 +499,7 @@ core/src/main/java/com/scalar/db/transaction/consensuscommit/cbrl/   // the repl
   CbrlReplayException.java     // fork hard-fail
 
 core/src/test/java/com/scalar/db/transaction/consensuscommit/cbrl/    // replay-core tests
-  RedoLogGenerator.java        // seeded: Stream<RedoOp>, chain-consistent
+  RedoLogGenerator.java        // seeded: Stream<RedoOperation>, chain-consistent
   ReferenceApplier.java        // trivial sequential applier → expected final state (oracle)
   ReplayCoreTest.java          // unit tests (§6.2)
   ReplayPropertyTest.java      // P1–P4 (§6.2)
@@ -594,7 +594,7 @@ remain open.
 
 - **Group commit: chain-linking + config-transparent IT done; in-doubt-child recovery is ScalarDB's own concern (no CBRL bug), exercised under the GC subclass** — restore core / §6.1 (design/impl + IT test)
 
-  **Landed (2026-06-18) — keep.** The redo→`RedoOp` explosion derives the writing transaction's **full id** — `keyManipulator.fullKey(parentRowId, childId)` for a normal group-commit child (row keyed by the parent, `child_id` set), else the row key itself (non-group-commit, or a delayed group commit keyed by the full id) — so `RedoOp.txId` matches the full id records store and other ops' `prev_tx_id` chains to. `closeOverChain` resolves a child's full `prev_tx_id` to its parent-keyed row; the `#1` reload preserves a parent row's `child_ids`. This chain-linking fix is correct.
+  **Landed (2026-06-18) — keep.** The redo→`RedoOperation` explosion derives the writing transaction's **full id** — `keyManipulator.fullKey(parentRowId, childId)` for a normal group-commit child (row keyed by the parent, `child_id` set), else the row key itself (non-group-commit, or a delayed group commit keyed by the full id) — so `RedoOperation.txId` matches the full id records store and other ops' `prev_tx_id` chains to. `closeOverChain` resolves a child's full `prev_tx_id` to its parent-keyed row; the `#1` reload preserves a parent row's `child_ids`. This chain-linking fix is correct.
 
   ✅ **RESOLVED (2026-06-19, commit `9eef2a872`) — config-transparent IT structure.** With/without group commit is now the **same** scenarios under different config, not a bespoke manager + a dedicated test. Reference patterns (read from latest main): `replication:e2e` is an abstract `E2ETest` holding the test methods (no `@EnabledIf`, no GC-specific test) plus two ~12-line subclasses (`E2EWith…`/`E2EWithoutCoordinatorGroupCommit…Test`) that override only `withCoordinatorGroupCommit()`/`getCompressionType()`, which `E2ETestEnv` maps to `COORDINATOR_GROUP_COMMIT_ENABLED`; the in-repo `ConsensusCommitSpecificIntegrationTestBase` keys `isGroupCommitEnabled()` off `ConsensusCommitConfig`, loads `scalardb.consensus_commit.coordinator.group_commit.*` via `ConsensusCommitTestUtils.loadConsensusCommitProperties`, and gates GC-only assertions with `@EnabledIf("isGroupCommitEnabled")`. **Done:** `CbrlBackupRestoreIntegrationTest` is now abstract with a `withCoordinatorGroupCommit()` hook feeding the single `manager`; two thin subclasses `CbrlBackupRestoreWith[out]GroupCommitIntegrationTest` run the same scenarios with GC off and on; the bespoke `groupCommitManager`/`groupCommitProperties`/`commitGroupBatch`/`hasGroupCommitChild` and the dedicated `groupCommit_*` test were deleted. Full-child-id chain-linking and delete→re-insert across group rows are exercised transparently under the GC-on subclass — both subclasses pass.
 

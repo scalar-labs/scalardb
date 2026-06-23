@@ -38,7 +38,7 @@ public final class RecordApplier {
    * Replays all buckets, returning the resulting state per key. {@code workerCount} workers each
    * own whole buckets ({@code M <= N}).
    */
-  public Map<RecordKey, RecordState> apply(List<List<RedoOp>> buckets, int workerCount)
+  public Map<RecordKey, RecordState> apply(List<List<RedoOperation>> buckets, int workerCount)
       throws InterruptedException {
     Preconditions.checkArgument(workerCount >= 1, "workerCount must be >= 1");
     Map<RecordKey, RecordState> result = new ConcurrentHashMap<>();
@@ -47,7 +47,7 @@ public final class RecordApplier {
       List<Future<?>> futures = new ArrayList<>(buckets.size());
       for (int b = 0; b < buckets.size(); b++) {
         int bucketIndex = b;
-        List<RedoOp> bucket = buckets.get(b);
+        List<RedoOperation> bucket = buckets.get(b);
         futures.add(executor.submit(() -> applyBucket(bucketIndex, bucket, result)));
       }
       for (Future<?> future : futures) {
@@ -65,15 +65,16 @@ public final class RecordApplier {
     return result;
   }
 
-  private void applyBucket(int bucketIndex, List<RedoOp> bucket, Map<RecordKey, RecordState> out) {
+  private void applyBucket(
+      int bucketIndex, List<RedoOperation> bucket, Map<RecordKey, RecordState> out) {
     if (!completedBuckets.add(bucketIndex)) {
       return; // Already applied (idempotent re-run).
     }
-    Map<RecordKey, List<RedoOp>> byKey = new LinkedHashMap<>();
-    for (RedoOp op : bucket) {
+    Map<RecordKey, List<RedoOperation>> byKey = new LinkedHashMap<>();
+    for (RedoOperation op : bucket) {
       byKey.computeIfAbsent(op.key(), k -> new ArrayList<>()).add(op);
     }
-    for (Map.Entry<RecordKey, List<RedoOp>> entry : byKey.entrySet()) {
+    for (Map.Entry<RecordKey, List<RedoOperation>> entry : byKey.entrySet()) {
       out.put(entry.getKey(), replayKey(entry.getKey(), entry.getValue()));
     }
   }
@@ -98,21 +99,21 @@ public final class RecordApplier {
    * scan + chain closure), not this primitive's. The one structural anomaly still rejected is a
    * fork (two ops sharing a {@code prev_tx_id}), which serializable commit cannot produce.
    */
-  RecordState replayKey(RecordKey key, List<RedoOp> ops) {
+  RecordState replayKey(RecordKey key, List<RedoOperation> ops) {
     RecordState current = reader.get(key);
 
     // divideWriteOperations: INSERT roots vs the prevTxId-keyed chain of UPDATE/DELETE ops.
     // producedBy maps each op's resulting version (its tx id) to the op, so the chain can be walked
     // backward from the base to find the versions it already reflects.
-    List<RedoOp> insertList = new ArrayList<>();
-    Map<String, RedoOp> nonInsertOps = new HashMap<>();
-    Map<String, RedoOp> producedBy = new HashMap<>();
-    for (RedoOp op : ops) {
+    List<RedoOperation> insertList = new ArrayList<>();
+    Map<String, RedoOperation> nonInsertOps = new HashMap<>();
+    Map<String, RedoOperation> producedBy = new HashMap<>();
+    for (RedoOperation op : ops) {
       producedBy.put(op.txId(), op);
       if (op.isInsert()) {
         insertList.add(op);
       } else {
-        RedoOp clash = nonInsertOps.put(op.prevTxId(), op);
+        RedoOperation clash = nonInsertOps.put(op.prevTxId(), op);
         if (clash != null) {
           throw new CbrlReplayException(
               "Two ops on "
@@ -130,7 +131,7 @@ public final class RecordApplier {
     // INSERT roots are applied in any order — the chain converges to the same final version, so
     // they
     // are NOT sorted by created_at. Restore never consults created_at or tx_version (highest rule).
-    Deque<RedoOp> insertQueue = new ArrayDeque<>(insertList);
+    Deque<RedoOperation> insertQueue = new ArrayDeque<>(insertList);
     // Versions the base already reflects: its current tx id and every chain-ancestor reachable by
     // walking prev_tx_id back through the captured ops. A root in this set was applied before the
     // backup and must not be re-applied after a DELETE during windowed repair — identified purely
@@ -139,7 +140,7 @@ public final class RecordApplier {
 
     RecordState.Builder state = current.toBuilder();
     while (true) {
-      RedoOp op;
+      RedoOperation op;
       if (state.currentTxId() == null || state.deleted()) {
         // Record absent or deleted: resume from an INSERT root the base does not already reflect.
         op = nextInsert(insertQueue, reflected, state);
@@ -176,7 +177,7 @@ public final class RecordApplier {
    * base — chain-only, no {@code created_at}/{@code tx_version} (highest rule).
    */
   private static Set<String> reflectedVersions(
-      @Nullable String baseTxId, Map<String, RedoOp> producedBy) {
+      @Nullable String baseTxId, Map<String, RedoOperation> producedBy) {
     Set<String> reflected = new HashSet<>();
     String txId = baseTxId;
     while (txId != null && producedBy.containsKey(txId) && reflected.add(txId)) {
@@ -192,10 +193,10 @@ public final class RecordApplier {
    * to the same final version regardless of which root is taken first.
    */
   @Nullable
-  private static RedoOp nextInsert(
-      Deque<RedoOp> insertQueue, Set<String> reflected, RecordState.Builder state) {
+  private static RedoOperation nextInsert(
+      Deque<RedoOperation> insertQueue, Set<String> reflected, RecordState.Builder state) {
     while (!insertQueue.isEmpty()) {
-      RedoOp candidate = insertQueue.poll();
+      RedoOperation candidate = insertQueue.poll();
       if (reflected.contains(candidate.txId())) {
         continue; // Already reflected in the base (chain-ancestor of the current version).
       }

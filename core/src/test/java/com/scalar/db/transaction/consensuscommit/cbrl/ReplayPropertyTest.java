@@ -29,10 +29,10 @@ class ReplayPropertyTest {
   @Test
   void p1_confluence_shuffledInputYieldsReferenceState() {
     for (long seed : SEEDS) {
-      List<RedoOp> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
+      List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
       Map<RecordKey, RecordState> expected = new ReferenceApplier().finalStates(ops);
 
-      List<RedoOp> shuffled = new ArrayList<>(ops);
+      List<RedoOperation> shuffled = new ArrayList<>(ops);
       Collections.shuffle(shuffled, new Random(seed * 31 + 1));
 
       Map<RecordKey, RecordState> actual = replayPerKey(shuffled, ABSENT);
@@ -52,14 +52,14 @@ class ReplayPropertyTest {
   @Test
   void p1_confluence_throughShufflerAndApplier() throws InterruptedException {
     for (long seed : SEEDS) {
-      List<RedoOp> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
+      List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
       Map<RecordKey, RecordState> expected = new ReferenceApplier().finalStates(ops);
 
-      List<RedoOp> shuffled = new ArrayList<>(ops);
+      List<RedoOperation> shuffled = new ArrayList<>(ops);
       Collections.shuffle(shuffled, new Random(seed));
 
       for (int bucketCount : new int[] {1, 3, NUM_KEYS}) {
-        List<List<RedoOp>> buckets = new RecordShuffler().shuffle(shuffled, bucketCount);
+        List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(shuffled, bucketCount);
         Map<RecordKey, RecordState> actual =
             new RecordApplier(ABSENT).apply(buckets, Math.max(1, bucketCount / 2));
         for (RecordKey key : expected.keySet()) {
@@ -75,7 +75,7 @@ class ReplayPropertyTest {
   @Test
   void p2_idempotency_rerunFromOutputIsNoOp() {
     for (long seed : SEEDS) {
-      List<RedoOp> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
+      List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
 
       Map<RecordKey, RecordState> firstRun = replayPerKey(ops, ABSENT);
       Map<RecordKey, RecordState> secondRun =
@@ -88,8 +88,8 @@ class ReplayPropertyTest {
   /** P2: re-applying the same buckets to one applier is skipped via per-bucket checkpoint. */
   @Test
   void p2_idempotency_secondApplyIsCheckpointed() throws InterruptedException {
-    List<RedoOp> ops = new RedoLogGenerator(7).generate(NUM_KEYS);
-    List<List<RedoOp>> buckets = new RecordShuffler().shuffle(ops, 4);
+    List<RedoOperation> ops = new RedoLogGenerator(7).generate(NUM_KEYS);
+    List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(ops, 4);
     RecordApplier applier = new RecordApplier(ABSENT);
 
     Map<RecordKey, RecordState> first = applier.apply(buckets, 4);
@@ -109,9 +109,9 @@ class ReplayPropertyTest {
   @Test
   void p3_connectivity_unreachableOpIsSkipped() {
     // INSERT t0 -> UPDATE t1(prev t0) -> UPDATE t2(prev t1). Drop t1 so t2 dangles off t1.
-    RedoOp t0 = new RedoOp("t0", write(0, null, 10));
-    RedoOp t2 = new RedoOp("t2", write(0, "t1", 30));
-    List<RedoOp> withGap = new ArrayList<>(ImmutableList.of(t0, t2));
+    RedoOperation t0 = new RedoOperation("t0", write(0, null, 10));
+    RedoOperation t2 = new RedoOperation("t2", write(0, "t1", 30));
+    List<RedoOperation> withGap = new ArrayList<>(ImmutableList.of(t0, t2));
 
     RecordState result = new RecordApplier(ABSENT).replayKey(t0.key(), withGap);
 
@@ -125,10 +125,10 @@ class ReplayPropertyTest {
   @Test
   void p4_singleOwner_keyOpsShareOneBucket() {
     for (long seed : SEEDS) {
-      List<RedoOp> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
+      List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
       for (int bucketCount : new int[] {1, 2, 3, 7, NUM_KEYS}) {
         Map<RecordKey, Integer> bucketByKey = new LinkedHashMap<>();
-        for (RedoOp op : ops) {
+        for (RedoOperation op : ops) {
           int bucket = RecordShuffler.bucketOf(op.key(), bucketCount);
           Integer prior = bucketByKey.putIfAbsent(op.key(), bucket);
           if (prior != null) {
@@ -140,14 +140,14 @@ class ReplayPropertyTest {
   }
 
   private static Map<RecordKey, RecordState> replayPerKey(
-      List<RedoOp> ops, RestoredRecordReader reader) {
-    Map<RecordKey, List<RedoOp>> byKey = new LinkedHashMap<>();
-    for (RedoOp op : ops) {
+      List<RedoOperation> ops, RestoredRecordReader reader) {
+    Map<RecordKey, List<RedoOperation>> byKey = new LinkedHashMap<>();
+    for (RedoOperation op : ops) {
       byKey.computeIfAbsent(op.key(), k -> new ArrayList<>()).add(op);
     }
     RecordApplier applier = new RecordApplier(reader);
     Map<RecordKey, RecordState> result = new LinkedHashMap<>();
-    for (Map.Entry<RecordKey, List<RedoOp>> entry : byKey.entrySet()) {
+    for (Map.Entry<RecordKey, List<RedoOperation>> entry : byKey.entrySet()) {
       result.put(entry.getKey(), applier.replayKey(entry.getKey(), entry.getValue()));
     }
     return result;

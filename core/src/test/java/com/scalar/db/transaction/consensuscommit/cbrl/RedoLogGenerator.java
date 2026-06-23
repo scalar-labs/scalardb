@@ -31,15 +31,15 @@ final class RedoLogGenerator {
   }
 
   /** Generates a flat list of ops across {@code numKeys} keys, in commit order. */
-  List<RedoOp> generate(int numKeys) {
-    List<RedoOp> ops = new ArrayList<>();
+  List<RedoOperation> generate(int numKeys) {
+    List<RedoOperation> ops = new ArrayList<>();
     for (int k = 0; k < numKeys; k++) {
       generateKeyHistory(k, ops);
     }
     return ops;
   }
 
-  private void generateKeyHistory(int keyIndex, List<RedoOp> ops) {
+  private void generateKeyHistory(int keyIndex, List<RedoOperation> ops) {
     boolean present = false;
     String lastTxId = null;
     int events = 1 + random.nextInt(7);
@@ -58,28 +58,28 @@ final class RedoLogGenerator {
     }
   }
 
-  private RedoOp insert(int keyIndex, String txId) {
+  private RedoOperation insert(int keyIndex, String txId) {
     Entry entry =
         baseEntry(keyIndex, Entry.EntryType.ENTRY_TYPE_WRITE)
             .addColumns(intColumn(COL_V, valueCounter++))
             .addColumns(intColumn(COL_W, valueCounter++))
             .build();
-    return new RedoOp(txId, entry);
+    return new RedoOperation(txId, entry);
   }
 
-  private RedoOp update(int keyIndex, String txId, String prevTxId) {
+  private RedoOperation update(int keyIndex, String txId, String prevTxId) {
     Entry entry =
         baseEntry(keyIndex, Entry.EntryType.ENTRY_TYPE_WRITE)
             .setPrevTxId(prevTxId)
             .addColumns(intColumn(COL_V, valueCounter++)) // partial: only COL_V
             .build();
-    return new RedoOp(txId, entry);
+    return new RedoOperation(txId, entry);
   }
 
-  private RedoOp delete(int keyIndex, String txId, String prevTxId) {
+  private RedoOperation delete(int keyIndex, String txId, String prevTxId) {
     Entry entry =
         baseEntry(keyIndex, Entry.EntryType.ENTRY_TYPE_DELETE).setPrevTxId(prevTxId).build();
-    return new RedoOp(txId, entry);
+    return new RedoOperation(txId, entry);
   }
 
   private static Entry.Builder baseEntry(int keyIndex, Entry.EntryType type) {

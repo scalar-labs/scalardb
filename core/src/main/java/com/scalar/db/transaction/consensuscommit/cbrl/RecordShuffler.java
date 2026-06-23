@@ -15,15 +15,15 @@ final class RecordShuffler {
     return Math.floorMod(key.hashCode(), bucketCount);
   }
 
-  List<List<RedoOp>> shuffle(Iterable<RedoOp> ops, int bucketCount) {
+  List<List<RedoOperation>> shuffle(Iterable<RedoOperation> ops, int bucketCount) {
     if (bucketCount < 1) {
       throw new IllegalArgumentException("bucketCount must be >= 1, was " + bucketCount);
     }
-    List<List<RedoOp>> buckets = new ArrayList<>(bucketCount);
+    List<List<RedoOperation>> buckets = new ArrayList<>(bucketCount);
     for (int i = 0; i < bucketCount; i++) {
       buckets.add(new ArrayList<>());
     }
-    for (RedoOp op : ops) {
+    for (RedoOperation op : ops) {
       buckets.get(bucketOf(op.key(), bucketCount)).add(op);
     }
     return buckets;

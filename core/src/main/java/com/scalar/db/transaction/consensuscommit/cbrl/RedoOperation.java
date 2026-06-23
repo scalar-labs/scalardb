@@ -5,22 +5,22 @@ import javax.annotation.Nullable;
 
 /**
  * One record-level write in the redo stream: a single {@link Entry} tagged with the transaction
- * that produced it ({@code txId}). The replay core consumes only {@code RedoOp}s and never how they
- * were sourced — the integration test builds them from real coordinator {@code tx_write_set} rows,
- * the property tests from a generator.
+ * that produced it ({@code txId}). The replay core consumes only {@code RedoOperation}s and never
+ * how they were sourced — the integration test builds them from real coordinator {@code
+ * tx_write_set} rows, the property tests from a generator.
  *
  * <p>Operation type is derived (decision A in the PoC plan): a {@code WRITE} entry with no {@code
  * prev_tx_id} is an INSERT (chain root); with a {@code prev_tx_id} it is an UPDATE; a {@code
  * DELETE} entry is a delete. This rests on the encoder invariant that {@code prev_tx_id} is set iff
  * the record had a committed before-image.
  */
-public final class RedoOp {
+public final class RedoOperation {
   private final RecordKey key;
   private final String txId;
   @Nullable private final String prevTxId;
   private final Entry entry;
 
-  public RedoOp(String txId, Entry entry) {
+  public RedoOperation(String txId, Entry entry) {
     this.key = RecordKey.from(entry);
     this.txId = txId;
     this.prevTxId = entry.hasPrevTxId() ? entry.getPrevTxId() : null;
@@ -58,7 +58,7 @@ public final class RedoOp {
 
   @Override
   public String toString() {
-    return "RedoOp{"
+    return "RedoOperation{"
         + (isDelete() ? "DELETE" : isInsert() ? "INSERT" : "UPDATE")
         + " tx="
         + txId

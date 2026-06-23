@@ -17,23 +17,23 @@ import java.util.TreeMap;
  */
 final class ReferenceApplier {
 
-  Map<RecordKey, RecordState> finalStates(List<RedoOp> ops) {
-    Map<RecordKey, List<RedoOp>> byKey = new LinkedHashMap<>();
-    for (RedoOp op : ops) {
+  Map<RecordKey, RecordState> finalStates(List<RedoOperation> ops) {
+    Map<RecordKey, List<RedoOperation>> byKey = new LinkedHashMap<>();
+    for (RedoOperation op : ops) {
       byKey.computeIfAbsent(op.key(), k -> new ArrayList<>()).add(op);
     }
     Map<RecordKey, RecordState> result = new LinkedHashMap<>();
-    for (Map.Entry<RecordKey, List<RedoOp>> entry : byKey.entrySet()) {
+    for (Map.Entry<RecordKey, List<RedoOperation>> entry : byKey.entrySet()) {
       result.put(entry.getKey(), apply(entry.getValue()));
     }
     return result;
   }
 
-  private RecordState apply(List<RedoOp> keyOps) {
+  private RecordState apply(List<RedoOperation> keyOps) {
     Map<String, Column> columns = new TreeMap<>();
     boolean present = false;
     String lastTxId = null;
-    for (RedoOp op : keyOps) {
+    for (RedoOperation op : keyOps) {
       if (op.isInsert()) {
         columns.clear();
         putAll(columns, op.entry().getColumnsList());

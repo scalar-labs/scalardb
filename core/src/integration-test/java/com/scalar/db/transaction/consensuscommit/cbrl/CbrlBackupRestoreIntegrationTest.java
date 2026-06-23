@@ -887,7 +887,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
     recoverCopyAgainstBackupCoordinator(coordinatorBackup);
 
-    List<RedoOp> redoOps = new ArrayList<>();
+    List<RedoOperation> redoOps = new ArrayList<>();
     for (CoordinatorBackupRow row : coordinatorBackup.values()) {
       for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
         // The writing transaction's full id is what records store and what other ops' prev_tx_id
@@ -904,12 +904,12 @@ public abstract class CbrlBackupRestoreIntegrationTest {
             // copy carries that state instead.
             continue;
           }
-          redoOps.add(new RedoOp(txId, entry));
+          redoOps.add(new RedoOperation(txId, entry));
         }
       }
     }
 
-    List<List<RedoOp>> buckets = new RecordShuffler().shuffle(redoOps, REPLAY_BUCKETS);
+    List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(redoOps, REPLAY_BUCKETS);
     Map<RecordKey, RecordState> finalStates =
         new RecordApplier(this::readCopyState).apply(buckets, REPLAY_WORKERS);
 

@@ -39,7 +39,8 @@ class ReplayCoreTest {
 
   @Test
   void singleInsertRoot_createsRecord() {
-    List<RedoOp> ops = ImmutableList.of(op("t0", write(null, ImmutableMap.of(COL_V, 5, COL_W, 9))));
+    List<RedoOperation> ops =
+        ImmutableList.of(op("t0", write(null, ImmutableMap.of(COL_V, 5, COL_W, 9))));
     RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(5);
@@ -48,7 +49,7 @@ class ReplayCoreTest {
 
   @Test
   void insertThenDelete_netZero_absent() {
-    List<RedoOp> ops =
+    List<RedoOperation> ops =
         ImmutableList.of(op("t0", write(null, ImmutableMap.of(COL_V, 1))), op("t1", delete("t0")));
     RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
     assertThat(result.present()).isFalse();
@@ -56,7 +57,7 @@ class ReplayCoreTest {
 
   @Test
   void partialColumnMerge_acrossTwoUpdates_carriesUnsetColumn() {
-    List<RedoOp> ops =
+    List<RedoOperation> ops =
         ImmutableList.of(
             op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2))),
             op("t1", write("t0", ImmutableMap.of(COL_V, 3))), // partial: only v
@@ -69,7 +70,7 @@ class ReplayCoreTest {
 
   @Test
   void deleteThenReinsert_reinsertIsRoot_replacesColumns() {
-    List<RedoOp> ops =
+    List<RedoOperation> ops =
         ImmutableList.of(
             op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2))),
             op("t1", delete("t0")),
@@ -83,7 +84,7 @@ class ReplayCoreTest {
   @Test
   void updateChainsOffExistingRecord() {
     RecordState current = present("tX", ImmutableMap.of(COL_V, 1, COL_W, 2));
-    List<RedoOp> ops = ImmutableList.of(op("t1", write("tX", ImmutableMap.of(COL_V, 9))));
+    List<RedoOperation> ops = ImmutableList.of(op("t1", write("tX", ImmutableMap.of(COL_V, 9))));
     RecordState result = new RecordApplier(k -> current).replayKey(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(9);
@@ -96,7 +97,7 @@ class ReplayCoreTest {
     // it links to a pre-window (unlogged) root the backup never captured. That op is unreachable
     // from the base and must be tolerated — left unapplied — not rejected as a broken chain.
     RecordState base = present("v1", ImmutableMap.of(COL_V, 5, COL_W, 9));
-    List<RedoOp> ops =
+    List<RedoOperation> ops =
         ImmutableList.of(
             op("v1", write("preWindowRoot", ImmutableMap.of(COL_V, 5))), // dangling: prev unlogged
             op("v2", write("v1", ImmutableMap.of(COL_V, 6)))); // chains forward off the base
@@ -114,7 +115,7 @@ class ReplayCoreTest {
     // by
     // walking prev_tx_id back from the cursor. Without it the record reverts.
     RecordState base = present("I0", ImmutableMap.of(COL_V, 1));
-    List<RedoOp> ops =
+    List<RedoOperation> ops =
         ImmutableList.of(
             op("I0", write(null, ImmutableMap.of(COL_V, 1))), // original (stale) insert root
             op("d1", delete("I0")),
@@ -126,9 +127,9 @@ class ReplayCoreTest {
 
   @Test
   void reorderedInput_sameResult() {
-    RedoOp a = op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2)));
-    RedoOp b = op("t1", write("t0", ImmutableMap.of(COL_V, 3)));
-    RedoOp c = op("t2", write("t1", ImmutableMap.of(COL_V, 4)));
+    RedoOperation a = op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2)));
+    RedoOperation b = op("t1", write("t0", ImmutableMap.of(COL_V, 3)));
+    RedoOperation c = op("t2", write("t1", ImmutableMap.of(COL_V, 4)));
     RecordState forward = new RecordApplier(ABSENT).replayKey(key(), ImmutableList.of(a, b, c));
     RecordState reversed = new RecordApplier(ABSENT).replayKey(key(), ImmutableList.of(c, b, a));
     assertThat(reversed).isEqualTo(forward);
@@ -139,7 +140,7 @@ class ReplayCoreTest {
     // A fork — two ops superseding the same prior version — cannot arise from serializable commit
     // (the prepare CAS linearizes each record's history). This is a defensive guard against a
     // corrupt backup or an encoder bug: replay must reject it loudly, not silently pick a branch.
-    List<RedoOp> ops =
+    List<RedoOperation> ops =
         ImmutableList.of(
             op("t0", write(null, ImmutableMap.of(COL_V, 1))),
             op("t1", write("t0", ImmutableMap.of(COL_V, 2))),
@@ -187,8 +188,8 @@ class ReplayCoreTest {
         .build();
   }
 
-  private static RedoOp op(String txId, Entry entry) {
-    return new RedoOp(txId, entry);
+  private static RedoOperation op(String txId, Entry entry) {
+    return new RedoOperation(txId, entry);
   }
 
   private static int intOf(RecordState state, String column) {
