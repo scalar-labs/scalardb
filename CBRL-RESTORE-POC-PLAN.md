@@ -297,6 +297,23 @@ the coordinator-reload + recovery-driving prove too awkward for a production res
 building durable crash-restart). Decide with a test exercising **both** rollforward and rollback
 through the replay.
 
+### 4.7 `CbrlRestore` — the orchestrator and the package's only public class
+
+- **The integration test is an end-to-end test; its input and output are the database, not
+  in-memory state.** `restore()` reads the coordinator backup and the non-snapshot-consistent copy
+  from the DB and writes the replayed state back to the restore-target tables; the IT's assertions
+  then read those tables (`cbrl_restore`) and assert on them — never on returned objects.
+- **`CbrlRestore` is the only `public` class in the `cbrl` package.** It exposes one entry point,
+  `restore(Map<String, CoordinatorBackupRow>)`, that orchestrates the whole restore: drive
+  PREPARED-record recovery against the reloaded coordinator backup → explode each `WriteSet` into
+  `RedoOperation`s → `RecordShuffler` → `RecordApplier` (pure: read-and-compute, returns
+  `Map<RecordKey, RecordState>`) → write the final states back to `cbrl_restore`. The write-back
+  lives here, in the `cbrl` package — not in the test harness.
+- **Every other class in the package is package-private** (`CoordinatorBackupRow`, `RecordKey`,
+  `RecordState`, `RedoOperation`, `RestoredRecordReader`, `RecordApplier`, `RecordShuffler`,
+  `CbrlReplayException`). The unit (`src/test`) and integration (`src/integration-test`) test source
+  sets sit in the same package, so they reach these without any public surface.
+
 ---
 
 ## 5. Replay primitive (mirrors SSR `RecordApplyService`)

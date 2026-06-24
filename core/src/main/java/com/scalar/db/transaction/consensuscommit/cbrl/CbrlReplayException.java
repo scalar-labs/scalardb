@@ -7,12 +7,12 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
  * is NOT an error — it is tolerated and skipped, as window-scoped logging makes such gaps
  * legitimate.)
  */
-public class CbrlReplayException extends RuntimeException {
-  public CbrlReplayException(String message) {
+class CbrlReplayException extends RuntimeException {
+  CbrlReplayException(String message) {
     super(message);
   }
 
-  public CbrlReplayException(String message, Throwable cause) {
+  CbrlReplayException(String message, Throwable cause) {
     super(message, cause);
   }
 }

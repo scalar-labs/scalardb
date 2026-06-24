@@ -3,15 +3,12 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.util.concurrent.Uninterruptibles;
-import com.google.protobuf.ByteString;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
@@ -20,14 +17,9 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.io.BigIntColumn;
-import com.scalar.db.io.BlobColumn;
-import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextColumn;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.storage.jdbc.JdbcEnv;
@@ -201,27 +193,12 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   private ExecutorService workerExecutor;
+  private CbrlRestore cbrlRestore;
   private final AtomicLong tokenCounter = new AtomicLong();
   private final AtomicLong committedCount = new AtomicLong();
 
   private interface TxBody {
     void run(DistributedTransaction tx) throws Exception;
-  }
-
-  /** One captured coordinator-state row: the unit of the coordinator backup. */
-  private static final class CoordinatorBackupRow {
-    private final String txId;
-    private final int state;
-    private final List<String> childIds; // non-empty only for normal group-commit parent rows
-    @Nullable private final WriteSet writeSet;
-
-    private CoordinatorBackupRow(
-        String txId, int state, List<String> childIds, @Nullable WriteSet writeSet) {
-      this.txId = txId;
-      this.state = state;
-      this.childIds = childIds;
-      this.writeSet = writeSet;
-    }
   }
 
   private Properties properties() {
@@ -258,6 +235,21 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       admin.createTable(namespace, TABLE_A, TABLE_A_METADATA, true);
       admin.createTable(namespace, TABLE_B, TABLE_B_METADATA, true);
     }
+
+    Map<String, List<String>> userColumnsByTable = new LinkedHashMap<>();
+    userColumnsByTable.put(TABLE_A, Arrays.asList(A_USER_COLUMNS));
+    userColumnsByTable.put(TABLE_B, Arrays.asList(B_USER_COLUMNS));
+    cbrlRestore =
+        new CbrlRestore(
+            storage,
+            manager,
+            coordinator,
+            admin,
+            keyManipulator,
+            RESTORE_NAMESPACE,
+            userColumnsByTable,
+            REPLAY_BUCKETS,
+            REPLAY_WORKERS);
   }
 
   @AfterAll
@@ -333,7 +325,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
 
     // Restore WITHOUT taking a copy: the restore tables stay empty as the repair base.
-    restore(backup);
+    cbrlRestore.restore(backup);
 
     for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
       assertThat(getWithRetry(getForTableA(RESTORE_NAMESPACE, i)))
@@ -424,7 +416,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     }
     Set<String> committedInBackup = committedFullIdsIn(coordinatorBackup);
 
-    restore(coordinatorBackup);
+    cbrlRestore.restore(coordinatorBackup);
 
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
     assertThat(findDisjointViolations(seedToken, history, committedInBackup))
@@ -433,7 +425,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         .isEmpty();
 
     Map<Integer, Long> image = readRestoredTokens();
-    restore(coordinatorBackup);
+    cbrlRestore.restore(coordinatorBackup);
     assertThat(readRestoredTokens()).as("idempotent restore").isEqualTo(image);
   }
 
@@ -715,7 +707,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       future.get();
     }
 
-    restore(coordinatorBackup);
+    cbrlRestore.restore(coordinatorBackup);
 
     assertThat(findConsistencyViolations())
         .as("cross-table consistency: both tables hold the same balance per account")
@@ -878,239 +870,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     return new CoordinatorBackupRow(txId, state, childIds, writeSet);
   }
 
-  /**
-   * Windowed repair: C4: PREPARED-record recovery (self-contained) — resolve the copy's in-flight
-   * records against the BACKED-UP coordinator reloaded into the coordinator table, never the live
-   * one — then replay the backup's committed redo onto the copy via the §5 core. Each key's cursor
-   * anchors at its copy version, so only the redo after that version is applied.
-   */
-  private void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
-    recoverCopyAgainstBackupCoordinator(coordinatorBackup);
-
-    List<RedoOperation> redoOps = new ArrayList<>();
-    for (CoordinatorBackupRow row : coordinatorBackup.values()) {
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
-        // The writing transaction's full id is what records store and what other ops' prev_tx_id
-        // chains to. For a normal group commit the coordinator row is keyed by the parent id and
-        // each child's EntryGroup carries its child_id, so the full id = parent + child. Otherwise
-        // (non-group-commit, or a delayed group commit) the row's key already is the full id.
-        String txId =
-            group.getChildId().isEmpty()
-                ? row.txId
-                : keyManipulator.fullKey(row.txId, group.getChildId());
-        for (Entry entry : group.getEntriesList()) {
-          if (!entry.hasTxVersion()) {
-            // Key-only write set from outside the backup window (logging was off): not redo. The
-            // copy carries that state instead.
-            continue;
-          }
-          redoOps.add(new RedoOperation(txId, entry));
-        }
-      }
-    }
-
-    List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(redoOps, REPLAY_BUCKETS);
-    Map<RecordKey, RecordState> finalStates =
-        new RecordApplier(this::readCopyState).apply(buckets, REPLAY_WORKERS);
-
-    withRetry(
-        tx -> {
-          for (Map.Entry<RecordKey, RecordState> entry : finalStates.entrySet()) {
-            applyToRestore(tx, entry.getKey(), entry.getValue());
-          }
-        });
-  }
-
-  /**
-   * C4: PREPARED-record recovery, self-contained. Reloads the coordinator table from the backup —
-   * the as-of-consistency-point decision set — and recovers the copy's in-flight records against
-   * it, never against the live coordinator (which by now has diverged past the consistency point).
-   * This models a real restore, where the original coordinator is gone and only the backup remains.
-   */
-  private void recoverCopyAgainstBackupCoordinator(Map<String, CoordinatorBackupRow> backup)
-      throws Exception {
-    reloadCoordinatorFromBackup(backup);
-    awaitCopyRecovered();
-  }
-
-  /**
-   * Truncates the coordinator and reloads it from the backup: every backed-up transaction as
-   * COMMITTED, and every transaction still PREPARED/DELETED in the copy but absent from the backup
-   * as ABORTED. An absent-from-backup in-flight transaction was mid-commit at copy time and never
-   * reached the consistency point, so the restore discards it — a fast, faithful stand-in for the
-   * 15-second transaction-lifetime expiry ScalarDB's recovery would otherwise wait out before
-   * rolling such a record back.
-   */
-  private void reloadCoordinatorFromBackup(Map<String, CoordinatorBackupRow> backup)
-      throws Exception {
-    admin.truncateCoordinatorTables();
-    for (CoordinatorBackupRow row : backup.values()) {
-      // For a normal group-commit parent row, preserve its child ids so recovery can resolve a
-      // child by its full id; the write set is not needed in the reloaded coordinator (the redo is
-      // replayed from the in-memory backup). Non-group rows reload with their write set.
-      Coordinator.State state =
-          row.childIds.isEmpty()
-              ? new Coordinator.State(row.txId, row.writeSet, TransactionState.COMMITTED)
-              : new Coordinator.State(row.txId, row.childIds, TransactionState.COMMITTED);
-      coordinator.putState(state);
-    }
-    for (String txId : inDoubtCopyTxIds(backup.keySet())) {
-      coordinator.putState(new Coordinator.State(txId, TransactionState.ABORTED));
-    }
-  }
-
-  /**
-   * Transaction ids of copy records still in an in-flight state (PREPARED/DELETED) whose
-   * transaction is not in the backup — in flight at copy time and never committed by the
-   * consistency point.
-   */
-  private Set<String> inDoubtCopyTxIds(Set<String> committedInBackup) throws Exception {
-    Set<String> inDoubt = new HashSet<>();
-    for (String table : new String[] {TABLE_A, TABLE_B}) {
-      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
-      try (Scanner scanner = storage.scan(scan)) {
-        for (Result result : scanner.all()) {
-          if (result.isNull(Attribute.ID)
-              || result.isNull(Attribute.STATE)
-              || result.getInt(Attribute.STATE) == TransactionState.COMMITTED.get()) {
-            continue;
-          }
-          String txId = result.getText(Attribute.ID);
-          if (!committedInBackup.contains(txId)) {
-            inDoubt.add(txId);
-          }
-        }
-      }
-    }
-    return inDoubt;
-  }
-
-  /**
-   * Drives ScalarDB's recovery by reading every key transactionally, then waits until no copy
-   * record is left in a PREPARED/DELETED state in storage — so the raw-storage replay base reads
-   * resolved values. Recovery is asynchronous and conditional, so it is re-triggered until storage
-   * settles.
-   */
-  private void awaitCopyRecovered() {
-    long deadlineMillis = System.currentTimeMillis() + 15_000;
-    while (true) {
-      for (int i = 0; i < RECORD_COUNT; i++) {
-        getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
-        getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
-      }
-      if (!anyInFlightCopyRecord()) {
-        return;
-      }
-      if (System.currentTimeMillis() > deadlineMillis) {
-        throw new IllegalStateException("Copy did not become recovery-quiescent within 15s");
-      }
-      Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
-    }
-  }
-
-  private boolean anyInFlightCopyRecord() {
-    try {
-      for (String table : new String[] {TABLE_A, TABLE_B}) {
-        Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
-        try (Scanner scanner = storage.scan(scan)) {
-          for (Result result : scanner.all()) {
-            if (!result.isNull(Attribute.STATE)
-                && result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()) {
-              return true;
-            }
-          }
-        }
-      }
-      return false;
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to scan copy state for recovery quiescence", e);
-    }
-  }
-
-  /** Reads the (recovered) copy record as the repair base: its committed tx id + user columns. */
-  private RecordState readCopyState(RecordKey key) {
-    try {
-      Optional<Result> result = storage.get(rawGet(key));
-      if (!result.isPresent() || result.get().isNull(Attribute.ID)) {
-        return RecordState.absent();
-      }
-      Result record = result.get();
-      String currentTxId = record.getText(Attribute.ID);
-      String[] userColumns = key.table().equals(TABLE_A) ? A_USER_COLUMNS : B_USER_COLUMNS;
-      Map<String, com.scalar.db.transaction.consensuscommit.proto.v1.Column> columns =
-          new LinkedHashMap<>();
-      for (String name : userColumns) {
-        Column<?> column = record.getColumns().get(name);
-        if (column != null) {
-          columns.put(name, ioColumnToProto(column));
-        }
-      }
-      return RecordState.of(currentTxId, false, columns, Collections.emptySet());
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to read copy base for " + key, e);
-    }
-  }
-
-  private Get rawGet(RecordKey key) {
-    GetBuilder.BuildableGet builder =
-        Get.newBuilder()
-            .namespace(RESTORE_NAMESPACE)
-            .table(key.table())
-            .partitionKey(toIoKey(key.partitionKey()));
-    if (key.clusteringKey() != null) {
-      builder.clusteringKey(toIoKey(key.clusteringKey()));
-    }
-    return builder.build();
-  }
-
-  private static com.scalar.db.transaction.consensuscommit.proto.v1.Column ioColumnToProto(
-      Column<?> column) {
-    String name = column.getName();
-    com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder =
-        com.scalar.db.transaction.consensuscommit.proto.v1.Column.newBuilder().setName(name);
-    if (column instanceof IntColumn) {
-      com.scalar.db.transaction.consensuscommit.proto.v1.Column.IntValue.Builder value =
-          com.scalar.db.transaction.consensuscommit.proto.v1.Column.IntValue.newBuilder();
-      if (!column.hasNullValue()) {
-        value.setValue(((IntColumn) column).getIntValue());
-      }
-      return builder.setIntValue(value).build();
-    }
-    if (column instanceof BigIntColumn) {
-      com.scalar.db.transaction.consensuscommit.proto.v1.Column.BigIntValue.Builder value =
-          com.scalar.db.transaction.consensuscommit.proto.v1.Column.BigIntValue.newBuilder();
-      if (!column.hasNullValue()) {
-        value.setValue(((BigIntColumn) column).getBigIntValue());
-      }
-      return builder.setBigintValue(value).build();
-    }
-    if (column instanceof BooleanColumn) {
-      com.scalar.db.transaction.consensuscommit.proto.v1.Column.BooleanValue.Builder value =
-          com.scalar.db.transaction.consensuscommit.proto.v1.Column.BooleanValue.newBuilder();
-      if (!column.hasNullValue()) {
-        value.setValue(((BooleanColumn) column).getBooleanValue());
-      }
-      return builder.setBooleanValue(value).build();
-    }
-    if (column instanceof TextColumn) {
-      com.scalar.db.transaction.consensuscommit.proto.v1.Column.TextValue.Builder value =
-          com.scalar.db.transaction.consensuscommit.proto.v1.Column.TextValue.newBuilder();
-      if (!column.hasNullValue()) {
-        value.setValue(((TextColumn) column).getTextValue());
-      }
-      return builder.setTextValue(value).build();
-    }
-    if (column instanceof BlobColumn) {
-      com.scalar.db.transaction.consensuscommit.proto.v1.Column.BlobValue.Builder value =
-          com.scalar.db.transaction.consensuscommit.proto.v1.Column.BlobValue.newBuilder();
-      if (!column.hasNullValue()) {
-        value.setValue(ByteString.copyFrom(((BlobColumn) column).getBlobValueAsBytes()));
-      }
-      return builder.setBlobValue(value).build();
-    }
-    throw new IllegalStateException("Unsupported column type for " + name + ": " + column);
-  }
-
   private void closeOverChain(Map<String, CoordinatorBackupRow> committedById) throws Exception {
     Deque<String> pending = new ArrayDeque<>();
     for (CoordinatorBackupRow row : committedById.values()) {
@@ -1157,83 +916,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
             .build();
     Optional<Result> result = storage.get(get);
     return result.isPresent() ? toBackupRow(result.get()) : null;
-  }
-
-  /**
-   * Applies one replayed record state to {@code cbrl_restore} within {@code tx} (read-then-write).
-   */
-  private void applyToRestore(DistributedTransaction tx, RecordKey key, RecordState state)
-      throws Exception {
-    Key partitionKey = toIoKey(key.partitionKey());
-    Key clusteringKey = key.clusteringKey() == null ? null : toIoKey(key.clusteringKey());
-
-    tx.get(rawGet(key)); // read first so the put/delete is an update, not insert-mode
-
-    if (state.present()) {
-      PutBuilder.Buildable put =
-          Put.newBuilder()
-              .namespace(RESTORE_NAMESPACE)
-              .table(key.table())
-              .partitionKey(partitionKey);
-      if (clusteringKey != null) {
-        put.clusteringKey(clusteringKey);
-      }
-      for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
-          state.columns().values()) {
-        put.value(toIoColumn(column));
-      }
-      tx.put(put.build());
-    } else {
-      DeleteBuilder.Buildable delete =
-          Delete.newBuilder()
-              .namespace(RESTORE_NAMESPACE)
-              .table(key.table())
-              .partitionKey(partitionKey);
-      if (clusteringKey != null) {
-        delete.clusteringKey(clusteringKey);
-      }
-      tx.delete(delete.build());
-    }
-  }
-
-  private static Key toIoKey(com.scalar.db.transaction.consensuscommit.proto.v1.Key protoKey) {
-    Key.Builder builder = Key.newBuilder();
-    for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
-        protoKey.getColumnsList()) {
-      builder.add(toIoColumn(column));
-    }
-    return builder.build();
-  }
-
-  private static Column<?> toIoColumn(
-      com.scalar.db.transaction.consensuscommit.proto.v1.Column column) {
-    String name = column.getName();
-    if (column.hasIntValue()) {
-      return column.getIntValue().hasValue()
-          ? IntColumn.of(name, column.getIntValue().getValue())
-          : IntColumn.ofNull(name);
-    }
-    if (column.hasBigintValue()) {
-      return column.getBigintValue().hasValue()
-          ? BigIntColumn.of(name, column.getBigintValue().getValue())
-          : BigIntColumn.ofNull(name);
-    }
-    if (column.hasBooleanValue()) {
-      return column.getBooleanValue().hasValue()
-          ? BooleanColumn.of(name, column.getBooleanValue().getValue())
-          : BooleanColumn.ofNull(name);
-    }
-    if (column.hasTextValue()) {
-      return column.getTextValue().hasValue()
-          ? TextColumn.of(name, column.getTextValue().getValue())
-          : TextColumn.ofNull(name);
-    }
-    if (column.hasBlobValue()) {
-      return column.getBlobValue().hasValue()
-          ? BlobColumn.of(name, column.getBlobValue().getValue().toByteArray())
-          : BlobColumn.ofNull(name);
-    }
-    throw new IllegalStateException("Unsupported column value in redo entry: " + column);
   }
 
   private List<String> findConsistencyViolations() {

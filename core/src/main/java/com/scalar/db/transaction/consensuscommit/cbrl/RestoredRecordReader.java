@@ -10,6 +10,6 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
  * in the PREPARED state are resolved via the consistency point and {@code before_*} images before
  * replay anchors on them. The PoC supplies states directly.
  */
-public interface RestoredRecordReader {
+interface RestoredRecordReader {
   RecordState get(RecordKey key);
 }

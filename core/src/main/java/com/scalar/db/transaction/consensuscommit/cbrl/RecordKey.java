@@ -10,13 +10,13 @@ import javax.annotation.Nullable;
  * bucketing key for pass 1 and the single-owner unit for pass 2. The proto {@link Key} values carry
  * their own structural {@code equals}/{@code hashCode}, so this is a straightforward value type.
  */
-public final class RecordKey {
+final class RecordKey {
   private final String namespace;
   private final String table;
   private final Key partitionKey;
   @Nullable private final Key clusteringKey;
 
-  public RecordKey(String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+  RecordKey(String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
     this.namespace = namespace;
     this.table = table;
     this.partitionKey = partitionKey;

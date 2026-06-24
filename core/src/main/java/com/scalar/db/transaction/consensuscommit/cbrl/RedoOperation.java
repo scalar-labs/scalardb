@@ -14,13 +14,13 @@ import javax.annotation.Nullable;
  * DELETE} entry is a delete. This rests on the encoder invariant that {@code prev_tx_id} is set iff
  * the record had a committed before-image.
  */
-public final class RedoOperation {
+final class RedoOperation {
   private final RecordKey key;
   private final String txId;
   @Nullable private final String prevTxId;
   private final Entry entry;
 
-  public RedoOperation(String txId, Entry entry) {
+  RedoOperation(String txId, Entry entry) {
     this.key = RecordKey.from(entry);
     this.txId = txId;
     this.prevTxId = entry.hasPrevTxId() ? entry.getPrevTxId() : null;

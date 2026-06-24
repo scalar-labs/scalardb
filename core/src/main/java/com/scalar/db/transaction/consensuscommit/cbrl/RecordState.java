@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
  * observably equal when both are absent, or both present with equal columns — what a restore writes
  * back. {@code insertTxIds}/{@code currentTxId} are internal bookkeeping and not part of that.
  */
-public final class RecordState {
+final class RecordState {
   @Nullable private final String currentTxId;
   private final boolean deleted;
   private final Map<String, Column> columns;
@@ -38,7 +38,7 @@ public final class RecordState {
   }
 
   /** The state of a key with no record (never inserted, or fully deleted and rolled forward). */
-  public static RecordState absent() {
+  static RecordState absent() {
     return new RecordState(null, false, Collections.emptyMap(), Collections.emptySet());
   }
 

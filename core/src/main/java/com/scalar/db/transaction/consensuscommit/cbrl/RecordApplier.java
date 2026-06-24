@@ -24,13 +24,13 @@ import javax.annotation.Nullable;
  * replayed by the cursor-driven primitive ({@link #replayKey}), which mirrors SSR's {@code
  * RecordApplyService.findWriteOperationsToApply}.
  */
-public final class RecordApplier {
+final class RecordApplier {
   private final RestoredRecordReader reader;
   // Per-bucket completion, so a crashed re-run skips done buckets (idempotency requirement). The
   // primitive is itself idempotent, so re-running a bucket is also safe; this just avoids the work.
   private final Set<Integer> completedBuckets = ConcurrentHashMap.newKeySet();
 
-  public RecordApplier(RestoredRecordReader reader) {
+  RecordApplier(RestoredRecordReader reader) {
     this.reader = reader;
   }
 
@@ -38,7 +38,7 @@ public final class RecordApplier {
    * Replays all buckets, returning the resulting state per key. {@code workerCount} workers each
    * own whole buckets ({@code M <= N}).
    */
-  public Map<RecordKey, RecordState> apply(List<List<RedoOperation>> buckets, int workerCount)
+  Map<RecordKey, RecordState> apply(List<List<RedoOperation>> buckets, int workerCount)
       throws InterruptedException {
     Preconditions.checkArgument(workerCount >= 1, "workerCount must be >= 1");
     Map<RecordKey, RecordState> result = new ConcurrentHashMap<>();
