@@ -307,7 +307,7 @@ Restored-table correctness is validated in **three independent layers**, because
 
 ## Risks & Dependencies
 
-- **R-risk-1 — Snapshot/coordinator-backup alignment (highest).** The point-in-time oracle (U5) and the coordinator backup (U4) must reflect the same committed-tx set. Misalignment makes layer-2 equality flaky. *Mitigation:* both key strictly off window-close; consider a brief commit barrier *for the oracle read only* (the backup stays non-pausing — only the test's measurement synchronizes). A non-closed copy can't pass silently regardless — it makes the restore fail loud (`IntegrityChecker` throws). This is the part most likely to need an implementation-time design call.
+- **R-risk-1 — Snapshot/coordinator-backup alignment (highest).** The point-in-time oracle (U5) and the coordinator backup (U4) must reflect the same committed-tx set. Misalignment makes layer-2 equality flaky. *Mitigation:* both key strictly off window-close; consider briefly pausing commits *for the oracle read only* (the backup stays non-pausing — only the test's measurement synchronizes). A non-closed copy can't pass silently regardless — it makes the restore fail loud (`IntegrityChecker` throws). This is the part most likely to need an implementation-time design call.
 - **R-risk-2 — Fail-closed visibility is hard to test deterministically (origin concern #2).** Simulating "a node that can't confirm the window" (GC pause / partition) in an IT is non-trivial. *Mitigation:* unit-test the gate's unconfirmable path directly (U1) rather than relying on the E2E to induce it.
 - **R-risk-3 — C4 recovery with foreign tx-ids.** The torn copy's PREPARED records reference source tx-ids that must resolve against the coordinator-backup artifact, not the live coordinator. *Mitigation:* drive recovery purely from the self-contained coordinator backup (U4) + `before_*`.
 - **R-risk-4 — TTL/epoch semantics** (window expiry mid-backup) could orphan a backup. *Mitigation:* explicit expiry handling in U1 + a test for "window expired mid-window".
@@ -318,7 +318,7 @@ Restored-table correctness is validated in **three independent layers**, because
 ## Open Questions (resolve during implementation)
 
 - Exact window-flag table schema and whether a window **epoch/id** is needed to detect stale caches (lean yes).
-- The precise snapshot/coordinator-backup alignment mechanism (R-risk-1) — barrier-for-oracle-read vs. a snapshot-isolation read that the coordinator backup is defined to match.
+- The precise snapshot/coordinator-backup alignment mechanism (R-risk-1) — pausing-commits-for-oracle-read vs. a snapshot-isolation read that the coordinator backup is defined to match.
 - Whether to reuse `BeforePreparationHook` for the gate consult or add a dedicated commit-path hook.
 - Whether `before_*` images are reliably present in a storage-level torn copy for every PREPARED record (origin §7 C4 asks to confirm).
 - Whether the current `CbrlBackupRestoreIntegrationTest` is deleted or kept as a narrower replay-core IT.
