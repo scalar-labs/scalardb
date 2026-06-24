@@ -205,17 +205,26 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
   locks, physical delete allowed — the design's core simplification vs. SSR).
 - Per key within a bucket: `divideWriteOperations` into `insertOperations` / `nonInsertOperations`,
   then walk the chain (§5).
-- **Checkpoint:** record per-bucket completion so a re-run skips done buckets — the
-  idempotent-re-run / restart requirement of §9 M4. **What the PoC delivers vs. what M4 needs:**
-  the PoC keeps `completedBuckets` (and `RecordState.insertTxIds`) **in memory**, which gives only
-  *algorithmic* idempotency — re-running replay from its output yields the same state (§6.2 P2,
-  §6.1 double-restore). It does **NOT** survive a process crash: a restarted restore starts with an
-  empty checkpoint and re-runs every bucket from the persisted record state. (The PoC's
-  single-transaction write-back keeps that safe — a crash leaves either the copy or the
-  fully-applied image, so the re-run still converges — but a real incrementally-writing restore
-  would not be safe without durable state.) Durable crash-restart is **in scope (M4) and an open
-  gap**: closing it needs the checkpoint and `insertTxIds` persisted alongside the restored data,
-  as SSR persists `insertTxIds` on the repl-record.
+- **Crash-restart / idempotent re-run (§9 M4).** Restore is re-runnable: a re-run reads the current
+  (recovered) record state, replays from it, and re-stamps the same final records. Write-back is the
+  per-record Storage-API apply (one `storage.put`/`delete` per record) — **not** atomic — so a crash
+  mid-write-back leaves a partial set; a full re-run re-derives the same final states from the same
+  copy + backup and overwrites the partial ones, so the converged image is correct. Idempotency is
+  *algorithmic*, carried in `RecordState.insertTxIds` (re-running replay from its output is a no-op;
+  §6.2 P2, §6.1 double-restore). There is **no durable per-bucket checkpoint** — a restarted restore
+  re-runs every bucket from the persisted record state (correct, just not work-skipping). Durable,
+  resumable crash-restart (skip already-done buckets after a crash) is **in scope (M4) and an open
+  gap**: closing it needs the cursor/`insertTxIds` persisted alongside the restored data, as SSR
+  persists `insertTxIds` on the repl-record.
+- **Memo — stricter crash test (deferred).** `crashMidRestore_reRunRestoresConsistently` injects the
+  crash by flipping a flag that wrapped storage/manager calls throw on, killing the restore *thread*
+  in-JVM. That is not a true crash: the JVM keeps running, OS/DB write buffers flush normally, and
+  the kill only lands at a proxied-call boundary timed by wall clock (hence the timing-flakiness
+  caveat). To test the concern strictly, run restore in a **separate JVM process** and
+  `destroyForcibly` it mid-restore (sweeping the kill point across the run), then re-run restore in a
+  fresh process and assert convergence. That exercises genuinely partial, abruptly-terminated state
+  — closer to a real operator crash — and lets the parent kill at an actual point in the child's
+  progress instead of by elapsed time.
 
 ### 4.4 Connectivity & the fork check (in `RecordApplier`, no separate checker)
 - **No fail-loud integrity checker** (an earlier `IntegrityChecker` idea was dropped — it would be
@@ -432,7 +441,8 @@ state** sequentially (the oracle).
 - **P1 Confluence:** shuffle the op list into random order (and across random `N`, `M`) ⇒
   replayed state per key equals the reference state.
 - **P2 Idempotency:** run replay twice (second run from the first run's output as the current state) ⇒
-  identical state; also re-run with `completedBuckets` pre-seeded ⇒ no change.
+  identical state; also run the full `RecordShuffler` → `RecordApplier` pipeline twice (second
+  `apply` from the first `apply`'s output) ⇒ identical state.
 - **P3 Connectivity (SSR-tolerant):** drop one mid-chain op ⇒ its successor is unreachable from the
   base and is **skipped** (left unapplied), no exception; the reachable prefix still applies.
 - **P4 Single-owner:** assert every key's ops occupy exactly one bucket across random `N`.
