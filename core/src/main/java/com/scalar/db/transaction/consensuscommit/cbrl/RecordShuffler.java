@@ -15,7 +15,7 @@ final class RecordShuffler {
     return Math.floorMod(key.hashCode(), bucketCount);
   }
 
-  List<List<RedoOperation>> shuffle(Iterable<RedoOperation> ops, int bucketCount) {
+  static List<List<RedoOperation>> shuffle(Iterable<RedoOperation> ops, int bucketCount) {
     if (bucketCount < 1) {
       throw new IllegalArgumentException("bucketCount must be >= 1, was " + bucketCount);
     }

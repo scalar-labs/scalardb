@@ -248,7 +248,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         new CbrlRestore(
             storage,
             manager,
-            keyManipulator,
             RESTORE_NAMESPACE,
             userColumnsByTable(),
             REPLAY_BUCKETS,
@@ -677,6 +676,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   @Test
   void concurrentSameKeyTransfers_restorePreservesConservation() throws Exception {
+    long workloadStartMillis = System.currentTimeMillis();
     long initialBalance = 1_000L;
     for (int i = 0; i < RECORD_COUNT; i++) {
       int key = i;
@@ -729,13 +729,22 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     assertThat(sumRestoredBalances(TABLE_B, B_TOKEN))
         .as("table_b total balance conserved")
         .isEqualTo(total);
+    // Every restored record must carry an ORIGINAL commit time — set while the workload ran, before
+    // the restore — not the restore-time clock. The window [workloadStart, beforeRestore) rejects
+    // both a restore-time "now" stamp (>= beforeRestore) and any bogus/zeroed value (<
+    // workloadStart);
+    // isNotEmpty rejects a vacuous pass. (committed_at can come from either the writer's
+    // coordinator
+    // tx_created_at or the copy record's own tx_committed_at, so we bound it rather than match
+    // exact.)
     assertThat(restoredCommitTimes())
-        .as(
-            "restored records keep their original commit time (all committed during the workload,"
-                + " before the restore ran), not the restore-time clock")
+        .as("restored records keep their original commit time, not the restore-time clock")
+        .isNotEmpty()
         .allSatisfy(
             committedAt ->
-                assertThat(committedAt).isGreaterThan(0L).isLessThan(beforeRestoreMillis));
+                assertThat(committedAt)
+                    .isGreaterThanOrEqualTo(workloadStartMillis)
+                    .isLessThan(beforeRestoreMillis));
   }
 
   /** Raw {@code tx_committed_at} of every present record in the restore tables. */
@@ -761,12 +770,15 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * baseline restore is timed first; the crash is then injected at a sweep of points across that
    * measured duration, and after each kill the restore is re-run to completion and re-checked.
    *
-   * <p>This is the design's crash-safety claim under test: write-back is one atomic transaction
-   * that persists only the final replayed state (with a fresh tx id), and recovery/replay are
-   * idempotent, so a re-run never sees a half-applied chain. The crash is injected by wrapping the
-   * storage/manager/coordinator the restore uses in proxies that throw once a flag is set, so the
-   * kill lands mid-operation (mid-recovery or mid-write-back) rather than relying on cooperative
-   * thread interruption, which JDBC ignores.
+   * <p>This is the design's crash-safety claim under test. Write-back is NOT atomic: it writes each
+   * record individually via the Storage API (one storage.put/delete per record, no enclosing
+   * transaction), so a crash can leave a partial set. Crash-safety instead comes from idempotent
+   * re-derivation — a re-run recomputes the same final states from the same backup and copy and
+   * re-stamps them, overwriting any partially-written records — plus idempotent recovery/replay, so
+   * the converged image is correct regardless of where the first attempt died. The crash is
+   * injected by wrapping the storage/manager the restore uses in proxies that throw once a flag is
+   * set, so the kill lands mid-operation (mid-recovery or mid-write-back) rather than relying on
+   * cooperative thread interruption, which JDBC ignores.
    */
   @Test
   void crashMidRestore_reRunRestoresConsistently() throws Exception {
@@ -867,7 +879,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     return new CbrlRestore(
         crashingStorage,
         crashingManager,
-        keyManipulator,
         RESTORE_NAMESPACE,
         userColumnsByTable(),
         REPLAY_BUCKETS,
@@ -1122,7 +1133,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
               : new Coordinator.State(row.txId, row.childIds, TransactionState.COMMITTED);
       coordinator.putState(state);
     }
-    for (String txId : inDoubtCopyTxIds(backup.keySet())) {
+    // Compare copy records' tx_id against the FULL committed ids (a group-commit child record
+    // carries its parent+child id, not the parent row key), so committed children are not
+    // misclassified as in-doubt and given a spurious ABORTED state.
+    for (String txId : inDoubtCopyTxIds(committedFullIdsIn(backup))) {
       coordinator.putState(new Coordinator.State(txId, TransactionState.ABORTED));
     }
   }
@@ -1319,6 +1333,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       } catch (Exception e) {
         last = e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
         abortQuietly(tx);
+        Uninterruptibles.sleepUninterruptibly(WORKLOAD_RETRY_BACKOFF);
       }
     }
     throw last;

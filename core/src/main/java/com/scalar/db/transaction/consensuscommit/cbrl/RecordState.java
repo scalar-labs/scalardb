@@ -192,6 +192,10 @@ final class RecordState {
     return "RecordState{present, cur=" + currentTxId + ", columns=" + columns.keySet() + '}';
   }
 
+  // Replay-state equality only: the write-back metadata (version, committedAt) is intentionally
+  // excluded — it is stamped from the coordinator backup, not derived by replay, so it is not part
+  // of the replayed identity. Tests that need to verify the stamped metadata assert on it directly
+  // (e.g. against the coordinator backup), not via equals.
   @Override
   public boolean equals(Object o) {
     if (this == o) {

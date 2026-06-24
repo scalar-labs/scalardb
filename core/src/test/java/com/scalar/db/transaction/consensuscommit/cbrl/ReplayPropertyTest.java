@@ -59,7 +59,7 @@ class ReplayPropertyTest {
       Collections.shuffle(shuffled, new Random(seed));
 
       for (int bucketCount : new int[] {1, 3, NUM_KEYS}) {
-        List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(shuffled, bucketCount);
+        List<List<RedoOperation>> buckets = RecordShuffler.shuffle(shuffled, bucketCount);
         Map<RecordKey, RecordState> actual =
             new RecordApplier(ABSENT).apply(buckets, Math.max(1, bucketCount / 2));
         for (RecordKey key : expected.keySet()) {
@@ -89,7 +89,7 @@ class ReplayPropertyTest {
   @Test
   void p2_idempotency_applyRerunFromOutputIsNoOp() throws InterruptedException {
     List<RedoOperation> ops = new RedoLogGenerator(7).generate(NUM_KEYS);
-    List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(ops, 4);
+    List<List<RedoOperation>> buckets = RecordShuffler.shuffle(ops, 4);
 
     Map<RecordKey, RecordState> first = new RecordApplier(ABSENT).apply(buckets, 4);
     Map<RecordKey, RecordState> second =

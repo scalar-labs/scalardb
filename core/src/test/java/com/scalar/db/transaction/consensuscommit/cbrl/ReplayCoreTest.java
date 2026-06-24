@@ -150,6 +150,16 @@ class ReplayCoreTest {
         .hasMessageContaining("share prev_tx_id");
   }
 
+  @Test
+  void blindDeletesWithNoPrevTxId_areTolerated_notForked() {
+    // Two DELETEs whose prior version had no captured tx_id (a deemed-as-committed / imported
+    // record) carry no prev_tx_id. They are unreachable from the chain walk and must be tolerated
+    // (skipped, logged) — NOT rejected as a fork the way two ops sharing a real prev_tx_id are.
+    List<RedoOperation> ops = ImmutableList.of(op("d1", delete(null)), op("d2", delete(null)));
+    RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
+    assertThat(result.present()).isFalse();
+  }
+
   private static Key keyProto() {
     return Key.newBuilder().addColumns(intColumn(PK, KEY)).build();
   }
@@ -179,13 +189,16 @@ class ReplayCoreTest {
   }
 
   private static Entry delete(String prevTxId) {
-    return Entry.newBuilder()
-        .setEntryType(Entry.EntryType.ENTRY_TYPE_DELETE)
-        .setNamespaceName(RedoLogGenerator.NAMESPACE)
-        .setTableName(RedoLogGenerator.TABLE)
-        .setPartitionKey(keyProto())
-        .setPrevTxId(prevTxId)
-        .build();
+    Entry.Builder builder =
+        Entry.newBuilder()
+            .setEntryType(Entry.EntryType.ENTRY_TYPE_DELETE)
+            .setNamespaceName(RedoLogGenerator.NAMESPACE)
+            .setTableName(RedoLogGenerator.TABLE)
+            .setPartitionKey(keyProto());
+    if (prevTxId != null) {
+      builder.setPrevTxId(prevTxId);
+    }
+    return builder.build();
   }
 
   private static RedoOperation op(String txId, Entry entry) {

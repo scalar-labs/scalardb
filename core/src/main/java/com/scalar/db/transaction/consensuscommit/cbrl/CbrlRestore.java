@@ -17,13 +17,20 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -58,7 +65,10 @@ import java.util.Optional;
 public final class CbrlRestore {
   private final DistributedStorage storage;
   private final DistributedTransactionManager manager;
-  private final CoordinatorGroupCommitKeyManipulator keyManipulator;
+  // Stateless; constructed here rather than leaked through the public constructor as an internal
+  // type that external callers have no other reason to depend on.
+  private final CoordinatorGroupCommitKeyManipulator keyManipulator =
+      new CoordinatorGroupCommitKeyManipulator();
   private final String restoreNamespace;
   // Restore table -> its user (non-key, non-tx-metadata) column names, read as the replay base.
   private final Map<String, List<String>> userColumnsByTable;
@@ -68,14 +78,12 @@ public final class CbrlRestore {
   public CbrlRestore(
       DistributedStorage storage,
       DistributedTransactionManager manager,
-      CoordinatorGroupCommitKeyManipulator keyManipulator,
       String restoreNamespace,
       Map<String, List<String>> userColumnsByTable,
       int replayBuckets,
       int replayWorkers) {
     this.storage = storage;
     this.manager = manager;
-    this.keyManipulator = keyManipulator;
     this.restoreNamespace = restoreNamespace;
     this.userColumnsByTable = userColumnsByTable;
     this.replayBuckets = replayBuckets;
@@ -94,6 +102,11 @@ public final class CbrlRestore {
     List<RedoOperation> redoOps = new ArrayList<>();
     for (CoordinatorBackupRow row : coordinatorBackup.values()) {
       committedAtByTxId.put(row.txId, row.createdAt);
+      if (row.writeSet == null) {
+        // Committed but no redo captured (a pre-feature / keys-only coordinator row): nothing to
+        // replay — the copy carries this transaction's state.
+        continue;
+      }
       for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
         // The writing transaction's full id is what records store and what other ops' prev_tx_id
         // chains to. For a normal group commit the row is keyed by the parent id and each child's
@@ -115,7 +128,7 @@ public final class CbrlRestore {
       }
     }
 
-    List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(redoOps, replayBuckets);
+    List<List<RedoOperation>> buckets = RecordShuffler.shuffle(redoOps, replayBuckets);
     Map<RecordKey, RecordState> finalStates =
         new RecordApplier(key -> readCopyState(key, committedAtByTxId))
             .apply(buckets, replayWorkers);
@@ -178,9 +191,15 @@ public final class CbrlRestore {
               record.isNull(Attribute.COMMITTED_AT)
                   ? 0L
                   : record.getBigInt(Attribute.COMMITTED_AT));
+      List<String> userColumns = userColumnsByTable.get(key.table());
+      if (userColumns == null) {
+        throw new IllegalArgumentException(
+            "Redo references a table outside the restore scope (not in userColumnsByTable): "
+                + key.table());
+      }
       Map<String, com.scalar.db.transaction.consensuscommit.proto.v1.Column> columns =
           new LinkedHashMap<>();
-      for (String name : userColumnsByTable.get(key.table())) {
+      for (String name : userColumns) {
         Column<?> column = record.getColumns().get(name);
         if (column != null) {
           columns.put(name, ioColumnToProto(column));
@@ -273,7 +292,9 @@ public final class CbrlRestore {
     return Scan.newBuilder().namespace(restoreNamespace).table(table).all().build();
   }
 
-  private static com.scalar.db.transaction.consensuscommit.proto.v1.Column ioColumnToProto(
+  // Mirrors WriteSetEncoder's ColumnEncodingVisitor exactly (same TimeRelatedColumnEncodingUtils),
+  // so a value read from the copy base encodes identically to the same value carried in the redo.
+  static com.scalar.db.transaction.consensuscommit.proto.v1.Column ioColumnToProto(
       Column<?> column) {
     String name = column.getName();
     com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder =
@@ -318,6 +339,54 @@ public final class CbrlRestore {
       }
       return builder.setBlobValue(value).build();
     }
+    if (column instanceof FloatColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.FloatValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.FloatValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(((FloatColumn) column).getFloatValue());
+      }
+      return builder.setFloatValue(value).build();
+    }
+    if (column instanceof DoubleColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.DoubleValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.DoubleValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(((DoubleColumn) column).getDoubleValue());
+      }
+      return builder.setDoubleValue(value).build();
+    }
+    if (column instanceof DateColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.DateValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.DateValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(TimeRelatedColumnEncodingUtils.encode((DateColumn) column));
+      }
+      return builder.setDateValue(value).build();
+    }
+    if (column instanceof TimeColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimeValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimeValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(TimeRelatedColumnEncodingUtils.encode((TimeColumn) column));
+      }
+      return builder.setTimeValue(value).build();
+    }
+    if (column instanceof TimestampColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimestampValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimestampValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(TimeRelatedColumnEncodingUtils.encode((TimestampColumn) column));
+      }
+      return builder.setTimestampValue(value).build();
+    }
+    if (column instanceof TimestampTZColumn) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimestampTZValue.Builder value =
+          com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimestampTZValue.newBuilder();
+      if (!column.hasNullValue()) {
+        value.setValue(TimeRelatedColumnEncodingUtils.encode((TimestampTZColumn) column));
+      }
+      return builder.setTimestamptzValue(value).build();
+    }
     throw new IllegalStateException("Unsupported column type for " + name + ": " + column);
   }
 
@@ -330,8 +399,7 @@ public final class CbrlRestore {
     return builder.build();
   }
 
-  private static Column<?> toIoColumn(
-      com.scalar.db.transaction.consensuscommit.proto.v1.Column column) {
+  static Column<?> toIoColumn(com.scalar.db.transaction.consensuscommit.proto.v1.Column column) {
     String name = column.getName();
     if (column.hasIntValue()) {
       return column.getIntValue().hasValue()
@@ -357,6 +425,43 @@ public final class CbrlRestore {
       return column.getBlobValue().hasValue()
           ? BlobColumn.of(name, column.getBlobValue().getValue().toByteArray())
           : BlobColumn.ofNull(name);
+    }
+    if (column.hasFloatValue()) {
+      return column.getFloatValue().hasValue()
+          ? FloatColumn.of(name, column.getFloatValue().getValue())
+          : FloatColumn.ofNull(name);
+    }
+    if (column.hasDoubleValue()) {
+      return column.getDoubleValue().hasValue()
+          ? DoubleColumn.of(name, column.getDoubleValue().getValue())
+          : DoubleColumn.ofNull(name);
+    }
+    if (column.hasDateValue()) {
+      return column.getDateValue().hasValue()
+          ? DateColumn.of(
+              name, TimeRelatedColumnEncodingUtils.decodeDate(column.getDateValue().getValue()))
+          : DateColumn.ofNull(name);
+    }
+    if (column.hasTimeValue()) {
+      return column.getTimeValue().hasValue()
+          ? TimeColumn.of(
+              name, TimeRelatedColumnEncodingUtils.decodeTime(column.getTimeValue().getValue()))
+          : TimeColumn.ofNull(name);
+    }
+    if (column.hasTimestampValue()) {
+      return column.getTimestampValue().hasValue()
+          ? TimestampColumn.of(
+              name,
+              TimeRelatedColumnEncodingUtils.decodeTimestamp(column.getTimestampValue().getValue()))
+          : TimestampColumn.ofNull(name);
+    }
+    if (column.hasTimestamptzValue()) {
+      return column.getTimestamptzValue().hasValue()
+          ? TimestampTZColumn.of(
+              name,
+              TimeRelatedColumnEncodingUtils.decodeTimestampTZ(
+                  column.getTimestamptzValue().getValue()))
+          : TimestampTZColumn.ofNull(name);
     }
     throw new IllegalStateException("Unsupported column value in redo entry: " + column);
   }

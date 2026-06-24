@@ -246,6 +246,8 @@ message Entry {
 
   // The record's resulting version after this write. Carried so CBRL restore can stamp the
   // restored record with a coherent version (it is not used for replay ordering — the chain is).
-  // Only populated for the full (redo-logging) write set.
+  // Only populated for the full (redo-logging) write set. Its presence is the canonical
+  // discriminator restore uses: an entry with this field absent (hasTxVersion() == false) is from a
+  // keys-only write set and must NOT be replayed. Do not set tx_version on a keys-only entry.
   optional int32 tx_version = 8;
 }

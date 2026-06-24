@@ -14,6 +14,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Pass 2: replays each bucket's redo ops onto the records being restored. A worker owns whole
@@ -23,6 +25,7 @@ import javax.annotation.Nullable;
  * RecordApplyService.findWriteOperationsToApply}.
  */
 final class RecordApplier {
+  private static final Logger logger = LoggerFactory.getLogger(RecordApplier.class);
   private final RestoredRecordReader reader;
 
   RecordApplier(RestoredRecordReader reader) {
@@ -104,7 +107,7 @@ final class RecordApplier {
       producedBy.put(op.txId(), op);
       if (op.isInsert()) {
         insertList.add(op);
-      } else {
+      } else if (op.prevTxId() != null) {
         RedoOperation clash = nonInsertOps.put(op.prevTxId(), op);
         if (clash != null) {
           throw new CbrlReplayException(
@@ -118,6 +121,18 @@ final class RecordApplier {
                   + op.txId()
                   + ") — not a linear chain");
         }
+      } else {
+        // A non-INSERT op with no captured prior committed version — e.g. a DELETE/UPDATE of a
+        // deemed-as-committed (imported / pre-ConsensusCommit) record. Not expected for
+        // ConsensusCommit-managed data, and unreachable from the chain walk (which advances only by
+        // a non-null cursor), so it is left unapplied. Warn so the anomaly is visible rather than
+        // silently swallowed — and so two of them no longer trip the fork guard.
+        logger.warn(
+            "Skipping a {} redo op on {} with no prev_tx_id (no captured prior committed version) —"
+                + " unexpected for ConsensusCommit-managed data. Transaction ID: {}",
+            op.isDelete() ? "DELETE" : "UPDATE",
+            key,
+            op.txId());
       }
     }
     // INSERT roots are applied in any order — the chain converges to the same final version, so
