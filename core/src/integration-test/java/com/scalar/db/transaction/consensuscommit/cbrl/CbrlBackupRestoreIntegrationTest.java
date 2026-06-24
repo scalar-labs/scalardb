@@ -30,6 +30,8 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayDeque;
@@ -194,6 +196,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       new CoordinatorGroupCommitKeyManipulator();
   private ExecutorService workerExecutor;
   private CbrlRestore cbrlRestore;
+  private ConsensusCommitConfig consensusCommitConfig;
+  private final AtomicBoolean crashRestore = new AtomicBoolean(false);
   private final AtomicLong tokenCounter = new AtomicLong();
   private final AtomicLong committedCount = new AtomicLong();
 
@@ -225,8 +229,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     manager = transactionFactory.getTransactionManager();
     admin = transactionFactory.getTransactionAdmin();
     storage = StorageFactory.create(properties).getStorage();
-    coordinator =
-        new Coordinator(storage, new ConsensusCommitConfig(new DatabaseConfig(properties)));
+    consensusCommitConfig = new ConsensusCommitConfig(new DatabaseConfig(properties));
+    coordinator = new Coordinator(storage, consensusCommitConfig);
     workerExecutor = Executors.newFixedThreadPool(WORKLOAD_THREADS);
 
     admin.createCoordinatorTables(true);
@@ -236,9 +240,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       admin.createTable(namespace, TABLE_B, TABLE_B_METADATA, true);
     }
 
-    Map<String, List<String>> userColumnsByTable = new LinkedHashMap<>();
-    userColumnsByTable.put(TABLE_A, Arrays.asList(A_USER_COLUMNS));
-    userColumnsByTable.put(TABLE_B, Arrays.asList(B_USER_COLUMNS));
     cbrlRestore =
         new CbrlRestore(
             storage,
@@ -247,7 +248,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
             admin,
             keyManipulator,
             RESTORE_NAMESPACE,
-            userColumnsByTable,
+            userColumnsByTable(),
             REPLAY_BUCKETS,
             REPLAY_WORKERS);
   }
@@ -721,6 +722,203 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     assertThat(sumRestoredBalances(TABLE_B, B_TOKEN))
         .as("table_b total balance conserved")
         .isEqualTo(total);
+  }
+
+  /**
+   * Crash-in-the-middle: a restore killed partway and then re-run from the full backup must still
+   * converge to a consistent, conserved image — re-running never corrupts the result, no matter
+   * where the first attempt died. Uses the conservation workload (no per-key oracle needed). A
+   * baseline restore is timed first; the crash is then injected at a sweep of points across that
+   * measured duration, and after each kill the restore is re-run to completion and re-checked.
+   *
+   * <p>This is the design's crash-safety claim under test: write-back is one atomic transaction
+   * that persists only the final replayed state (with a fresh tx id), and recovery/replay are
+   * idempotent, so a re-run never sees a half-applied chain. The crash is injected by wrapping the
+   * storage/manager/coordinator the restore uses in proxies that throw once a flag is set, so the
+   * kill lands mid-operation (mid-recovery or mid-write-back) rather than relying on cooperative
+   * thread interruption, which JDBC ignores.
+   */
+  @Test
+  void crashMidRestore_reRunRestoresConsistently() throws Exception {
+    long initialBalance = 1_000L;
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      int key = i;
+      withRetry(
+          tx -> {
+            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
+            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
+          });
+    }
+    long total = (long) RECORD_COUNT * initialBalance;
+
+    manager.enableRedoLogging(); // Open the backup window.
+    AtomicBoolean stop = new AtomicBoolean(false);
+    List<Future<?>> workload = startTransferWorkload(stop);
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
+    copyUserTables();
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
+    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    stop.set(true);
+    for (Future<?> future : workload) {
+      future.get();
+    }
+
+    // The non-snapshot-consistent copy, captured so each crash iteration restarts from the same
+    // base.
+    Map<String, List<Put>> copySnapshot = snapshotRestoreTables();
+
+    // Baseline: one full restore, to validate the happy path and to measure its duration.
+    long startNanos = System.nanoTime();
+    cbrlRestore.restore(backup);
+    long restoreNanos = System.nanoTime() - startNanos;
+    assertThat(findConsistencyViolations()).as("baseline restore consistent").isEmpty();
+    assertThat(sumRestoredBalances(TABLE_A, A_TOKEN)).as("baseline conserved").isEqualTo(total);
+
+    CbrlRestore crashingRestore = newCrashingRestore();
+    int steps = 4;
+    int killed = 0;
+    for (int step = 1; step <= steps; step++) {
+      resetRestoreTables(copySnapshot); // Fresh non-consistent base for this attempt.
+
+      crashRestore.set(false);
+      Throwable[] thrown = {null};
+      Thread attempt =
+          new Thread(
+              () -> {
+                try {
+                  crashingRestore.restore(backup);
+                } catch (Throwable t) {
+                  thrown[0] = t; // The injected crash; null if the restore finished first.
+                }
+              });
+      attempt.start();
+      Uninterruptibles.sleepUninterruptibly(Duration.ofNanos((restoreNanos / steps) * step));
+      crashRestore.set(true); // Inject the crash at this fraction of the restore timeline.
+      attempt.join();
+      crashRestore.set(false);
+      if (thrown[0] != null) {
+        killed++; // The attempt was genuinely killed mid-restore, not allowed to finish.
+      }
+
+      // Re-run from the full backup on whatever partial state the crash left behind.
+      cbrlRestore.restore(backup);
+
+      assertThat(findConsistencyViolations())
+          .as("re-run after crash at %d/%d: cross-table consistency", step, steps)
+          .isEmpty();
+      assertThat(presentKeyCount())
+          .as("re-run after crash at %d/%d: every account present", step, steps)
+          .isEqualTo(RECORD_COUNT);
+      assertThat(sumRestoredBalances(TABLE_A, A_TOKEN))
+          .as("re-run after crash at %d/%d: table_a conserved", step, steps)
+          .isEqualTo(total);
+      assertThat(sumRestoredBalances(TABLE_B, B_TOKEN))
+          .as("re-run after crash at %d/%d: table_b conserved", step, steps)
+          .isEqualTo(total);
+    }
+
+    assertThat(killed)
+        .as("the crash injection actually killed a restore mid-flight at least once (has teeth)")
+        .isGreaterThan(0);
+  }
+
+  /**
+   * A {@link CbrlRestore} whose storage/manager/coordinator throw once {@link #crashRestore} is
+   * set.
+   */
+  private CbrlRestore newCrashingRestore() {
+    DistributedStorage crashingStorage = crashing(DistributedStorage.class, storage, false);
+    DistributedTransactionManager crashingManager =
+        crashing(DistributedTransactionManager.class, manager, true);
+    Coordinator crashingCoordinator = new Coordinator(crashingStorage, consensusCommitConfig);
+    return new CbrlRestore(
+        crashingStorage,
+        crashingManager,
+        crashingCoordinator,
+        admin,
+        keyManipulator,
+        RESTORE_NAMESPACE,
+        userColumnsByTable(),
+        REPLAY_BUCKETS,
+        REPLAY_WORKERS);
+  }
+
+  /**
+   * Wraps {@code real} so every call throws once {@link #crashRestore} is set (close/abort
+   * excepted, so cleanup still runs). When {@code wrapTransactions}, transactions it returns are
+   * wrapped too, so a kill can land mid-transaction.
+   */
+  @SuppressWarnings("unchecked")
+  private <T> T crashing(Class<T> iface, T real, boolean wrapTransactions) {
+    return (T)
+        Proxy.newProxyInstance(
+            iface.getClassLoader(),
+            new Class<?>[] {iface},
+            (proxy, method, args) -> {
+              String name = method.getName();
+              if (crashRestore.get() && !name.equals("close") && !name.equals("abort")) {
+                throw new IllegalStateException("injected mid-restore crash");
+              }
+              Object result;
+              try {
+                result = args == null ? method.invoke(real) : method.invoke(real, args);
+              } catch (InvocationTargetException e) {
+                throw e.getCause();
+              }
+              if (wrapTransactions && result instanceof DistributedTransaction) {
+                return crashing(
+                    DistributedTransaction.class, (DistributedTransaction) result, false);
+              }
+              return result;
+            });
+  }
+
+  /**
+   * Captures the current cbrl_restore rows (with metadata) so a crash iteration can reset to them.
+   */
+  private Map<String, List<Put>> snapshotRestoreTables() throws Exception {
+    Map<String, List<Put>> snapshot = new LinkedHashMap<>();
+    for (String table : new String[] {TABLE_A, TABLE_B}) {
+      List<Put> puts = new ArrayList<>();
+      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
+      try (Scanner scanner = storage.scan(scan)) {
+        for (Result result : scanner.all()) {
+          PutBuilder.Buildable builder =
+              Put.newBuilder()
+                  .namespace(RESTORE_NAMESPACE)
+                  .table(table)
+                  .partitionKey(result.getPartitionKey().orElseThrow(IllegalStateException::new));
+          result.getClusteringKey().ifPresent(builder::clusteringKey);
+          for (Column<?> column : result.getColumns().values()) {
+            if (!isKeyColumn(column.getName(), table)) {
+              builder.value(column);
+            }
+          }
+          puts.add(builder.build());
+        }
+      }
+      snapshot.put(table, puts);
+    }
+    return snapshot;
+  }
+
+  /**
+   * Resets cbrl_restore to a snapshot (truncate then re-put) — the pre-restore non-consistent copy.
+   */
+  private void resetRestoreTables(Map<String, List<Put>> snapshot) throws Exception {
+    for (String table : new String[] {TABLE_A, TABLE_B}) {
+      admin.truncateTable(RESTORE_NAMESPACE, table);
+      for (Put put : snapshot.get(table)) {
+        storage.put(put);
+      }
+    }
+  }
+
+  private Map<String, List<String>> userColumnsByTable() {
+    Map<String, List<String>> map = new LinkedHashMap<>();
+    map.put(TABLE_A, Arrays.asList(A_USER_COLUMNS));
+    map.put(TABLE_B, Arrays.asList(B_USER_COLUMNS));
+    return map;
   }
 
   private List<Future<?>> startTransferWorkload(AtomicBoolean stop) {
