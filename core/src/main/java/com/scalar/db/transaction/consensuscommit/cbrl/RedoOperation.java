@@ -19,12 +19,20 @@ final class RedoOperation {
   private final String txId;
   @Nullable private final String prevTxId;
   private final Entry entry;
+  // The writing transaction's commit time (the coordinator's tx_created_at), stamped on the
+  // restored record. 0 for generator/unit-test ops that never write back.
+  private final long committedAt;
 
   RedoOperation(String txId, Entry entry) {
+    this(txId, entry, 0L);
+  }
+
+  RedoOperation(String txId, Entry entry, long committedAt) {
     this.key = RecordKey.from(entry);
     this.txId = txId;
     this.prevTxId = entry.hasPrevTxId() ? entry.getPrevTxId() : null;
     this.entry = entry;
+    this.committedAt = committedAt;
   }
 
   RecordKey key() {
@@ -42,6 +50,22 @@ final class RedoOperation {
 
   Entry entry() {
     return entry;
+  }
+
+  /**
+   * The Consensus Commit version this write produced — stamped on the restored record, never used
+   * for ordering (chain-only).
+   */
+  int version() {
+    return entry.getTxVersion();
+  }
+
+  /**
+   * The writing transaction's commit time (coordinator tx_created_at) — stamped on the restored
+   * record so it keeps its original commit timestamp instead of the restore-time clock.
+   */
+  long committedAt() {
+    return committedAt;
   }
 
   boolean isDelete() {

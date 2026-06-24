@@ -156,6 +156,9 @@ final class RecordApplier {
         state.applyDelete();
       }
       state.advanceCursor(op.txId());
+      // Stamp the version and commit time this write produced (write-back metadata, not ordering).
+      state.setVersion(op.version());
+      state.setCommittedAt(op.committedAt());
     }
     // Ops left in nonInsertOps were never reached (window-boundary or below-base links). They are
     // tolerated, as in SSR — see the method comment.

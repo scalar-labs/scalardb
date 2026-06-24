@@ -14,11 +14,15 @@ final class CoordinatorBackupRow {
   final int state;
   final List<String> childIds;
   @Nullable final WriteSet writeSet;
+  // The transaction's commit time (the coordinator's tx_created_at), stamped on restored records.
+  final long createdAt;
 
-  CoordinatorBackupRow(String txId, int state, List<String> childIds, @Nullable WriteSet writeSet) {
+  CoordinatorBackupRow(
+      String txId, int state, List<String> childIds, @Nullable WriteSet writeSet, long createdAt) {
     this.txId = txId;
     this.state = state;
     this.childIds = childIds;
     this.writeSet = writeSet;
+    this.createdAt = createdAt;
   }
 }

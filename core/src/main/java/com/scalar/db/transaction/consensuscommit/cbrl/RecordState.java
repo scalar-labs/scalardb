@@ -25,21 +25,31 @@ final class RecordState {
   private final boolean deleted;
   private final Map<String, Column> columns;
   private final Set<String> insertTxIds;
+  // The Consensus Commit version to stamp on the restored record (write-back metadata, never used
+  // for ordering — chain-only). Carried from the copy's base and advanced per applied redo op.
+  private final int version;
+  // The writing transaction's commit time (coordinator tx_created_at), stamped on the restored
+  // record so it keeps its original commit timestamp. Base read from the copy; advanced per op.
+  private final long committedAt;
 
   private RecordState(
       @Nullable String currentTxId,
       boolean deleted,
       Map<String, Column> columns,
-      Set<String> insertTxIds) {
+      Set<String> insertTxIds,
+      int version,
+      long committedAt) {
     this.currentTxId = currentTxId;
     this.deleted = deleted;
     this.columns = columns;
     this.insertTxIds = insertTxIds;
+    this.version = version;
+    this.committedAt = committedAt;
   }
 
   /** The state of a key with no record (never inserted, or fully deleted and rolled forward). */
   static RecordState absent() {
-    return new RecordState(null, false, Collections.emptyMap(), Collections.emptySet());
+    return new RecordState(null, false, Collections.emptyMap(), Collections.emptySet(), 0, 0);
   }
 
   static RecordState of(
@@ -47,7 +57,17 @@ final class RecordState {
       boolean deleted,
       Map<String, Column> columns,
       Set<String> insertTxIds) {
-    return new RecordState(currentTxId, deleted, columns, insertTxIds);
+    return new RecordState(currentTxId, deleted, columns, insertTxIds, 0, 0);
+  }
+
+  static RecordState of(
+      @Nullable String currentTxId,
+      boolean deleted,
+      Map<String, Column> columns,
+      Set<String> insertTxIds,
+      int version,
+      long committedAt) {
+    return new RecordState(currentTxId, deleted, columns, insertTxIds, version, committedAt);
   }
 
   @Nullable
@@ -63,9 +83,17 @@ final class RecordState {
     return columns;
   }
 
+  int version() {
+    return version;
+  }
+
+  long committedAt() {
+    return committedAt;
+  }
+
   /** Mutable working copy used while replaying a key's chain. */
   Builder toBuilder() {
-    return new Builder(currentTxId, deleted, columns, insertTxIds);
+    return new Builder(currentTxId, deleted, columns, insertTxIds, version, committedAt);
   }
 
   static final class Builder {
@@ -73,16 +101,22 @@ final class RecordState {
     private boolean deleted;
     private final Map<String, Column> columns;
     private final Set<String> insertTxIds;
+    private int version;
+    private long committedAt;
 
     private Builder(
         @Nullable String currentTxId,
         boolean deleted,
         Map<String, Column> columns,
-        Set<String> insertTxIds) {
+        Set<String> insertTxIds,
+        int version,
+        long committedAt) {
       this.currentTxId = currentTxId;
       this.deleted = deleted;
       this.columns = new LinkedHashMap<>(columns);
       this.insertTxIds = new HashSet<>(insertTxIds);
+      this.version = version;
+      this.committedAt = committedAt;
     }
 
     /** INSERT: the record is (re)created, so its columns become exactly the insert's. */
@@ -120,6 +154,14 @@ final class RecordState {
       currentTxId = txId;
     }
 
+    void setVersion(int version) {
+      this.version = version;
+    }
+
+    void setCommittedAt(long committedAt) {
+      this.committedAt = committedAt;
+    }
+
     @Nullable
     String currentTxId() {
       return currentTxId;
@@ -130,7 +172,7 @@ final class RecordState {
     }
 
     RecordState build() {
-      return new RecordState(currentTxId, deleted, columns, insertTxIds);
+      return new RecordState(currentTxId, deleted, columns, insertTxIds, version, committedAt);
     }
   }
 

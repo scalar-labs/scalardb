@@ -185,6 +185,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private static final int DELETE_PERCENTAGE = 30;
   private static final Duration WORKLOAD_WARMUP = Duration.ofMillis(400);
   private static final Duration WORKLOAD_AFTER_COPY = Duration.ofMillis(400);
+  // Backoff between workload-transaction retries: an UncommittedRecordException means a concurrent
+  // (group-)committed record's coordinator state has not landed yet, so retrying immediately just
+  // burns attempts before async recovery resolves it. A short pause lets it settle.
+  private static final Duration WORKLOAD_RETRY_BACKOFF = Duration.ofMillis(20);
   private static final int REPLAY_BUCKETS = 8;
   private static final int REPLAY_WORKERS = 4;
 
@@ -244,8 +248,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         new CbrlRestore(
             storage,
             manager,
-            coordinator,
-            admin,
             keyManipulator,
             RESTORE_NAMESPACE,
             userColumnsByTable(),
@@ -326,6 +328,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
 
     // Restore WITHOUT taking a copy: the restore tables stay empty as the repair base.
+    arrangeRestoredCoordinator(backup);
     cbrlRestore.restore(backup);
 
     for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
@@ -417,6 +420,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     }
     Set<String> committedInBackup = committedFullIdsIn(coordinatorBackup);
 
+    arrangeRestoredCoordinator(coordinatorBackup);
     cbrlRestore.restore(coordinatorBackup);
 
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
@@ -499,6 +503,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       } catch (Exception e) {
         last = e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
         abortQuietly(tx);
+        Uninterruptibles.sleepUninterruptibly(WORKLOAD_RETRY_BACKOFF);
       }
     }
     throw last;
@@ -708,6 +713,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       future.get();
     }
 
+    arrangeRestoredCoordinator(coordinatorBackup);
+    long beforeRestoreMillis = System.currentTimeMillis();
     cbrlRestore.restore(coordinatorBackup);
 
     assertThat(findConsistencyViolations())
@@ -722,6 +729,29 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     assertThat(sumRestoredBalances(TABLE_B, B_TOKEN))
         .as("table_b total balance conserved")
         .isEqualTo(total);
+    assertThat(restoredCommitTimes())
+        .as(
+            "restored records keep their original commit time (all committed during the workload,"
+                + " before the restore ran), not the restore-time clock")
+        .allSatisfy(
+            committedAt ->
+                assertThat(committedAt).isGreaterThan(0L).isLessThan(beforeRestoreMillis));
+  }
+
+  /** Raw {@code tx_committed_at} of every present record in the restore tables. */
+  private List<Long> restoredCommitTimes() throws Exception {
+    List<Long> times = new ArrayList<>();
+    for (String table : new String[] {TABLE_A, TABLE_B}) {
+      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
+      try (Scanner scanner = storage.scan(scan)) {
+        for (Result result : scanner.all()) {
+          if (!result.isNull(Attribute.COMMITTED_AT)) {
+            times.add(result.getBigInt(Attribute.COMMITTED_AT));
+          }
+        }
+      }
+    }
+    return times;
   }
 
   /**
@@ -766,6 +796,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     // The non-snapshot-consistent copy, captured so each crash iteration restarts from the same
     // base.
     Map<String, List<Put>> copySnapshot = snapshotRestoreTables();
+
+    // The coordinator table is restored from its backup before any restore (here: test arrange).
+    // CbrlRestore never touches the coordinator, so this holds across every crash iteration below.
+    arrangeRestoredCoordinator(backup);
 
     // Baseline: one full restore, to validate the happy path and to measure its duration.
     long startNanos = System.nanoTime();
@@ -830,12 +864,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     DistributedStorage crashingStorage = crashing(DistributedStorage.class, storage, false);
     DistributedTransactionManager crashingManager =
         crashing(DistributedTransactionManager.class, manager, true);
-    Coordinator crashingCoordinator = new Coordinator(crashingStorage, consensusCommitConfig);
     return new CbrlRestore(
         crashingStorage,
         crashingManager,
-        crashingCoordinator,
-        admin,
         keyManipulator,
         RESTORE_NAMESPACE,
         userColumnsByTable(),
@@ -1035,6 +1066,106 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     return name.equals(B_PK) || name.equals(B_CK);
   }
 
+  /**
+   * The restore path must add no coordinator rows of its own: it applies records with the Storage
+   * API and resolves in-flight ones via record-level recovery against the already-restored
+   * coordinator, never a transaction. The coordinator after restore must equal what the restore
+   * found (the restored backup).
+   */
+  @Test
+  void restore_writesNoCoordinatorRows() throws Exception {
+    long initialBalance = 1_000L;
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      int key = i;
+      withRetry(
+          tx -> {
+            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
+            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
+          });
+    }
+
+    manager.enableRedoLogging();
+    AtomicBoolean stop = new AtomicBoolean(false);
+    List<Future<?>> workload = startTransferWorkload(stop);
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
+    copyUserTables();
+    Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
+    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    stop.set(true);
+    for (Future<?> future : workload) {
+      future.get();
+    }
+
+    arrangeRestoredCoordinator(backup);
+    Set<String> coordinatorBefore = coordinatorTxIds();
+
+    cbrlRestore.restore(backup);
+
+    assertThat(coordinatorTxIds())
+        .as("restore must not write any coordinator rows of its own")
+        .isEqualTo(coordinatorBefore);
+  }
+
+  /**
+   * Test arrange: simulate the physical restore of the coordinator table into the target — every
+   * backed-up transaction COMMITTED, and every in-flight copy record whose writer is absent from
+   * the backup ABORTED. In production this is the backup tool restoring the coordinator table like
+   * any other; {@link CbrlRestore} itself never writes or truncates the coordinator.
+   */
+  private void arrangeRestoredCoordinator(Map<String, CoordinatorBackupRow> backup)
+      throws Exception {
+    admin.truncateCoordinatorTables();
+    for (CoordinatorBackupRow row : backup.values()) {
+      Coordinator.State state =
+          row.childIds.isEmpty()
+              ? new Coordinator.State(row.txId, row.writeSet, TransactionState.COMMITTED)
+              : new Coordinator.State(row.txId, row.childIds, TransactionState.COMMITTED);
+      coordinator.putState(state);
+    }
+    for (String txId : inDoubtCopyTxIds(backup.keySet())) {
+      coordinator.putState(new Coordinator.State(txId, TransactionState.ABORTED));
+    }
+  }
+
+  /**
+   * Transaction ids of copy records still in an in-flight state (PREPARED/DELETED) whose
+   * transaction is not in the backup — in flight at copy time, never committed by the consistency
+   * point.
+   */
+  private Set<String> inDoubtCopyTxIds(Set<String> committedInBackup) throws Exception {
+    Set<String> inDoubt = new HashSet<>();
+    for (String table : new String[] {TABLE_A, TABLE_B}) {
+      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
+      try (Scanner scanner = storage.scan(scan)) {
+        for (Result result : scanner.all()) {
+          if (result.isNull(Attribute.ID)
+              || result.isNull(Attribute.STATE)
+              || result.getInt(Attribute.STATE) == TransactionState.COMMITTED.get()) {
+            continue;
+          }
+          String txId = result.getText(Attribute.ID);
+          if (!committedInBackup.contains(txId)) {
+            inDoubt.add(txId);
+          }
+        }
+      }
+    }
+    return inDoubt;
+  }
+
+  /** The transaction ids currently present in the coordinator table. */
+  private Set<String> coordinatorTxIds() throws Exception {
+    Set<String> ids = new HashSet<>();
+    Scan scan =
+        Scan.newBuilder().namespace(COORDINATOR_NAMESPACE).table(Coordinator.TABLE).all().build();
+    try (Scanner scanner = storage.scan(scan)) {
+      for (Result result : scanner.all()) {
+        ids.add(result.getText(Attribute.ID));
+      }
+    }
+    return ids;
+  }
+
   /** Backs up the coordinator WHILE live and closes it over the chain (self-contained). */
   private Map<String, CoordinatorBackupRow> backUpCoordinator() throws Exception {
     Map<String, CoordinatorBackupRow> committedById = new HashMap<>();
@@ -1065,7 +1196,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         result.isNull(Attribute.WRITE_SET)
             ? null
             : WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
-    return new CoordinatorBackupRow(txId, state, childIds, writeSet);
+    long createdAt =
+        result.isNull(Attribute.CREATED_AT) ? 0 : result.getBigInt(Attribute.CREATED_AT);
+    return new CoordinatorBackupRow(txId, state, childIds, writeSet, createdAt);
   }
 
   private void closeOverChain(Map<String, CoordinatorBackupRow> committedById) throws Exception {
@@ -1168,6 +1301,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       } catch (Exception e) {
         last = e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
         abortQuietly(tx);
+        Uninterruptibles.sleepUninterruptibly(WORKLOAD_RETRY_BACKOFF);
       }
     }
     throw last;

@@ -1,12 +1,9 @@
 package com.scalar.db.transaction.consensuscommit.cbrl;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.protobuf.ByteString;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
@@ -24,47 +21,43 @@ import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.Attribute;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import javax.annotation.Nullable;
 
 /**
- * Orchestrates the whole CBRL restore against a coordinator backup and a non-snapshot-consistent
- * copy already loaded into the restore tables. {@link #restore(Map)} does the three steps end to
- * end:
+ * Orchestrates the whole CBRL restore against a non-snapshot-consistent copy and the redo captured
+ * in the coordinator backup. It uses <b>only the Storage API</b> for applying records and core's
+ * record-level recovery for resolving in-flight ones — like SSR, it never runs a transaction, so a
+ * restore creates <b>no coordinator rows</b> for its own work. {@link #restore(Map)} does three
+ * steps:
  *
  * <ol>
- *   <li><b>C4 recovery:</b> reload the coordinator from the backup (the consistency-point decision
- *       set) and resolve the copy's in-flight (PREPARED/DELETED) records against it via ScalarDB's
- *       lazy recovery, never against the live coordinator.
+ *   <li><b>C4 recovery:</b> resolve the copy's in-flight ({@code PREPARED}/{@code DELETED}) records
+ *       against the already-restored coordinator via {@link
+ *       DistributedTransactionManager#recoverRecord} — core rolls each forward/back with the
+ *       Storage API. The coordinator must already hold a terminal state for every writer (it is
+ *       restored from its own backup, like any table), so recovery only rolls records and writes
+ *       nothing to the coordinator.
  *   <li><b>Chain replay (§5):</b> explode the backup's committed redo into {@link RedoOperation}s
  *       and replay them forward from each record's copied version via {@link RecordApplier}.
- *   <li><b>Write-back:</b> persist the reconstructed per-record state into the restore tables.
+ *   <li><b>Write-back:</b> persist each reconstructed record as a COMMITTED Consensus Commit record
+ *       with a raw {@code storage.put} (deletes via {@code storage.delete}) — no transaction.
  * </ol>
  *
- * <p>Callers do the backup-taking (live user-table copy + coordinator snapshot) and then call only
- * {@link #restore(Map)}; the orchestrator owns recovery, replay, and persistence.
+ * <p>Callers do the backup-taking and ensure the coordinator and user tables are restored (in a
+ * test, arranged) before calling only {@link #restore(Map)}.
  */
 public final class CbrlRestore {
-  private static final int MAX_RETRIES = 100;
-  private static final Duration RECOVERY_POLL = Duration.ofMillis(50);
-  private static final long RECOVERY_TIMEOUT_MILLIS = 15_000;
-
   private final DistributedStorage storage;
   private final DistributedTransactionManager manager;
-  private final Coordinator coordinator;
-  private final DistributedTransactionAdmin admin;
   private final CoordinatorGroupCommitKeyManipulator keyManipulator;
   private final String restoreNamespace;
   // Restore table -> its user (non-key, non-tx-metadata) column names, read as the replay base.
@@ -75,8 +68,6 @@ public final class CbrlRestore {
   public CbrlRestore(
       DistributedStorage storage,
       DistributedTransactionManager manager,
-      Coordinator coordinator,
-      DistributedTransactionAdmin admin,
       CoordinatorGroupCommitKeyManipulator keyManipulator,
       String restoreNamespace,
       Map<String, List<String>> userColumnsByTable,
@@ -84,8 +75,6 @@ public final class CbrlRestore {
       int replayWorkers) {
     this.storage = storage;
     this.manager = manager;
-    this.coordinator = coordinator;
-    this.admin = admin;
     this.keyManipulator = keyManipulator;
     this.restoreNamespace = restoreNamespace;
     this.userColumnsByTable = userColumnsByTable;
@@ -93,12 +82,18 @@ public final class CbrlRestore {
     this.replayWorkers = replayWorkers;
   }
 
-  /** Recovers the copy, replays the committed redo, and writes the result back to the tables. */
+  /**
+   * Recovers the copy, replays the committed redo, and writes the result back via the Storage API.
+   */
   public void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
-    recoverCopyAgainstBackupCoordinator(coordinatorBackup);
+    recoverCopy();
 
+    // Original commit time (the coordinator's tx_created_at) per transaction id, used to stamp the
+    // restored records so they keep their commit timestamp instead of the restore-time clock.
+    Map<String, Long> committedAtByTxId = new HashMap<>();
     List<RedoOperation> redoOps = new ArrayList<>();
     for (CoordinatorBackupRow row : coordinatorBackup.values()) {
+      committedAtByTxId.put(row.txId, row.createdAt);
       for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
         // The writing transaction's full id is what records store and what other ops' prev_tx_id
         // chains to. For a normal group commit the row is keyed by the parent id and each child's
@@ -108,146 +103,64 @@ public final class CbrlRestore {
             group.getChildId().isEmpty()
                 ? row.txId
                 : keyManipulator.fullKey(row.txId, group.getChildId());
+        committedAtByTxId.put(txId, row.createdAt);
         for (Entry entry : group.getEntriesList()) {
           if (!entry.hasTxVersion()) {
             // Key-only write set from outside the backup window (logging was off): not redo. The
             // copy carries that state instead.
             continue;
           }
-          redoOps.add(new RedoOperation(txId, entry));
+          redoOps.add(new RedoOperation(txId, entry, row.createdAt));
         }
       }
     }
 
     List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(redoOps, replayBuckets);
     Map<RecordKey, RecordState> finalStates =
-        new RecordApplier(this::readCopyState).apply(buckets, replayWorkers);
+        new RecordApplier(key -> readCopyState(key, committedAtByTxId))
+            .apply(buckets, replayWorkers);
 
     writeBack(finalStates);
   }
 
   /**
-   * C4: reload the coordinator from the backup, then drive ScalarDB's lazy recovery so the copy's
-   * in-flight records resolve to a clean committed-or-absent base against that backup.
+   * C4: resolves every in-flight ({@code PREPARED}/{@code DELETED}) copy record against the
+   * already-restored coordinator via core's record-level recovery, so the replay base reads clean
+   * committed-or-absent values. With a terminal coordinator state present for each writer (the
+   * caller restored the coordinator from its backup), {@code recoverRecord} only rolls the record —
+   * it writes nothing to the coordinator, and never uses a transaction.
    */
-  private void recoverCopyAgainstBackupCoordinator(Map<String, CoordinatorBackupRow> backup)
-      throws Exception {
-    reloadCoordinatorFromBackup(backup);
-    awaitCopyRecovered();
-  }
-
-  /**
-   * Truncates the coordinator and reloads it from the backup: every backed-up transaction as
-   * COMMITTED, and every transaction still PREPARED/DELETED in the copy but absent from the backup
-   * as ABORTED (in flight at copy time, never reached the consistency point, so it is discarded).
-   */
-  private void reloadCoordinatorFromBackup(Map<String, CoordinatorBackupRow> backup)
-      throws Exception {
-    admin.truncateCoordinatorTables();
-    for (CoordinatorBackupRow row : backup.values()) {
-      // For a normal group-commit parent row, preserve its child ids so recovery can resolve a
-      // child by its full id; the write set is not needed in the reloaded coordinator (the redo is
-      // replayed from the in-memory backup). Non-group rows reload with their write set.
-      Coordinator.State state =
-          row.childIds.isEmpty()
-              ? new Coordinator.State(row.txId, row.writeSet, TransactionState.COMMITTED)
-              : new Coordinator.State(row.txId, row.childIds, TransactionState.COMMITTED);
-      coordinator.putState(state);
-    }
-    for (String txId : inDoubtCopyTxIds(backup.keySet())) {
-      coordinator.putState(new Coordinator.State(txId, TransactionState.ABORTED));
-    }
-  }
-
-  /**
-   * Transaction ids of copy records still in an in-flight state (PREPARED/DELETED) whose
-   * transaction is not in the backup — in flight at copy time and never committed by the
-   * consistency point.
-   */
-  private Set<String> inDoubtCopyTxIds(Set<String> committedInBackup) throws Exception {
-    Set<String> inDoubt = new HashSet<>();
+  private void recoverCopy() throws Exception {
     for (String table : userColumnsByTable.keySet()) {
-      try (Scanner scanner = storage.scan(scanAll(table))) {
-        for (Result result : scanner.all()) {
-          if (result.isNull(Attribute.ID)
-              || result.isNull(Attribute.STATE)
-              || result.getInt(Attribute.STATE) == TransactionState.COMMITTED.get()) {
-            continue;
-          }
-          String txId = result.getText(Attribute.ID);
-          if (!committedInBackup.contains(txId)) {
-            inDoubt.add(txId);
-          }
-        }
-      }
-    }
-    return inDoubt;
-  }
-
-  /**
-   * Drives ScalarDB's recovery by reading each in-flight copy record transactionally, then waits
-   * until no copy record is left in a PREPARED/DELETED state — so the raw-storage replay base reads
-   * resolved values. Recovery is asynchronous and conditional, so it is re-triggered until storage
-   * settles.
-   */
-  private void awaitCopyRecovered() throws Exception {
-    long deadlineMillis = System.currentTimeMillis() + RECOVERY_TIMEOUT_MILLIS;
-    while (true) {
-      List<Get> inFlight = inFlightCopyRecordGets();
-      if (inFlight.isEmpty()) {
-        return;
-      }
-      for (Get get : inFlight) {
-        readTransactionallyToTriggerRecovery(get);
-      }
-      if (System.currentTimeMillis() > deadlineMillis) {
-        throw new IllegalStateException("Copy did not become recovery-quiescent within 15s");
-      }
-      Uninterruptibles.sleepUninterruptibly(RECOVERY_POLL);
-    }
-  }
-
-  /** Transactional Gets for every copy record currently in a non-COMMITTED (in-flight) state. */
-  private List<Get> inFlightCopyRecordGets() throws Exception {
-    List<Get> gets = new ArrayList<>();
-    for (String table : userColumnsByTable.keySet()) {
+      List<Key[]> inDoubt = new ArrayList<>();
       try (Scanner scanner = storage.scan(scanAll(table))) {
         for (Result result : scanner.all()) {
           if (!result.isNull(Attribute.STATE)
               && result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()) {
-            GetBuilder.BuildableGet builder =
-                Get.newBuilder()
-                    .namespace(restoreNamespace)
-                    .table(table)
-                    .partitionKey(result.getPartitionKey().orElseThrow(IllegalStateException::new));
-            result.getClusteringKey().ifPresent(builder::clusteringKey);
-            gets.add(builder.build());
+            Key partitionKey = result.getPartitionKey().orElseThrow(IllegalStateException::new);
+            Key clusteringKey = result.getClusteringKey().orElse(null);
+            inDoubt.add(new Key[] {partitionKey, clusteringKey});
           }
         }
       }
-    }
-    return gets;
-  }
-
-  private void readTransactionallyToTriggerRecovery(Get get) {
-    RuntimeException last = null;
-    for (int retry = 0; retry < MAX_RETRIES; retry++) {
-      DistributedTransaction tx = null;
-      try {
-        tx = manager.begin();
-        tx.get(get);
-        tx.commit();
-        return;
-      } catch (Exception e) {
-        last = e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
-        abortQuietly(tx);
+      for (Key[] keys : inDoubt) {
+        boolean resolved = manager.recoverRecord(restoreNamespace, table, keys[0], keys[1]);
+        if (!resolved) {
+          throw new IllegalStateException(
+              "Copy record not recoverable — its writer has no coordinator state and has not"
+                  + " expired; the coordinator backup must be restored before restore(). Table: "
+                  + table
+                  + "; Partition Key: "
+                  + keys[0]);
+        }
       }
     }
-    throw last;
   }
 
-  /** Reads the (recovered) copy record as the replay base: its committed tx id + user columns. */
-  private RecordState readCopyState(RecordKey key) {
+  /**
+   * Reads the (recovered) copy record as the replay base: committed tx id, version, user columns.
+   */
+  private RecordState readCopyState(RecordKey key, Map<String, Long> committedAtByTxId) {
     try {
       Optional<Result> result = storage.get(rawGet(key));
       if (!result.isPresent() || result.get().isNull(Attribute.ID)) {
@@ -255,6 +168,16 @@ public final class CbrlRestore {
       }
       Result record = result.get();
       String currentTxId = record.getText(Attribute.ID);
+      int version = record.isNull(Attribute.VERSION) ? 0 : record.getInt(Attribute.VERSION);
+      // Prefer the writer's coordinator commit time: recovery (rollforward) may have re-stamped the
+      // record's tx_committed_at to recovery-time. Fall back to the record's column for txs not in
+      // the backup (e.g. pre-window writers, whose copied record still carries the original time).
+      long committedAt =
+          committedAtByTxId.getOrDefault(
+              currentTxId,
+              record.isNull(Attribute.COMMITTED_AT)
+                  ? 0L
+                  : record.getBigInt(Attribute.COMMITTED_AT));
       Map<String, com.scalar.db.transaction.consensuscommit.proto.v1.Column> columns =
           new LinkedHashMap<>();
       for (String name : userColumnsByTable.get(key.table())) {
@@ -263,65 +186,75 @@ public final class CbrlRestore {
           columns.put(name, ioColumnToProto(column));
         }
       }
-      return RecordState.of(currentTxId, false, columns, Collections.emptySet());
+      return RecordState.of(
+          currentTxId, false, columns, Collections.emptySet(), version, committedAt);
     } catch (Exception e) {
       throw new RuntimeException("Failed to read copy base for " + key, e);
     }
   }
 
-  /** Persists every reconstructed record state into the restore tables, in one transaction. */
-  private void writeBack(Map<RecordKey, RecordState> finalStates) {
-    RuntimeException last = null;
-    for (int retry = 0; retry < MAX_RETRIES; retry++) {
-      DistributedTransaction tx = null;
-      try {
-        tx = manager.begin();
-        for (Map.Entry<RecordKey, RecordState> entry : finalStates.entrySet()) {
-          applyToRestore(tx, entry.getKey(), entry.getValue());
-        }
-        tx.commit();
-        return;
-      } catch (Exception e) {
-        last = e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
-        abortQuietly(tx);
-      }
+  /**
+   * Persists each reconstructed record into the restore tables with the Storage API — SSR-style,
+   * one record at a time, no transaction: present records as COMMITTED Consensus Commit records
+   * ({@code storage.put}), absent records removed ({@code storage.delete}). A crash mid-write-back
+   * leaves a partial set; a re-run re-derives the same final states and re-stamps them
+   * idempotently.
+   */
+  private void writeBack(Map<RecordKey, RecordState> finalStates) throws Exception {
+    for (Map.Entry<RecordKey, RecordState> entry : finalStates.entrySet()) {
+      applyToRestore(entry.getKey(), entry.getValue());
     }
-    throw last;
   }
 
-  /** Applies one replayed record state to the restore table within {@code tx} (read-then-write). */
-  private void applyToRestore(DistributedTransaction tx, RecordKey key, RecordState state)
-      throws Exception {
-    Key partitionKey = toIoKey(key.partitionKey());
-    Key clusteringKey = key.clusteringKey() == null ? null : toIoKey(key.clusteringKey());
-
-    tx.get(rawGet(key)); // read first so the put/delete is an update, not insert-mode
-
+  private void applyToRestore(RecordKey key, RecordState state) throws Exception {
     if (state.present()) {
-      PutBuilder.Buildable put =
-          Put.newBuilder()
-              .namespace(restoreNamespace)
-              .table(key.table())
-              .partitionKey(partitionKey);
-      if (clusteringKey != null) {
-        put.clusteringKey(clusteringKey);
-      }
-      for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
-          state.columns().values()) {
-        put.value(toIoColumn(column));
-      }
-      tx.put(put.build());
+      storage.put(buildCommittedPut(key, state));
     } else {
-      DeleteBuilder.Buildable delete =
-          Delete.newBuilder()
-              .namespace(restoreNamespace)
-              .table(key.table())
-              .partitionKey(partitionKey);
-      if (clusteringKey != null) {
-        delete.clusteringKey(clusteringKey);
-      }
-      tx.delete(delete.build());
+      storage.delete(buildDelete(key));
     }
+  }
+
+  /**
+   * A COMMITTED Consensus Commit record for a raw {@code storage.put}, mirroring {@code
+   * CommitMutationComposer}'s committed image: final user columns plus {@code tx_id}, {@code
+   * tx_state = COMMITTED}, {@code tx_version}, and commit/prepare timestamps. The {@code before_*}
+   * images are already cleared on the recovered base, and {@code storage.put} only overwrites the
+   * columns set here, so they stay cleared.
+   */
+  private Put buildCommittedPut(RecordKey key, RecordState state) {
+    PutBuilder.Buildable put =
+        Put.newBuilder()
+            .namespace(restoreNamespace)
+            .table(key.table())
+            .partitionKey(toIoKey(key.partitionKey()));
+    if (key.clusteringKey() != null) {
+      put.clusteringKey(toIoKey(key.clusteringKey()));
+    }
+    for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
+        state.columns().values()) {
+      put.value(toIoColumn(column));
+    }
+    put.textValue(Attribute.ID, state.currentTxId());
+    put.intValue(Attribute.STATE, TransactionState.COMMITTED.get());
+    put.intValue(Attribute.VERSION, state.version());
+    // Keep the original commit time (the writing transaction's coordinator tx_created_at), not the
+    // restore-time clock. tx_prepared_at is set to the same value — it is not load-bearing for a
+    // committed record, and the redo carries no separate prepare time.
+    put.bigIntValue(Attribute.PREPARED_AT, state.committedAt());
+    put.bigIntValue(Attribute.COMMITTED_AT, state.committedAt());
+    return put.build();
+  }
+
+  private Delete buildDelete(RecordKey key) {
+    DeleteBuilder.Buildable delete =
+        Delete.newBuilder()
+            .namespace(restoreNamespace)
+            .table(key.table())
+            .partitionKey(toIoKey(key.partitionKey()));
+    if (key.clusteringKey() != null) {
+      delete.clusteringKey(toIoKey(key.clusteringKey()));
+    }
+    return delete.build();
   }
 
   private Get rawGet(RecordKey key) {
@@ -338,16 +271,6 @@ public final class CbrlRestore {
 
   private Scan scanAll(String table) {
     return Scan.newBuilder().namespace(restoreNamespace).table(table).all().build();
-  }
-
-  private static void abortQuietly(@Nullable DistributedTransaction tx) {
-    if (tx != null) {
-      try {
-        tx.abort();
-      } catch (Exception ignored) {
-        // Best effort.
-      }
-    }
   }
 
   private static com.scalar.db.transaction.consensuscommit.proto.v1.Column ioColumnToProto(
