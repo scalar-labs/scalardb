@@ -112,7 +112,7 @@ class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
   }
 
   @VisibleForTesting
-  static class Emitter implements Emittable<String, String, TransactionContext> {
+  static class Emitter implements Emittable<String, String, TransactionContext, Void> {
     private final Coordinator coordinator;
     private final WriteSetEncoder writeSetEncoder;
 
@@ -122,10 +122,10 @@ class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
     }
 
     @Override
-    public void emitNormalGroup(String parentId, List<TransactionContext> contexts)
+    public Void emitNormalGroup(String parentId, List<TransactionContext> contexts)
         throws CoordinatorException {
       if (contexts.isEmpty()) {
-        return;
+        return null;
       }
       if (KEY_MANIPULATOR.isFullKey(parentId)) {
         throw new AssertionError(
@@ -146,10 +146,11 @@ class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
           "Transaction {} (parent ID) is committed successfully at {}",
           parentId,
           System.currentTimeMillis());
+      return null;
     }
 
     @Override
-    public void emitDelayedGroup(String fullId, TransactionContext context)
+    public Void emitDelayedGroup(String fullId, TransactionContext context)
         throws CoordinatorException {
       coordinator.putState(
           new State(
@@ -159,6 +160,7 @@ class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
               System.currentTimeMillis()));
       logger.debug(
           "Transaction {} is committed successfully at {}", fullId, System.currentTimeMillis());
+      return null;
     }
   }
 }
