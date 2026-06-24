@@ -85,18 +85,18 @@ class ReplayPropertyTest {
     }
   }
 
-  /** P2: re-applying the same buckets to one applier is skipped via per-bucket checkpoint. */
+  /** P2 via the full pipeline: re-running apply() from the prior run's output changes nothing. */
   @Test
-  void p2_idempotency_secondApplyIsCheckpointed() throws InterruptedException {
+  void p2_idempotency_applyRerunFromOutputIsNoOp() throws InterruptedException {
     List<RedoOperation> ops = new RedoLogGenerator(7).generate(NUM_KEYS);
     List<List<RedoOperation>> buckets = new RecordShuffler().shuffle(ops, 4);
-    RecordApplier applier = new RecordApplier(ABSENT);
 
-    Map<RecordKey, RecordState> first = applier.apply(buckets, 4);
-    Map<RecordKey, RecordState> second = applier.apply(buckets, 4);
+    Map<RecordKey, RecordState> first = new RecordApplier(ABSENT).apply(buckets, 4);
+    Map<RecordKey, RecordState> second =
+        new RecordApplier(key -> first.getOrDefault(key, RecordState.absent())).apply(buckets, 4);
 
     assertThat(first).isNotEmpty();
-    assertThat(second).as("completed buckets are skipped on re-apply").isEmpty();
+    assertThat(second).as("apply() re-run from its own output is a no-op").isEqualTo(first);
   }
 
   /**

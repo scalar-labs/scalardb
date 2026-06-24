@@ -6,11 +6,9 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,9 +24,6 @@ import javax.annotation.Nullable;
  */
 final class RecordApplier {
   private final RestoredRecordReader reader;
-  // Per-bucket completion, so a crashed re-run skips done buckets (idempotency requirement). The
-  // primitive is itself idempotent, so re-running a bucket is also safe; this just avoids the work.
-  private final Set<Integer> completedBuckets = ConcurrentHashMap.newKeySet();
 
   RecordApplier(RestoredRecordReader reader) {
     this.reader = reader;
@@ -41,18 +36,17 @@ final class RecordApplier {
   Map<RecordKey, RecordState> apply(List<List<RedoOperation>> buckets, int workerCount)
       throws InterruptedException {
     Preconditions.checkArgument(workerCount >= 1, "workerCount must be >= 1");
-    Map<RecordKey, RecordState> result = new ConcurrentHashMap<>();
     ExecutorService executor = Executors.newFixedThreadPool(Math.min(workerCount, buckets.size()));
     try {
-      List<Future<?>> futures = new ArrayList<>(buckets.size());
-      for (int b = 0; b < buckets.size(); b++) {
-        int bucketIndex = b;
-        List<RedoOperation> bucket = buckets.get(b);
-        futures.add(executor.submit(() -> applyBucket(bucketIndex, bucket, result)));
+      List<Future<Map<RecordKey, RecordState>>> futures = new ArrayList<>(buckets.size());
+      for (List<RedoOperation> bucket : buckets) {
+        futures.add(executor.submit(() -> applyBucket(bucket)));
       }
-      for (Future<?> future : futures) {
-        future.get();
+      Map<RecordKey, RecordState> result = new HashMap<>();
+      for (Future<Map<RecordKey, RecordState>> future : futures) {
+        result.putAll(future.get()); // Buckets partition the key space, so no key is merged twice.
       }
+      return result;
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       if (cause instanceof CbrlReplayException) {
@@ -62,21 +56,19 @@ final class RecordApplier {
     } finally {
       executor.shutdownNow();
     }
-    return result;
   }
 
-  private void applyBucket(
-      int bucketIndex, List<RedoOperation> bucket, Map<RecordKey, RecordState> out) {
-    if (!completedBuckets.add(bucketIndex)) {
-      return; // Already applied (idempotent re-run).
-    }
-    Map<RecordKey, List<RedoOperation>> byKey = new LinkedHashMap<>();
+  /** Replays one bucket's keys independently and returns the resulting state per key. */
+  private Map<RecordKey, RecordState> applyBucket(List<RedoOperation> bucket) {
+    Map<RecordKey, List<RedoOperation>> byKey = new HashMap<>();
     for (RedoOperation op : bucket) {
       byKey.computeIfAbsent(op.key(), k -> new ArrayList<>()).add(op);
     }
+    Map<RecordKey, RecordState> result = new HashMap<>();
     for (Map.Entry<RecordKey, List<RedoOperation>> entry : byKey.entrySet()) {
-      out.put(entry.getKey(), replayKey(entry.getKey(), entry.getValue()));
+      result.put(entry.getKey(), replayKey(entry.getKey(), entry.getValue()));
     }
+    return result;
   }
 
   /**
