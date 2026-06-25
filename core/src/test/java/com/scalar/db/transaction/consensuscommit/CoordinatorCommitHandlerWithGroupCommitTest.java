@@ -18,11 +18,13 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
+import com.scalar.db.util.groupcommit.GroupCommitException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
@@ -52,7 +54,6 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
   @Mock private Coordinator coordinator;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
-  @Mock private ParticipantCommitHandler participantCommitHandler;
   @Mock private ConsensusCommitConfig config;
 
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -70,10 +71,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // emitter must be in place before reserve() is called so that the slot can be emitted later.
     handler =
         new CoordinatorCommitHandlerWithGroupCommit(
-            coordinator,
-            new WriteSetEncoder(tableMetadataManager),
-            participantCommitHandler,
-            groupCommitter);
+            coordinator, new WriteSetEncoder(tableMetadataManager), groupCommitter);
     fullId = groupCommitter.reserve(UUID.randomUUID().toString());
   }
 
@@ -143,9 +141,59 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     assertThatThrownBy(() -> handler.commitState(context))
         .isInstanceOf(CommitConflictException.class);
 
-    // Slot is released on the conflict path; rollback is dispatched through participant handler.
+    // Slot is released on the conflict path. Record rollback is the orchestrator's responsibility
+    // (see CommitHandlerTest), not this Coordinator-side handler's.
     verify(groupCommitter).remove(fullId);
-    verify(participantCommitHandler).rollbackRecords(context);
+  }
+
+  @Test
+  void
+      commitState_WhenGroupCommitExceptionWithCoordinatorConflictCause_ShouldCancelSlotAndHandleConflict()
+          throws Exception {
+    // A plain GroupCommitException (not GroupCommitConflictException) whose cause is a
+    // CoordinatorConflictException is routed to handleCommitConflict. With the coordinator state
+    // absent on re-read, that resolves to a definitive conflict (CommitConflictException).
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
+    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
+    CoordinatorConflictException cause = new CoordinatorConflictException("coordinator conflict");
+    GroupCommitException groupCommitException =
+        new GroupCommitException("group commit failed", cause);
+    doThrow(groupCommitException).when(groupCommitter).ready(eq(fullId), eq(context));
+    when(coordinator.getState(anyString())).thenReturn(Optional.empty());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commitState(context))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCause(cause);
+
+    // The slot is released before the conflict is handled.
+    verify(groupCommitter).remove(fullId);
+  }
+
+  @Test
+  void commitState_WhenGroupCommitExceptionWithNonConflictCause_ShouldCancelSlotAndThrowUnknown()
+      throws Exception {
+    // A plain GroupCommitException whose cause is not a CoordinatorConflictException means the
+    // group committer failed to access the coordinator state, so the transaction status is unknown.
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
+    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
+    RuntimeException cause = new RuntimeException("storage unavailable");
+    GroupCommitException groupCommitException =
+        new GroupCommitException("group commit failed", cause);
+    doThrow(groupCommitException).when(groupCommitter).ready(eq(fullId), eq(context));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commitState(context))
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasMessageContaining("The coordinator status is unknown")
+        .hasCause(cause);
+
+    // The slot is released even on the unknown-status path.
+    verify(groupCommitter).remove(fullId);
+    // The state is unknown, so the coordinator state is never re-read to resolve a conflict.
+    verify(coordinator, never()).getState(anyString());
   }
 
   // ---------- abortState (cancelGroupCommitIfNeeded) ----------
@@ -189,14 +237,14 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
   @Test
   void
-      handleCommitConflict_GroupCommitConflictExceptionGivenAndNoStatePersisted_ShouldRollbackRecordsAndThrowCommitConflict()
+      handleCommitConflict_GroupCommitConflictExceptionGivenAndNoStatePersisted_ShouldThrowCommitConflict()
           throws Exception {
     // The group-commit conflict route (commitState catches GroupCommitConflictException and calls
     // handleCommitConflict) must, when the coordinator state is absent on re-read, resolve to a
-    // definitive conflict -- roll the records back and throw CommitConflictException -- the same
-    // outcome as the normal-commit conflict route. getState for a group-commit child checks both
-    // the parent and full-ID rows, so an absent state genuinely means the transaction never
-    // committed.
+    // definitive conflict -- throw CommitConflictException -- the same outcome as the normal-commit
+    // conflict route. getState for a group-commit child checks both the parent and full-ID rows, so
+    // an absent state genuinely means the transaction never committed. Record rollback itself is
+    // the orchestrator's responsibility (see CommitHandlerTest).
 
     // Arrange
     Snapshot snapshot = prepareSnapshotWithWrite(fullId);
@@ -208,7 +256,6 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
-    verify(participantCommitHandler).rollbackRecords(context);
     verify(coordinator).getState(fullId);
   }
 

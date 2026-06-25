@@ -40,7 +40,6 @@ class CoordinatorCommitHandlerTest {
 
   @Mock private Coordinator coordinator;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
-  @Mock private ParticipantCommitHandler participantCommitHandler;
   @Mock private ConsensusCommitConfig config;
 
   private ParallelExecutor parallelExecutor;
@@ -63,8 +62,7 @@ class CoordinatorCommitHandlerTest {
   }
 
   private CoordinatorCommitHandler createHandler() {
-    return new CoordinatorCommitHandler(
-        coordinator, new WriteSetEncoder(tableMetadataManager), participantCommitHandler);
+    return new CoordinatorCommitHandler(coordinator, new WriteSetEncoder(tableMetadataManager));
   }
 
   private Put preparePut1() {
@@ -127,9 +125,11 @@ class CoordinatorCommitHandlerTest {
   }
 
   @Test
-  void
-      commitState_WhenCoordinatorConflictAndAbortedReturnedInGetState_ShouldRollbackRecordsAndThrowConflict()
-          throws Exception {
+  void commitState_WhenCoordinatorConflictAndAbortedReturnedInGetState_ShouldThrowConflict()
+      throws Exception {
+    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
+    // assert that the conflict is surfaced.
+
     // Arrange
     Snapshot snapshot = prepareSnapshotWithWrite();
     TransactionContext context = createTransactionContext(snapshot);
@@ -149,8 +149,6 @@ class CoordinatorCommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.commitState(context))
         .isInstanceOf(CommitConflictException.class);
-
-    verify(participantCommitHandler).rollbackRecords(context);
   }
 
   @Test
@@ -175,17 +173,16 @@ class CoordinatorCommitHandlerTest {
         .when(coordinator)
         .getState(anyId());
 
-    // Act (must not throw)
+    // Act Assert (must not throw — the transaction is already committed)
     handler.commitState(context);
-
-    // Assert
-    verify(participantCommitHandler, never()).rollbackRecords(any());
   }
 
   @Test
-  void
-      commitState_WhenCoordinatorConflictAndNoStatePersisted_ShouldRollbackRecordsAndThrowConflict()
-          throws Exception {
+  void commitState_WhenCoordinatorConflictAndNoStatePersisted_ShouldThrowConflict()
+      throws Exception {
+    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
+    // assert that the conflict is surfaced.
+
     // Arrange
     Snapshot snapshot = prepareSnapshotWithWrite();
     TransactionContext context = createTransactionContext(snapshot);
@@ -200,8 +197,6 @@ class CoordinatorCommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.commitState(context))
         .isInstanceOf(CommitConflictException.class);
-
-    verify(participantCommitHandler).rollbackRecords(context);
   }
 
   @Test
@@ -435,8 +430,10 @@ class CoordinatorCommitHandlerTest {
   // ---------- handleCommitConflict ----------
 
   @Test
-  void handleCommitConflict_WhenAbortedStatePersisted_ShouldRollbackRecordsAndThrowConflict()
-      throws Exception {
+  void handleCommitConflict_WhenAbortedStatePersisted_ShouldThrowConflict() throws Exception {
+    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
+    // assert that the conflict is surfaced.
+
     // Arrange
     Snapshot snapshot = prepareSnapshotWithWrite();
     TransactionContext context = createTransactionContext(snapshot);
@@ -452,7 +449,6 @@ class CoordinatorCommitHandlerTest {
     assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
-    verify(participantCommitHandler).rollbackRecords(context);
   }
 
   @Test
@@ -467,16 +463,15 @@ class CoordinatorCommitHandlerTest {
         .when(coordinator)
         .getState(anyId());
 
-    // Act (must not throw)
+    // Act Assert (must not throw)
     handler.handleCommitConflict(context, new RuntimeException("conflict"));
-
-    // Assert
-    verify(participantCommitHandler, never()).rollbackRecords(any());
   }
 
   @Test
-  void handleCommitConflict_WhenNoStatePersisted_ShouldRollbackRecordsAndThrowConflict()
-      throws Exception {
+  void handleCommitConflict_WhenNoStatePersisted_ShouldThrowConflict() throws Exception {
+    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
+    // assert that the conflict is surfaced.
+
     // Arrange
     Snapshot snapshot = prepareSnapshotWithWrite();
     TransactionContext context = createTransactionContext(snapshot);
@@ -487,7 +482,6 @@ class CoordinatorCommitHandlerTest {
     assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
-    verify(participantCommitHandler).rollbackRecords(context);
   }
 
   @Test

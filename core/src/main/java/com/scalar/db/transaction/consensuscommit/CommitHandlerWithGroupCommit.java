@@ -46,8 +46,8 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         checkNotNull(groupCommitter));
   }
 
-  // Second-stage delegating constructor so the ParticipantCommitHandler is available when we build
-  // the CoordinatorCommitHandlerWithGroupCommit.
+  // Second-stage delegating constructor that builds the two specialized handlers before handing
+  // them to the package-private constructor.
   private CommitHandlerWithGroupCommit(
       TransactionTableMetadataManager tableMetadataManager,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
@@ -56,22 +56,19 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       CoordinatorGroupCommitter groupCommitter) {
     this(
         coordinatorWriteOmissionOnReadOnlyEnabled,
-        participantCommitHandler,
         new CoordinatorCommitHandlerWithGroupCommit(
-            coordinator,
-            new WriteSetEncoder(tableMetadataManager),
-            participantCommitHandler,
-            groupCommitter));
+            coordinator, new WriteSetEncoder(tableMetadataManager), groupCommitter),
+        participantCommitHandler);
   }
 
-  // Package-private so test code can inject Mockito spies of ParticipantCommitHandler /
-  // CoordinatorCommitHandlerWithGroupCommit via constructor injection rather than via reflection.
+  // Package-private so test code can inject Mockito spies of the two specialized handlers via
+  // constructor injection rather than via reflection.
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   CommitHandlerWithGroupCommit(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
-      ParticipantCommitHandler participantCommitHandler,
-      CoordinatorCommitHandlerWithGroupCommit coordinatorHandler) {
-    super(coordinatorWriteOmissionOnReadOnlyEnabled, participantCommitHandler, coordinatorHandler);
+      CoordinatorCommitHandlerWithGroupCommit coordinatorHandler,
+      ParticipantCommitHandler participantCommitHandler) {
+    super(coordinatorWriteOmissionOnReadOnlyEnabled, coordinatorHandler, participantCommitHandler);
     this.coordinatorHandler = coordinatorHandler;
   }
 
