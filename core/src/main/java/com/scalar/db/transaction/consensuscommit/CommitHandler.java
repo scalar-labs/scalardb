@@ -49,8 +49,8 @@ import org.slf4j.LoggerFactory;
 public class CommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CommitHandler.class);
 
-  private final ParticipantCommitHandler participantCommitHandler;
   private final CoordinatorCommitHandler coordinatorCommitHandler;
+  private final ParticipantCommitHandler participantCommitHandler;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
@@ -65,6 +65,8 @@ public class CommitHandler {
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean onePhaseCommitEnabled) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
+    this.coordinatorCommitHandler =
+        new CoordinatorCommitHandler(coordinator, new WriteSetEncoder(tableMetadataManager));
     this.participantCommitHandler =
         new ParticipantCommitHandler(
             storage,
@@ -72,9 +74,6 @@ public class CommitHandler {
             parallelExecutor,
             mutationsGrouper,
             onePhaseCommitEnabled);
-    this.coordinatorCommitHandler =
-        new CoordinatorCommitHandler(
-            coordinator, new WriteSetEncoder(tableMetadataManager), participantCommitHandler);
   }
 
   // Constructor for subclasses (CommitHandlerWithGroupCommit) that need to inject a
@@ -84,11 +83,11 @@ public class CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   protected CommitHandler(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
-      ParticipantCommitHandler participantCommitHandler,
-      CoordinatorCommitHandler coordinatorCommitHandler) {
+      CoordinatorCommitHandler coordinatorCommitHandler,
+      ParticipantCommitHandler participantCommitHandler) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
-    this.participantCommitHandler = checkNotNull(participantCommitHandler);
     this.coordinatorCommitHandler = checkNotNull(coordinatorCommitHandler);
+    this.participantCommitHandler = checkNotNull(participantCommitHandler);
   }
 
   /**
@@ -208,7 +207,18 @@ public class CommitHandler {
         context, beforePreparationHookFuture.orElse(null), hasWritesOrDeletesInSnapshot);
 
     if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
-      commitState(context);
+      try {
+        commitState(context);
+      } catch (CommitConflictException e) {
+        // The COMMITTED-state write lost a putState race that resolved to ABORTED (or absent): the
+        // transaction is aborted. The Coordinator-side handler only reports the conflict; the
+        // orchestrator owns the records, so roll back the prepared records here before surfacing
+        // it.
+        if (hasWritesOrDeletesInSnapshot) {
+          rollbackRecords(context);
+        }
+        throw e;
+      }
     }
     if (hasWritesOrDeletesInSnapshot) {
       commitRecords(context);

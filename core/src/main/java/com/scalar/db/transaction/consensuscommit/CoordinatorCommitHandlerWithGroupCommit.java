@@ -22,9 +22,6 @@ import org.slf4j.LoggerFactory;
  * Group-commit-aware variant of {@link CoordinatorCommitHandler}. Routes {@code commitState} into
  * the group-commit emitter so that multiple transactions' COMMITTED states can be batched into one
  * Coordinator-table row. Cancels the group commit slot reservation on the abort path.
- *
- * <p>Used by {@link CommitHandlerWithGroupCommit} (the orchestrator variant) in place of the base
- * {@link CoordinatorCommitHandler} when group commit is enabled.
  */
 @ThreadSafe
 class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
@@ -39,9 +36,8 @@ class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
   CoordinatorCommitHandlerWithGroupCommit(
       Coordinator coordinator,
       WriteSetEncoder writeSetEncoder,
-      ParticipantCommitHandler participantCommitHandler,
       CoordinatorGroupCommitter groupCommitter) {
-    super(coordinator, writeSetEncoder, participantCommitHandler);
+    super(coordinator, writeSetEncoder);
     checkNotNull(groupCommitter);
     // The methods of this emitter will be called via GroupCommitter.ready().
     groupCommitter.setEmitter(new Emitter(coordinator, writeSetEncoder));

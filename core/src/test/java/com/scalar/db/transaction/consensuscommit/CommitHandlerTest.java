@@ -68,8 +68,8 @@ public class CommitHandlerTest {
   protected CommitHandler createCommitHandler(boolean coordinatorWriteOmissionOnReadOnlyEnabled) {
     return new CommitHandler(
         coordinatorWriteOmissionOnReadOnlyEnabled,
-        participantCommitHandler,
-        coordinatorCommitHandler);
+        coordinatorCommitHandler,
+        participantCommitHandler);
   }
 
   @BeforeEach
@@ -304,6 +304,29 @@ public class CommitHandlerTest {
     verify(participantCommitHandler).validateRecords(context);
     verify(coordinatorCommitHandler).abortState(context);
     verify(participantCommitHandler).rollbackRecords(context);
+  }
+
+  @Test
+  public void commit_CommitStateThrowsConflict_WithWrites_ShouldRollbackRecordsAndThrowConflict()
+      throws Exception {
+    // The Coordinator-side handler only reports the commit-state putState conflict; the
+    // orchestrator
+    // owns the records, so it rolls them back here before surfacing the conflict.
+
+    // Arrange
+    Snapshot snapshot = snapshotWithWrites();
+    doThrow(new CommitConflictException("conflict", anyId()))
+        .when(coordinatorCommitHandler)
+        .commitState(any());
+    TransactionContext context =
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitConflictException.class);
+
+    verify(coordinatorCommitHandler).commitState(context);
+    verify(participantCommitHandler).rollbackRecords(context);
+    verify(participantCommitHandler, never()).commitRecords(any());
   }
 
   @Test
