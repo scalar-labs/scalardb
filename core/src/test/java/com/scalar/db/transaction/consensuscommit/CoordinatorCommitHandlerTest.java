@@ -10,16 +10,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import java.util.Objects;
 import java.util.Optional;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,70 +23,31 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-/** Direct unit tests for {@link CoordinatorCommitHandler}. */
+/**
+ * Direct unit tests for {@link CoordinatorCommitHandler}. These tests pass ids and pre-encoded
+ * write sets directly; encoding is the orchestrator's job, covered by {@link CommitHandlerTest}.
+ */
 class CoordinatorCommitHandlerTest {
-  private static final String ANY_NAMESPACE_NAME = "namespace";
-  private static final String ANY_TABLE_NAME = "table";
-  private static final String ANY_NAME_1 = "name1";
-  private static final String ANY_NAME_2 = "name2";
-  private static final String ANY_NAME_3 = "name3";
-  private static final String ANY_TEXT_1 = "text1";
-  private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_ID = "id";
-  private static final int ANY_INT_1 = 100;
 
   @Mock private Coordinator coordinator;
-  @Mock private TransactionTableMetadataManager tableMetadataManager;
-  @Mock private ConsensusCommitConfig config;
 
-  private ParallelExecutor parallelExecutor;
   private CoordinatorCommitHandler handler;
 
   private String anyId() {
     return ANY_ID;
   }
 
+  // A non-empty pre-encoded write set; its contents are irrelevant here (the handler just persists
+  // it verbatim), so any WriteSet that round-trips through the State matcher works.
+  private static WriteSet anyWriteSet() {
+    return WriteSet.newBuilder().setSchemaVersion(1).build();
+  }
+
   @BeforeEach
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    parallelExecutor = new ParallelExecutor(config);
-    handler = createHandler();
-  }
-
-  @AfterEach
-  void tearDown() {
-    parallelExecutor.close();
-  }
-
-  private CoordinatorCommitHandler createHandler() {
-    return new CoordinatorCommitHandler(coordinator, new WriteSetEncoder(tableMetadataManager));
-  }
-
-  private Put preparePut1() {
-    return Put.newBuilder()
-        .namespace(ANY_NAMESPACE_NAME)
-        .table(ANY_TABLE_NAME)
-        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-        .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
-        .intValue(ANY_NAME_3, ANY_INT_1)
-        .build();
-  }
-
-  private Snapshot prepareSnapshotWithWrite() throws CrudException {
-    Snapshot snapshot = new Snapshot(anyId(), tableMetadataManager, new ParallelExecutor(config));
-    Put put1 = preparePut1();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
-    return snapshot;
-  }
-
-  private TransactionContext createTransactionContext(Snapshot snapshot) {
-    return new TransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
-  }
-
-  // Helper: encode the WriteSet that would be persisted for the given snapshot/context.
-  private WriteSet expectedSingleGroupWriteSet(Snapshot snapshot) {
-    TransactionContext context = createTransactionContext(snapshot);
-    return new WriteSetEncoder(tableMetadataManager).encodeSingleGroupWriteSet(context, false);
+    handler = new CoordinatorCommitHandler(coordinator);
   }
 
   // Mockito matcher that compares Coordinator.State by id + writeSet + state (ignores createdAt).
@@ -106,36 +63,41 @@ class CoordinatorCommitHandlerTest {
   // ---------- commitState ----------
 
   @Test
-  void commitState_WhenSuccessful_ShouldPutCommittedState()
-      throws CommitConflictException, UnknownTransactionStatusException, CoordinatorException,
-          CrudException {
+  void commitState_WhenSuccessful_ShouldPutCommittedStateWithGivenWriteSet() throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
+    WriteSet writeSet = anyWriteSet();
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
 
     // Act
-    handler.commitState(context);
+    handler.commitState(anyId(), writeSet);
 
     // Assert
     verify(coordinator)
-        .putState(
-            argThat(
-                stateMatcher(
-                    anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.COMMITTED)));
+        .putState(argThat(stateMatcher(anyId(), writeSet, TransactionState.COMMITTED)));
   }
 
   @Test
-  void commitState_ShouldStampReturnedCommittedAtOnState() throws Exception {
+  void commitState_WhenWriteSetNull_ShouldPutCommittedStateWithoutWriteSet() throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
 
     // Act
-    long committedAt = handler.commitState(context);
+    handler.commitState(anyId(), null);
 
-    // Assert: the COMMITTED coordinator row carries the committedAt that is returned.
+    // Assert — writeSet absent (null in matcher).
+    verify(coordinator).putState(argThat(stateMatcher(anyId(), null, TransactionState.COMMITTED)));
+  }
+
+  @Test
+  void commitState_ShouldStampGeneratedCommittedAtAndReturnIt() throws Exception {
+    // Arrange
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+
+    // Act
+    long committedAt = handler.commitState(anyId(), anyWriteSet());
+
+    // Assert — the handler generates the committedAt, stamps it on the COMMITTED row, and returns
+    // that same value.
     ArgumentCaptor<Coordinator.State> captor = ArgumentCaptor.forClass(Coordinator.State.class);
     verify(coordinator).putState(captor.capture());
     assertThat(captor.getValue().getCreatedAt()).isEqualTo(committedAt);
@@ -144,18 +106,12 @@ class CoordinatorCommitHandlerTest {
   @Test
   void commitState_WhenCoordinatorConflictAndAbortedReturnedInGetState_ShouldThrowConflict()
       throws Exception {
-    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
-    // assert that the conflict is surfaced.
-
+    // Record rollback is the orchestrator's job (see CommitHandlerTest); this only checks the
+    // conflict surfaces.
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(
-            argThat(
-                stateMatcher(
-                    anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.COMMITTED)));
+        .putState(any(Coordinator.State.class));
     doReturn(
             Optional.of(
                 new Coordinator.State(
@@ -164,31 +120,27 @@ class CoordinatorCommitHandlerTest {
         .getState(anyId());
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commitState(context))
+    assertThatThrownBy(() -> handler.commitState(anyId(), anyWriteSet()))
         .isInstanceOf(CommitConflictException.class);
   }
 
   @Test
-  void commitState_WhenCoordinatorConflictAndCommittedReturnedInGetState_ShouldReturnNormally()
+  void commitState_WhenCoordinatorConflictAndCommittedReturnedInGetState_ShouldReturnPersisted()
       throws Exception {
     // Two-phase Commit can drive the same commit twice (multiple participants / recovery), so the
-    // COMMITTED case is reachable and treated as success.
+    // COMMITTED case is reachable and treated as success — the persisted row's committedAt is
+    // returned, not the value we tried to write.
 
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(
-            argThat(
-                stateMatcher(
-                    anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.COMMITTED)));
+        .putState(any(Coordinator.State.class));
     doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.COMMITTED, 999L)))
         .when(coordinator)
         .getState(anyId());
 
-    // Act (must not throw) — the persisted COMMITTED row's committedAt is returned.
-    long committedAt = handler.commitState(context);
+    // Act (must not throw)
+    long committedAt = handler.commitState(anyId(), anyWriteSet());
 
     // Assert
     assertThat(committedAt).isEqualTo(999L);
@@ -197,68 +149,27 @@ class CoordinatorCommitHandlerTest {
   @Test
   void commitState_WhenCoordinatorConflictAndNoStatePersisted_ShouldThrowConflict()
       throws Exception {
-    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
-    // assert that the conflict is surfaced.
-
+    // Record rollback is the orchestrator's job (see CommitHandlerTest); this only checks the
+    // conflict surfaces.
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
-        .putState(
-            argThat(
-                stateMatcher(
-                    anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.COMMITTED)));
+        .putState(any(Coordinator.State.class));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commitState(context))
+    assertThatThrownBy(() -> handler.commitState(anyId(), anyWriteSet()))
         .isInstanceOf(CommitConflictException.class);
   }
 
   @Test
   void commitState_WhenCoordinatorExceptionThrown_ShouldThrowUnknown() throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorException.class).when(coordinator).putState(any(Coordinator.State.class));
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commitState(context))
+    assertThatThrownBy(() -> handler.commitState(anyId(), anyWriteSet()))
         .isInstanceOf(UnknownTransactionStatusException.class);
-  }
-
-  // ---------- commitStateWithoutWriteSet ----------
-
-  @Test
-  void commitStateWithoutWriteSet_WhenSuccessful_ShouldPutCommittedStateWithoutWriteSet()
-      throws Exception {
-    // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
-
-    // Act
-    handler.commitStateWithoutWriteSet(context);
-
-    // Assert — writeSet absent (null in matcher).
-    verify(coordinator).putState(argThat(stateMatcher(anyId(), null, TransactionState.COMMITTED)));
-  }
-
-  @Test
-  void commitStateWithoutWriteSet_ShouldStampReturnedCommittedAtOnState() throws Exception {
-    // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
-
-    // Act
-    long committedAt = handler.commitStateWithoutWriteSet(context);
-
-    // Assert: the COMMITTED coordinator row carries the committedAt that is returned.
-    ArgumentCaptor<Coordinator.State> captor = ArgumentCaptor.forClass(Coordinator.State.class);
-    verify(coordinator).putState(captor.capture());
-    assertThat(captor.getValue().getCreatedAt()).isEqualTo(committedAt);
   }
 
   // ---------- abortState ----------
@@ -266,27 +177,34 @@ class CoordinatorCommitHandlerTest {
   @Test
   void abortState_WhenSuccessful_ShouldPutAbortedStateAndReturnAborted() throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
+    WriteSet writeSet = anyWriteSet();
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
 
     // Act
-    TransactionState result = handler.abortState(context);
+    TransactionState result = handler.abortState(anyId(), writeSet);
 
     // Assert
     assertThat(result).isEqualTo(TransactionState.ABORTED);
     verify(coordinator)
-        .putState(
-            argThat(
-                stateMatcher(
-                    anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.ABORTED)));
+        .putState(argThat(stateMatcher(anyId(), writeSet, TransactionState.ABORTED)));
+  }
+
+  @Test
+  void abortState_WhenWriteSetNull_ShouldPutAbortedStateWithoutWriteSet() throws Exception {
+    // Arrange
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+
+    // Act
+    TransactionState result = handler.abortState(anyId(), null);
+
+    // Assert
+    assertThat(result).isEqualTo(TransactionState.ABORTED);
+    verify(coordinator).putState(argThat(stateMatcher(anyId(), null, TransactionState.ABORTED)));
   }
 
   @Test
   void abortState_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted() throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(any(Coordinator.State.class));
@@ -298,7 +216,7 @@ class CoordinatorCommitHandlerTest {
         .getState(anyId());
 
     // Act
-    TransactionState result = handler.abortState(context);
+    TransactionState result = handler.abortState(anyId(), anyWriteSet());
 
     // Assert
     assertThat(result).isEqualTo(TransactionState.COMMITTED);
@@ -313,15 +231,13 @@ class CoordinatorCommitHandlerTest {
     // cleanup process), not an honest UNKNOWN.
 
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
         .putState(any(Coordinator.State.class));
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
 
     // Act
-    TransactionState result = handler.abortState(context);
+    TransactionState result = handler.abortState(anyId(), null);
 
     // Assert
     assertThat(result).isEqualTo(TransactionState.ABORTED);
@@ -331,71 +247,11 @@ class CoordinatorCommitHandlerTest {
   @Test
   void abortState_WhenCoordinatorExceptionThrown_ShouldThrowUnknown() throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorException.class).when(coordinator).putState(any(Coordinator.State.class));
 
     // Act Assert
-    assertThatThrownBy(() -> handler.abortState(context))
+    assertThatThrownBy(() -> handler.abortState(anyId(), null))
         .isInstanceOf(UnknownTransactionStatusException.class);
-  }
-
-  // ---------- abortStateWithoutWriteSet ----------
-
-  @Test
-  void abortStateWithoutWriteSet_WhenSuccessful_ShouldPutAbortedStateWithoutWriteSet()
-      throws Exception {
-    // Arrange
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
-
-    // Act
-    TransactionState result = handler.abortStateWithoutWriteSet(anyId());
-
-    // Assert
-    assertThat(result).isEqualTo(TransactionState.ABORTED);
-    verify(coordinator).putState(argThat(stateMatcher(anyId(), null, TransactionState.ABORTED)));
-  }
-
-  @Test
-  void abortStateWithoutWriteSet_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted()
-      throws Exception {
-    // Arrange
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putState(any(Coordinator.State.class));
-    doReturn(
-            Optional.of(
-                new Coordinator.State(
-                    anyId(), TransactionState.COMMITTED, System.currentTimeMillis())))
-        .when(coordinator)
-        .getState(anyId());
-
-    // Act
-    TransactionState result = handler.abortStateWithoutWriteSet(anyId());
-
-    // Assert
-    assertThat(result).isEqualTo(TransactionState.COMMITTED);
-    verify(coordinator).getState(anyId());
-  }
-
-  @Test
-  void abortStateWithoutWriteSet_WhenConflictAndNoStatePersisted_ShouldReturnAborted()
-      throws Exception {
-    // Like abortState, this path cannot be racing a deletable COMMITTED row, so a
-    // conflicting-then-absent coordinator state resolves to ABORTED, not UNKNOWN.
-
-    // Arrange
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putState(any(Coordinator.State.class));
-    doReturn(Optional.empty()).when(coordinator).getState(anyId());
-
-    // Act
-    TransactionState result = handler.abortStateWithoutWriteSet(anyId());
-
-    // Assert
-    assertThat(result).isEqualTo(TransactionState.ABORTED);
-    verify(coordinator).getState(anyId());
   }
 
   // ---------- forceAbortState ----------
@@ -464,12 +320,9 @@ class CoordinatorCommitHandlerTest {
 
   @Test
   void handleCommitConflict_WhenAbortedStatePersisted_ShouldThrowConflict() throws Exception {
-    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
-    // assert that the conflict is surfaced.
-
+    // Record rollback is the orchestrator's job (see CommitHandlerTest); this only checks the
+    // conflict surfaces.
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doReturn(
             Optional.of(
                 new Coordinator.State(
@@ -479,40 +332,36 @@ class CoordinatorCommitHandlerTest {
     Exception cause = new RuntimeException("conflict");
 
     // Act Assert
-    assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), cause))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
   }
 
   @Test
-  void handleCommitConflict_WhenCommittedStatePersisted_ShouldReturnNormally() throws Exception {
+  void handleCommitConflict_WhenCommittedStatePersisted_ShouldReturnPersistedCommittedAt()
+      throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
-    doReturn(
-            Optional.of(
-                new Coordinator.State(
-                    anyId(), TransactionState.COMMITTED, System.currentTimeMillis())))
+    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.COMMITTED, 999L)))
         .when(coordinator)
         .getState(anyId());
 
-    // Act Assert (must not throw)
-    handler.handleCommitConflict(context, new RuntimeException("conflict"));
+    // Act
+    long committedAt = handler.handleCommitConflict(anyId(), new RuntimeException("conflict"));
+
+    // Assert
+    assertThat(committedAt).isEqualTo(999L);
   }
 
   @Test
   void handleCommitConflict_WhenNoStatePersisted_ShouldThrowConflict() throws Exception {
-    // Record rollback is the orchestrator's responsibility (see CommitHandlerTest); here we only
-    // assert that the conflict is surfaced.
-
+    // Record rollback is the orchestrator's job (see CommitHandlerTest); this only checks the
+    // conflict surfaces.
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doReturn(Optional.empty()).when(coordinator).getState(anyId());
     Exception cause = new RuntimeException("conflict");
 
     // Act Assert
-    assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), cause))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
   }
@@ -521,12 +370,10 @@ class CoordinatorCommitHandlerTest {
   void handleCommitConflict_WhenGetStateThrowsCoordinatorException_ShouldThrowUnknown()
       throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite();
-    TransactionContext context = createTransactionContext(snapshot);
     doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
 
     // Act Assert
-    assertThatThrownBy(() -> handler.handleCommitConflict(context, new RuntimeException()))
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), new RuntimeException()))
         .isInstanceOf(UnknownTransactionStatusException.class);
   }
 }
