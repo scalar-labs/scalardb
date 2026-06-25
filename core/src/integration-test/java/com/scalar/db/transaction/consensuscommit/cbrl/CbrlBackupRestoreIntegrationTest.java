@@ -220,6 +220,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   // restored from the copy alone (the load-bearing proof). The rest are split into one disjoint
   // range per worker in the disjoint-owner test.
   private static final int PRE_WINDOW_ONLY_KEYS = 4;
+  // Half-and-half: keys [0, SEEDED_KEYS) are seeded pre-window (so they exist in the copy);
+  // [SEEDED_KEYS, RECORD_COUNT) start ABSENT and are created in-window, so restore exercises both
+  // the copied-base path AND replaying a redo INSERT onto a base the copy never had (a chain root).
+  private static final int SEEDED_KEYS = RECORD_COUNT / 2;
 
   // Per-column tracking for the disjoint-owner test: a column index per user column of table_a,
   // used
@@ -544,11 +548,17 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     boolean[] present = new boolean[RECORD_COUNT];
     Map<Integer, List<OwnedOp>> history = new HashMap<>();
     for (int i = 0; i < RECORD_COUNT; i++) {
+      history.put(i, new ArrayList<>());
+    }
+    // Seed only the first SEEDED_KEYS pre-window; the rest start absent and are created in-window
+    // by
+    // their owner (mutateOwnedKey inserts an absent key), so their first redo op is a chain-root
+    // INSERT replayed onto a base the copy never had.
+    for (int i = 0; i < SEEDED_KEYS; i++) {
       long token = tokenCounter.incrementAndGet();
       int key = i;
       seedToken[i] = token;
       present[i] = true;
-      history.put(i, new ArrayList<>());
       withRetry(
           tx -> {
             tx.put(deterministicPutForTableA(key, token, ALL_COLUMNS));
@@ -713,7 +723,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       long[] seedToken, Map<Integer, List<OwnedOp>> history, Set<String> committedInBackup) {
     List<String> violations = new ArrayList<>();
     for (int i = 0; i < RECORD_COUNT; i++) {
-      boolean present = true;
+      // Un-seeded keys (i >= SEEDED_KEYS) start absent; their first in-window op is a full INSERT.
+      boolean present = i < SEEDED_KEYS;
       long[] cols = new long[USER_COLUMN_COUNT];
       Arrays.fill(cols, seedToken[i]);
       for (OwnedOp op : history.get(i)) {
@@ -861,15 +872,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   void restore_AfterConcurrentSameKeyTransfers_ShouldPreserveConservation() throws Exception {
     long workloadStartMillis = System.currentTimeMillis();
     long initialBalance = 1_000L;
-    for (int i = 0; i < RECORD_COUNT; i++) {
-      int key = i;
-      withRetry(
-          tx -> {
-            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
-            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
-          });
-    }
-    long total = (long) RECORD_COUNT * initialBalance;
+    seedBalances(SEEDED_KEYS, initialBalance); // Half seeded; the rest are created in-window.
+    long total = (long) SEEDED_KEYS * initialBalance;
 
     manager.enableRedoLogging(); // Open the backup window.
 
@@ -903,9 +907,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     assertThat(findConsistencyViolations())
         .as("cross-table consistency: both tables hold the same balance per account")
         .isEmpty();
-    assertThat(presentKeyCount())
-        .as("no deletes: every account is present")
-        .isEqualTo(RECORD_COUNT);
+    assertThat(presentSeededKeyCount())
+        .as("no deletes: every seeded account survives")
+        .isEqualTo(SEEDED_KEYS);
     assertThat(sumRestoredBalances(TABLE_A, A_TOKEN))
         .as("table_a total balance conserved")
         .isEqualTo(total);
@@ -966,15 +970,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   @Test
   void restore_CrashedMidway_ShouldConvergeOnReRun() throws Exception {
     long initialBalance = 1_000L;
-    for (int i = 0; i < RECORD_COUNT; i++) {
-      int key = i;
-      withRetry(
-          tx -> {
-            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
-            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
-          });
-    }
-    long total = (long) RECORD_COUNT * initialBalance;
+    seedBalances(SEEDED_KEYS, initialBalance); // Half seeded; the rest are created in-window.
+    long total = (long) SEEDED_KEYS * initialBalance;
 
     manager.enableRedoLogging(); // Open the backup window.
     AtomicBoolean stop = new AtomicBoolean(false);
@@ -1035,9 +1032,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       assertThat(findConsistencyViolations())
           .as("re-run after crash at %d/%d: cross-table consistency", step, steps)
           .isEmpty();
-      assertThat(presentKeyCount())
-          .as("re-run after crash at %d/%d: every account present", step, steps)
-          .isEqualTo(RECORD_COUNT);
+      assertThat(presentSeededKeyCount())
+          .as("re-run after crash at %d/%d: every seeded account survives", step, steps)
+          .isEqualTo(SEEDED_KEYS);
       assertThat(sumRestoredBalances(TABLE_A, A_TOKEN))
           .as("re-run after crash at %d/%d: table_a conserved", step, steps)
           .isEqualTo(total);
@@ -1182,9 +1179,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
   /** Reads an account's balance, pulling both tables into the read set so its writes chain. */
   private long readBalance(DistributedTransaction tx, int i) throws Exception {
-    Result a = tx.get(getForTableA(SRC_NAMESPACE, i)).orElseThrow(IllegalStateException::new);
+    Optional<Result> a = tx.get(getForTableA(SRC_NAMESPACE, i)); // Absent (un-seeded) reads as 0.
     tx.get(getForTableB(SRC_NAMESPACE, i)); // Read so the table_b write links to its prior version.
-    return a.getBigInt(A_TOKEN);
+    return a.map(r -> r.getBigInt(A_TOKEN)).orElse(0L);
   }
 
   private void writeBalance(DistributedTransaction tx, int i, long balance) throws Exception {
@@ -1274,14 +1271,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   @Test
   void restore_ShouldWriteNoCoordinatorRows() throws Exception {
     long initialBalance = 1_000L;
-    for (int i = 0; i < RECORD_COUNT; i++) {
-      int key = i;
-      withRetry(
-          tx -> {
-            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
-            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
-          });
-    }
+    seedBalances(RECORD_COUNT, initialBalance);
 
     manager.enableRedoLogging();
     AtomicBoolean stop = new AtomicBoolean(false);
@@ -1502,14 +1492,27 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     return violations;
   }
 
-  private int presentKeyCount() {
+  /** How many seeded keys [0, SEEDED_KEYS) survive — transfers never delete them, so all must. */
+  private int presentSeededKeyCount() {
     int count = 0;
-    for (int i = 0; i < RECORD_COUNT; i++) {
+    for (int i = 0; i < SEEDED_KEYS; i++) {
       if (getWithRetry(getForTableA(RESTORE_NAMESPACE, i)).isPresent()) {
         count++;
       }
     }
     return count;
+  }
+
+  /** Seeds keys [0, count) with {@code initialBalance} in both tables, pre-window (logging off). */
+  private void seedBalances(int count, long initialBalance) {
+    for (int i = 0; i < count; i++) {
+      int key = i;
+      withRetry(
+          tx -> {
+            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
+            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
+          });
+    }
   }
 
   private Map<Integer, Long> readRestoredTokens() {
