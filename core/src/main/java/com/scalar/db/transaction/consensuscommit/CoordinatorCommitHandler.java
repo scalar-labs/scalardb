@@ -18,15 +18,11 @@ import org.slf4j.LoggerFactory;
  * Handles the Coordinator-side (state-table) operations of the Consensus Commit protocol: writing
  * the COMMITTED / ABORTED records to the Coordinator state table and resolving putState conflicts.
  *
- * <p>This is one of the two specialized handlers that {@link CommitHandler} delegates to. The other
- * is {@link ParticipantCommitHandler}, which owns participant-side data-record operations.
- *
- * <p>Methods here only touch the Coordinator state table via {@link Coordinator}. They never write
- * to user data tables — except indirectly: when {@code commitState} loses a putState race and the
- * persisted state turns out to be ABORTED (or absent), this handler asks the orchestrator-provided
- * {@link ParticipantCommitHandler} to roll back the records that the transaction had prepared. That
- * cross-handler call keeps the "commit conflict → rollback records" invariant atomic from the
- * orchestrator's perspective.
+ * <p>Methods here only touch the Coordinator state table via {@link Coordinator}; they never touch
+ * user data tables. When {@code commitState} loses a putState race and the persisted state turns
+ * out to be ABORTED (or absent), this handler reports a {@link CommitConflictException} and leaves
+ * the rollback of the transaction's prepared records to the caller. This keeps the handler free of
+ * any participant-side dependency.
  */
 @ThreadSafe
 class CoordinatorCommitHandler {
@@ -34,16 +30,11 @@ class CoordinatorCommitHandler {
 
   private final Coordinator coordinator;
   private final WriteSetEncoder writeSetEncoder;
-  private final ParticipantCommitHandler participantCommitHandler;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  CoordinatorCommitHandler(
-      Coordinator coordinator,
-      WriteSetEncoder writeSetEncoder,
-      ParticipantCommitHandler participantCommitHandler) {
+  CoordinatorCommitHandler(Coordinator coordinator, WriteSetEncoder writeSetEncoder) {
     this.coordinator = checkNotNull(coordinator);
     this.writeSetEncoder = checkNotNull(writeSetEncoder);
-    this.participantCommitHandler = checkNotNull(participantCommitHandler);
   }
 
   /**
@@ -88,7 +79,6 @@ class CoordinatorCommitHandler {
       if (s.isPresent()) {
         TransactionState state = s.get().getState();
         if (state == TransactionState.ABORTED) {
-          participantCommitHandler.rollbackRecords(context);
           throw new CommitConflictException(
               CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
                   cause.getMessage()),
@@ -111,8 +101,9 @@ class CoordinatorCommitHandler {
         // The coordinator state is absent: a row existed when our putIfNotExists lost the race, but
         // it is gone now. In both interfaces this means the conflicting row was an ABORTED written
         // by a lazy recovery (which also rolled the records back) and later removed by the
-        // Coordinator state cleanup process, so the transaction is definitively aborted. Roll the
-        // records back and report a conflict -- the same outcome as the present-ABORTED case above.
+        // Coordinator state cleanup process, so the transaction is definitively aborted. Report a
+        // conflict (the orchestrator rolls the records back) -- the same outcome as the
+        // present-ABORTED case above.
         //
         // A COMMITTED row can be ruled out here in both interfaces:
         //   - One-phase Commit I/F: this commit is the only writer of this transaction's COMMITTED
@@ -139,7 +130,6 @@ class CoordinatorCommitHandler {
         //
         // TODO: revisit this if/when the Two-phase Commit I/F is removed.
 
-        participantCommitHandler.rollbackRecords(context);
         throw new CommitConflictException(
             CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
                 cause.getMessage()),

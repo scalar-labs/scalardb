@@ -33,9 +33,6 @@ import org.slf4j.LoggerFactory;
  * preparing, validating, committing, and rolling back the records the transaction touches in user
  * data tables.
  *
- * <p>This is one of the two specialized handlers that {@link CommitHandler} delegates to. The other
- * is {@link CoordinatorCommitHandler}, which owns Coordinator-table state writes.
- *
  * <p>Methods here only touch user data tables via {@link DistributedStorage} and the {@link
  * MutationsGrouper} / {@link ParallelExecutor} stack. They never write to the Coordinator table.
  */
