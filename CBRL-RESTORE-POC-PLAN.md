@@ -263,6 +263,31 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
   `consensuscommit.Snapshot`. Both of those are also "reading records"; the name must not blur
   into them.
 
+#### Verified recovery semantics (2026-06-25) — which tx-id a rolled-forward record carries
+
+- **Lazy recovery commits under the *original* writer's tx-id, never the recoverer's.** When any
+  transaction lazily rolls forward another transaction's `PREPARED` record, the committed record
+  keeps the **original** writer's `tx_id`: `RecoveryHandler.createCommitMutationComposer` builds the
+  composer with `result.getId()` — the id already on the prepared record
+  (`RecoveryHandler.java:235-236`) — and `CommitMutationComposer.composePut` only flips
+  `STATE→COMMITTED` and sets `COMMITTED_AT`, *conditioned on* `ID == id`, and **never writes the
+  `ID` column** (`CommitMutationComposer.java:93-99`). Rollback is symmetric (`result.getId()` at
+  `:192`; the coordinator row is written under the original id via
+  `putStateForLazyRecoveryRollback(result.getId())`). **Why it matters for CBRL:** the copy always
+  carries the original writer's id whether the record was finalized by its own committer or rolled
+  forward by a third transaction, so the `prev_tx_id → tx_id` chain and the coordinator linkage (the
+  writer's row) stay intact — lazy-recovery-by-another-transaction is transparent to
+  `recoverCopy`/replay. There is no "recoverer's tx-id" anywhere on the data record.
+- **Corollary — never trust the copy record's own `tx_committed_at`.** Roll-forward stamps
+  `COMMITTED_AT = current`, i.e. the **recoverer's recovery-time clock**, not the original commit
+  time. This re-stamp happens both in production (a third transaction rolls the record forward) and
+  at restore time (our own `recoverRecord`). So `readCopyState` takes the commit time from the
+  **coordinator backup** (`committedAtByTxId` = coordinator `tx_created_at`), not from the record
+  column (`CbrlRestore.java:213-218`); that override is load-bearing for preserving original commit
+  timestamps. Lock it in with an IT case: a record `PREPARED` in the copy whose writer commits
+  *during* the window → assert the restored value, `tx_version`, **and** the original commit time (we
+  currently arrange only the rolled-*back* in-doubt case, not a rolled-*forward* one).
+
 ### 4.6 Alternative (worth revisiting) — fold recovery into the replay instead of driving core lazy recovery
 
 **Current approach (§4.5, §6.1, §7 C4):** restore delegates PREPARED/DELETED finalization to
