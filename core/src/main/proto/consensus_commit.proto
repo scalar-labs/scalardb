@@ -249,5 +249,10 @@ message Entry {
   // Only populated for the full (redo-logging) write set. Its presence is the canonical
   // discriminator restore uses: an entry with this field absent (hasTxVersion() == false) is from a
   // keys-only write set and must NOT be replayed. Do not set tx_version on a keys-only entry.
+  //
+  // TODO: Using a version field's presence as the keys-only-vs-full discriminator overloads it as a
+  // boolean flag. A cleaner signal would be an explicit marker — a third EntryType
+  // (ENTRY_TYPE_KEY_ONLY) or a `bool keys_only` — set by the encoder's keys-only path; it would also
+  // read uniformly for DELETE entries, which are column-less regardless of mode.
   optional int32 tx_version = 8;
 }

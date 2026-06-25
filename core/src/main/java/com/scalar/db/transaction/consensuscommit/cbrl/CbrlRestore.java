@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
@@ -13,6 +14,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -26,9 +28,12 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
@@ -41,6 +46,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * Orchestrates the whole CBRL restore against a non-snapshot-consistent copy and the redo captured
@@ -64,9 +72,13 @@ import java.util.Optional;
  * <p>Callers do the backup-taking and ensure the coordinator and user tables are restored (in a
  * test, arranged) before calling only {@link #restore()}.
  */
-public final class CbrlRestore {
+public final class CbrlRestore implements AutoCloseable {
   private final DistributedStorage storage;
   private final DistributedTransactionManager manager;
+  private final DistributedTransactionAdmin admin;
+  // True if this instance built storage/manager/admin (and so must close them); false if they were
+  // injected by the caller, who then owns their lifecycle.
+  private final boolean ownsResources;
   // Stateless; constructed here rather than leaked through the public constructor as an internal
   // type that external callers have no other reason to depend on.
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -74,26 +86,88 @@ public final class CbrlRestore {
   private final String restoreNamespace;
   // Namespace of the restored coordinator table — read for the redo and original commit times.
   private final String coordinatorNamespace;
-  // Restore table -> its user (non-key, non-tx-metadata) column names, read as the replay base.
+  // Restore table -> its user (non-key, non-tx-metadata) column names, derived from each table's
+  // metadata and read as the replay base.
   private final Map<String, List<String>> userColumnsByTable;
   private final int replayBuckets;
   private final int replayWorkers;
 
-  public CbrlRestore(
-      DistributedStorage storage,
-      DistributedTransactionManager manager,
+  /**
+   * Builds its own ScalarDB handles (storage, transaction manager, admin) from {@code properties};
+   * {@link #close()} closes them. Only the restore-target namespace is an argument — the
+   * coordinator namespace, per-table user columns, and replay concurrency are all derived from
+   * {@code properties} and the restored schema, so the caller hand-derives nothing.
+   */
+  public CbrlRestore(Properties properties, String restoreNamespace) throws ExecutionException {
+    this(properties, restoreNamespace, null, null, null);
+  }
+
+  /**
+   * Uses caller-provided ScalarDB handles (the caller owns their lifecycle — e.g. a shared test
+   * factory or crash-injecting proxies); everything else is still derived from {@code properties}
+   * and the schema. The three handles must be all non-null or all null (the public constructor uses
+   * the all-null form to build its own).
+   */
+  CbrlRestore(
+      Properties properties,
       String restoreNamespace,
-      String coordinatorNamespace,
-      Map<String, List<String>> userColumnsByTable,
-      int replayBuckets,
-      int replayWorkers) {
-    this.storage = storage;
-    this.manager = manager;
+      @Nullable DistributedStorage storage,
+      @Nullable DistributedTransactionManager manager,
+      @Nullable DistributedTransactionAdmin admin)
+      throws ExecutionException {
+    boolean injected = storage != null;
+    if (injected != (manager != null) || injected != (admin != null)) {
+      throw new IllegalArgumentException(
+          "storage, manager, and admin must all be null or all non-null");
+    }
+    CbrlConfig config = new CbrlConfig(properties);
     this.restoreNamespace = restoreNamespace;
-    this.coordinatorNamespace = coordinatorNamespace;
-    this.userColumnsByTable = userColumnsByTable;
-    this.replayBuckets = replayBuckets;
-    this.replayWorkers = replayWorkers;
+    this.coordinatorNamespace = config.getCoordinatorNamespace();
+    this.replayBuckets = config.getReplayBuckets();
+    this.replayWorkers = config.getReplayWorkers();
+    if (injected) {
+      this.storage = storage;
+      this.manager = manager;
+      this.admin = admin;
+      this.ownsResources = false;
+    } else {
+      StorageFactory storageFactory = StorageFactory.create(properties);
+      TransactionFactory transactionFactory = TransactionFactory.create(properties);
+      this.storage = storageFactory.getStorage();
+      this.manager = transactionFactory.getTransactionManager();
+      this.admin = transactionFactory.getTransactionAdmin();
+      this.ownsResources = true;
+    }
+    this.userColumnsByTable = deriveUserColumnsByTable();
+  }
+
+  /**
+   * Derives each restore-target table's user (non-key, non-tx-metadata) columns from its schema —
+   * the columns read as the replay base and written back. The caller no longer supplies them.
+   */
+  private Map<String, List<String>> deriveUserColumnsByTable() throws ExecutionException {
+    Map<String, List<String>> map = new HashMap<>();
+    for (String table : admin.getNamespaceTableNames(restoreNamespace)) {
+      TransactionTableMetadata metadata =
+          new TransactionTableMetadata(admin.getTableMetadata(restoreNamespace, table));
+      List<String> userColumns =
+          metadata.getColumnNames().stream()
+              .filter(c -> !metadata.getPrimaryKeyColumnNames().contains(c))
+              .filter(c -> !metadata.getTransactionMetaColumnNames().contains(c))
+              .collect(Collectors.toList());
+      map.put(table, userColumns);
+    }
+    return map;
+  }
+
+  /** Closes the ScalarDB handles only if this instance built them. */
+  @Override
+  public void close() {
+    if (ownsResources) {
+      storage.close();
+      manager.close();
+      admin.close();
+    }
   }
 
   /**

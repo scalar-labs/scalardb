@@ -156,7 +156,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private static final String B_CK = "ck";
   private static final String B_TOKEN = "col_token";
   private static final String B_TEXT = "col_text";
-  private static final String[] B_USER_COLUMNS = {B_TOKEN, B_TEXT};
   private static final TableMetadata TABLE_B_METADATA =
       TableMetadata.newBuilder()
           .addColumn(B_PK, DataType.INT)
@@ -182,19 +181,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private static final String C_TIME = "c_time";
   private static final String C_TIMESTAMP = "c_timestamp";
   private static final String C_TIMESTAMPTZ = "c_timestamptz";
-  private static final String[] C_USER_COLUMNS = {
-    C_BOOLEAN,
-    C_INT,
-    C_BIGINT,
-    C_FLOAT,
-    C_DOUBLE,
-    C_TEXT,
-    C_BLOB,
-    C_DATE,
-    C_TIME,
-    C_TIMESTAMP,
-    C_TIMESTAMPTZ
-  };
   private static final TableMetadata TABLE_C_METADATA =
       TableMetadata.newBuilder()
           .addColumn(C_PK, DataType.INT)
@@ -245,8 +231,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   // (group-)committed record's coordinator state has not landed yet, so retrying immediately just
   // burns attempts before async recovery resolves it. A short pause lets it settle.
   private static final Duration WORKLOAD_RETRY_BACKOFF = Duration.ofMillis(20);
-  private static final int REPLAY_BUCKETS = 8;
-  private static final int REPLAY_WORKERS = 4;
 
   private DistributedTransactionManager manager;
   private DistributedTransactionAdmin admin;
@@ -297,15 +281,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       admin.createTable(namespace, TABLE_C, TABLE_C_METADATA, true);
     }
 
-    cbrlRestore =
-        new CbrlRestore(
-            storage,
-            manager,
-            RESTORE_NAMESPACE,
-            COORDINATOR_NAMESPACE,
-            userColumnsByTable(),
-            REPLAY_BUCKETS,
-            REPLAY_WORKERS);
+    cbrlRestore = new CbrlRestore(properties, RESTORE_NAMESPACE, storage, manager, admin);
   }
 
   @AfterAll
@@ -1052,18 +1028,13 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * A {@link CbrlRestore} whose storage/manager/coordinator throw once {@link #crashRestore} is
    * set.
    */
-  private CbrlRestore newCrashingRestore() {
+  private CbrlRestore newCrashingRestore() throws Exception {
     DistributedStorage crashingStorage = crashing(DistributedStorage.class, storage, false);
     DistributedTransactionManager crashingManager =
         crashing(DistributedTransactionManager.class, manager, true);
+    // The admin is the real one: metadata is read at construction, before any crash is injected.
     return new CbrlRestore(
-        crashingStorage,
-        crashingManager,
-        RESTORE_NAMESPACE,
-        COORDINATOR_NAMESPACE,
-        userColumnsByTable(),
-        REPLAY_BUCKETS,
-        REPLAY_WORKERS);
+        properties(), RESTORE_NAMESPACE, crashingStorage, crashingManager, admin);
   }
 
   /**
@@ -1135,14 +1106,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         storage.put(put);
       }
     }
-  }
-
-  private Map<String, List<String>> userColumnsByTable() {
-    Map<String, List<String>> map = new LinkedHashMap<>();
-    map.put(TABLE_A, Arrays.asList(A_USER_COLUMNS));
-    map.put(TABLE_B, Arrays.asList(B_USER_COLUMNS));
-    map.put(TABLE_C, Arrays.asList(C_USER_COLUMNS));
-    return map;
   }
 
   private List<Future<?>> startTransferWorkload(AtomicBoolean stop) {
