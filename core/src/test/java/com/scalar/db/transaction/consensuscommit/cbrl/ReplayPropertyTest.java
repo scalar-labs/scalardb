@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -59,9 +60,9 @@ class ReplayPropertyTest {
       Collections.shuffle(shuffled, new Random(seed));
 
       for (int bucketCount : new int[] {1, 3, NUM_KEYS}) {
-        List<List<RedoOperation>> buckets = RecordShuffler.shuffle(shuffled, bucketCount);
+        List<RedoBucket> buckets = RecordShuffler.shuffle(shuffled, bucketCount);
         Map<RecordKey, RecordState> actual =
-            new RecordApplier(ABSENT).apply(buckets, Math.max(1, bucketCount / 2));
+            applyCollect(new RecordApplier(ABSENT), buckets, Math.max(1, bucketCount / 2));
         for (RecordKey key : expected.keySet()) {
           assertThat(actual.get(key).observablyEquals(expected.get(key)))
               .as("seed %d, N=%d, %s", seed, bucketCount, key)
@@ -89,11 +90,12 @@ class ReplayPropertyTest {
   @Test
   void p2_idempotency_applyRerunFromOutputIsNoOp() throws InterruptedException {
     List<RedoOperation> ops = new RedoLogGenerator(7).generate(NUM_KEYS);
-    List<List<RedoOperation>> buckets = RecordShuffler.shuffle(ops, 4);
+    List<RedoBucket> buckets = RecordShuffler.shuffle(ops, 4);
 
-    Map<RecordKey, RecordState> first = new RecordApplier(ABSENT).apply(buckets, 4);
+    Map<RecordKey, RecordState> first = applyCollect(new RecordApplier(ABSENT), buckets, 4);
     Map<RecordKey, RecordState> second =
-        new RecordApplier(key -> first.getOrDefault(key, RecordState.absent())).apply(buckets, 4);
+        applyCollect(
+            new RecordApplier(key -> first.getOrDefault(key, RecordState.absent())), buckets, 4);
 
     assertThat(first).isNotEmpty();
     assertThat(second).as("apply() re-run from its own output is a no-op").isEqualTo(first);
@@ -113,7 +115,7 @@ class ReplayPropertyTest {
     RedoOperation t2 = new RedoOperation("t2", write(0, "t1", 30));
     List<RedoOperation> withGap = new ArrayList<>(ImmutableList.of(t0, t2));
 
-    RecordState result = new RecordApplier(ABSENT).replayKey(t0.key(), withGap);
+    RecordState result = new RecordApplier(ABSENT).computeWriteOps(t0.key(), withGap);
 
     assertThat(result.present()).isTrue();
     assertThat(result.columns().get(RedoLogGenerator.COL_V).getIntValue().getValue())
@@ -148,8 +150,17 @@ class ReplayPropertyTest {
     RecordApplier applier = new RecordApplier(reader);
     Map<RecordKey, RecordState> result = new LinkedHashMap<>();
     for (Map.Entry<RecordKey, List<RedoOperation>> entry : byKey.entrySet()) {
-      result.put(entry.getKey(), applier.replayKey(entry.getKey(), entry.getValue()));
+      result.put(entry.getKey(), applier.computeWriteOps(entry.getKey(), entry.getValue()));
     }
+    return result;
+  }
+
+  /** Runs the full bucket pipeline, collecting each key's reconstructed state via the sink. */
+  private static Map<RecordKey, RecordState> applyCollect(
+      RecordApplier applier, List<RedoBucket> buckets, int workerCount)
+      throws InterruptedException {
+    Map<RecordKey, RecordState> result = new ConcurrentHashMap<>();
+    applier.apply(buckets, workerCount, result::put);
     return result;
   }
 

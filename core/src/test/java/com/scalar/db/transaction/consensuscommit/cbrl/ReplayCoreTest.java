@@ -26,14 +26,14 @@ class ReplayCoreTest {
 
   @Test
   void emptyWindow_absentStaysAbsent() {
-    RecordState result = new RecordApplier(ABSENT).replayKey(key(), ImmutableList.of());
+    RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ImmutableList.of());
     assertThat(result.present()).isFalse();
   }
 
   @Test
   void emptyWindow_presentStaysUnchanged() {
     RecordState present = present("tX", ImmutableMap.of(COL_V, 1));
-    RecordState result = new RecordApplier(k -> present).replayKey(key(), ImmutableList.of());
+    RecordState result = new RecordApplier(k -> present).computeWriteOps(key(), ImmutableList.of());
     assertThat(result).isEqualTo(present);
   }
 
@@ -41,7 +41,7 @@ class ReplayCoreTest {
   void singleInsertRoot_createsRecord() {
     List<RedoOperation> ops =
         ImmutableList.of(op("t0", write(null, ImmutableMap.of(COL_V, 5, COL_W, 9))));
-    RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
+    RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(5);
     assertThat(intOf(result, COL_W)).isEqualTo(9);
@@ -51,7 +51,7 @@ class ReplayCoreTest {
   void insertThenDelete_netZero_absent() {
     List<RedoOperation> ops =
         ImmutableList.of(op("t0", write(null, ImmutableMap.of(COL_V, 1))), op("t1", delete("t0")));
-    RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
+    RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
     assertThat(result.present()).isFalse();
   }
 
@@ -62,7 +62,7 @@ class ReplayCoreTest {
             op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2))),
             op("t1", write("t0", ImmutableMap.of(COL_V, 3))), // partial: only v
             op("t2", write("t1", ImmutableMap.of(COL_V, 4)))); // partial: only v
-    RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
+    RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(4); // last update wins
     assertThat(intOf(result, COL_W)).isEqualTo(2); // carried from insert
@@ -75,7 +75,7 @@ class ReplayCoreTest {
             op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2))),
             op("t1", delete("t0")),
             op("t2", write(null, ImmutableMap.of(COL_V, 7)))); // re-insert, root, only v
-    RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
+    RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(7);
     assertThat(result.columns()).doesNotContainKey(COL_W); // insert replaces, doesn't merge
@@ -85,7 +85,7 @@ class ReplayCoreTest {
   void updateChainsOffExistingRecord() {
     RecordState current = present("tX", ImmutableMap.of(COL_V, 1, COL_W, 2));
     List<RedoOperation> ops = ImmutableList.of(op("t1", write("tX", ImmutableMap.of(COL_V, 9))));
-    RecordState result = new RecordApplier(k -> current).replayKey(key(), ops);
+    RecordState result = new RecordApplier(k -> current).computeWriteOps(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(9);
     assertThat(intOf(result, COL_W)).isEqualTo(2);
@@ -101,7 +101,7 @@ class ReplayCoreTest {
         ImmutableList.of(
             op("v1", write("preWindowRoot", ImmutableMap.of(COL_V, 5))), // dangling: prev unlogged
             op("v2", write("v1", ImmutableMap.of(COL_V, 6)))); // chains forward off the base
-    RecordState result = new RecordApplier(k -> base).replayKey(key(), ops);
+    RecordState result = new RecordApplier(k -> base).computeWriteOps(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(6); // forward update applied
     assertThat(intOf(result, COL_W)).isEqualTo(9); // carried from the copy's base
@@ -120,7 +120,7 @@ class ReplayCoreTest {
             op("I0", write(null, ImmutableMap.of(COL_V, 1))), // original (stale) insert root
             op("d1", delete("I0")),
             op("I2", write(null, ImmutableMap.of(COL_V, 7)))); // re-insert after the delete
-    RecordState result = new RecordApplier(k -> base).replayKey(key(), ops);
+    RecordState result = new RecordApplier(k -> base).computeWriteOps(key(), ops);
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(7); // the re-insert, not the stale root's 1
   }
@@ -130,8 +130,10 @@ class ReplayCoreTest {
     RedoOperation a = op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2)));
     RedoOperation b = op("t1", write("t0", ImmutableMap.of(COL_V, 3)));
     RedoOperation c = op("t2", write("t1", ImmutableMap.of(COL_V, 4)));
-    RecordState forward = new RecordApplier(ABSENT).replayKey(key(), ImmutableList.of(a, b, c));
-    RecordState reversed = new RecordApplier(ABSENT).replayKey(key(), ImmutableList.of(c, b, a));
+    RecordState forward =
+        new RecordApplier(ABSENT).computeWriteOps(key(), ImmutableList.of(a, b, c));
+    RecordState reversed =
+        new RecordApplier(ABSENT).computeWriteOps(key(), ImmutableList.of(c, b, a));
     assertThat(reversed).isEqualTo(forward);
   }
 
@@ -145,7 +147,7 @@ class ReplayCoreTest {
             op("t0", write(null, ImmutableMap.of(COL_V, 1))),
             op("t1", write("t0", ImmutableMap.of(COL_V, 2))),
             op("t2", write("t0", ImmutableMap.of(COL_V, 3)))); // also chains off t0 -> fork
-    assertThatThrownBy(() -> new RecordApplier(ABSENT).replayKey(key(), ops))
+    assertThatThrownBy(() -> new RecordApplier(ABSENT).computeWriteOps(key(), ops))
         .isInstanceOf(CbrlReplayException.class)
         .hasMessageContaining("share prev_tx_id");
   }
@@ -156,7 +158,7 @@ class ReplayCoreTest {
     // record) carry no prev_tx_id. They are unreachable from the chain walk and must be tolerated
     // (skipped, logged) — NOT rejected as a fork the way two ops sharing a real prev_tx_id are.
     List<RedoOperation> ops = ImmutableList.of(op("d1", delete(null)), op("d2", delete(null)));
-    RecordState result = new RecordApplier(ABSENT).replayKey(key(), ops);
+    RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
     assertThat(result.present()).isFalse();
   }
 

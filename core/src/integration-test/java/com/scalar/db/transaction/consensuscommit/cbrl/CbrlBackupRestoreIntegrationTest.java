@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -29,7 +30,6 @@ import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
-import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
@@ -41,7 +41,6 @@ import java.time.LocalTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -128,8 +127,11 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   protected abstract boolean withCoordinatorGroupCommit();
 
   private static final String TEST_NAME = "cbrl";
-  private static final String SRC_NAMESPACE = "cbrl_src";
-  private static final String RESTORE_NAMESPACE = "cbrl_restore";
+  // One user namespace, restored in place: CbrlRestore routes each record by the namespace carried
+  // in its redo, so the workload writes here, the non-snapshot-consistent copy is captured here,
+  // and
+  // restore rewrites it here. (The two-namespace src/restore split is gone — restore is in-place.)
+  private static final String USER_NAMESPACE = "cbrl_data";
   private static final String COORDINATOR_NAMESPACE = "cbrl_coordinator";
 
   private static final String TABLE_A = "table_a";
@@ -235,6 +237,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private DistributedTransactionManager manager;
   private DistributedTransactionAdmin admin;
   private DistributedStorage storage;
+  private DistributedStorageAdmin storageAdmin;
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   private ExecutorService workerExecutor;
@@ -270,18 +273,18 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     TransactionFactory transactionFactory = TransactionFactory.create(properties);
     manager = transactionFactory.getTransactionManager();
     admin = transactionFactory.getTransactionAdmin();
-    storage = StorageFactory.create(properties).getStorage();
+    StorageFactory storageFactory = StorageFactory.create(properties);
+    storage = storageFactory.getStorage();
+    storageAdmin = storageFactory.getStorageAdmin();
     workerExecutor = Executors.newFixedThreadPool(WORKLOAD_THREADS);
 
     admin.createCoordinatorTables(true);
-    for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
-      admin.createNamespace(namespace, true);
-      admin.createTable(namespace, TABLE_A, TABLE_A_METADATA, true);
-      admin.createTable(namespace, TABLE_B, TABLE_B_METADATA, true);
-      admin.createTable(namespace, TABLE_C, TABLE_C_METADATA, true);
-    }
+    admin.createNamespace(USER_NAMESPACE, true);
+    admin.createTable(USER_NAMESPACE, TABLE_A, TABLE_A_METADATA, true);
+    admin.createTable(USER_NAMESPACE, TABLE_B, TABLE_B_METADATA, true);
+    admin.createTable(USER_NAMESPACE, TABLE_C, TABLE_C_METADATA, true);
 
-    cbrlRestore = new CbrlRestore(properties, RESTORE_NAMESPACE, storage, manager, admin);
+    cbrlRestore = new CbrlRestore(properties, storage, manager, storageAdmin);
   }
 
   @AfterAll
@@ -290,15 +293,16 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       workerExecutor.shutdownNow();
     }
     if (admin != null) {
-      for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
-        admin.dropTable(namespace, TABLE_A, true);
-        admin.dropTable(namespace, TABLE_B, true);
-        admin.dropTable(namespace, TABLE_C, true);
-        admin.dropNamespace(namespace, true);
-      }
+      admin.dropTable(USER_NAMESPACE, TABLE_A, true);
+      admin.dropTable(USER_NAMESPACE, TABLE_B, true);
+      admin.dropTable(USER_NAMESPACE, TABLE_C, true);
+      admin.dropNamespace(USER_NAMESPACE, true);
       admin.dropCoordinatorTables(true);
       admin.dropNamespace(COORDINATOR_NAMESPACE, true);
       admin.close();
+    }
+    if (storageAdmin != null) {
+      storageAdmin.close();
     }
     if (manager != null) {
       manager.close();
@@ -312,11 +316,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   void beforeEach() throws Exception {
     manager.disableRedoLogging(); // Clean baseline: the window is closed until a test opens it.
     admin.truncateCoordinatorTables();
-    for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
-      admin.truncateTable(namespace, TABLE_A);
-      admin.truncateTable(namespace, TABLE_B);
-      admin.truncateTable(namespace, TABLE_C);
-    }
+    admin.truncateTable(USER_NAMESPACE, TABLE_A);
+    admin.truncateTable(USER_NAMESPACE, TABLE_B);
+    admin.truncateTable(USER_NAMESPACE, TABLE_C);
   }
 
   /** Negative control: proves the consistency check detects an inconsistent image. */
@@ -324,10 +326,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   void consistencyCheck_ForInconsistentImage_ShouldReportViolations() {
     withRetry(
         tx -> {
-          tx.put(putForTableA(RESTORE_NAMESPACE, 0, 111L));
-          tx.put(putForTableB(RESTORE_NAMESPACE, 0, 222L));
+          tx.put(putForTableA(USER_NAMESPACE, 0, 111L));
+          tx.put(putForTableB(USER_NAMESPACE, 0, 222L));
         });
-    withRetry(tx -> tx.put(putForTableA(RESTORE_NAMESPACE, 1, 333L)));
+    withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, 1, 333L)));
 
     List<String> violations = findConsistencyViolations();
 
@@ -351,19 +353,21 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       int key = i;
       withRetry(
           tx -> {
-            tx.put(putForTableA(SRC_NAMESPACE, key, token));
-            tx.put(putForTableB(SRC_NAMESPACE, key, token));
+            tx.put(putForTableA(USER_NAMESPACE, key, token));
+            tx.put(putForTableB(USER_NAMESPACE, key, token));
           });
     }
 
-    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
+    Map<String, Coordinator.State> backup = backupCoordinator();
 
-    // Restore WITHOUT taking a copy: the restore tables stay empty as the repair base.
+    // Restore WITHOUT the user-table backup: empty the user tables so the repair base is empty (the
+    // coordinator is still restored, so the redo path runs — it just has no copied base to anchor).
+    clearUserTables();
     arrangeRestoredCoordinator(backup);
     cbrlRestore.restore();
 
     for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
-      assertThat(getWithRetry(getForTableA(RESTORE_NAMESPACE, i)))
+      assertThat(getWithRetry(getForTableA(USER_NAMESPACE, i)))
           .as("without the copy, pre-window-only key %d is unrecoverable", i)
           .isEmpty();
     }
@@ -385,26 +389,26 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     int key = 0;
     long token = tokenCounter.incrementAndGet();
     manager.enableRedoLogging(); // Open the backup window.
-    withRetry(tx -> tx.put(putForTableA(SRC_NAMESPACE, key, token))); // T inserts + commits.
+    withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, key, token))); // T inserts + commits.
     Result committed =
-        storage.get(getForTableA(SRC_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+        storage.get(getForTableA(USER_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
     String txId = committed.getText(Attribute.ID);
     int version = committed.getInt(Attribute.VERSION);
-    // Rewind the SOURCE record to PREPARED, as if the scan caught T mid-commit, then copy it
-    // through
-    // the normal path so cbrl_restore captures the in-flight image (insert-style: no before-image —
-    // roll-forward ignores it anyway, so it need not be rebuilt).
-    storage.put(preparedRecordForTableA(SRC_NAMESPACE, key, committed, txId, version));
-    copyUserTables();
+    // Rewind the record to PREPARED, as if the scan caught T mid-commit, then capture it as the
+    // copy
+    // (insert-style: no before-image — roll-forward ignores it anyway, so it need not be rebuilt).
+    storage.put(preparedRecordForTableA(USER_NAMESPACE, key, committed, txId, version));
+    Map<String, List<Put>> copy = captureCopy();
     // T is the only in-window writer, so its coordinator row carries the original commit time.
-    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
-    long originalCommittedAt = backup.values().iterator().next().createdAt;
+    Map<String, Coordinator.State> backup = backupCoordinator();
+    long originalCommittedAt = backup.values().iterator().next().getCreatedAt();
+    installCopy(copy);
     arrangeRestoredCoordinator(backup);
 
     // Act
     cbrlRestore.restore();
     Result restored =
-        storage.get(getForTableA(RESTORE_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+        storage.get(getForTableA(USER_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
 
     // Assert
     assertThat(restored.getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
@@ -427,22 +431,23 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     int key = 0;
     long token = tokenCounter.incrementAndGet();
     // Pre-window committed base (logging OFF): a record for T to delete.
-    withRetry(tx -> tx.put(putForTableA(SRC_NAMESPACE, key, token)));
+    withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, key, token)));
     manager.enableRedoLogging(); // Open the backup window.
-    withRetry(tx -> tx.delete(deleteForTableA(SRC_NAMESPACE, key))); // T deletes + commits.
+    withRetry(tx -> tx.delete(deleteForTableA(USER_NAMESPACE, key))); // T deletes + commits.
     // The pre-window base also lands in the backup as a keys-only row (a logging-off commit still
     // writes a tx_write_set, just without redo), so pick the in-window DELETE writer by entry type.
-    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
+    Map<String, Coordinator.State> backup = backupCoordinator();
     String txId = deleteWriterFullId(backup);
-    // Re-create the SOURCE record as the DELETED tombstone T left mid-commit, then copy it through
-    // the normal path so cbrl_restore captures the in-flight image.
-    storage.put(deletedRecordForTableA(SRC_NAMESPACE, key, txId));
-    copyUserTables();
+    // Re-create the record as the DELETED tombstone T left mid-commit, then capture it as the copy
+    // so the restore base carries the in-flight image.
+    storage.put(deletedRecordForTableA(USER_NAMESPACE, key, txId));
+    Map<String, List<Put>> copy = captureCopy();
+    installCopy(copy);
     arrangeRestoredCoordinator(backup);
 
     // Act
     cbrlRestore.restore();
-    Optional<Result> restored = storage.get(getForTableA(RESTORE_NAMESPACE, key));
+    Optional<Result> restored = storage.get(getForTableA(USER_NAMESPACE, key));
 
     // Assert
     assertThat(restored)
@@ -462,7 +467,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     int key = 0;
     manager.enableRedoLogging(); // Open the backup window.
     withRetry(tx -> tx.put(allTypesPut(key)));
-    copyUserTables();
+    Map<String, List<Put>> copy = captureCopy();
+    installCopy(copy);
     arrangeRestoredCoordinator(backupCoordinator());
 
     // Act
@@ -549,12 +555,13 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startDisjointWorkload(stop, present, history);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
-    copyUserTables(); // Live, non-snapshot-consistent base; catches in-flight records to recover.
+    // Live, non-snapshot-consistent copy; catches in-flight records to recover at restore.
+    Map<String, List<Put>> copy = captureCopy();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
 
     // Back up the coordinator WHILE the workload runs (Flow: back up, THEN stop) — non-pausing.
     long commitsBeforeBackup = committedCount.get();
-    Map<String, CoordinatorBackupRow> coordinatorBackup = backupCoordinator();
+    Map<String, Coordinator.State> coordinatorBackup = backupCoordinator();
     long deadlineMillis = System.currentTimeMillis() + 5_000;
     while (committedCount.get() <= commitsBeforeBackup
         && System.currentTimeMillis() < deadlineMillis) {
@@ -572,6 +579,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     }
     Set<String> committedInBackup = committedFullIdsIn(coordinatorBackup);
 
+    installCopy(copy);
     arrangeRestoredCoordinator(coordinatorBackup);
     cbrlRestore.restore();
 
@@ -638,11 +646,11 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       DistributedTransaction tx = null;
       try {
         tx = manager.begin();
-        tx.get(getForTableA(SRC_NAMESPACE, key)); // Read both so partial writes chain (merge).
-        tx.get(getForTableB(SRC_NAMESPACE, key));
+        tx.get(getForTableA(USER_NAMESPACE, key)); // Read both so partial writes chain (merge).
+        tx.get(getForTableB(USER_NAMESPACE, key));
         if (delete) {
-          tx.delete(deleteForTableA(SRC_NAMESPACE, key));
-          tx.delete(deleteForTableB(SRC_NAMESPACE, key));
+          tx.delete(deleteForTableA(USER_NAMESPACE, key));
+          tx.delete(deleteForTableB(USER_NAMESPACE, key));
         } else {
           tx.put(deterministicPutForTableA(key, token, mask));
           Optional<Put> putB = deterministicPutForTableB(key, token, mask);
@@ -662,28 +670,28 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /** Full transaction ids whose writes the backup carries (the consistency-point committed set). */
-  private Set<String> committedFullIdsIn(Map<String, CoordinatorBackupRow> backup) {
+  private Set<String> committedFullIdsIn(Map<String, Coordinator.State> backup) {
     Set<String> ids = new HashSet<>();
-    for (CoordinatorBackupRow row : backup.values()) {
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+    for (Coordinator.State state : backup.values()) {
+      for (EntryGroup group : state.getWriteSet().get().getEntryGroupsList()) {
         ids.add(
             group.getChildId().isEmpty()
-                ? row.txId
-                : keyManipulator.fullKey(row.txId, group.getChildId()));
+                ? state.getId()
+                : keyManipulator.fullKey(state.getId(), group.getChildId()));
       }
     }
     return ids;
   }
 
   /** The full tx id of the (single) backup writer whose redo contains a DELETE entry. */
-  private String deleteWriterFullId(Map<String, CoordinatorBackupRow> backup) {
-    for (CoordinatorBackupRow row : backup.values()) {
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+  private String deleteWriterFullId(Map<String, Coordinator.State> backup) {
+    for (Coordinator.State state : backup.values()) {
+      for (EntryGroup group : state.getWriteSet().get().getEntryGroupsList()) {
         for (Entry entry : group.getEntriesList()) {
           if (entry.getEntryType() == Entry.EntryType.ENTRY_TYPE_DELETE) {
             return group.getChildId().isEmpty()
-                ? row.txId
-                : keyManipulator.fullKey(row.txId, group.getChildId());
+                ? state.getId()
+                : keyManipulator.fullKey(state.getId(), group.getChildId());
           }
         }
       }
@@ -718,8 +726,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           }
         }
       }
-      Optional<Result> a = getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
-      Optional<Result> b = getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+      Optional<Result> a = getWithRetry(getForTableA(USER_NAMESPACE, i));
+      Optional<Result> b = getWithRetry(getForTableB(USER_NAMESPACE, i));
       if (a.isPresent() != present || b.isPresent() != present) {
         violations.add(
             String.format(
@@ -794,7 +802,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   private Put deterministicPutForTableA(int i, long token, int mask) {
     PutBuilder.Buildable builder =
-        Put.newBuilder().namespace(SRC_NAMESPACE).table(TABLE_A).partitionKey(Key.ofInt(A_PK, i));
+        Put.newBuilder().namespace(USER_NAMESPACE).table(TABLE_A).partitionKey(Key.ofInt(A_PK, i));
     if ((mask & (1 << COL_TOKEN)) != 0) {
       builder.bigIntValue(A_TOKEN, token);
     }
@@ -817,7 +825,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private Optional<Put> deterministicPutForTableB(int i, long token, int mask) {
     PutBuilder.Buildable builder =
         Put.newBuilder()
-            .namespace(SRC_NAMESPACE)
+            .namespace(USER_NAMESPACE)
             .table(TABLE_B)
             .partitionKey(Key.ofInt(B_PK, i))
             .clusteringKey(Key.ofInt(B_CK, i));
@@ -856,12 +864,12 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
-    copyUserTables();
+    Map<String, List<Put>> copy = captureCopy();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
 
     // Back up the coordinator WHILE the workload runs — conservation tolerates a fuzzy cut.
     long commitsBeforeBackup = committedCount.get();
-    Map<String, CoordinatorBackupRow> coordinatorBackup = backupCoordinator();
+    Map<String, Coordinator.State> coordinatorBackup = backupCoordinator();
     long deadlineMillis = System.currentTimeMillis() + 5_000;
     while (committedCount.get() <= commitsBeforeBackup
         && System.currentTimeMillis() < deadlineMillis) {
@@ -876,6 +884,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       future.get();
     }
 
+    installCopy(copy);
     arrangeRestoredCoordinator(coordinatorBackup);
     long beforeRestoreMillis = System.currentTimeMillis();
     cbrlRestore.restore();
@@ -914,7 +923,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private List<Long> restoredCommitTimes() throws Exception {
     List<Long> times = new ArrayList<>();
     for (String table : USER_TABLES) {
-      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
+      Scan scan = Scan.newBuilder().namespace(USER_NAMESPACE).table(table).all().build();
       try (Scanner scanner = storage.scan(scan)) {
         for (Result result : scanner.all()) {
           if (!result.isNull(Attribute.COMMITTED_AT)) {
@@ -953,20 +962,19 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
-    copyUserTables();
+    // The non-snapshot-consistent copy, captured so each crash iteration restarts from the same
+    // base.
+    Map<String, List<Put>> copy = captureCopy();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
-    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
+    Map<String, Coordinator.State> backup = backupCoordinator();
     stop.set(true);
     for (Future<?> future : workload) {
       future.get();
     }
 
-    // The non-snapshot-consistent copy, captured so each crash iteration restarts from the same
-    // base.
-    Map<String, List<Put>> copySnapshot = snapshotRestoreTables();
-
     // The coordinator table is restored from its backup before any restore (here: test arrange).
     // CbrlRestore never touches the coordinator, so this holds across every crash iteration below.
+    installCopy(copy);
     arrangeRestoredCoordinator(backup);
 
     // Baseline: one full restore, to validate the happy path and to measure its duration.
@@ -980,7 +988,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     int steps = 4;
     int killed = 0;
     for (int step = 1; step <= steps; step++) {
-      resetRestoreTables(copySnapshot); // Fresh non-consistent base for this attempt.
+      installCopy(copy); // Fresh non-consistent base for this attempt.
 
       crashRestore.set(false);
       Throwable[] thrown = {null};
@@ -1032,9 +1040,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     DistributedStorage crashingStorage = crashing(DistributedStorage.class, storage, false);
     DistributedTransactionManager crashingManager =
         crashing(DistributedTransactionManager.class, manager, true);
-    // The admin is the real one: metadata is read at construction, before any crash is injected.
-    return new CbrlRestore(
-        properties(), RESTORE_NAMESPACE, crashingStorage, crashingManager, admin);
+    // The storage admin is the real one: schema is read lazily through it (not the crashing
+    // handles), so a crash lands on recovery (manager) or read/write-back (storage), never
+    // metadata.
+    return new CbrlRestore(properties(), crashingStorage, crashingManager, storageAdmin);
   }
 
   /**
@@ -1065,47 +1074,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
               }
               return result;
             });
-  }
-
-  /**
-   * Captures the current cbrl_restore rows (with metadata) so a crash iteration can reset to them.
-   */
-  private Map<String, List<Put>> snapshotRestoreTables() throws Exception {
-    Map<String, List<Put>> snapshot = new LinkedHashMap<>();
-    for (String table : USER_TABLES) {
-      List<Put> puts = new ArrayList<>();
-      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
-      try (Scanner scanner = storage.scan(scan)) {
-        for (Result result : scanner.all()) {
-          PutBuilder.Buildable builder =
-              Put.newBuilder()
-                  .namespace(RESTORE_NAMESPACE)
-                  .table(table)
-                  .partitionKey(result.getPartitionKey().orElseThrow(IllegalStateException::new));
-          result.getClusteringKey().ifPresent(builder::clusteringKey);
-          for (Column<?> column : result.getColumns().values()) {
-            if (!isKeyColumn(column.getName(), table)) {
-              builder.value(column);
-            }
-          }
-          puts.add(builder.build());
-        }
-      }
-      snapshot.put(table, puts);
-    }
-    return snapshot;
-  }
-
-  /**
-   * Resets cbrl_restore to a snapshot (truncate then re-put) — the pre-restore non-consistent copy.
-   */
-  private void resetRestoreTables(Map<String, List<Put>> snapshot) throws Exception {
-    for (String table : USER_TABLES) {
-      admin.truncateTable(RESTORE_NAMESPACE, table);
-      for (Put put : snapshot.get(table)) {
-        storage.put(put);
-      }
-    }
   }
 
   private List<Future<?>> startTransferWorkload(AtomicBoolean stop) {
@@ -1142,14 +1110,15 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
   /** Reads an account's balance, pulling both tables into the read set so its writes chain. */
   private long readBalance(DistributedTransaction tx, int i) throws Exception {
-    Optional<Result> a = tx.get(getForTableA(SRC_NAMESPACE, i)); // Absent (un-seeded) reads as 0.
-    tx.get(getForTableB(SRC_NAMESPACE, i)); // Read so the table_b write links to its prior version.
+    Optional<Result> a = tx.get(getForTableA(USER_NAMESPACE, i)); // Absent (un-seeded) reads as 0.
+    tx.get(
+        getForTableB(USER_NAMESPACE, i)); // Read so the table_b write links to its prior version.
     return a.map(r -> r.getBigInt(A_TOKEN)).orElse(0L);
   }
 
   private void writeBalance(DistributedTransaction tx, int i, long balance) throws Exception {
-    tx.put(putForTableA(SRC_NAMESPACE, i, balance));
-    tx.put(putForTableB(SRC_NAMESPACE, i, balance));
+    tx.put(putForTableA(USER_NAMESPACE, i, balance));
+    tx.put(putForTableB(USER_NAMESPACE, i, balance));
   }
 
   private long sumRestoredBalances(String table, String balanceColumn) {
@@ -1157,8 +1126,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     for (int i = 0; i < RECORD_COUNT; i++) {
       Optional<Result> result =
           table.equals(TABLE_A)
-              ? getWithRetry(getForTableA(RESTORE_NAMESPACE, i))
-              : getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+              ? getWithRetry(getForTableA(USER_NAMESPACE, i))
+              : getWithRetry(getForTableB(USER_NAMESPACE, i));
       if (result.isPresent()) {
         sum += result.get().getBigInt(balanceColumn);
       }
@@ -1174,8 +1143,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       seed.put(i, token);
       withRetry(
           tx -> {
-            tx.put(putForTableA(SRC_NAMESPACE, key, token));
-            tx.put(putForTableB(SRC_NAMESPACE, key, token));
+            tx.put(putForTableA(USER_NAMESPACE, key, token));
+            tx.put(putForTableB(USER_NAMESPACE, key, token));
           });
     }
     return seed;
@@ -1186,18 +1155,22 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Raw, storage-level copy of the user tables (with metadata) into cbrl_restore — the
-   * non-snapshot-consistent base.
+   * Captures a raw, storage-level copy of the user tables (all columns, with transaction metadata)
+   * — the non-snapshot-consistent backup of the user-table data. Taken WHILE the workload runs, so
+   * it catches in-flight (PREPARED/DELETED) records and a different instant per row. Held in memory
+   * and re-installed by {@link #installCopy} before restore, modelling the user-table physical
+   * backup that is restored ahead of CBRL.
    */
-  private void copyUserTables() throws Exception {
+  private Map<String, List<Put>> captureCopy() throws Exception {
+    Map<String, List<Put>> copy = new LinkedHashMap<>();
     for (String table : USER_TABLES) {
       List<Put> puts = new ArrayList<>();
-      Scan scan = Scan.newBuilder().namespace(SRC_NAMESPACE).table(table).all().build();
+      Scan scan = Scan.newBuilder().namespace(USER_NAMESPACE).table(table).all().build();
       try (Scanner scanner = storage.scan(scan)) {
         for (Result result : scanner.all()) {
           PutBuilder.Buildable builder =
               Put.newBuilder()
-                  .namespace(RESTORE_NAMESPACE)
+                  .namespace(USER_NAMESPACE)
                   .table(table)
                   .partitionKey(result.getPartitionKey().orElseThrow(IllegalStateException::new));
           result.getClusteringKey().ifPresent(builder::clusteringKey);
@@ -1209,9 +1182,30 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           puts.add(builder.build());
         }
       }
-      for (Put put : puts) {
+      copy.put(table, puts);
+    }
+    return copy;
+  }
+
+  /**
+   * Installs the captured copy as the restore base, in place: truncate each user table, then
+   * rewrite the copy verbatim. This models the physical restore of the user-table backup
+   * (discarding the live post-copy state) before CBRL runs, and resets the base between crash
+   * iterations.
+   */
+  private void installCopy(Map<String, List<Put>> copy) throws Exception {
+    for (String table : USER_TABLES) {
+      admin.truncateTable(USER_NAMESPACE, table);
+      for (Put put : copy.get(table)) {
         storage.put(put);
       }
+    }
+  }
+
+  /** Empties the user tables: the restore base when the user-table backup is NOT restored. */
+  private void clearUserTables() throws Exception {
+    for (String table : USER_TABLES) {
+      admin.truncateTable(USER_NAMESPACE, table);
     }
   }
 
@@ -1240,14 +1234,15 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
-    copyUserTables();
+    Map<String, List<Put>> copy = captureCopy();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
-    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
+    Map<String, Coordinator.State> backup = backupCoordinator();
     stop.set(true);
     for (Future<?> future : workload) {
       future.get();
     }
 
+    installCopy(copy);
     arrangeRestoredCoordinator(backup);
     Set<String> coordinatorBefore = coordinatorTxIds();
 
@@ -1264,16 +1259,15 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * the backup ABORTED. In production this is the backup tool restoring the coordinator table like
    * any other; {@link CbrlRestore} itself never writes or truncates the coordinator.
    */
-  private void arrangeRestoredCoordinator(Map<String, CoordinatorBackupRow> backup)
-      throws Exception {
+  private void arrangeRestoredCoordinator(Map<String, Coordinator.State> backup) throws Exception {
     admin.truncateCoordinatorTables();
     // Faithful physical restore: rewrite each backed-up coordinator row verbatim (state,
     // created_at, write_set, child_ids) with a raw storage.put — NOT coordinator.putState, which
     // would re-stamp created_at to now and (for group commit) drop the write_set. CbrlRestore now
     // reads the redo and the original commit times from the restored coordinator table itself, so
     // those columns must survive the restore exactly as a real coordinator-table backup would.
-    for (CoordinatorBackupRow row : backup.values()) {
-      storage.put(coordinatorRowPut(row));
+    for (Coordinator.State state : backup.values()) {
+      storage.put(coordinatorRowPut(state));
     }
     // Compare copy records' tx_id against the FULL committed ids (a group-commit child record
     // carries its parent+child id, not the parent row key), so committed children are not
@@ -1284,19 +1278,17 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /** A faithful raw restore of a backed-up coordinator row — every column preserved. */
-  private Put coordinatorRowPut(CoordinatorBackupRow row) {
+  private Put coordinatorRowPut(Coordinator.State state) {
     PutBuilder.Buildable put =
         Put.newBuilder()
             .namespace(COORDINATOR_NAMESPACE)
             .table(Coordinator.TABLE)
-            .partitionKey(Key.ofText(Attribute.ID, row.txId))
-            .intValue(Attribute.STATE, row.state)
-            .bigIntValue(Attribute.CREATED_AT, row.createdAt);
-    if (row.writeSet != null) {
-      put.blobValue(Attribute.WRITE_SET, row.writeSet.toByteArray());
-    }
-    if (!row.childIds.isEmpty()) {
-      put.textValue(Attribute.CHILD_IDS, String.join(",", row.childIds));
+            .partitionKey(Key.ofText(Attribute.ID, state.getId()))
+            .intValue(Attribute.STATE, state.getState().get())
+            .bigIntValue(Attribute.CREATED_AT, state.getCreatedAt());
+    state.getWriteSet().ifPresent(ws -> put.blobValue(Attribute.WRITE_SET, ws.toByteArray()));
+    if (!state.getChildIds().isEmpty()) {
+      put.textValue(Attribute.CHILD_IDS, String.join(",", state.getChildIds()));
     }
     return put.build();
   }
@@ -1322,7 +1314,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private Set<String> inDoubtCopyTxIds(Set<String> committedInBackup) throws Exception {
     Set<String> inDoubt = new HashSet<>();
     for (String table : USER_TABLES) {
-      Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
+      Scan scan = Scan.newBuilder().namespace(USER_NAMESPACE).table(table).all().build();
       try (Scanner scanner = storage.scan(scan)) {
         for (Result result : scanner.all()) {
           if (result.isNull(Attribute.ID)
@@ -1354,15 +1346,15 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /** Backs up the coordinator WHILE live and closes it over the chain (self-contained). */
-  private Map<String, CoordinatorBackupRow> backupCoordinator() throws Exception {
-    Map<String, CoordinatorBackupRow> committedById = new HashMap<>();
+  private Map<String, Coordinator.State> backupCoordinator() throws Exception {
+    Map<String, Coordinator.State> committedById = new HashMap<>();
     Scan scan =
         Scan.newBuilder().namespace(COORDINATOR_NAMESPACE).table(Coordinator.TABLE).all().build();
     try (Scanner scanner = storage.scan(scan)) {
       for (Result result : scanner.all()) {
-        CoordinatorBackupRow row = toBackupRow(result);
-        if (row.state == TransactionState.COMMITTED.get() && row.writeSet != null) {
-          committedById.put(row.txId, row);
+        if (committedWithWriteSet(result)) {
+          Coordinator.State state = new Coordinator.State(result);
+          committedById.put(state.getId(), state);
         }
       }
     }
@@ -1370,28 +1362,17 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     return committedById;
   }
 
-  private static CoordinatorBackupRow toBackupRow(Result result) throws Exception {
-    String txId = result.getText(Attribute.ID);
-    int state = result.isNull(Attribute.STATE) ? 0 : result.getInt(Attribute.STATE);
-    String childIdsStr =
-        result.isNull(Attribute.CHILD_IDS) ? null : result.getText(Attribute.CHILD_IDS);
-    List<String> childIds =
-        (childIdsStr == null || childIdsStr.isEmpty())
-            ? Collections.emptyList()
-            : Arrays.asList(childIdsStr.split(","));
-    WriteSet writeSet =
-        result.isNull(Attribute.WRITE_SET)
-            ? null
-            : WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
-    long createdAt =
-        result.isNull(Attribute.CREATED_AT) ? 0 : result.getBigInt(Attribute.CREATED_AT);
-    return new CoordinatorBackupRow(txId, state, childIds, writeSet, createdAt);
+  /** Whether a coordinator row is a COMMITTED row carrying a write set (the redo-bearing rows). */
+  private static boolean committedWithWriteSet(Result result) {
+    return !result.isNull(Attribute.STATE)
+        && result.getInt(Attribute.STATE) == TransactionState.COMMITTED.get()
+        && !result.isNull(Attribute.WRITE_SET);
   }
 
-  private void closeOverChain(Map<String, CoordinatorBackupRow> committedById) throws Exception {
+  private void closeOverChain(Map<String, Coordinator.State> committedById) throws Exception {
     Deque<String> pending = new ArrayDeque<>();
-    for (CoordinatorBackupRow row : committedById.values()) {
-      collectPrevTxIds(row, committedById, pending);
+    for (Coordinator.State state : committedById.values()) {
+      collectPrevTxIds(state, committedById, pending);
     }
     while (!pending.isEmpty()) {
       String prevTxId = pending.poll();
@@ -1404,18 +1385,18 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       if (committedById.containsKey(rowKey)) {
         continue;
       }
-      CoordinatorBackupRow row = fetchCoordinatorRow(rowKey);
-      if (row == null || row.state != TransactionState.COMMITTED.get() || row.writeSet == null) {
+      Coordinator.State state = fetchCommittedCoordinatorRow(rowKey);
+      if (state == null) {
         continue;
       }
-      committedById.put(rowKey, row);
-      collectPrevTxIds(row, committedById, pending);
+      committedById.put(rowKey, state);
+      collectPrevTxIds(state, committedById, pending);
     }
   }
 
   private static void collectPrevTxIds(
-      CoordinatorBackupRow row, Map<String, CoordinatorBackupRow> known, Deque<String> pending) {
-    for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+      Coordinator.State state, Map<String, Coordinator.State> known, Deque<String> pending) {
+    for (EntryGroup group : state.getWriteSet().get().getEntryGroupsList()) {
       for (Entry entry : group.getEntriesList()) {
         if (entry.hasPrevTxId() && !known.containsKey(entry.getPrevTxId())) {
           pending.add(entry.getPrevTxId());
@@ -1424,8 +1405,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     }
   }
 
+  /** The COMMITTED-with-write-set coordinator row for {@code txId}, or null if it is neither. */
   @Nullable
-  private CoordinatorBackupRow fetchCoordinatorRow(String txId) throws Exception {
+  private Coordinator.State fetchCommittedCoordinatorRow(String txId) throws Exception {
     Get get =
         Get.newBuilder()
             .namespace(COORDINATOR_NAMESPACE)
@@ -1433,14 +1415,16 @@ public abstract class CbrlBackupRestoreIntegrationTest {
             .partitionKey(Key.ofText(Attribute.ID, txId))
             .build();
     Optional<Result> result = storage.get(get);
-    return result.isPresent() ? toBackupRow(result.get()) : null;
+    return result.isPresent() && committedWithWriteSet(result.get())
+        ? new Coordinator.State(result.get())
+        : null;
   }
 
   private List<String> findConsistencyViolations() {
     List<String> violations = new ArrayList<>();
     for (int i = 0; i < RECORD_COUNT; i++) {
-      Optional<Result> a = getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
-      Optional<Result> b = getWithRetry(getForTableB(RESTORE_NAMESPACE, i));
+      Optional<Result> a = getWithRetry(getForTableA(USER_NAMESPACE, i));
+      Optional<Result> b = getWithRetry(getForTableB(USER_NAMESPACE, i));
       if (a.isPresent() != b.isPresent()) {
         violations.add(
             String.format("key %d presence: a=%s b=%s", i, a.isPresent(), b.isPresent()));
@@ -1459,7 +1443,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private int presentSeededKeyCount() {
     int count = 0;
     for (int i = 0; i < SEEDED_KEYS; i++) {
-      if (getWithRetry(getForTableA(RESTORE_NAMESPACE, i)).isPresent()) {
+      if (getWithRetry(getForTableA(USER_NAMESPACE, i)).isPresent()) {
         count++;
       }
     }
@@ -1472,8 +1456,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       int key = i;
       withRetry(
           tx -> {
-            tx.put(putForTableA(SRC_NAMESPACE, key, initialBalance));
-            tx.put(putForTableB(SRC_NAMESPACE, key, initialBalance));
+            tx.put(putForTableA(USER_NAMESPACE, key, initialBalance));
+            tx.put(putForTableB(USER_NAMESPACE, key, initialBalance));
           });
     }
   }
@@ -1481,7 +1465,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private Map<Integer, Long> readRestoredTokens() {
     Map<Integer, Long> tokens = new HashMap<>();
     for (int i = 0; i < RECORD_COUNT; i++) {
-      Optional<Result> a = getWithRetry(getForTableA(RESTORE_NAMESPACE, i));
+      Optional<Result> a = getWithRetry(getForTableA(USER_NAMESPACE, i));
       if (a.isPresent()) {
         tokens.put(i, a.get().getBigInt(A_TOKEN));
       }
@@ -1581,7 +1565,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   /** A record with one value of every ScalarDB column type, for the all-types round-trip test. */
   private Put allTypesPut(int key) {
     return Put.newBuilder()
-        .namespace(SRC_NAMESPACE)
+        .namespace(USER_NAMESPACE)
         .table(TABLE_C)
         .partitionKey(Key.ofInt(C_PK, key))
         .booleanValue(C_BOOLEAN, true)
@@ -1600,7 +1584,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
   private Get getForTableC(int key) {
     return Get.newBuilder()
-        .namespace(RESTORE_NAMESPACE)
+        .namespace(USER_NAMESPACE)
         .table(TABLE_C)
         .partitionKey(Key.ofInt(C_PK, key))
         .build();

@@ -4,7 +4,7 @@ import com.google.protobuf.ByteString;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransactionAdmin;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
@@ -34,12 +34,12 @@ import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
+import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -47,25 +47,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
  * Orchestrates the whole CBRL restore against a non-snapshot-consistent copy and the redo captured
  * in the coordinator backup. It uses <b>only the Storage API</b> for applying records and core's
  * record-level recovery for resolving in-flight ones — like SSR, it never runs a transaction, so a
- * restore creates <b>no coordinator rows</b> for its own work. {@link #restore()} does three steps:
+ * restore creates <b>no coordinator rows</b> for its own work. Every record is routed by the
+ * namespace and table carried in its redo {@link Entry}, so one restore spans every namespace the
+ * backup window touched (the coordinator namespace alone comes from configuration). {@link
+ * #restore()} reads the redo from the restored coordinator table, then for each record key — on the
+ * worker that owns it — does three steps:
  *
  * <ol>
- *   <li><b>C4 recovery:</b> resolve the copy's in-flight ({@code PREPARED}/{@code DELETED}) records
+ *   <li><b>C4 recovery:</b> resolve the copy's in-flight ({@code PREPARED}/{@code DELETED}) record
  *       against the already-restored coordinator via {@link
- *       DistributedTransactionManager#recoverRecord} — core rolls each forward/back with the
- *       Storage API. The coordinator must already hold a terminal state for every writer (it is
- *       restored from its own backup, like any table), so recovery only rolls records and writes
- *       nothing to the coordinator.
- *   <li><b>Chain replay (§5):</b> explode the backup's committed redo into {@link RedoOperation}s
- *       and replay them forward from each record's copied version via {@link RecordApplier}.
- *   <li><b>Write-back:</b> persist each reconstructed record as a COMMITTED Consensus Commit record
+ *       DistributedTransactionManager#recoverRecord} — core rolls it forward/back with the Storage
+ *       API. The coordinator must already hold a terminal state for every writer (it is restored
+ *       from its own backup, like any table), so recovery only rolls the record and writes nothing
+ *       to the coordinator. {@code recoverRecord} is a no-op for an already-committed or absent
+ *       record, so it is called per redo key without a prior scan.
+ *   <li><b>Chain replay (§5):</b> replay the key's committed redo forward from its copied version
+ *       via {@link RecordApplier}.
+ *   <li><b>Write-back:</b> persist the reconstructed record as a COMMITTED Consensus Commit record
  *       with a raw {@code storage.put} (deletes via {@code storage.delete}) — no transaction.
  * </ol>
  *
@@ -75,7 +79,7 @@ import javax.annotation.Nullable;
 public final class CbrlRestore implements AutoCloseable {
   private final DistributedStorage storage;
   private final DistributedTransactionManager manager;
-  private final DistributedTransactionAdmin admin;
+  private final DistributedStorageAdmin admin;
   // True if this instance built storage/manager/admin (and so must close them); false if they were
   // injected by the caller, who then owns their lifecycle.
   private final boolean ownsResources;
@@ -83,23 +87,23 @@ public final class CbrlRestore implements AutoCloseable {
   // type that external callers have no other reason to depend on.
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
-  private final String restoreNamespace;
   // Namespace of the restored coordinator table — read for the redo and original commit times.
   private final String coordinatorNamespace;
-  // Restore table -> its user (non-key, non-tx-metadata) column names, derived from each table's
-  // metadata and read as the replay base.
-  private final Map<String, List<String>> userColumnsByTable;
+  // Resolves each restored table's schema on demand (cached), so the user (non-key,
+  // non-tx-metadata)
+  // columns read as the replay base are derived from the table rather than supplied by the caller.
+  private final TransactionTableMetadataManager metadataManager;
   private final int replayBuckets;
   private final int replayWorkers;
 
   /**
-   * Builds its own ScalarDB handles (storage, transaction manager, admin) from {@code properties};
-   * {@link #close()} closes them. Only the restore-target namespace is an argument — the
-   * coordinator namespace, per-table user columns, and replay concurrency are all derived from
-   * {@code properties} and the restored schema, so the caller hand-derives nothing.
+   * Builds its own ScalarDB handles (storage, transaction manager, storage admin) from {@code
+   * properties}; {@link #close()} closes them. There is no namespace argument — restore routes each
+   * record by the namespace in its redo, and the coordinator namespace and replay concurrency come
+   * from {@code properties}, so the caller hand-derives nothing.
    */
-  public CbrlRestore(Properties properties, String restoreNamespace) throws ExecutionException {
-    this(properties, restoreNamespace, null, null, null);
+  public CbrlRestore(Properties properties) throws ExecutionException {
+    this(properties, null, null, null);
   }
 
   /**
@@ -110,10 +114,9 @@ public final class CbrlRestore implements AutoCloseable {
    */
   CbrlRestore(
       Properties properties,
-      String restoreNamespace,
       @Nullable DistributedStorage storage,
       @Nullable DistributedTransactionManager manager,
-      @Nullable DistributedTransactionAdmin admin)
+      @Nullable DistributedStorageAdmin admin)
       throws ExecutionException {
     boolean injected = storage != null;
     if (injected != (manager != null) || injected != (admin != null)) {
@@ -121,7 +124,6 @@ public final class CbrlRestore implements AutoCloseable {
           "storage, manager, and admin must all be null or all non-null");
     }
     CbrlConfig config = new CbrlConfig(properties);
-    this.restoreNamespace = restoreNamespace;
     this.coordinatorNamespace = config.getCoordinatorNamespace();
     this.replayBuckets = config.getReplayBuckets();
     this.replayWorkers = config.getReplayWorkers();
@@ -135,29 +137,12 @@ public final class CbrlRestore implements AutoCloseable {
       TransactionFactory transactionFactory = TransactionFactory.create(properties);
       this.storage = storageFactory.getStorage();
       this.manager = transactionFactory.getTransactionManager();
-      this.admin = transactionFactory.getTransactionAdmin();
+      this.admin = storageFactory.getStorageAdmin();
       this.ownsResources = true;
     }
-    this.userColumnsByTable = deriveUserColumnsByTable();
-  }
-
-  /**
-   * Derives each restore-target table's user (non-key, non-tx-metadata) columns from its schema —
-   * the columns read as the replay base and written back. The caller no longer supplies them.
-   */
-  private Map<String, List<String>> deriveUserColumnsByTable() throws ExecutionException {
-    Map<String, List<String>> map = new HashMap<>();
-    for (String table : admin.getNamespaceTableNames(restoreNamespace)) {
-      TransactionTableMetadata metadata =
-          new TransactionTableMetadata(admin.getTableMetadata(restoreNamespace, table));
-      List<String> userColumns =
-          metadata.getColumnNames().stream()
-              .filter(c -> !metadata.getPrimaryKeyColumnNames().contains(c))
-              .filter(c -> !metadata.getTransactionMetaColumnNames().contains(c))
-              .collect(Collectors.toList());
-      map.put(table, userColumns);
-    }
-    return map;
+    // The schema does not change during a one-shot restore, so cache it for the whole run (no
+    // expiry).
+    this.metadataManager = new TransactionTableMetadataManager(this.admin, -1);
   }
 
   /** Closes the ScalarDB handles only if this instance built them. */
@@ -171,51 +156,43 @@ public final class CbrlRestore implements AutoCloseable {
   }
 
   /**
-   * Recovers the copy, replays the committed redo, and writes the result back via the Storage API.
-   * Every input is the database: the redo and the original commit times are read from the restored
-   * coordinator table here, not supplied by the caller.
+   * Reads the redo from the restored coordinator table, then for each record key recovers the copy,
+   * replays the committed redo, and writes the result back via the Storage API. Every input is the
+   * database: the redo and the original commit times are read from the restored coordinator table
+   * here, not supplied by the caller.
    */
   public void restore() throws Exception {
-    recoverCopy();
-
     // Original commit time (the coordinator's tx_created_at) per transaction id, used to stamp the
     // restored records so they keep their commit timestamp instead of the restore-time clock.
     Map<String, Long> committedAtByTxId = new HashMap<>();
     List<RedoOperation> redoOps = new ArrayList<>();
-    for (CoordinatorBackupRow row : readCoordinatorBackup()) {
-      committedAtByTxId.put(row.txId, row.createdAt);
-      if (row.writeSet == null) {
-        // Committed but no redo captured (a pre-feature / keys-only coordinator row): nothing to
-        // replay — the copy carries this transaction's state.
-        continue;
-      }
-      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+    for (Coordinator.State state : readCoordinatorTable()) {
+      // The column is filtered to present in readCoordinatorTable().
+      WriteSet writeSet = state.getWriteSet().get();
+      for (EntryGroup group : writeSet.getEntryGroupsList()) {
         // The writing transaction's full id is what records store and what other ops' prev_tx_id
         // chains to. For a normal group commit the row is keyed by the parent id and each child's
         // EntryGroup carries its child_id, so the full id = parent + child; otherwise the row's key
         // already is the full id.
         String txId =
             group.getChildId().isEmpty()
-                ? row.txId
-                : keyManipulator.fullKey(row.txId, group.getChildId());
-        committedAtByTxId.put(txId, row.createdAt);
+                ? state.getId()
+                : keyManipulator.fullKey(state.getId(), group.getChildId());
+        committedAtByTxId.put(txId, state.getCreatedAt());
         for (Entry entry : group.getEntriesList()) {
           if (!entry.hasTxVersion()) {
             // Key-only write set from outside the backup window (logging was off): not redo. The
             // copy carries that state instead.
             continue;
           }
-          redoOps.add(new RedoOperation(txId, entry, row.createdAt));
+          redoOps.add(new RedoOperation(txId, entry, state.getCreatedAt()));
         }
       }
     }
 
-    List<List<RedoOperation>> buckets = RecordShuffler.shuffle(redoOps, replayBuckets);
-    Map<RecordKey, RecordState> finalStates =
-        new RecordApplier(key -> readCopyState(key, committedAtByTxId))
-            .apply(buckets, replayWorkers);
-
-    writeBack(finalStates);
+    List<RedoBucket> buckets = RecordShuffler.shuffle(redoOps, replayBuckets);
+    new RecordApplier(key -> readCopyState(key, committedAtByTxId))
+        .apply(buckets, replayWorkers, this::applyToRestore);
   }
 
   /**
@@ -224,8 +201,8 @@ public final class CbrlRestore implements AutoCloseable {
    * tx_write_set}. This is both the redo source and the original-commit-time source — CBRL reads it
    * from the database rather than receiving it, so every restore input is the database.
    */
-  private List<CoordinatorBackupRow> readCoordinatorBackup() throws Exception {
-    List<CoordinatorBackupRow> rows = new ArrayList<>();
+  private List<Coordinator.State> readCoordinatorTable() throws Exception {
+    List<Coordinator.State> states = new ArrayList<>();
     try (Scanner scanner =
         storage.scan(
             Scan.newBuilder()
@@ -240,66 +217,22 @@ public final class CbrlRestore implements AutoCloseable {
           // Not a committed-with-redo row (e.g. an ABORTED in-doubt marker): no redo to replay.
           continue;
         }
-        rows.add(parseCoordinatorRow(result));
+        states.add(new Coordinator.State(result));
       }
     }
-    return rows;
-  }
-
-  private CoordinatorBackupRow parseCoordinatorRow(Result result) throws Exception {
-    String txId = result.getText(Attribute.ID);
-    int state = result.getInt(Attribute.STATE);
-    String childIdsStr =
-        result.isNull(Attribute.CHILD_IDS) ? null : result.getText(Attribute.CHILD_IDS);
-    List<String> childIds =
-        (childIdsStr == null || childIdsStr.isEmpty())
-            ? Collections.emptyList()
-            : Arrays.asList(childIdsStr.split(","));
-    WriteSet writeSet = WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
-    long createdAt =
-        result.isNull(Attribute.CREATED_AT) ? 0 : result.getBigInt(Attribute.CREATED_AT);
-    return new CoordinatorBackupRow(txId, state, childIds, writeSet, createdAt);
+    return states;
   }
 
   /**
-   * C4: resolves every in-flight ({@code PREPARED}/{@code DELETED}) copy record against the
-   * already-restored coordinator via core's record-level recovery, so the replay base reads clean
-   * committed-or-absent values. With a terminal coordinator state present for each writer (the
-   * caller restored the coordinator from its backup), {@code recoverRecord} only rolls the record —
-   * it writes nothing to the coordinator, and never uses a transaction.
-   */
-  private void recoverCopy() throws Exception {
-    for (String table : userColumnsByTable.keySet()) {
-      List<Key[]> inDoubt = new ArrayList<>();
-      try (Scanner scanner = storage.scan(scanAll(table))) {
-        for (Result result : scanner.all()) {
-          if (!result.isNull(Attribute.STATE)
-              && result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()) {
-            Key partitionKey = result.getPartitionKey().orElseThrow(IllegalStateException::new);
-            Key clusteringKey = result.getClusteringKey().orElse(null);
-            inDoubt.add(new Key[] {partitionKey, clusteringKey});
-          }
-        }
-      }
-      for (Key[] keys : inDoubt) {
-        boolean resolved = manager.recoverRecord(restoreNamespace, table, keys[0], keys[1]);
-        if (!resolved) {
-          throw new IllegalStateException(
-              "Copy record not recoverable — its writer has no coordinator state and has not"
-                  + " expired; the coordinator backup must be restored before restore(). Table: "
-                  + table
-                  + "; Partition Key: "
-                  + keys[0]);
-        }
-      }
-    }
-  }
-
-  /**
-   * Reads the (recovered) copy record as the replay base: committed tx id, version, user columns.
+   * Reads the recovered copy record as the replay base: committed tx id, version, user columns. The
+   * key's in-flight copy record is first resolved against the already-restored coordinator (C4:
+   * {@code recoverRecord} rolls a {@code PREPARED}/{@code DELETED} record forward/back, or no-ops
+   * if it is already committed or absent), so the base reads clean. This is the per-key recovery
+   * that runs on the owning pass-2 worker, with no full-table scan.
    */
   private RecordState readCopyState(RecordKey key, Map<String, Long> committedAtByTxId) {
     try {
+      recoverKey(key);
       Optional<Result> result = storage.get(rawGet(key));
       if (!result.isPresent() || result.get().isNull(Attribute.ID)) {
         return RecordState.absent();
@@ -316,15 +249,9 @@ public final class CbrlRestore implements AutoCloseable {
               record.isNull(Attribute.COMMITTED_AT)
                   ? 0L
                   : record.getBigInt(Attribute.COMMITTED_AT));
-      List<String> userColumns = userColumnsByTable.get(key.table());
-      if (userColumns == null) {
-        throw new IllegalArgumentException(
-            "Redo references a table outside the restore scope (not in userColumnsByTable): "
-                + key.table());
-      }
       Map<String, com.scalar.db.transaction.consensuscommit.proto.v1.Column> columns =
           new LinkedHashMap<>();
-      for (String name : userColumns) {
+      for (String name : userColumnNames(key)) {
         Column<?> column = record.getColumns().get(name);
         if (column != null) {
           columns.put(name, ioColumnToProto(column));
@@ -338,18 +265,54 @@ public final class CbrlRestore implements AutoCloseable {
   }
 
   /**
-   * Persists each reconstructed record into the restore tables with the Storage API — SSR-style,
-   * one record at a time, no transaction: present records as COMMITTED Consensus Commit records
-   * ({@code storage.put}), absent records removed ({@code storage.delete}). A crash mid-write-back
-   * leaves a partial set; a re-run re-derives the same final states and re-stamps them
-   * idempotently.
+   * The user (non-key, non-tx-metadata) column names of the key's table, from its schema. These are
+   * the columns read as the replay base and written back; the caller no longer supplies them.
    */
-  private void writeBack(Map<RecordKey, RecordState> finalStates) throws Exception {
-    for (Map.Entry<RecordKey, RecordState> entry : finalStates.entrySet()) {
-      applyToRestore(entry.getKey(), entry.getValue());
+  private List<String> userColumnNames(RecordKey key) throws ExecutionException {
+    TransactionTableMetadata metadata =
+        metadataManager.getTransactionTableMetadata(key.namespace(), key.table());
+    if (metadata == null) {
+      throw new IllegalArgumentException(
+          "Redo references a table with no schema: " + key.namespace() + "." + key.table());
+    }
+    List<String> userColumns = new ArrayList<>();
+    for (String name : metadata.getColumnNames()) {
+      if (!metadata.getPrimaryKeyColumnNames().contains(name)
+          && !metadata.getTransactionMetaColumnNames().contains(name)) {
+        userColumns.add(name);
+      }
+    }
+    return userColumns;
+  }
+
+  /**
+   * C4: resolves the key's in-flight ({@code PREPARED}/{@code DELETED}) copy record against the
+   * already-restored coordinator via core's record-level recovery, so the replay base reads clean
+   * committed-or-absent. With a terminal coordinator state present for the writer (the caller
+   * restored the coordinator from its backup), {@code recoverRecord} only rolls the record — it
+   * writes nothing to the coordinator, and never uses a transaction. It is a no-op for an
+   * already-committed or absent record.
+   */
+  private void recoverKey(RecordKey key) throws Exception {
+    Key partitionKey = toIoKey(key.partitionKey());
+    Key clusteringKey = key.clusteringKey() == null ? null : toIoKey(key.clusteringKey());
+    boolean resolved =
+        manager.recoverRecord(key.namespace(), key.table(), partitionKey, clusteringKey);
+    if (!resolved) {
+      throw new IllegalStateException(
+          "Copy record not recoverable — its writer has no coordinator state and has not expired;"
+              + " the coordinator backup must be restored before restore(). Key: "
+              + key);
     }
   }
 
+  /**
+   * Persists one reconstructed record into its restore table with the Storage API — SSR-style, no
+   * transaction: a present record as a COMMITTED Consensus Commit record ({@code storage.put}), an
+   * absent record removed ({@code storage.delete}). Called per key by the owning pass-2 worker. A
+   * crash mid-restore leaves a partial set; a re-run re-derives the same final states and re-stamps
+   * them idempotently.
+   */
   private void applyToRestore(RecordKey key, RecordState state) throws Exception {
     if (state.present()) {
       storage.put(buildCommittedPut(key, state));
@@ -368,7 +331,7 @@ public final class CbrlRestore implements AutoCloseable {
   private Put buildCommittedPut(RecordKey key, RecordState state) {
     PutBuilder.Buildable put =
         Put.newBuilder()
-            .namespace(restoreNamespace)
+            .namespace(key.namespace())
             .table(key.table())
             .partitionKey(toIoKey(key.partitionKey()));
     if (key.clusteringKey() != null) {
@@ -392,7 +355,7 @@ public final class CbrlRestore implements AutoCloseable {
   private Delete buildDelete(RecordKey key) {
     DeleteBuilder.Buildable delete =
         Delete.newBuilder()
-            .namespace(restoreNamespace)
+            .namespace(key.namespace())
             .table(key.table())
             .partitionKey(toIoKey(key.partitionKey()));
     if (key.clusteringKey() != null) {
@@ -404,17 +367,13 @@ public final class CbrlRestore implements AutoCloseable {
   private Get rawGet(RecordKey key) {
     GetBuilder.BuildableGet builder =
         Get.newBuilder()
-            .namespace(restoreNamespace)
+            .namespace(key.namespace())
             .table(key.table())
             .partitionKey(toIoKey(key.partitionKey()));
     if (key.clusteringKey() != null) {
       builder.clusteringKey(toIoKey(key.clusteringKey()));
     }
     return builder.build();
-  }
-
-  private Scan scanAll(String table) {
-    return Scan.newBuilder().namespace(restoreNamespace).table(table).all().build();
   }
 
   // Mirrors WriteSetEncoder's ColumnEncodingVisitor exactly (same TimeRelatedColumnEncodingUtils),

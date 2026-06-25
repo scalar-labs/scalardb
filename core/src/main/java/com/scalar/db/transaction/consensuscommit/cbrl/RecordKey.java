@@ -31,6 +31,10 @@ final class RecordKey {
         entry.hasClusteringKey() ? entry.getClusteringKey() : null);
   }
 
+  String namespace() {
+    return namespace;
+  }
+
   String table() {
     return table;
   }

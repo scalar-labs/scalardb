@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Pass 1: distributes redo ops into {@code N} buckets by {@code floorMod(hash(recordKey), N)}. All
- * ops sharing a {@link RecordKey} land in exactly one bucket, so pass 2 can own whole buckets with
- * no intra-key concurrency (no CAS, no locks). Append order within a bucket is irrelevant — the
- * replay primitive is cursor-driven and order-independent within a key.
+ * Pass 1: distributes redo ops into {@code N} {@link RedoBucket}s by {@code
+ * floorMod(hash(recordKey), N)}. All ops sharing a {@link RecordKey} land in exactly one bucket, so
+ * pass 2 can own whole buckets with no intra-key concurrency (no CAS, no locks). Append order
+ * within a bucket is irrelevant — the replay primitive is cursor-driven and order-independent
+ * within a key.
  */
 final class RecordShuffler {
 
@@ -15,13 +16,13 @@ final class RecordShuffler {
     return Math.floorMod(key.hashCode(), bucketCount);
   }
 
-  static List<List<RedoOperation>> shuffle(Iterable<RedoOperation> ops, int bucketCount) {
+  static List<RedoBucket> shuffle(Iterable<RedoOperation> ops, int bucketCount) {
     if (bucketCount < 1) {
       throw new IllegalArgumentException("bucketCount must be >= 1, was " + bucketCount);
     }
-    List<List<RedoOperation>> buckets = new ArrayList<>(bucketCount);
+    List<RedoBucket> buckets = new ArrayList<>(bucketCount);
     for (int i = 0; i < bucketCount; i++) {
-      buckets.add(new ArrayList<>());
+      buckets.add(new RedoBucket());
     }
     for (RedoOperation op : ops) {
       buckets.get(bucketOf(op.key(), bucketCount)).add(op);

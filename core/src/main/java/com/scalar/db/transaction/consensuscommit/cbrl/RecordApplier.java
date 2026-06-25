@@ -18,11 +18,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Pass 2: replays each bucket's redo ops onto the records being restored. A worker owns whole
- * buckets, so there is no intra-key concurrency — no CAS, no locks (the design's core
- * simplification over SSR). Within a bucket, ops are grouped by {@link RecordKey} and each key is
- * replayed by the cursor-driven primitive ({@link #replayKey}), which mirrors SSR's {@code
- * RecordApplyService.findWriteOperationsToApply}.
+ * Pass 2: replays each bucket's redo ops onto the records being restored and writes the result
+ * back. A worker owns whole buckets, so there is no intra-key concurrency — no CAS, no locks (the
+ * design's core simplification over SSR). Within a bucket, ops are grouped by {@link RecordKey} and
+ * each key runs its whole recover&rarr;read&rarr;replay&rarr;write-back pipeline on that one
+ * worker: {@link #computeWriteOps} mirrors SSR's {@code
+ * RecordApplyService.findWriteOperationsToApply} (the per-key recovery and base read happen inside
+ * the injected {@link RestoredRecordReader}), then the reconstructed state is handed to the {@link
+ * RecordSink} for write-back.
  */
 final class RecordApplier {
   private static final Logger logger = LoggerFactory.getLogger(RecordApplier.class);
@@ -33,23 +36,28 @@ final class RecordApplier {
   }
 
   /**
-   * Replays all buckets, returning the resulting state per key. {@code workerCount} workers each
-   * own whole buckets ({@code M <= N}).
+   * Replays all buckets and hands each key's reconstructed final state to {@code sink}. {@code
+   * workerCount} workers each own whole buckets ({@code M <= N}), so a key's whole pipeline —
+   * recover, read the base, replay, write back — runs on one worker with no intra-key concurrency.
    */
-  Map<RecordKey, RecordState> apply(List<List<RedoOperation>> buckets, int workerCount)
+  void apply(List<RedoBucket> buckets, int workerCount, RecordSink sink)
       throws InterruptedException {
     Preconditions.checkArgument(workerCount >= 1, "workerCount must be >= 1");
-    ExecutorService executor = Executors.newFixedThreadPool(Math.min(workerCount, buckets.size()));
+    ExecutorService executor =
+        Executors.newFixedThreadPool(Math.min(workerCount, Math.max(1, buckets.size())));
     try {
-      List<Future<Map<RecordKey, RecordState>>> futures = new ArrayList<>(buckets.size());
-      for (List<RedoOperation> bucket : buckets) {
-        futures.add(executor.submit(() -> applyBucket(bucket)));
+      List<Future<Void>> futures = new ArrayList<>(buckets.size());
+      for (RedoBucket bucket : buckets) {
+        futures.add(
+            executor.submit(
+                () -> {
+                  applyBucket(bucket, sink);
+                  return null;
+                }));
       }
-      Map<RecordKey, RecordState> result = new HashMap<>();
-      for (Future<Map<RecordKey, RecordState>> future : futures) {
-        result.putAll(future.get()); // Buckets partition the key space, so no key is merged twice.
+      for (Future<Void> future : futures) {
+        future.get();
       }
-      return result;
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       if (cause instanceof CbrlReplayException) {
@@ -61,17 +69,18 @@ final class RecordApplier {
     }
   }
 
-  /** Replays one bucket's keys independently and returns the resulting state per key. */
-  private Map<RecordKey, RecordState> applyBucket(List<RedoOperation> bucket) {
+  /**
+   * Replays one bucket's keys independently, writing each reconstructed state back via {@code
+   * sink}.
+   */
+  private void applyBucket(RedoBucket bucket, RecordSink sink) throws Exception {
     Map<RecordKey, List<RedoOperation>> byKey = new HashMap<>();
-    for (RedoOperation op : bucket) {
+    for (RedoOperation op : bucket.operations()) {
       byKey.computeIfAbsent(op.key(), k -> new ArrayList<>()).add(op);
     }
-    Map<RecordKey, RecordState> result = new HashMap<>();
     for (Map.Entry<RecordKey, List<RedoOperation>> entry : byKey.entrySet()) {
-      result.put(entry.getKey(), replayKey(entry.getKey(), entry.getValue()));
+      sink.writeBack(entry.getKey(), computeWriteOps(entry.getKey(), entry.getValue()));
     }
-    return result;
   }
 
   /**
@@ -94,7 +103,7 @@ final class RecordApplier {
    * scan + chain closure), not this primitive's. The one structural anomaly still rejected is a
    * fork (two ops sharing a {@code prev_tx_id}), which serializable commit cannot produce.
    */
-  RecordState replayKey(RecordKey key, List<RedoOperation> ops) {
+  RecordState computeWriteOps(RecordKey key, List<RedoOperation> ops) {
     RecordState current = reader.get(key);
 
     // divideWriteOperations: INSERT roots vs the prevTxId-keyed chain of UPDATE/DELETE ops.
