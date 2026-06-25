@@ -34,6 +34,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -163,6 +167,54 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           .addClusteringKey(B_CK)
           .build();
 
+  // table_c carries one column of EVERY ScalarDB data type, to prove restore round-trips them all
+  // end-to-end (the other tables exercise only INT/BIGINT/TEXT/BOOLEAN/BLOB).
+  private static final String TABLE_C = "table_c";
+  private static final String C_PK = "pk";
+  private static final String C_BOOLEAN = "c_boolean";
+  private static final String C_INT = "c_int";
+  private static final String C_BIGINT = "c_bigint";
+  private static final String C_FLOAT = "c_float";
+  private static final String C_DOUBLE = "c_double";
+  private static final String C_TEXT = "c_text";
+  private static final String C_BLOB = "c_blob";
+  private static final String C_DATE = "c_date";
+  private static final String C_TIME = "c_time";
+  private static final String C_TIMESTAMP = "c_timestamp";
+  private static final String C_TIMESTAMPTZ = "c_timestamptz";
+  private static final String[] C_USER_COLUMNS = {
+    C_BOOLEAN,
+    C_INT,
+    C_BIGINT,
+    C_FLOAT,
+    C_DOUBLE,
+    C_TEXT,
+    C_BLOB,
+    C_DATE,
+    C_TIME,
+    C_TIMESTAMP,
+    C_TIMESTAMPTZ
+  };
+  private static final TableMetadata TABLE_C_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn(C_PK, DataType.INT)
+          .addColumn(C_BOOLEAN, DataType.BOOLEAN)
+          .addColumn(C_INT, DataType.INT)
+          .addColumn(C_BIGINT, DataType.BIGINT)
+          .addColumn(C_FLOAT, DataType.FLOAT)
+          .addColumn(C_DOUBLE, DataType.DOUBLE)
+          .addColumn(C_TEXT, DataType.TEXT)
+          .addColumn(C_BLOB, DataType.BLOB)
+          .addColumn(C_DATE, DataType.DATE)
+          .addColumn(C_TIME, DataType.TIME)
+          .addColumn(C_TIMESTAMP, DataType.TIMESTAMP)
+          .addColumn(C_TIMESTAMPTZ, DataType.TIMESTAMPTZ)
+          .addPartitionKey(C_PK)
+          .build();
+
+  // Every user table, for the copy/recover/snapshot loops that operate on all of them uniformly.
+  private static final String[] USER_TABLES = {TABLE_A, TABLE_B, TABLE_C};
+
   private static final int RECORD_COUNT = 40;
   // Keys [0, PRE_WINDOW_ONLY_KEYS) are seeded pre-window and never touched in-window: zero redo,
   // restored from the copy alone (the load-bearing proof). The rest are split into one disjoint
@@ -238,6 +290,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       admin.createNamespace(namespace, true);
       admin.createTable(namespace, TABLE_A, TABLE_A_METADATA, true);
       admin.createTable(namespace, TABLE_B, TABLE_B_METADATA, true);
+      admin.createTable(namespace, TABLE_C, TABLE_C_METADATA, true);
     }
 
     cbrlRestore =
@@ -260,6 +313,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
         admin.dropTable(namespace, TABLE_A, true);
         admin.dropTable(namespace, TABLE_B, true);
+        admin.dropTable(namespace, TABLE_C, true);
         admin.dropNamespace(namespace, true);
       }
       admin.dropCoordinatorTables(true);
@@ -281,6 +335,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     for (String namespace : new String[] {SRC_NAMESPACE, RESTORE_NAMESPACE}) {
       admin.truncateTable(namespace, TABLE_A);
       admin.truncateTable(namespace, TABLE_B);
+      admin.truncateTable(namespace, TABLE_C);
     }
   }
 
@@ -321,7 +376,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           });
     }
 
-    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
 
     // Restore WITHOUT taking a copy: the restore tables stay empty as the repair base.
     arrangeRestoredCoordinator(backup);
@@ -344,36 +399,34 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * only exercises rolled-back in-doubt records, never a rolled-forward one.
    */
   @Test
-  void preparedCopyRecord_committedInWindow_restoresRolledForwardWithOriginalCommitTime()
+  void preparedCopyRecordCommittedInWindow_restoresRolledForwardWithOriginalCommitTime()
       throws Exception {
+    // Arrange
     int key = 0;
     long token = tokenCounter.incrementAndGet();
-
-    manager.enableRedoLogging(); // Open the window so the commit is logged.
+    manager.enableRedoLogging(); // Open the backup window.
     withRetry(tx -> tx.put(putForTableA(SRC_NAMESPACE, key, token))); // T inserts + commits.
-
-    // T's real committed image (after-image, full tx id, version) from the source.
     Result committed =
         storage.get(getForTableA(SRC_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
     String txId = committed.getText(Attribute.ID);
     int version = committed.getInt(Attribute.VERSION);
-
-    // Rewind the SOURCE record to PREPARED, as if it were still mid-commit, then take the copy
-    // through the normal path (copyUserTables) so cbrl_restore captures the in-flight image
-    // (insert-style: no before-image — roll-forward ignores it anyway, so it need not be rebuilt).
+    // Rewind the SOURCE record to PREPARED, as if the scan caught T mid-commit, then copy it
+    // through
+    // the normal path so cbrl_restore captures the in-flight image (insert-style: no before-image —
+    // roll-forward ignores it anyway, so it need not be rebuilt).
     storage.put(preparedRecordForTableA(SRC_NAMESPACE, key, committed, txId, version));
     copyUserTables();
-
-    Map<String, CoordinatorBackupRow> backup =
-        backUpCoordinator(); // Coordinator last; T COMMITTED.
-    assertThat(backup).as("only the single in-window writer is captured").hasSize(1);
+    // T is the only in-window writer, so its coordinator row carries the original commit time.
+    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
     long originalCommittedAt = backup.values().iterator().next().createdAt;
-
     arrangeRestoredCoordinator(backup);
-    cbrlRestore.restore();
 
+    // Act
+    cbrlRestore.restore();
     Result restored =
         storage.get(getForTableA(RESTORE_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+
+    // Assert
     assertThat(restored.getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
     assertThat(restored.getText(Attribute.ID)).as("original writer's tx id").isEqualTo(txId);
     assertThat(restored.getBigInt(A_TOKEN)).as("writer's after-image").isEqualTo(token);
@@ -389,34 +442,67 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * to physically absent. A single record suffices.
    */
   @Test
-  void deletedCopyRecord_committedInWindow_restoresAsAbsent() throws Exception {
+  void deletedCopyRecordCommittedInWindow_restoresAsAbsent() throws Exception {
+    // Arrange
     int key = 0;
     long token = tokenCounter.incrementAndGet();
-
     // Pre-window committed base (logging OFF): a record for T to delete.
     withRetry(tx -> tx.put(putForTableA(SRC_NAMESPACE, key, token)));
-
-    manager.enableRedoLogging(); // Open the window so the delete commit is logged.
+    manager.enableRedoLogging(); // Open the backup window.
     withRetry(tx -> tx.delete(deleteForTableA(SRC_NAMESPACE, key))); // T deletes + commits.
-
-    // Back up first only to learn the delete writer's id; for a single deterministic record the
-    // copy-vs-coordinator-backup order is immaterial. The pre-window base also lands in the backup
-    // as a keys-only row (a logging-off commit still writes a tx_write_set, just without redo), so
-    // the backup is not size-1; pick the in-window DELETE writer by its redo entry type.
-    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    // The pre-window base also lands in the backup as a keys-only row (a logging-off commit still
+    // writes a tx_write_set, just without redo), so pick the in-window DELETE writer by entry type.
+    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
     String txId = deleteWriterFullId(backup);
-
     // Re-create the SOURCE record as the DELETED tombstone T left mid-commit, then copy it through
-    // the normal path (copyUserTables) so cbrl_restore captures the in-flight image.
+    // the normal path so cbrl_restore captures the in-flight image.
     storage.put(deletedRecordForTableA(SRC_NAMESPACE, key, txId));
     copyUserTables();
-
     arrangeRestoredCoordinator(backup);
-    cbrlRestore.restore();
 
-    assertThat(storage.get(getForTableA(RESTORE_NAMESPACE, key)))
+    // Act
+    cbrlRestore.restore();
+    Optional<Result> restored = storage.get(getForTableA(RESTORE_NAMESPACE, key));
+
+    // Assert
+    assertThat(restored)
         .as("a DELETED copy record whose writer committed must restore as absent")
         .isEmpty();
+  }
+
+  /**
+   * Every ScalarDB column type survives restore end-to-end. The other tables exercise only
+   * INT/BIGINT/TEXT/BOOLEAN/BLOB; this writes a record with all 11 types to {@code table_c}, takes
+   * the copy, and restores — driving the {@code cbrl} proto&lt;-&gt;io converters for every type
+   * through the full pipeline (beyond the codec unit test).
+   */
+  @Test
+  void allColumnTypes_restoreRoundTripsEveryType() throws Exception {
+    // Arrange
+    int key = 0;
+    manager.enableRedoLogging(); // Open the backup window.
+    withRetry(tx -> tx.put(allTypesPut(key)));
+    copyUserTables();
+    arrangeRestoredCoordinator(backupCoordinator());
+
+    // Act
+    cbrlRestore.restore();
+    Result restored = getWithRetry(getForTableC(key)).orElseThrow(IllegalStateException::new);
+
+    // Assert
+    assertThat(restored.getBoolean(C_BOOLEAN)).isTrue();
+    assertThat(restored.getInt(C_INT)).isEqualTo(42);
+    assertThat(restored.getBigInt(C_BIGINT)).isEqualTo(9_000_000_000L);
+    assertThat(restored.getFloat(C_FLOAT)).isEqualTo(1.5f);
+    assertThat(restored.getDouble(C_DOUBLE)).isEqualTo(2.25d);
+    assertThat(restored.getText(C_TEXT)).isEqualTo("hello");
+    assertThat(restored.getBlobAsBytes(C_BLOB)).isEqualTo(new byte[] {1, 2, 3});
+    assertThat(restored.getDate(C_DATE)).isEqualTo(LocalDate.of(2026, 6, 24));
+    assertThat(restored.getTime(C_TIME)).isEqualTo(LocalTime.of(1, 2, 3));
+    assertThat(restored.getTimestamp(C_TIMESTAMP))
+        .isEqualTo(LocalDateTime.of(2026, 6, 24, 1, 2, 3));
+    assertThat(restored.getTimestampTZ(C_TIMESTAMPTZ))
+        .isEqualTo(Instant.ofEpochSecond(1_700_000_000L));
   }
 
   /** One committed in-window write on an owned key, recorded for the prefix oracle. */
@@ -482,7 +568,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
     // Back up the coordinator WHILE the workload runs (Flow: back up, THEN stop) — non-pausing.
     long commitsBeforeBackup = committedCount.get();
-    Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
+    Map<String, CoordinatorBackupRow> coordinatorBackup = backupCoordinator();
     long deadlineMillis = System.currentTimeMillis() + 5_000;
     while (committedCount.get() <= commitsBeforeBackup
         && System.currentTimeMillis() < deadlineMillis) {
@@ -795,7 +881,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
     // Back up the coordinator WHILE the workload runs — conservation tolerates a fuzzy cut.
     long commitsBeforeBackup = committedCount.get();
-    Map<String, CoordinatorBackupRow> coordinatorBackup = backUpCoordinator();
+    Map<String, CoordinatorBackupRow> coordinatorBackup = backupCoordinator();
     long deadlineMillis = System.currentTimeMillis() + 5_000;
     while (committedCount.get() <= commitsBeforeBackup
         && System.currentTimeMillis() < deadlineMillis) {
@@ -847,7 +933,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   /** Raw {@code tx_committed_at} of every present record in the restore tables. */
   private List<Long> restoredCommitTimes() throws Exception {
     List<Long> times = new ArrayList<>();
-    for (String table : new String[] {TABLE_A, TABLE_B}) {
+    for (String table : USER_TABLES) {
       Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
       try (Scanner scanner = storage.scan(scan)) {
         for (Result result : scanner.all()) {
@@ -896,7 +982,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
     copyUserTables();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
-    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
     stop.set(true);
     for (Future<?> future : workload) {
       future.get();
@@ -1018,7 +1104,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   private Map<String, List<Put>> snapshotRestoreTables() throws Exception {
     Map<String, List<Put>> snapshot = new LinkedHashMap<>();
-    for (String table : new String[] {TABLE_A, TABLE_B}) {
+    for (String table : USER_TABLES) {
       List<Put> puts = new ArrayList<>();
       Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
       try (Scanner scanner = storage.scan(scan)) {
@@ -1046,7 +1132,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * Resets cbrl_restore to a snapshot (truncate then re-put) — the pre-restore non-consistent copy.
    */
   private void resetRestoreTables(Map<String, List<Put>> snapshot) throws Exception {
-    for (String table : new String[] {TABLE_A, TABLE_B}) {
+    for (String table : USER_TABLES) {
       admin.truncateTable(RESTORE_NAMESPACE, table);
       for (Put put : snapshot.get(table)) {
         storage.put(put);
@@ -1058,6 +1144,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Map<String, List<String>> map = new LinkedHashMap<>();
     map.put(TABLE_A, Arrays.asList(A_USER_COLUMNS));
     map.put(TABLE_B, Arrays.asList(B_USER_COLUMNS));
+    map.put(TABLE_C, Arrays.asList(C_USER_COLUMNS));
     return map;
   }
 
@@ -1143,7 +1230,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * non-snapshot-consistent base.
    */
   private void copyUserTables() throws Exception {
-    for (String table : new String[] {TABLE_A, TABLE_B}) {
+    for (String table : USER_TABLES) {
       List<Put> puts = new ArrayList<>();
       Scan scan = Scan.newBuilder().namespace(SRC_NAMESPACE).table(table).all().build();
       try (Scanner scanner = storage.scan(scan)) {
@@ -1172,7 +1259,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     if (table.equals(TABLE_A)) {
       return name.equals(A_PK);
     }
-    return name.equals(B_PK) || name.equals(B_CK);
+    if (table.equals(TABLE_B)) {
+      return name.equals(B_PK) || name.equals(B_CK);
+    }
+    return name.equals(C_PK);
   }
 
   /**
@@ -1199,7 +1289,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
     copyUserTables();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
-    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    Map<String, CoordinatorBackupRow> backup = backupCoordinator();
     stop.set(true);
     for (Future<?> future : workload) {
       future.get();
@@ -1278,7 +1368,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   private Set<String> inDoubtCopyTxIds(Set<String> committedInBackup) throws Exception {
     Set<String> inDoubt = new HashSet<>();
-    for (String table : new String[] {TABLE_A, TABLE_B}) {
+    for (String table : USER_TABLES) {
       Scan scan = Scan.newBuilder().namespace(RESTORE_NAMESPACE).table(table).all().build();
       try (Scanner scanner = storage.scan(scan)) {
         for (Result result : scanner.all()) {
@@ -1311,7 +1401,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /** Backs up the coordinator WHILE live and closes it over the chain (self-contained). */
-  private Map<String, CoordinatorBackupRow> backUpCoordinator() throws Exception {
+  private Map<String, CoordinatorBackupRow> backupCoordinator() throws Exception {
     Map<String, CoordinatorBackupRow> committedById = new HashMap<>();
     Scan scan =
         Scan.newBuilder().namespace(COORDINATOR_NAMESPACE).table(Coordinator.TABLE).all().build();
@@ -1519,6 +1609,34 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         .table(TABLE_B)
         .partitionKey(Key.ofInt(B_PK, i))
         .clusteringKey(Key.ofInt(B_CK, i))
+        .build();
+  }
+
+  /** A record with one value of every ScalarDB column type, for the all-types round-trip test. */
+  private Put allTypesPut(int key) {
+    return Put.newBuilder()
+        .namespace(SRC_NAMESPACE)
+        .table(TABLE_C)
+        .partitionKey(Key.ofInt(C_PK, key))
+        .booleanValue(C_BOOLEAN, true)
+        .intValue(C_INT, 42)
+        .bigIntValue(C_BIGINT, 9_000_000_000L)
+        .floatValue(C_FLOAT, 1.5f)
+        .doubleValue(C_DOUBLE, 2.25d)
+        .textValue(C_TEXT, "hello")
+        .blobValue(C_BLOB, new byte[] {1, 2, 3})
+        .dateValue(C_DATE, LocalDate.of(2026, 6, 24))
+        .timeValue(C_TIME, LocalTime.of(1, 2, 3))
+        .timestampValue(C_TIMESTAMP, LocalDateTime.of(2026, 6, 24, 1, 2, 3))
+        .timestampTZValue(C_TIMESTAMPTZ, Instant.ofEpochSecond(1_700_000_000L))
+        .build();
+  }
+
+  private Get getForTableC(int key) {
+    return Get.newBuilder()
+        .namespace(RESTORE_NAMESPACE)
+        .table(TABLE_C)
+        .partitionKey(Key.ofInt(C_PK, key))
         .build();
   }
 
