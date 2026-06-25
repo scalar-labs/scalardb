@@ -87,26 +87,26 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * <p>Two complementary workloads exercise the restore:
  *
  * <ul>
- *   <li>{@link #disjointOwnerWorkload_restoresLatestValuePerColumn()} — each key is owned by one
- *       worker writing a monotonically increasing token, with column values derived from that token
- *       and a {@code token % 6} subset written per transaction. The coordinator is backed up
- *       <b>live</b> (non-pausing); the oracle is each key's recorded ops applied up to the backup's
- *       captured prefix, and every restored column must equal the value of its last-in-prefix
- *       writer. This proves window-consistency, that no older write overwrites a newer one, that
- *       partial after-images MERGE (untouched columns carried forward), and — via keys untouched
- *       in-window — that the copy is load-bearing.
- *   <li>{@link #concurrentSameKeyTransfers_restorePreservesConservation()} — many workers run
- *       balance-preserving transfers on shared accounts, so the same record is written concurrently
- *       and conflicts. This is the same-key contention that leaves the copy with in-flight PREPARED
- *       records (recovered forward) and conflict-aborted records (recovered back); the conservation
- *       invariant (total balance and per-account cross-table equality) must survive restore. The
- *       backup is taken WHILE the workload runs, proving it does not pause.
+ *   <li>{@link #restore_AfterDisjointOwnerWorkload_ShouldYieldLatestValuePerColumn()} — each key is
+ *       owned by one worker writing a monotonically increasing token, with column values derived
+ *       from that token and a {@code token % 6} subset written per transaction. The coordinator is
+ *       backed up <b>live</b> (non-pausing); the oracle is each key's recorded ops applied up to
+ *       the backup's captured prefix, and every restored column must equal the value of its
+ *       last-in-prefix writer. This proves window-consistency, that no older write overwrites a
+ *       newer one, that partial after-images MERGE (untouched columns carried forward), and — via
+ *       keys untouched in-window — that the copy is load-bearing.
+ *   <li>{@link #restore_AfterConcurrentSameKeyTransfers_ShouldPreserveConservation()} — many
+ *       workers run balance-preserving transfers on shared accounts, so the same record is written
+ *       concurrently and conflicts. This is the same-key contention that leaves the copy with
+ *       in-flight PREPARED records (recovered forward) and conflict-aborted records (recovered
+ *       back); the conservation invariant (total balance and per-account cross-table equality) must
+ *       survive restore. The backup is taken WHILE the workload runs, proving it does not pause.
  * </ul>
  *
  * <p>The two negative controls keep the checks honest: {@link
- * #consistencyCheckDetectsInconsistentImage_negativeControl()} proves the consistency check has
- * teeth, and {@link #copyIsLoadBearing_negativeControl()} restores the same backup <b>without</b>
- * the copy and shows the pre-window data is then unrecoverable.
+ * #consistencyCheck_ForInconsistentImage_ShouldReportViolations()} proves the consistency check has
+ * teeth, and {@link #restore_WithoutTheCopy_ShouldLeavePreWindowKeysUnrecoverable()} restores the
+ * same backup <b>without</b> the copy and shows the pre-window data is then unrecoverable.
  *
  * <p>This is an abstract base; concrete subclasses select the config axis — {@code
  * CbrlBackupRestoreWithoutGroupCommitIntegrationTest} and {@code
@@ -341,7 +341,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
   /** Negative control: proves the consistency check detects an inconsistent image. */
   @Test
-  void consistencyCheckDetectsInconsistentImage_negativeControl() {
+  void consistencyCheck_ForInconsistentImage_ShouldReportViolations() {
     withRetry(
         tx -> {
           tx.put(putForTableA(RESTORE_NAMESPACE, 0, 111L));
@@ -360,7 +360,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * the pre-window-only keys unrecoverable, since they have no redo and no other base.
    */
   @Test
-  void copyIsLoadBearing_negativeControl() throws Exception {
+  void restore_WithoutTheCopy_ShouldLeavePreWindowKeysUnrecoverable() throws Exception {
     Map<Integer, Long> seed = seedPreWindowBase(PRE_WINDOW_ONLY_KEYS); // logging still OFF
 
     // Open the window and do a little in-window work on OTHER keys, so the backup has redo (the
@@ -399,7 +399,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * only exercises rolled-back in-doubt records, never a rolled-forward one.
    */
   @Test
-  void preparedCopyRecordCommittedInWindow_restoresRolledForwardWithOriginalCommitTime()
+  void restore_ForPreparedCopyRecordCommittedInWindow_ShouldRollForwardKeepingOriginalCommitTime()
       throws Exception {
     // Arrange
     int key = 0;
@@ -442,7 +442,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * to physically absent. A single record suffices.
    */
   @Test
-  void deletedCopyRecordCommittedInWindow_restoresAsAbsent() throws Exception {
+  void restore_ForDeletedCopyRecordCommittedInWindow_ShouldRemoveTheRecord() throws Exception {
     // Arrange
     int key = 0;
     long token = tokenCounter.incrementAndGet();
@@ -477,7 +477,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * through the full pipeline (beyond the codec unit test).
    */
   @Test
-  void allColumnTypes_restoreRoundTripsEveryType() throws Exception {
+  void restore_ForAllColumnTypes_ShouldRoundTripEveryType() throws Exception {
     // Arrange
     int key = 0;
     manager.enableRedoLogging(); // Open the backup window.
@@ -539,7 +539,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * touched in-window, so they also prove the copy is load-bearing (restored with no redo).
    */
   @Test
-  void disjointOwnerWorkload_restoresLatestValuePerColumn() throws Exception {
+  void restore_AfterDisjointOwnerWorkload_ShouldYieldLatestValuePerColumn() throws Exception {
     long[] seedToken = new long[RECORD_COUNT];
     boolean[] present = new boolean[RECORD_COUNT];
     Map<Integer, List<OwnedOp>> history = new HashMap<>();
@@ -858,7 +858,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * holds for whatever consistent cut it captures.
    */
   @Test
-  void concurrentSameKeyTransfers_restorePreservesConservation() throws Exception {
+  void restore_AfterConcurrentSameKeyTransfers_ShouldPreserveConservation() throws Exception {
     long workloadStartMillis = System.currentTimeMillis();
     long initialBalance = 1_000L;
     for (int i = 0; i < RECORD_COUNT; i++) {
@@ -964,7 +964,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * cooperative thread interruption, which JDBC ignores.
    */
   @Test
-  void crashMidRestore_reRunRestoresConsistently() throws Exception {
+  void restore_CrashedMidway_ShouldConvergeOnReRun() throws Exception {
     long initialBalance = 1_000L;
     for (int i = 0; i < RECORD_COUNT; i++) {
       int key = i;
@@ -1272,7 +1272,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * found (the restored backup).
    */
   @Test
-  void restore_writesNoCoordinatorRows() throws Exception {
+  void restore_ShouldWriteNoCoordinatorRows() throws Exception {
     long initialBalance = 1_000L;
     for (int i = 0; i < RECORD_COUNT; i++) {
       int key = i;
