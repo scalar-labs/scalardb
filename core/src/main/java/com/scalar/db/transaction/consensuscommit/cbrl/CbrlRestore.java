@@ -27,11 +27,14 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -43,8 +46,7 @@ import java.util.Optional;
  * Orchestrates the whole CBRL restore against a non-snapshot-consistent copy and the redo captured
  * in the coordinator backup. It uses <b>only the Storage API</b> for applying records and core's
  * record-level recovery for resolving in-flight ones — like SSR, it never runs a transaction, so a
- * restore creates <b>no coordinator rows</b> for its own work. {@link #restore(Map)} does three
- * steps:
+ * restore creates <b>no coordinator rows</b> for its own work. {@link #restore()} does three steps:
  *
  * <ol>
  *   <li><b>C4 recovery:</b> resolve the copy's in-flight ({@code PREPARED}/{@code DELETED}) records
@@ -60,7 +62,7 @@ import java.util.Optional;
  * </ol>
  *
  * <p>Callers do the backup-taking and ensure the coordinator and user tables are restored (in a
- * test, arranged) before calling only {@link #restore(Map)}.
+ * test, arranged) before calling only {@link #restore()}.
  */
 public final class CbrlRestore {
   private final DistributedStorage storage;
@@ -70,6 +72,8 @@ public final class CbrlRestore {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   private final String restoreNamespace;
+  // Namespace of the restored coordinator table — read for the redo and original commit times.
+  private final String coordinatorNamespace;
   // Restore table -> its user (non-key, non-tx-metadata) column names, read as the replay base.
   private final Map<String, List<String>> userColumnsByTable;
   private final int replayBuckets;
@@ -79,12 +83,14 @@ public final class CbrlRestore {
       DistributedStorage storage,
       DistributedTransactionManager manager,
       String restoreNamespace,
+      String coordinatorNamespace,
       Map<String, List<String>> userColumnsByTable,
       int replayBuckets,
       int replayWorkers) {
     this.storage = storage;
     this.manager = manager;
     this.restoreNamespace = restoreNamespace;
+    this.coordinatorNamespace = coordinatorNamespace;
     this.userColumnsByTable = userColumnsByTable;
     this.replayBuckets = replayBuckets;
     this.replayWorkers = replayWorkers;
@@ -92,15 +98,17 @@ public final class CbrlRestore {
 
   /**
    * Recovers the copy, replays the committed redo, and writes the result back via the Storage API.
+   * Every input is the database: the redo and the original commit times are read from the restored
+   * coordinator table here, not supplied by the caller.
    */
-  public void restore(Map<String, CoordinatorBackupRow> coordinatorBackup) throws Exception {
+  public void restore() throws Exception {
     recoverCopy();
 
     // Original commit time (the coordinator's tx_created_at) per transaction id, used to stamp the
     // restored records so they keep their commit timestamp instead of the restore-time clock.
     Map<String, Long> committedAtByTxId = new HashMap<>();
     List<RedoOperation> redoOps = new ArrayList<>();
-    for (CoordinatorBackupRow row : coordinatorBackup.values()) {
+    for (CoordinatorBackupRow row : readCoordinatorBackup()) {
       committedAtByTxId.put(row.txId, row.createdAt);
       if (row.writeSet == null) {
         // Committed but no redo captured (a pre-feature / keys-only coordinator row): nothing to
@@ -134,6 +142,49 @@ public final class CbrlRestore {
             .apply(buckets, replayWorkers);
 
     writeBack(finalStates);
+  }
+
+  /**
+   * The coordinator backup, read from the restored coordinator table itself (the caller has
+   * physically restored it like any other table): every {@code COMMITTED} row carrying a {@code
+   * tx_write_set}. This is both the redo source and the original-commit-time source — CBRL reads it
+   * from the database rather than receiving it, so every restore input is the database.
+   */
+  private List<CoordinatorBackupRow> readCoordinatorBackup() throws Exception {
+    List<CoordinatorBackupRow> rows = new ArrayList<>();
+    try (Scanner scanner =
+        storage.scan(
+            Scan.newBuilder()
+                .namespace(coordinatorNamespace)
+                .table(Coordinator.TABLE)
+                .all()
+                .build())) {
+      for (Result result : scanner.all()) {
+        if (result.isNull(Attribute.STATE)
+            || result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()
+            || result.isNull(Attribute.WRITE_SET)) {
+          // Not a committed-with-redo row (e.g. an ABORTED in-doubt marker): no redo to replay.
+          continue;
+        }
+        rows.add(parseCoordinatorRow(result));
+      }
+    }
+    return rows;
+  }
+
+  private CoordinatorBackupRow parseCoordinatorRow(Result result) throws Exception {
+    String txId = result.getText(Attribute.ID);
+    int state = result.getInt(Attribute.STATE);
+    String childIdsStr =
+        result.isNull(Attribute.CHILD_IDS) ? null : result.getText(Attribute.CHILD_IDS);
+    List<String> childIds =
+        (childIdsStr == null || childIdsStr.isEmpty())
+            ? Collections.emptyList()
+            : Arrays.asList(childIdsStr.split(","));
+    WriteSet writeSet = WriteSet.parseFrom(result.getBlobAsBytes(Attribute.WRITE_SET));
+    long createdAt =
+        result.isNull(Attribute.CREATED_AT) ? 0 : result.getBigInt(Attribute.CREATED_AT);
+    return new CoordinatorBackupRow(txId, state, childIds, writeSet, createdAt);
   }
 
   /**

@@ -195,12 +195,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private DistributedTransactionManager manager;
   private DistributedTransactionAdmin admin;
   private DistributedStorage storage;
-  private Coordinator coordinator;
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   private ExecutorService workerExecutor;
   private CbrlRestore cbrlRestore;
-  private ConsensusCommitConfig consensusCommitConfig;
   private final AtomicBoolean crashRestore = new AtomicBoolean(false);
   private final AtomicLong tokenCounter = new AtomicLong();
   private final AtomicLong committedCount = new AtomicLong();
@@ -233,8 +231,6 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     manager = transactionFactory.getTransactionManager();
     admin = transactionFactory.getTransactionAdmin();
     storage = StorageFactory.create(properties).getStorage();
-    consensusCommitConfig = new ConsensusCommitConfig(new DatabaseConfig(properties));
-    coordinator = new Coordinator(storage, consensusCommitConfig);
     workerExecutor = Executors.newFixedThreadPool(WORKLOAD_THREADS);
 
     admin.createCoordinatorTables(true);
@@ -249,6 +245,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
             storage,
             manager,
             RESTORE_NAMESPACE,
+            COORDINATOR_NAMESPACE,
             userColumnsByTable(),
             REPLAY_BUCKETS,
             REPLAY_WORKERS);
@@ -328,7 +325,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
     // Restore WITHOUT taking a copy: the restore tables stay empty as the repair base.
     arrangeRestoredCoordinator(backup);
-    cbrlRestore.restore(backup);
+    cbrlRestore.restore();
 
     for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
       assertThat(getWithRetry(getForTableA(RESTORE_NAMESPACE, i)))
@@ -336,6 +333,90 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           .isEmpty();
     }
     assertThat(seed).hasSize(PRE_WINDOW_ONLY_KEYS); // sanity: the keys were in fact seeded
+  }
+
+  /**
+   * Artificial roll-forward case (plan §4.5): the copy caught a record in the PREPARED state, but
+   * its writer committed during the window. On restore the record must roll forward to COMMITTED
+   * under the ORIGINAL writer's tx id, carry the writer's after-image, and — critically — keep its
+   * ORIGINAL commit time (the coordinator's {@code tx_created_at}), not the recovery-time clock
+   * that core's roll-forward stamps onto the record. A single record suffices; the existing suite
+   * only exercises rolled-back in-doubt records, never a rolled-forward one.
+   */
+  @Test
+  void preparedCopyRecord_committedInWindow_restoresRolledForwardWithOriginalCommitTime()
+      throws Exception {
+    int key = 0;
+    long token = tokenCounter.incrementAndGet();
+
+    manager.enableRedoLogging(); // Open the window so the commit is logged.
+    withRetry(tx -> tx.put(putForTableA(SRC_NAMESPACE, key, token))); // T inserts + commits.
+
+    // T's real committed image (after-image, full tx id, version) from the source.
+    Result committed =
+        storage.get(getForTableA(SRC_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+    String txId = committed.getText(Attribute.ID);
+    int version = committed.getInt(Attribute.VERSION);
+
+    // Rewind the SOURCE record to PREPARED, as if it were still mid-commit, then take the copy
+    // through the normal path (copyUserTables) so cbrl_restore captures the in-flight image
+    // (insert-style: no before-image — roll-forward ignores it anyway, so it need not be rebuilt).
+    storage.put(preparedRecordForTableA(SRC_NAMESPACE, key, committed, txId, version));
+    copyUserTables();
+
+    Map<String, CoordinatorBackupRow> backup =
+        backUpCoordinator(); // Coordinator last; T COMMITTED.
+    assertThat(backup).as("only the single in-window writer is captured").hasSize(1);
+    long originalCommittedAt = backup.values().iterator().next().createdAt;
+
+    arrangeRestoredCoordinator(backup);
+    cbrlRestore.restore();
+
+    Result restored =
+        storage.get(getForTableA(RESTORE_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+    assertThat(restored.getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(restored.getText(Attribute.ID)).as("original writer's tx id").isEqualTo(txId);
+    assertThat(restored.getBigInt(A_TOKEN)).as("writer's after-image").isEqualTo(token);
+    assertThat(restored.getInt(Attribute.VERSION)).isEqualTo(version);
+    assertThat(restored.getBigInt(Attribute.COMMITTED_AT))
+        .as("rolled-forward record keeps the original commit time, not the recovery-time clock")
+        .isEqualTo(originalCommittedAt);
+  }
+
+  /**
+   * Artificial roll-forward case (plan §4.5), delete variant: the copy caught a record in the
+   * DELETED state whose writer committed during the window. On restore the record must roll forward
+   * to physically absent. A single record suffices.
+   */
+  @Test
+  void deletedCopyRecord_committedInWindow_restoresAsAbsent() throws Exception {
+    int key = 0;
+    long token = tokenCounter.incrementAndGet();
+
+    // Pre-window committed base (logging OFF): a record for T to delete.
+    withRetry(tx -> tx.put(putForTableA(SRC_NAMESPACE, key, token)));
+
+    manager.enableRedoLogging(); // Open the window so the delete commit is logged.
+    withRetry(tx -> tx.delete(deleteForTableA(SRC_NAMESPACE, key))); // T deletes + commits.
+
+    // Back up first only to learn the delete writer's id; for a single deterministic record the
+    // copy-vs-coordinator-backup order is immaterial. The pre-window base also lands in the backup
+    // as a keys-only row (a logging-off commit still writes a tx_write_set, just without redo), so
+    // the backup is not size-1; pick the in-window DELETE writer by its redo entry type.
+    Map<String, CoordinatorBackupRow> backup = backUpCoordinator();
+    String txId = deleteWriterFullId(backup);
+
+    // Re-create the SOURCE record as the DELETED tombstone T left mid-commit, then copy it through
+    // the normal path (copyUserTables) so cbrl_restore captures the in-flight image.
+    storage.put(deletedRecordForTableA(SRC_NAMESPACE, key, txId));
+    copyUserTables();
+
+    arrangeRestoredCoordinator(backup);
+    cbrlRestore.restore();
+
+    assertThat(storage.get(getForTableA(RESTORE_NAMESPACE, key)))
+        .as("a DELETED copy record whose writer committed must restore as absent")
+        .isEmpty();
   }
 
   /** One committed in-window write on an owned key, recorded for the prefix oracle. */
@@ -420,7 +501,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Set<String> committedInBackup = committedFullIdsIn(coordinatorBackup);
 
     arrangeRestoredCoordinator(coordinatorBackup);
-    cbrlRestore.restore(coordinatorBackup);
+    cbrlRestore.restore();
 
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
     assertThat(findDisjointViolations(seedToken, history, committedInBackup))
@@ -429,7 +510,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         .isEmpty();
 
     Map<Integer, Long> image = readRestoredTokens();
-    cbrlRestore.restore(coordinatorBackup);
+    cbrlRestore.restore();
     assertThat(readRestoredTokens()).as("idempotent restore").isEqualTo(image);
   }
 
@@ -520,6 +601,22 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       }
     }
     return ids;
+  }
+
+  /** The full tx id of the (single) backup writer whose redo contains a DELETE entry. */
+  private String deleteWriterFullId(Map<String, CoordinatorBackupRow> backup) {
+    for (CoordinatorBackupRow row : backup.values()) {
+      for (EntryGroup group : row.writeSet.getEntryGroupsList()) {
+        for (Entry entry : group.getEntriesList()) {
+          if (entry.getEntryType() == Entry.EntryType.ENTRY_TYPE_DELETE) {
+            return group.getChildId().isEmpty()
+                ? row.txId
+                : keyManipulator.fullKey(row.txId, group.getChildId());
+          }
+        }
+      }
+    }
+    throw new IllegalStateException("No DELETE redo entry in the coordinator backup");
   }
 
   /**
@@ -715,7 +812,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
     arrangeRestoredCoordinator(coordinatorBackup);
     long beforeRestoreMillis = System.currentTimeMillis();
-    cbrlRestore.restore(coordinatorBackup);
+    cbrlRestore.restore();
 
     assertThat(findConsistencyViolations())
         .as("cross-table consistency: both tables hold the same balance per account")
@@ -815,7 +912,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
     // Baseline: one full restore, to validate the happy path and to measure its duration.
     long startNanos = System.nanoTime();
-    cbrlRestore.restore(backup);
+    cbrlRestore.restore();
     long restoreNanos = System.nanoTime() - startNanos;
     assertThat(findConsistencyViolations()).as("baseline restore consistent").isEmpty();
     assertThat(sumRestoredBalances(TABLE_A, A_TOKEN)).as("baseline conserved").isEqualTo(total);
@@ -832,7 +929,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           new Thread(
               () -> {
                 try {
-                  crashingRestore.restore(backup);
+                  crashingRestore.restore();
                 } catch (Throwable t) {
                   thrown[0] = t; // The injected crash; null if the restore finished first.
                 }
@@ -847,7 +944,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       }
 
       // Re-run from the full backup on whatever partial state the crash left behind.
-      cbrlRestore.restore(backup);
+      cbrlRestore.restore();
 
       assertThat(findConsistencyViolations())
           .as("re-run after crash at %d/%d: cross-table consistency", step, steps)
@@ -880,6 +977,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         crashingStorage,
         crashingManager,
         RESTORE_NAMESPACE,
+        COORDINATOR_NAMESPACE,
         userColumnsByTable(),
         REPLAY_BUCKETS,
         REPLAY_WORKERS);
@@ -1110,7 +1208,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     arrangeRestoredCoordinator(backup);
     Set<String> coordinatorBefore = coordinatorTxIds();
 
-    cbrlRestore.restore(backup);
+    cbrlRestore.restore();
 
     assertThat(coordinatorTxIds())
         .as("restore must not write any coordinator rows of its own")
@@ -1126,19 +1224,51 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   private void arrangeRestoredCoordinator(Map<String, CoordinatorBackupRow> backup)
       throws Exception {
     admin.truncateCoordinatorTables();
+    // Faithful physical restore: rewrite each backed-up coordinator row verbatim (state,
+    // created_at, write_set, child_ids) with a raw storage.put — NOT coordinator.putState, which
+    // would re-stamp created_at to now and (for group commit) drop the write_set. CbrlRestore now
+    // reads the redo and the original commit times from the restored coordinator table itself, so
+    // those columns must survive the restore exactly as a real coordinator-table backup would.
     for (CoordinatorBackupRow row : backup.values()) {
-      Coordinator.State state =
-          row.childIds.isEmpty()
-              ? new Coordinator.State(row.txId, row.writeSet, TransactionState.COMMITTED)
-              : new Coordinator.State(row.txId, row.childIds, TransactionState.COMMITTED);
-      coordinator.putState(state);
+      storage.put(coordinatorRowPut(row));
     }
     // Compare copy records' tx_id against the FULL committed ids (a group-commit child record
     // carries its parent+child id, not the parent row key), so committed children are not
     // misclassified as in-doubt and given a spurious ABORTED state.
     for (String txId : inDoubtCopyTxIds(committedFullIdsIn(backup))) {
-      coordinator.putState(new Coordinator.State(txId, TransactionState.ABORTED));
+      storage.put(abortedCoordinatorRowPut(txId));
     }
+  }
+
+  /** A faithful raw restore of a backed-up coordinator row — every column preserved. */
+  private Put coordinatorRowPut(CoordinatorBackupRow row) {
+    PutBuilder.Buildable put =
+        Put.newBuilder()
+            .namespace(COORDINATOR_NAMESPACE)
+            .table(Coordinator.TABLE)
+            .partitionKey(Key.ofText(Attribute.ID, row.txId))
+            .intValue(Attribute.STATE, row.state)
+            .bigIntValue(Attribute.CREATED_AT, row.createdAt);
+    if (row.writeSet != null) {
+      put.blobValue(Attribute.WRITE_SET, row.writeSet.toByteArray());
+    }
+    if (!row.childIds.isEmpty()) {
+      put.textValue(Attribute.CHILD_IDS, String.join(",", row.childIds));
+    }
+    return put.build();
+  }
+
+  /**
+   * An ABORTED coordinator row for an in-doubt copy record's writer (created_at must be non-zero).
+   */
+  private Put abortedCoordinatorRowPut(String txId) {
+    return Put.newBuilder()
+        .namespace(COORDINATOR_NAMESPACE)
+        .table(Coordinator.TABLE)
+        .partitionKey(Key.ofText(Attribute.ID, txId))
+        .intValue(Attribute.STATE, TransactionState.ABORTED.get())
+        .bigIntValue(Attribute.CREATED_AT, System.currentTimeMillis())
+        .build();
   }
 
   /**
@@ -1389,6 +1519,43 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         .table(TABLE_B)
         .partitionKey(Key.ofInt(B_PK, i))
         .clusteringKey(Key.ofInt(B_CK, i))
+        .build();
+  }
+
+  /**
+   * A raw PREPARED copy record carrying the writer's after-image (insert-style: no before-image),
+   * fabricated to simulate the raw scan catching a record mid-commit. Mirrors what {@code
+   * PrepareMutationComposer} writes for an initial record: user columns + {@code tx_id}, {@code
+   * tx_state = PREPARED}, {@code tx_prepared_at}, {@code tx_version}.
+   */
+  private Put preparedRecordForTableA(
+      String namespace, int key, Result afterImage, String txId, int version) {
+    PutBuilder.Buildable put =
+        Put.newBuilder().namespace(namespace).table(TABLE_A).partitionKey(Key.ofInt(A_PK, key));
+    for (String column : A_USER_COLUMNS) {
+      put.value(afterImage.getColumns().get(column));
+    }
+    return put.textValue(Attribute.ID, txId)
+        .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+        .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+        .intValue(Attribute.VERSION, version)
+        .build();
+  }
+
+  /**
+   * A raw DELETED copy record (a tombstone: tx metadata only, no user columns), fabricated like
+   * {@link #preparedRecordForTableA}. The version is arbitrary — delete roll-forward keys off
+   * {@code tx_state = DELETED} and {@code tx_id} only.
+   */
+  private Put deletedRecordForTableA(String namespace, int key, String txId) {
+    return Put.newBuilder()
+        .namespace(namespace)
+        .table(TABLE_A)
+        .partitionKey(Key.ofInt(A_PK, key))
+        .textValue(Attribute.ID, txId)
+        .intValue(Attribute.STATE, TransactionState.DELETED.get())
+        .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+        .intValue(Attribute.VERSION, 2)
         .build();
   }
 

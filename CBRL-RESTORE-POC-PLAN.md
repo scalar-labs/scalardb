@@ -283,7 +283,7 @@ ordering metadata `tx_write_set` lacks (so the replay core is exercised regardle
   time. This re-stamp happens both in production (a third transaction rolls the record forward) and
   at restore time (our own `recoverRecord`). So `readCopyState` takes the commit time from the
   **coordinator backup** (`committedAtByTxId` = coordinator `tx_created_at`), not from the record
-  column (`CbrlRestore.java:213-218`); that override is load-bearing for preserving original commit
+  column (`readCopyState`, `CbrlRestore.java:240-247`); that override is load-bearing for preserving original commit
   timestamps. Lock it in with an IT case: a record `PREPARED` in the copy whose writer commits
   *during* the window → assert the restored value, `tx_version`, **and** the original commit time (we
   currently arrange only the rolled-*back* in-doubt case, not a rolled-*forward* one).
@@ -338,11 +338,16 @@ through the replay.
   from the DB and writes the replayed state back to the restore-target tables; the IT's assertions
   then read those tables (`cbrl_restore`) and assert on them — never on returned objects.
 - **`CbrlRestore` is the only `public` class in the `cbrl` package.** It exposes one entry point,
-  `restore(Map<String, CoordinatorBackupRow>)`, that orchestrates the whole restore: drive
-  PREPARED-record recovery against the reloaded coordinator backup → explode each `WriteSet` into
+  `restore()` — **no arguments; every input is the database**, so the caller supplies no restore
+  information. It orchestrates the whole restore: drive PREPARED-record recovery against the restored
+  coordinator table → **read the coordinator backup from that same table** (every `COMMITTED` row's
+  `tx_write_set`, plus its `tx_created_at` for original commit times) → explode each `WriteSet` into
   `RedoOperation`s → `RecordShuffler` → `RecordApplier` (pure: read-and-compute, returns
-  `Map<RecordKey, RecordState>`) → write the final states back to `cbrl_restore`. The write-back
-  lives here, in the `cbrl` package — not in the test harness.
+  `Map<RecordKey, RecordState>`) → write the final states back to `cbrl_restore`. The write-back and
+  the coordinator-backup read both live here, in the `cbrl` package — not in the test harness. The
+  caller (in production, the backup tool) only physically restores the coordinator and user tables
+  first; it must restore the coordinator faithfully (preserving `tx_created_at`/`tx_write_set`),
+  which a real table backup does and the test arrange mimics with a raw `storage.put`.
 - **Every other class in the package is package-private** (`CoordinatorBackupRow`, `RecordKey`,
   `RecordState`, `RedoOperation`, `RestoredRecordReader`, `RecordApplier`, `RecordShuffler`,
   `CbrlReplayException`). The unit (`src/test`) and integration (`src/integration-test`) test source
