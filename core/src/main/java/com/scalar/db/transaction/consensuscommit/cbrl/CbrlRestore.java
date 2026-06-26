@@ -19,6 +19,7 @@ import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
@@ -251,7 +252,7 @@ public final class CbrlRestore implements AutoCloseable {
                   : record.getBigInt(Attribute.COMMITTED_AT));
       Map<String, com.scalar.db.transaction.consensuscommit.proto.v1.Column> columns =
           new LinkedHashMap<>();
-      for (String name : userColumnNames(key)) {
+      for (String name : userColumnNames(metadataOf(key))) {
         Column<?> column = record.getColumns().get(name);
         if (column != null) {
           columns.put(name, ioColumnToProto(column));
@@ -264,17 +265,22 @@ public final class CbrlRestore implements AutoCloseable {
     }
   }
 
-  /**
-   * The user (non-key, non-tx-metadata) column names of the key's table, from its schema. These are
-   * the columns read as the replay base and written back; the caller no longer supplies them.
-   */
-  private List<String> userColumnNames(RecordKey key) throws ExecutionException {
+  /** The key's table schema, from the cached metadata manager. */
+  private TransactionTableMetadata metadataOf(RecordKey key) throws ExecutionException {
     TransactionTableMetadata metadata =
         metadataManager.getTransactionTableMetadata(key.namespace(), key.table());
     if (metadata == null) {
       throw new IllegalArgumentException(
           "Redo references a table with no schema: " + key.namespace() + "." + key.table());
     }
+    return metadata;
+  }
+
+  /**
+   * The user (non-key, non-tx-metadata) column names of a table, from its schema. These are the
+   * columns read as the replay base and written back; the caller no longer supplies them.
+   */
+  private static List<String> userColumnNames(TransactionTableMetadata metadata) {
     List<String> userColumns = new ArrayList<>();
     for (String name : metadata.getColumnNames()) {
       if (!metadata.getPrimaryKeyColumnNames().contains(name)
@@ -323,12 +329,17 @@ public final class CbrlRestore implements AutoCloseable {
 
   /**
    * A COMMITTED Consensus Commit record for a raw {@code storage.put}, mirroring {@code
-   * CommitMutationComposer}'s committed image: final user columns plus {@code tx_id}, {@code
-   * tx_state = COMMITTED}, {@code tx_version}, and commit/prepare timestamps. The {@code before_*}
-   * images are already cleared on the recovered base, and {@code storage.put} only overwrites the
-   * columns set here, so they stay cleared.
+   * CommitMutationComposer}'s committed image: every user column plus {@code tx_id}, {@code
+   * tx_state = COMMITTED}, {@code tx_version}, and commit/prepare timestamps. It writes the
+   * <b>full</b> user column set — the replayed value where the state has one, an explicit NULL
+   * otherwise — because {@code storage.put} is a partial-column UPSERT: a column the replayed state
+   * dropped (e.g. a re-insert with fewer columns than the non-snapshot copy still physically holds)
+   * would otherwise keep its stale copy value. This mirrors {@code
+   * RecordApplyService.fillUnsetColumnsWithNull} in the replication log applier, which nulls unset
+   * columns for the same reason. The {@code before_*} images are already cleared on the recovered
+   * base, so the omitted meta columns stay cleared.
    */
-  private Put buildCommittedPut(RecordKey key, RecordState state) {
+  private Put buildCommittedPut(RecordKey key, RecordState state) throws ExecutionException {
     PutBuilder.Buildable put =
         Put.newBuilder()
             .namespace(key.namespace())
@@ -337,9 +348,13 @@ public final class CbrlRestore implements AutoCloseable {
     if (key.clusteringKey() != null) {
       put.clusteringKey(toIoKey(key.clusteringKey()));
     }
-    for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
-        state.columns().values()) {
-      put.value(toIoColumn(column));
+    TransactionTableMetadata metadata = metadataOf(key);
+    for (String name : userColumnNames(metadata)) {
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column column = state.columns().get(name);
+      put.value(
+          column != null
+              ? toIoColumn(column)
+              : nullColumnOf(name, metadata.getColumnDataType(name)));
     }
     put.textValue(Attribute.ID, state.currentTxId());
     put.intValue(Attribute.STATE, TransactionState.COMMITTED.get());
@@ -374,6 +389,36 @@ public final class CbrlRestore implements AutoCloseable {
       builder.clusteringKey(toIoKey(key.clusteringKey()));
     }
     return builder.build();
+  }
+
+  /** A null-valued {@link Column} of the given type, used to clear a dropped user column. */
+  private static Column<?> nullColumnOf(String name, DataType type) {
+    switch (type) {
+      case BOOLEAN:
+        return BooleanColumn.ofNull(name);
+      case INT:
+        return IntColumn.ofNull(name);
+      case BIGINT:
+        return BigIntColumn.ofNull(name);
+      case FLOAT:
+        return FloatColumn.ofNull(name);
+      case DOUBLE:
+        return DoubleColumn.ofNull(name);
+      case TEXT:
+        return TextColumn.ofNull(name);
+      case BLOB:
+        return BlobColumn.ofNull(name);
+      case DATE:
+        return DateColumn.ofNull(name);
+      case TIME:
+        return TimeColumn.ofNull(name);
+      case TIMESTAMP:
+        return TimestampColumn.ofNull(name);
+      case TIMESTAMPTZ:
+        return TimestampTZColumn.ofNull(name);
+      default:
+        throw new AssertionError("Unsupported data type: " + type);
+    }
   }
 
   // Mirrors WriteSetEncoder's ColumnEncodingVisitor exactly (same TimeRelatedColumnEncodingUtils),

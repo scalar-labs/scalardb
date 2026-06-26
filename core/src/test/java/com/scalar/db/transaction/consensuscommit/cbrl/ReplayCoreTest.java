@@ -26,22 +26,32 @@ class ReplayCoreTest {
 
   @Test
   void emptyWindow_absentStaysAbsent() {
-    RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ImmutableList.of());
+    // Arrange
+    RecordApplier applier = new RecordApplier(ABSENT);
+    // Act
+    RecordState result = applier.computeWriteOps(key(), ImmutableList.of());
+    // Assert
     assertThat(result.present()).isFalse();
   }
 
   @Test
   void emptyWindow_presentStaysUnchanged() {
+    // Arrange
     RecordState present = present("tX", ImmutableMap.of(COL_V, 1));
+    // Act
     RecordState result = new RecordApplier(k -> present).computeWriteOps(key(), ImmutableList.of());
+    // Assert
     assertThat(result).isEqualTo(present);
   }
 
   @Test
   void singleInsertRoot_createsRecord() {
+    // Arrange
     List<RedoOperation> ops =
         ImmutableList.of(op("t0", write(null, ImmutableMap.of(COL_V, 5, COL_W, 9))));
+    // Act
     RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(5);
     assertThat(intOf(result, COL_W)).isEqualTo(9);
@@ -49,20 +59,26 @@ class ReplayCoreTest {
 
   @Test
   void insertThenDelete_netZero_absent() {
+    // Arrange
     List<RedoOperation> ops =
         ImmutableList.of(op("t0", write(null, ImmutableMap.of(COL_V, 1))), op("t1", delete("t0")));
+    // Act
     RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isFalse();
   }
 
   @Test
   void partialColumnMerge_acrossTwoUpdates_carriesUnsetColumn() {
+    // Arrange
     List<RedoOperation> ops =
         ImmutableList.of(
             op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2))),
             op("t1", write("t0", ImmutableMap.of(COL_V, 3))), // partial: only v
             op("t2", write("t1", ImmutableMap.of(COL_V, 4)))); // partial: only v
+    // Act
     RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(4); // last update wins
     assertThat(intOf(result, COL_W)).isEqualTo(2); // carried from insert
@@ -70,12 +86,15 @@ class ReplayCoreTest {
 
   @Test
   void deleteThenReinsert_reinsertIsRoot_replacesColumns() {
+    // Arrange
     List<RedoOperation> ops =
         ImmutableList.of(
             op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2))),
             op("t1", delete("t0")),
             op("t2", write(null, ImmutableMap.of(COL_V, 7)))); // re-insert, root, only v
+    // Act
     RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(7);
     assertThat(result.columns()).doesNotContainKey(COL_W); // insert replaces, doesn't merge
@@ -83,9 +102,12 @@ class ReplayCoreTest {
 
   @Test
   void updateChainsOffExistingRecord() {
+    // Arrange
     RecordState current = present("tX", ImmutableMap.of(COL_V, 1, COL_W, 2));
     List<RedoOperation> ops = ImmutableList.of(op("t1", write("tX", ImmutableMap.of(COL_V, 9))));
+    // Act
     RecordState result = new RecordApplier(k -> current).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(9);
     assertThat(intOf(result, COL_W)).isEqualTo(2);
@@ -93,6 +115,7 @@ class ReplayCoreTest {
 
   @Test
   void windowScopedRedo_danglingRootBelowBase_tolerated() {
+    // Arrange
     // Windowed repair: the copy's base is at an in-window version "v1", and the op that produced
     // it links to a pre-window (unlogged) root the backup never captured. That op is unreachable
     // from the base and must be tolerated — left unapplied — not rejected as a broken chain.
@@ -101,7 +124,9 @@ class ReplayCoreTest {
         ImmutableList.of(
             op("v1", write("preWindowRoot", ImmutableMap.of(COL_V, 5))), // dangling: prev unlogged
             op("v2", write("v1", ImmutableMap.of(COL_V, 6)))); // chains forward off the base
+    // Act
     RecordState result = new RecordApplier(k -> base).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(6); // forward update applied
     assertThat(intOf(result, COL_W)).isEqualTo(9); // carried from the copy's base
@@ -109,6 +134,7 @@ class ReplayCoreTest {
 
   @Test
   void midChainAnchor_deleteThenReinsert_skipsStaleInsertRoot() {
+    // Arrange
     // Repair anchored mid-chain on the copy's base "I0". After the delete, replay must resume from
     // the re-insert that follows it — never the original insert root "I0", which the base already
     // reflects (it is the base's own version / a chain-ancestor of it). The stale root is skipped
@@ -120,25 +146,31 @@ class ReplayCoreTest {
             op("I0", write(null, ImmutableMap.of(COL_V, 1))), // original (stale) insert root
             op("d1", delete("I0")),
             op("I2", write(null, ImmutableMap.of(COL_V, 7)))); // re-insert after the delete
+    // Act
     RecordState result = new RecordApplier(k -> base).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isTrue();
     assertThat(intOf(result, COL_V)).isEqualTo(7); // the re-insert, not the stale root's 1
   }
 
   @Test
   void reorderedInput_sameResult() {
+    // Arrange
     RedoOperation a = op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2)));
     RedoOperation b = op("t1", write("t0", ImmutableMap.of(COL_V, 3)));
     RedoOperation c = op("t2", write("t1", ImmutableMap.of(COL_V, 4)));
+    // Act
     RecordState forward =
         new RecordApplier(ABSENT).computeWriteOps(key(), ImmutableList.of(a, b, c));
     RecordState reversed =
         new RecordApplier(ABSENT).computeWriteOps(key(), ImmutableList.of(c, b, a));
+    // Assert
     assertThat(reversed).isEqualTo(forward);
   }
 
   @Test
   void fork_twoOpsShareAPrevTxId_rejected() {
+    // Arrange
     // A fork — two ops superseding the same prior version — cannot arise from serializable commit
     // (the prepare CAS linearizes each record's history). This is a defensive guard against a
     // corrupt backup or an encoder bug: replay must reject it loudly, not silently pick a branch.
@@ -147,6 +179,7 @@ class ReplayCoreTest {
             op("t0", write(null, ImmutableMap.of(COL_V, 1))),
             op("t1", write("t0", ImmutableMap.of(COL_V, 2))),
             op("t2", write("t0", ImmutableMap.of(COL_V, 3)))); // also chains off t0 -> fork
+    // Act & Assert
     assertThatThrownBy(() -> new RecordApplier(ABSENT).computeWriteOps(key(), ops))
         .isInstanceOf(CbrlReplayException.class)
         .hasMessageContaining("share prev_tx_id");
@@ -154,11 +187,14 @@ class ReplayCoreTest {
 
   @Test
   void blindDeletesWithNoPrevTxId_areTolerated_notForked() {
+    // Arrange
     // Two DELETEs whose prior version had no captured tx_id (a deemed-as-committed / imported
     // record) carry no prev_tx_id. They are unreachable from the chain walk and must be tolerated
     // (skipped, logged) — NOT rejected as a fork the way two ops sharing a real prev_tx_id are.
     List<RedoOperation> ops = ImmutableList.of(op("d1", delete(null)), op("d2", delete(null)));
+    // Act
     RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);
+    // Assert
     assertThat(result.present()).isFalse();
   }
 

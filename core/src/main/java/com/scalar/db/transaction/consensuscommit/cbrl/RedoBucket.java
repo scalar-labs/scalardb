@@ -20,8 +20,4 @@ final class RedoBucket {
   List<RedoOperation> operations() {
     return operations;
   }
-
-  boolean isEmpty() {
-    return operations.isEmpty();
-  }
 }

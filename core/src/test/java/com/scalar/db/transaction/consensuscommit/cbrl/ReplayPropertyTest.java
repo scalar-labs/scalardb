@@ -30,14 +30,16 @@ class ReplayPropertyTest {
   @Test
   void p1_confluence_shuffledInputYieldsReferenceState() {
     for (long seed : SEEDS) {
+      // Arrange
       List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
       Map<RecordKey, RecordState> expected = new ReferenceApplier().finalStates(ops);
-
       List<RedoOperation> shuffled = new ArrayList<>(ops);
       Collections.shuffle(shuffled, new Random(seed * 31 + 1));
 
+      // Act
       Map<RecordKey, RecordState> actual = replayPerKey(shuffled, ABSENT);
 
+      // Assert
       assertThat(actual.keySet()).as("seed %d keys", seed).isEqualTo(expected.keySet());
       for (RecordKey key : expected.keySet()) {
         assertThat(actual.get(key).observablyEquals(expected.get(key)))
@@ -53,16 +55,19 @@ class ReplayPropertyTest {
   @Test
   void p1_confluence_throughShufflerAndApplier() throws InterruptedException {
     for (long seed : SEEDS) {
+      // Arrange
       List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
       Map<RecordKey, RecordState> expected = new ReferenceApplier().finalStates(ops);
-
       List<RedoOperation> shuffled = new ArrayList<>(ops);
       Collections.shuffle(shuffled, new Random(seed));
 
       for (int bucketCount : new int[] {1, 3, NUM_KEYS}) {
+        // Act
         List<RedoBucket> buckets = RecordShuffler.shuffle(shuffled, bucketCount);
         Map<RecordKey, RecordState> actual =
             applyCollect(new RecordApplier(ABSENT), buckets, Math.max(1, bucketCount / 2));
+
+        // Assert
         for (RecordKey key : expected.keySet()) {
           assertThat(actual.get(key).observablyEquals(expected.get(key)))
               .as("seed %d, N=%d, %s", seed, bucketCount, key)
@@ -76,12 +81,15 @@ class ReplayPropertyTest {
   @Test
   void p2_idempotency_rerunFromOutputIsNoOp() {
     for (long seed : SEEDS) {
+      // Arrange
       List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
 
+      // Act
       Map<RecordKey, RecordState> firstRun = replayPerKey(ops, ABSENT);
       Map<RecordKey, RecordState> secondRun =
           replayPerKey(ops, key -> firstRun.getOrDefault(key, RecordState.absent()));
 
+      // Assert
       assertThat(secondRun).as("seed %d idempotent", seed).isEqualTo(firstRun);
     }
   }
@@ -89,14 +97,17 @@ class ReplayPropertyTest {
   /** P2 via the full pipeline: re-running apply() from the prior run's output changes nothing. */
   @Test
   void p2_idempotency_applyRerunFromOutputIsNoOp() throws InterruptedException {
+    // Arrange
     List<RedoOperation> ops = new RedoLogGenerator(7).generate(NUM_KEYS);
     List<RedoBucket> buckets = RecordShuffler.shuffle(ops, 4);
 
+    // Act
     Map<RecordKey, RecordState> first = applyCollect(new RecordApplier(ABSENT), buckets, 4);
     Map<RecordKey, RecordState> second =
         applyCollect(
             new RecordApplier(key -> first.getOrDefault(key, RecordState.absent())), buckets, 4);
 
+    // Assert
     assertThat(first).isNotEmpty();
     assertThat(second).as("apply() re-run from its own output is a no-op").isEqualTo(first);
   }
@@ -110,13 +121,16 @@ class ReplayPropertyTest {
    */
   @Test
   void p3_connectivity_unreachableOpIsSkipped() {
+    // Arrange
     // INSERT t0 -> UPDATE t1(prev t0) -> UPDATE t2(prev t1). Drop t1 so t2 dangles off t1.
     RedoOperation t0 = new RedoOperation("t0", write(0, null, 10));
     RedoOperation t2 = new RedoOperation("t2", write(0, "t1", 30));
     List<RedoOperation> withGap = new ArrayList<>(ImmutableList.of(t0, t2));
 
+    // Act
     RecordState result = new RecordApplier(ABSENT).computeWriteOps(t0.key(), withGap);
 
+    // Assert
     assertThat(result.present()).isTrue();
     assertThat(result.columns().get(RedoLogGenerator.COL_V).getIntValue().getValue())
         .as("the unreachable successor is skipped, leaving the reachable prefix")
@@ -127,8 +141,10 @@ class ReplayPropertyTest {
   @Test
   void p4_singleOwner_keyOpsShareOneBucket() {
     for (long seed : SEEDS) {
+      // Arrange
       List<RedoOperation> ops = new RedoLogGenerator(seed).generate(NUM_KEYS);
       for (int bucketCount : new int[] {1, 2, 3, 7, NUM_KEYS}) {
+        // Act & Assert: each key's ops must all hash to the one bucket the first op chose.
         Map<RecordKey, Integer> bucketByKey = new LinkedHashMap<>();
         for (RedoOperation op : ops) {
           int bucket = RecordShuffler.bucketOf(op.key(), bucketCount);

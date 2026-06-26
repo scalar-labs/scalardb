@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,10 @@ import org.slf4j.LoggerFactory;
  */
 final class RecordApplier {
   private static final Logger logger = LoggerFactory.getLogger(RecordApplier.class);
+  // Bound on how long apply() waits for workers to drain on shutdown. The happy path returns
+  // immediately (every future already resolved); this only bites if a worker is wedged in a storage
+  // call after a failure.
+  private static final long SHUTDOWN_TIMEOUT_SECONDS = 60;
   private final RestoredRecordReader reader;
 
   RecordApplier(RestoredRecordReader reader) {
@@ -65,7 +70,30 @@ final class RecordApplier {
       }
       throw new CbrlReplayException("Replay failed", cause);
     } finally {
+      // Drain before returning: a worker may still be mid-write-back when one bucket failed, and
+      // storage calls do not honor interruption, so shutdownNow() alone would let apply() return
+      // while another worker is still mutating storage.
+      shutdownAndAwait(executor);
+    }
+  }
+
+  /**
+   * Graceful shutdown: stop accepting work and let the running workers finish, then force-cancel
+   * and wait again if they overrun the bound — so apply() never returns while a worker still
+   * touches storage.
+   */
+  private static void shutdownAndAwait(ExecutorService executor) {
+    executor.shutdown();
+    try {
+      if (!executor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        executor.shutdownNow();
+        if (!executor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+          logger.warn("Replay workers did not terminate after shutdown.");
+        }
+      }
+    } catch (InterruptedException e) {
       executor.shutdownNow();
+      Thread.currentThread().interrupt();
     }
   }
 

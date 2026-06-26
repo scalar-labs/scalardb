@@ -324,6 +324,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   /** Negative control: proves the consistency check detects an inconsistent image. */
   @Test
   void consistencyCheck_ForInconsistentImage_ShouldReportViolations() {
+    // Arrange: key 0 with mismatched tokens across the two tables, key 1 in table_a only — two
+    // distinct inconsistencies the check must catch.
     withRetry(
         tx -> {
           tx.put(putForTableA(USER_NAMESPACE, 0, 111L));
@@ -331,8 +333,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         });
     withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, 1, 333L)));
 
+    // Act
     List<String> violations = findConsistencyViolations();
 
+    // Assert
     assertThat(violations).hasSize(2);
     assertThat(violations.toString()).contains("key 0").contains("key 1");
   }
@@ -343,8 +347,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   @Test
   void restore_WithoutTheCopy_ShouldLeavePreWindowKeysUnrecoverable() throws Exception {
+    // Arrange
     Map<Integer, Long> seed = seedPreWindowBase(PRE_WINDOW_ONLY_KEYS); // logging still OFF
-
     // Open the window and do a little in-window work on OTHER keys, so the backup has redo (the
     // restore path runs) but nothing touches the seeded keys.
     manager.enableRedoLogging();
@@ -357,15 +361,16 @@ public abstract class CbrlBackupRestoreIntegrationTest {
             tx.put(putForTableB(USER_NAMESPACE, key, token));
           });
     }
-
     Map<String, Coordinator.State> backup = backupCoordinator();
-
     // Restore WITHOUT the user-table backup: empty the user tables so the repair base is empty (the
     // coordinator is still restored, so the redo path runs — it just has no copied base to anchor).
     clearUserTables();
     arrangeRestoredCoordinator(backup);
+
+    // Act
     cbrlRestore.restore();
 
+    // Assert
     for (int i = 0; i < PRE_WINDOW_ONLY_KEYS; i++) {
       assertThat(getWithRetry(getForTableA(USER_NAMESPACE, i)))
           .as("without the copy, pre-window-only key %d is unrecoverable", i)
@@ -491,6 +496,51 @@ public abstract class CbrlBackupRestoreIntegrationTest {
         .isEqualTo(Instant.ofEpochSecond(1_700_000_000L));
   }
 
+  /**
+   * A re-insert that drops columns the non-snapshot copy still physically holds must CLEAR them,
+   * not leave the stale copy value. The chain (full insert pre-window, then in-window delete +
+   * re-insert of only the token column) nets to a present record whose user-column set is smaller
+   * than the copied base; since write-back is a partial-column UPSERT, an unset column would
+   * otherwise keep its old copy value. The restore writes the full committed image (NULL for
+   * dropped columns), mirroring the replication log applier's fillUnsetColumnsWithNull.
+   */
+  @Test
+  void restore_AfterReinsertDroppingColumns_ShouldClearTheDroppedColumns() throws Exception {
+    // Arrange
+    int key = 0;
+    long baseToken = tokenCounter.incrementAndGet();
+    // Pre-window committed base with EVERY table_a column set (logging off).
+    withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, key, baseToken)));
+    manager.enableRedoLogging(); // Open the backup window.
+    // Capture the copy at the full-column base, before the in-window delete + re-insert.
+    Map<String, List<Put>> copy = captureCopy();
+    // In-window: delete, then re-insert with ONLY the token column, so the chain nets to a present
+    // record that drops col_int/col_text/col_bool/col_blob — columns the copy base still holds.
+    withRetry(tx -> tx.delete(deleteForTableA(USER_NAMESPACE, key)));
+    long reinsertToken = tokenCounter.incrementAndGet();
+    withRetry(
+        tx -> {
+          tx.get(getForTableA(USER_NAMESPACE, key));
+          tx.put(deterministicPutForTableA(key, reinsertToken, 1 << COL_TOKEN));
+        });
+    installCopy(copy);
+    arrangeRestoredCoordinator(backupCoordinator());
+
+    // Act
+    cbrlRestore.restore();
+    Result restored =
+        getWithRetry(getForTableA(USER_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
+
+    // Assert
+    assertThat(restored.getBigInt(A_TOKEN)).isEqualTo(reinsertToken);
+    assertThat(restored.isNull(A_INT))
+        .as("dropped column is cleared, not the stale copy value")
+        .isTrue();
+    assertThat(restored.isNull(A_TEXT)).isTrue();
+    assertThat(restored.isNull(A_BOOL)).isTrue();
+    assertThat(restored.isNull(A_BLOB)).isTrue();
+  }
+
   /** One committed in-window write on an owned key, recorded for the prefix oracle. */
   private static final class OwnedOp {
     private final String txId;
@@ -526,6 +576,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   @Test
   void restore_AfterDisjointOwnerWorkload_ShouldYieldLatestValuePerColumn() throws Exception {
+    // Arrange
     long[] seedToken = new long[RECORD_COUNT];
     boolean[] present = new boolean[RECORD_COUNT];
     Map<Integer, List<OwnedOp>> history = new HashMap<>();
@@ -581,14 +632,17 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
     installCopy(copy);
     arrangeRestoredCoordinator(coordinatorBackup);
+
+    // Act
     cbrlRestore.restore();
 
+    // Assert
     assertThat(findConsistencyViolations()).as("consistency").isEmpty();
     assertThat(findDisjointViolations(seedToken, history, committedInBackup))
         .as(
             "every restored column == its last in-backup writer (merged, no regression, point-in-time)")
         .isEmpty();
-
+    // A second restore over the already-restored image changes nothing (idempotent).
     Map<Integer, Long> image = readRestoredTokens();
     cbrlRestore.restore();
     assertThat(readRestoredTokens()).as("idempotent restore").isEqualTo(image);
@@ -854,6 +908,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   @Test
   void restore_AfterConcurrentSameKeyTransfers_ShouldPreserveConservation() throws Exception {
+    // Arrange
     long workloadStartMillis = System.currentTimeMillis();
     long initialBalance = 1_000L;
     seedBalances(SEEDED_KEYS, initialBalance); // Half seeded; the rest are created in-window.
@@ -887,8 +942,11 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     installCopy(copy);
     arrangeRestoredCoordinator(coordinatorBackup);
     long beforeRestoreMillis = System.currentTimeMillis();
+
+    // Act
     cbrlRestore.restore();
 
+    // Assert
     assertThat(findConsistencyViolations())
         .as("cross-table consistency: both tables hold the same balance per account")
         .isEmpty();
@@ -954,6 +1012,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   @Test
   void restore_CrashedMidway_ShouldConvergeOnReRun() throws Exception {
+    // Arrange
     long initialBalance = 1_000L;
     seedBalances(SEEDED_KEYS, initialBalance); // Half seeded; the rest are created in-window.
     long total = (long) SEEDED_KEYS * initialBalance;
@@ -977,13 +1036,15 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     installCopy(copy);
     arrangeRestoredCoordinator(backup);
 
-    // Baseline: one full restore, to validate the happy path and to measure its duration.
+    // Act & Assert (baseline): one full restore validates the happy path and measures its duration.
     long startNanos = System.nanoTime();
     cbrlRestore.restore();
     long restoreNanos = System.nanoTime() - startNanos;
     assertThat(findConsistencyViolations()).as("baseline restore consistent").isEmpty();
     assertThat(sumRestoredBalances(TABLE_A, A_TOKEN)).as("baseline conserved").isEqualTo(total);
 
+    // Act & Assert (crash): kill a restore at a sweep of points, then re-run to convergence each
+    // time, asserting the re-derived image stays consistent and conserved no matter where it died.
     CbrlRestore crashingRestore = newCrashingRestore();
     int steps = 4;
     int killed = 0;
@@ -1227,9 +1288,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    */
   @Test
   void restore_ShouldWriteNoCoordinatorRows() throws Exception {
+    // Arrange
     long initialBalance = 1_000L;
     seedBalances(RECORD_COUNT, initialBalance);
-
     manager.enableRedoLogging();
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
@@ -1241,14 +1302,16 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     for (Future<?> future : workload) {
       future.get();
     }
-
     installCopy(copy);
     arrangeRestoredCoordinator(backup);
+
+    // Act
     Set<String> coordinatorBefore = coordinatorTxIds();
-
     cbrlRestore.restore();
+    Set<String> coordinatorAfter = coordinatorTxIds();
 
-    assertThat(coordinatorTxIds())
+    // Assert
+    assertThat(coordinatorAfter)
         .as("restore must not write any coordinator rows of its own")
         .isEqualTo(coordinatorBefore);
   }
