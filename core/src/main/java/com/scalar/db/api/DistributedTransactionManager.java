@@ -438,8 +438,21 @@ public interface DistributedTransactionManager
    * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
    * the implications of invoking this method directly.
    *
+   * <p><b>Finished or unknown transactions:</b> the state is read from the transaction's
+   * Coordinator state row. Once that row has been removed — by {@link #finishTransaction(String)}
+   * or another Coordinator state cleanup — the transaction's terminal outcome is no longer
+   * persisted and cannot be read, so this method returns {@link TransactionState#UNKNOWN}. A
+   * committed-and-cleaned-up transaction, a transaction ID that never existed, and a transaction
+   * whose state row could not be read are therefore indistinguishable through this method: all
+   * return {@link TransactionState#UNKNOWN}.
+   *
+   * <p>Relatedly, calling {@link #rollback(String)} or {@link #abort(String)} on a finished,
+   * cleaned-up transaction ID records a fresh ABORTED state, after which this method returns {@link
+   * TransactionState#ABORTED} for that ID even if the transaction had committed.
+   *
    * @param txId a transaction ID
-   * @return {@link TransactionState}
+   * @return the transaction's {@link TransactionState}, or {@link TransactionState#UNKNOWN} if its
+   *     state can no longer be determined (see above)
    * @throws TransactionException if getting the state of a given transaction fails
    * @throws UnsupportedOperationException if the underlying transaction manager does not support
    *     getting a transaction state
@@ -453,6 +466,15 @@ public interface DistributedTransactionManager
    * transaction manager. Most applications should not call it directly — it is intended for
    * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
    * the implications of invoking this method directly.
+   *
+   * <p><b>Limitation for finished transactions:</b> if the given transaction ID has already
+   * finished and been cleaned up (its Coordinator state row removed by {@link
+   * #finishTransaction(String)} or another Coordinator state cleanup), this method writes a fresh
+   * ABORTED Coordinator state and returns {@link TransactionState#ABORTED} — even if that
+   * transaction had actually committed. (If a Coordinator state row is still present, that existing
+   * state is returned and no new row is written.) A subsequent {@link #getState(String)} for the
+   * same ID then returns {@link TransactionState#ABORTED}, masking the true (possibly committed)
+   * outcome. Do not roll back a transaction ID that may already have finished.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
@@ -469,6 +491,8 @@ public interface DistributedTransactionManager
    * transaction manager. Most applications should not call it directly — it is intended for
    * advanced use cases. Callers are expected to understand the underlying transaction lifecycle and
    * the implications of invoking this method directly.
+   *
+   * <p>The finished-transaction limitation described on {@link #rollback(String)} applies here too.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
@@ -512,6 +536,10 @@ public interface DistributedTransactionManager
    * <p><b>Idempotency:</b> calling this method on a transaction ID whose state row is absent
    * (already finished, never started, or already cleaned up by a concurrent caller) returns {@code
    * true}. Callers may safely re-invoke this method on the same transaction ID.
+   *
+   * <p><b>Effect on {@link #getState(String)}:</b> once this method finishes a transaction and
+   * reclaims its Coordinator state row, {@link #getState(String)} for that transaction ID returns
+   * {@link TransactionState#UNKNOWN}, since the terminal outcome is no longer persisted.
    *
    * <p><b>Group commit:</b> when the transaction ID belongs to a child of a group commit, the call
    * processes the write sets of all sibling children in a single pass and then deletes the shared

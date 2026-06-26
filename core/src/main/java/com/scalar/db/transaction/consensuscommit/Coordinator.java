@@ -256,8 +256,7 @@ public class Coordinator {
     // - The original commit with `tx_id: <full tx ID>` succeeds
     // - `lazy-recovery-abort-with-parent-id` succeeds
     // - `lazy-recovery-abort-with-full-id` fails
-    // - The transaction is treated as committed since the commit `tx_id` is the transaction full
-    // ID
+    // - The transaction is treated as committed since the commit `tx_id` is the transaction full ID
     //
     // D. The original commit with `tx_id: <full tx ID>` is in-progress in case #b, and lazy
     // recovery happens first
@@ -282,20 +281,35 @@ public class Coordinator {
 
       // If the group commit contains the transaction, follow the state.
       // Otherwise, continue to insert a record with the full ID.
+      //
+      // The parent row can also be absent here: the Coordinator state cleanup process removed an
+      // already-finished group-commit row in the small window after our insert conflicted (the row
+      // existed at insert time, which is why the insert conflicted). This is no longer an invariant
+      // violation, so we fall through to insert the full-ID record -- the same path taken when the
+      // parent row is present but does not contain this child. If the transaction actually
+      // committed via a full-ID record (a delayed, standalone commit), that insert conflicts and
+      // the caller re-reads the committed outcome instead of treating the transaction as aborted.
+      // If instead it committed via the parent row (a normal group commit) whose row was then
+      // cleaned up, no full-ID record exists, so the insert succeeds and writes a now-spurious
+      // full-ID ABORTED. This is non-corrupting -- the record was already finalized to its
+      // committed value, so a subsequent rollback is a conditional no-op -- and is the same
+      // accepted residual as the read path's pre-abort/abort cleanup race (the spurious ABORTED is
+      // reclaimed later by the Coordinator state cleanup process). getState for such a finished,
+      // cleaned-up transaction is already documented as indeterminate.
       Optional<State> optState = getState(keys.parentKey);
-      if (!optState.isPresent()) {
-        throw new AssertionError();
-      }
-      State state = optState.get();
-      if (state.getChildIds().contains(keys.childKey)) {
-        if (state.getState() == TransactionState.ABORTED) {
-          return;
-        } else {
-          // Conflicted.
-          throw e;
+      if (optState.isPresent()) {
+        State state = optState.get();
+        if (state.getChildIds().contains(keys.childKey)) {
+          if (state.getState() == TransactionState.ABORTED) {
+            return;
+          } else {
+            // Conflicted.
+            throw e;
+          }
         }
       }
     }
+
     // This record is to intend the transaction is aborted.
     putState(new Coordinator.State(id, TransactionState.ABORTED));
   }

@@ -15,6 +15,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -27,9 +28,11 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitConfig;
+import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -332,6 +335,40 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     verify(handler).onFailureBeforeCommit(any());
     // The bare ID never reserved a slot, so cancelGroupCommitIfNeeded skips remove() entirely.
     verify(groupCommitter, never()).remove(anyString());
+  }
+
+  @Test
+  public void
+      handleCommitConflict_GroupCommitConflictExceptionGivenAndNoStatePersisted_ShouldRollbackRecordsAndThrowCommitConflict()
+          throws Exception {
+    // The group-commit conflict route (commitStateViaGroupCommit catches
+    // GroupCommitConflictException and calls handleCommitConflict) must, when the coordinator state
+    // is absent on re-read, resolve to a definitive conflict -- roll the records back and throw
+    // CommitConflictException -- the same outcome as the normal-commit conflict route. getState for
+    // a group-commit child checks both the parent and full-ID rows, so an absent state genuinely
+    // means the transaction never committed.
+
+    // Arrange
+    // This test resolves the conflict by calling handleCommitConflict directly and never emits or
+    // removes the group, so release the slot reserved by extraInitialize() up front. Leaving it
+    // outstanding would make groupCommitter.close() block on it during teardown.
+    groupCommitter.remove(anyId());
+    clearInvocations(groupCommitter);
+
+    CommitHandler handler = spy(createCommitHandler(true));
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    TransactionContext context =
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+    doNothing().when(handler).rollbackRecords(any(TransactionContext.class));
+    when(coordinator.getState(anyId())).thenReturn(Optional.empty());
+    GroupCommitConflictException cause = new GroupCommitConflictException("conflict");
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCause(cause);
+    verify(handler).rollbackRecords(context);
+    verify(coordinator).getState(anyId());
   }
 
   @Test

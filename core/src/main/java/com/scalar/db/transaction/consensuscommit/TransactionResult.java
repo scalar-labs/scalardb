@@ -136,6 +136,19 @@ public class TransactionResult extends AbstractResult {
     return result.getColumns();
   }
 
+  /**
+   * Returns the ID of the transaction that last wrote this record ({@code tx_id}).
+   *
+   * <p>This is {@code null} when the record has no transaction metadata, i.e. when the record is
+   * deemed as committed (see {@link #isDeemedAsCommitted()} and {@link #getState()}). That happens
+   * when a record imported into a table initially has no transaction metadata. A record written by
+   * a ScalarDB transaction otherwise always carries {@code tx_id} and {@code tx_state} together, so
+   * a non-null {@code tx_id} implies the record is prepared, deleted, or committed by a known
+   * transaction.
+   *
+   * @return the transaction ID that last wrote this record, or {@code null} when the record is
+   *     deemed as committed (no transaction metadata)
+   */
   @Nullable
   public String getId() {
     return getText(Attribute.ID);

@@ -293,8 +293,28 @@ public class RecoveryHandler {
       return false;
     }
 
+    // result is the expired uncommitted writer being recovered, so its tx_id is non-null here;
+    // getId() is @Nullable only for deemed-committed records, which are never recovered.
+    String txId = result.getId();
+    assert txId != null;
+
+    // Before writing the ABORTED state, physically re-read the record. A Coordinator state cleanup
+    // process can finalize the record and remove the writer's state row, so an expired writer with
+    // no coordinator state no longer implies the record is still uncommitted: the writer may have
+    // committed and been cleaned up. Only abort when the record is still uncommitted by this
+    // writer; otherwise writing the ABORTED state would leave a spurious tombstone for an
+    // already-resolved (possibly committed) transaction.
+    Optional<TransactionResult> latest =
+        ConsensusCommitUtils.rereadRecord(storage, tableMetadataManager, selection, result);
+    if (!latest.isPresent() || latest.get().isCommitted() || !txId.equals(latest.get().getId())) {
+      // The record is gone, already committed, or re-prepared by a different transaction — this
+      // writer's record has already been resolved (rolled and possibly replaced), so the record is
+      // consistent and no ABORTED state should be written.
+      return true;
+    }
+
     try {
-      coordinator.putStateForLazyRecoveryRollback(result.getId());
+      coordinator.putStateForLazyRecoveryRollback(txId);
     } catch (CoordinatorConflictException e) {
       TransactionTableMetadata tableMetadata =
           getTransactionTableMetadata(tableMetadataManager, selection);
@@ -308,7 +328,7 @@ public class RecoveryHandler {
           selection.forFullTableName().get(),
           partitionKey,
           clusteringKey,
-          result.getId(),
+          txId,
           e);
 
       if (!ensureRecordResolved) {
@@ -324,7 +344,7 @@ public class RecoveryHandler {
       // coordinator state and roll the record to the winner's outcome so it is physically resolved
       // on return.
       Optional<TransactionState> rereadState =
-          coordinator.getState(result.getId()).map(Coordinator.State::getState);
+          coordinator.getState(txId).map(Coordinator.State::getState);
 
       if (rereadState.isPresent()) {
         // Roll the targeted record to the winner's outcome. This is idempotent: the underlying

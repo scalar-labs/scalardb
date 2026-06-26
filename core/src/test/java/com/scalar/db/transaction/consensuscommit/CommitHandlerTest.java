@@ -677,6 +677,10 @@ public class CommitHandlerTest {
   @Test
   public void abortStateForRollback_WhenConflictAndNoStatePersisted_ShouldThrowUnknown()
       throws CoordinatorException {
+    // The conflicting state row is absent on re-read, which is reachable once the Coordinator state
+    // cleanup process removes a finished row. The outcome cannot be recovered, so an honest
+    // UnknownTransactionStatusException is thrown, preserving the original conflict as the cause.
+
     // Arrange
     doThrow(CoordinatorConflictException.class)
         .when(coordinator)
@@ -685,7 +689,8 @@ public class CommitHandlerTest {
 
     // Act Assert
     assertThatThrownBy(() -> handler.abortStateForRollback(anyId()))
-        .isInstanceOf(UnknownTransactionStatusException.class);
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasCauseInstanceOf(CoordinatorConflictException.class);
     verify(coordinator).getState(anyId());
   }
 
@@ -702,7 +707,47 @@ public class CommitHandlerTest {
 
   @Test
   public void
-      commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
+      abortStateWithoutWriteSet_WhenConflictAndCommittedStatePersisted_ShouldReturnCommitted()
+          throws CoordinatorException, UnknownTransactionStatusException {
+    // Arrange
+    doThrow(CoordinatorConflictException.class).when(coordinator).putState(any());
+    doReturn(Optional.of(new Coordinator.State(anyId(), TransactionState.COMMITTED)))
+        .when(coordinator)
+        .getState(anyId());
+
+    // Act
+    TransactionState result = handler.abortStateWithoutWriteSet(anyId());
+
+    // Assert
+    // A concurrent writer committed first, so the persisted COMMITTED state is followed.
+    assertThat(result).isEqualTo(TransactionState.COMMITTED);
+    verify(coordinator).getState(anyId());
+  }
+
+  @Test
+  public void abortStateWithoutWriteSet_WhenConflictAndNoStatePersisted_ShouldReturnAborted()
+      throws CoordinatorException, UnknownTransactionStatusException {
+    // Unlike abortStateForRollback (the One-phase Commit I/F abort-by-id path), this method is used
+    // by the self-abort path and all Two-phase Commit I/F aborts, which cannot be racing a real,
+    // deletable COMMITTED row. A conflicting-then-absent coordinator state is therefore
+    // determinable as ABORTED (the conflict was a lazy-recovery ABORTED later removed by the
+    // Coordinator state cleanup process), not an honest UNKNOWN.
+
+    // Arrange
+    doThrow(CoordinatorConflictException.class).when(coordinator).putState(any());
+    doReturn(Optional.empty()).when(coordinator).getState(anyId());
+
+    // Act
+    TransactionState result = handler.abortStateWithoutWriteSet(anyId());
+
+    // Assert
+    assertThat(result).isEqualTo(TransactionState.ABORTED);
+    verify(coordinator).getState(anyId());
+  }
+
+  @Test
+  public void
+      commit_ExceptionThrownInPrepareRecordsAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldRollbackRecordsAndThrowCommitException()
           throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
@@ -717,8 +762,13 @@ public class CommitHandlerTest {
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
 
     // Act
+
+    // The self-abort path provably never committed, so a conflicting-then-absent coordinator state
+    // resolves to ABORTED rather than UNKNOWN. The commit then surfaces the original preparation
+    // failure (a CommitException) instead of masking it with an UnknownTransactionStatusException.
     assertThatThrownBy(() -> handler.commit(context))
-        .isInstanceOf(UnknownTransactionStatusException.class);
+        .isInstanceOf(CommitException.class)
+        .isNotInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
 
@@ -733,7 +783,7 @@ public class CommitHandlerTest {
             new Coordinator.State(
                 anyId(), expectedSingleGroupWriteSet(snapshot), TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
-    verify(handler, never()).rollbackRecords(context);
+    verify(handler).rollbackRecords(context);
     verify(handler).onFailureBeforeCommit(context);
   }
 
@@ -909,7 +959,7 @@ public class CommitHandlerTest {
 
   @Test
   public void
-      commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
+      commit_ExceptionThrownInValidationAndCoordinatorConflictExceptionThrownInCoordinatorAbortThenNothingReturnedInGetState_ShouldRollbackRecordsAndThrowCommitException()
           throws ExecutionException, CoordinatorException, ValidationConflictException,
               CrudException {
     // Arrange
@@ -925,8 +975,13 @@ public class CommitHandlerTest {
         createTransactionContext(anyId(), snapshot, Isolation.SERIALIZABLE, false, false);
 
     // Act
+
+    // The self-abort path provably never committed, so a conflicting-then-absent coordinator state
+    // resolves to ABORTED rather than UNKNOWN. The commit then surfaces the original validation
+    // failure (a CommitException) instead of masking it with an UnknownTransactionStatusException.
     assertThatThrownBy(() -> handler.commit(context))
-        .isInstanceOf(UnknownTransactionStatusException.class);
+        .isInstanceOf(CommitException.class)
+        .isNotInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
 
@@ -937,7 +992,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(anyId(), writeSet, TransactionState.COMMITTED));
     verify(coordinator).getState(anyId());
-    verify(handler, never()).rollbackRecords(context);
+    verify(handler).rollbackRecords(context);
     verify(handler).onFailureBeforeCommit(context);
   }
 
@@ -1068,8 +1123,14 @@ public class CommitHandlerTest {
 
   @Test
   public void
-      commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenNothingReturnedInGetState_ShouldThrowUnknown()
+      commit_CoordinatorConflictExceptionThrownInCoordinatorCommitAndThenNothingReturnedInGetState_ShouldRollbackRecordsAndThrowCommitConflict()
           throws ExecutionException, CoordinatorException, CrudException {
+    // Writing the COMMITTED state conflicts, and the conflicting row is absent on re-read. The only
+    // concurrent writer of this transaction's state is a lazy recovery, which only ever writes
+    // ABORTED, so the conflicting row was an ABORTED state that the Coordinator state cleanup
+    // process then removed. The transaction is therefore aborted, so the records are rolled back
+    // and a conflict is reported -- the same outcome as when the ABORTED state is still present.
+
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doNothing().when(storage).mutate(anyList());
@@ -1081,13 +1142,14 @@ public class CommitHandlerTest {
 
     // Act
     assertThatThrownBy(() -> handler.commit(context))
-        .isInstanceOf(UnknownTransactionStatusException.class);
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(CoordinatorConflictException.class);
 
     // Assert
     verify(storage, times(2)).mutate(anyList());
     verifyCoordinatorPutState(TransactionState.COMMITTED, snapshot);
     verify(coordinator).getState(anyId());
-    verify(handler, never()).rollbackRecords(context);
+    verify(handler).rollbackRecords(context);
     verify(handler, never()).onFailureBeforeCommit(any());
   }
 
