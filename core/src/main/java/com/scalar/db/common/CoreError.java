@@ -1246,6 +1246,12 @@ public enum CoreError implements ScalarDbError {
       "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_RESOLVING_UNCOMMITTED_RECORD_RETRY_LIMIT_EXCEEDED(
+      Category.CONCURRENCY_ERROR,
+      "0030",
+      "Resolving an uncommitted record exceeded the retry limit during recovery. Transaction ID: %s",
+      "",
+      ""),
 
   //
   // Errors for the internal error category
@@ -1467,12 +1473,6 @@ public enum CoreError implements ScalarDbError {
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0000",
       "Rolling back the transaction failed. Details: %s",
-      "",
-      ""),
-  CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
-      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
-      "0001",
-      "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS(

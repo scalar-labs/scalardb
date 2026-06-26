@@ -6,6 +6,7 @@ import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionSetBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
@@ -15,6 +16,7 @@ import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanBuilder;
@@ -37,6 +39,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -450,6 +453,49 @@ public final class ConsensusCommitUtils {
           CoreError.TABLE_NOT_FOUND.buildMessage(operation.forFullTableName().get()));
     }
     return metadata;
+  }
+
+  /**
+   * Re-reads the record physically (with linearizable consistency). This is used to determine the
+   * record's current state when the writer's coordinator state is absent: since a Coordinator state
+   * cleanup process can run, an absent state no longer implies the writer never committed, so a
+   * previously observed (uncommitted) result may be stale.
+   *
+   * @param storage the storage to read from
+   * @param tableMetadataManager the metadata manager used to resolve the table metadata
+   * @param selection the selection that identifies the record (provides namespace/table/metadata)
+   * @param observed the previously observed, uncommitted {@link TransactionResult} for the record
+   * @return the freshly re-read record, or empty if the record no longer exists
+   * @throws ExecutionException if the underlying storage read fails
+   */
+  static Optional<TransactionResult> rereadRecord(
+      DistributedStorage storage,
+      TransactionTableMetadataManager tableMetadataManager,
+      Selection selection,
+      TransactionResult observed)
+      throws ExecutionException {
+    TransactionTableMetadata transactionTableMetadata =
+        getTransactionTableMetadata(tableMetadataManager, selection);
+    TableMetadata tableMetadata = transactionTableMetadata.getTableMetadata();
+    Key partitionKey = ScalarDbUtils.getPartitionKey(observed, tableMetadata);
+    Optional<Key> clusteringKey = ScalarDbUtils.getClusteringKey(observed, tableMetadata);
+    Optional<Result> result = storage.get(buildReReadGet(selection, partitionKey, clusteringKey));
+    return result.map(TransactionResult::new);
+  }
+
+  private static Get buildReReadGet(
+      Selection selection, Key partitionKey, Optional<Key> clusteringKey) {
+    assert selection.forNamespace().isPresent() && selection.forTable().isPresent();
+    // Read all columns (no projections) with linearizable consistency so the before-image and the
+    // transaction metadata are available.
+    GetBuilder.BuildableGetWithPartitionKey builder =
+        Get.newBuilder()
+            .namespace(selection.forNamespace().get())
+            .table(selection.forTable().get())
+            .partitionKey(partitionKey)
+            .consistency(Consistency.LINEARIZABLE);
+    clusteringKey.ifPresent(builder::clusteringKey);
+    return builder.build();
   }
 
   static Get prepareGetForStorage(Get get, TableMetadata metadata) {
