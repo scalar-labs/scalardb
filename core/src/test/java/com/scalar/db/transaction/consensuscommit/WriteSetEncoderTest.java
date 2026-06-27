@@ -11,15 +11,24 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -442,5 +451,113 @@ class WriteSetEncoderTest {
     assertThat(putEntry.getColumnsList()).hasSize(1);
     assertThat(putEntry.getColumns(0).getName()).isEqualTo("v");
     assertThat(putEntry.getColumns(0).getTextValue().getValue()).isEqualTo("user-value");
+  }
+
+  @Test
+  void
+      encodeFromWriteSetEntries_GivenWriteSetsFromMultipleParticipants_ShouldGroupByParticipantAndStampParticipantId() {
+    // Arrange — p1 owns two entries, p2 owns one; map iteration order is p1 then p2.
+    TwoPhaseCommit.WriteSetEntry p1Write =
+        writeSetEntry(
+            TwoPhaseCommit.WriteSetEntry.Type.WRITE,
+            Key.ofText("pk", "a"),
+            Optional.of(Key.ofInt("ck", 1)));
+    TwoPhaseCommit.WriteSetEntry p2Write =
+        writeSetEntry(
+            TwoPhaseCommit.WriteSetEntry.Type.WRITE, Key.ofText("pk", "b"), Optional.empty());
+    TwoPhaseCommit.WriteSetEntry p1Delete =
+        writeSetEntry(
+            TwoPhaseCommit.WriteSetEntry.Type.DELETE,
+            Key.ofText("pk", "c"),
+            Optional.of(Key.ofInt("ck", 2)));
+
+    Map<String, List<TwoPhaseCommit.WriteSetEntry>> writeSetsByParticipant = new LinkedHashMap<>();
+    writeSetsByParticipant.put("p1", Arrays.asList(p1Write, p1Delete));
+    writeSetsByParticipant.put("p2", Collections.singletonList(p2Write));
+
+    // Act
+    WriteSet writeSet =
+        WriteSetEncoder.encodeFromWriteSetEntries(
+            writeSetsByParticipant, /* includeColumns= */ false);
+
+    // Assert — two groups in map iteration order (p1, then p2); p1 holds both its entries.
+    assertThat(writeSet.getSchemaVersion()).isEqualTo(1);
+    assertThat(writeSet.getEntryGroupsList()).hasSize(2);
+
+    EntryGroup p1Group = writeSet.getEntryGroups(0);
+    assertThat(p1Group.hasChildId()).isFalse();
+    assertThat(p1Group.getEntriesList()).hasSize(2);
+    Entry p1FirstEntry = p1Group.getEntries(0);
+    assertThat(p1FirstEntry.getParticipantId()).isEqualTo("p1");
+    assertThat(p1FirstEntry.getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
+    assertThat(p1FirstEntry.getNamespaceName()).isEqualTo(NAMESPACE);
+    assertThat(p1FirstEntry.getTableName()).isEqualTo(TABLE);
+    assertThat(p1FirstEntry.hasClusteringKey()).isTrue();
+    // includeColumns=false: non-key columns are not persisted.
+    assertThat(p1FirstEntry.getColumnsList()).isEmpty();
+    Entry p1SecondEntry = p1Group.getEntries(1);
+    assertThat(p1SecondEntry.getParticipantId()).isEqualTo("p1");
+    assertThat(p1SecondEntry.getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_DELETE);
+
+    EntryGroup p2Group = writeSet.getEntryGroups(1);
+    assertThat(p2Group.getEntriesList()).hasSize(1);
+    Entry p2Entry = p2Group.getEntries(0);
+    assertThat(p2Entry.getParticipantId()).isEqualTo("p2");
+    assertThat(p2Entry.hasClusteringKey()).isFalse();
+  }
+
+  @Test
+  void encodeFromWriteSetEntries_WhenIncludeColumns_ShouldEncodeNonKeyColumnsOfWriteEntries() {
+    // Arrange — a WRITE entry carrying one non-key column (the participant already filtered out any
+    // ConsensusCommit-internal columns).
+    TwoPhaseCommit.WriteSetEntry write =
+        writeSetEntry(
+            TwoPhaseCommit.WriteSetEntry.Type.WRITE, Key.ofText("pk", "a"), Optional.empty());
+    when(write.getColumns()).thenReturn(Collections.singletonList(TextColumn.of("v", "val")));
+    Map<String, List<TwoPhaseCommit.WriteSetEntry>> writeSetsByParticipant = new LinkedHashMap<>();
+    writeSetsByParticipant.put("p1", Collections.singletonList(write));
+
+    // Act
+    WriteSet writeSet =
+        WriteSetEncoder.encodeFromWriteSetEntries(
+            writeSetsByParticipant, /* includeColumns= */ true);
+
+    // Assert — the non-key column is encoded on the entry.
+    Entry entry = writeSet.getEntryGroups(0).getEntries(0);
+    assertThat(entry.getColumnsList()).hasSize(1);
+    assertThat(entry.getColumns(0).getName()).isEqualTo("v");
+    assertThat(entry.getColumns(0).getTextValue().getValue()).isEqualTo("val");
+  }
+
+  @Test
+  void encodeFromWriteSetEntries_WhenAParticipantHasNoEntries_ShouldSkipThatParticipant() {
+    // Arrange — p1 owns one entry, p2 owns none (e.g. a read-only participant). The empty
+    // participant must not contribute an EntryGroup.
+    TwoPhaseCommit.WriteSetEntry p1Write =
+        writeSetEntry(
+            TwoPhaseCommit.WriteSetEntry.Type.WRITE, Key.ofText("pk", "a"), Optional.empty());
+    Map<String, List<TwoPhaseCommit.WriteSetEntry>> writeSetsByParticipant = new LinkedHashMap<>();
+    writeSetsByParticipant.put("p1", Collections.singletonList(p1Write));
+    writeSetsByParticipant.put("p2", Collections.emptyList());
+
+    // Act
+    WriteSet writeSet =
+        WriteSetEncoder.encodeFromWriteSetEntries(
+            writeSetsByParticipant, /* includeColumns= */ false);
+
+    // Assert — only p1's group is emitted; the empty p2 is skipped.
+    assertThat(writeSet.getEntryGroupsList()).hasSize(1);
+    assertThat(writeSet.getEntryGroups(0).getEntries(0).getParticipantId()).isEqualTo("p1");
+  }
+
+  private static TwoPhaseCommit.WriteSetEntry writeSetEntry(
+      TwoPhaseCommit.WriteSetEntry.Type type, Key partitionKey, Optional<Key> clusteringKey) {
+    TwoPhaseCommit.WriteSetEntry entry = mock(TwoPhaseCommit.WriteSetEntry.class);
+    when(entry.getType()).thenReturn(type);
+    when(entry.getNamespaceName()).thenReturn(NAMESPACE);
+    when(entry.getTableName()).thenReturn(TABLE);
+    when(entry.getPartitionKey()).thenReturn(partitionKey);
+    when(entry.getClusteringKey()).thenReturn(clusteringKey);
+    return entry;
   }
 }
