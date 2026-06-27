@@ -46,4 +46,26 @@ public interface DistributedTransactionProvider {
    */
   @Nullable
   TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(DatabaseConfig config);
+
+  /**
+   * Creates an instance of {@link TwoPhaseCommit.Coordinator} for the new multi-participant
+   * two-phase commit interface.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommit.Coordinator}. If the transaction manager does not
+   *     support the two-phase commit interface, returns {@code null}.
+   */
+  @Nullable
+  TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config);
+
+  /**
+   * Creates an instance of {@link TwoPhaseCommit.Participant} for the new multi-participant
+   * two-phase commit interface.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommit.Participant}. If the transaction manager does not
+   *     support the two-phase commit interface, returns {@code null}.
+   */
+  @Nullable
+  TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config);
 }

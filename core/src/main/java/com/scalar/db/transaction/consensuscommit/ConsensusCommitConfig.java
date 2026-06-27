@@ -23,6 +23,7 @@ public class ConsensusCommitConfig {
   public static final String PREFIX = DatabaseConfig.PREFIX + "consensus_commit.";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
   public static final String COORDINATOR_NAMESPACE = PREFIX + "coordinator.namespace";
+  public static final String PARTICIPANT_ID = PREFIX + "participant_id";
 
   public static final String PARALLEL_EXECUTOR_COUNT = PREFIX + "parallel_executor_count";
   public static final String PARALLEL_PREPARATION_ENABLED = PREFIX + "parallel_preparation.enabled";
@@ -68,6 +69,7 @@ public class ConsensusCommitConfig {
 
   private final Isolation isolation;
   @Nullable private final String coordinatorNamespace;
+  @Nullable private final String participantId;
 
   private final int parallelExecutorCount;
   private final boolean parallelPreparationEnabled;
@@ -129,6 +131,7 @@ public class ConsensusCommitConfig {
     }
 
     coordinatorNamespace = getString(properties, COORDINATOR_NAMESPACE, null);
+    participantId = getString(properties, PARTICIPANT_ID, null);
 
     parallelExecutorCount =
         getInt(properties, PARALLEL_EXECUTOR_COUNT, DEFAULT_PARALLEL_EXECUTOR_COUNT);
@@ -194,6 +197,19 @@ public class ConsensusCommitConfig {
 
   public Optional<String> getCoordinatorNamespace() {
     return Optional.ofNullable(coordinatorNamespace);
+  }
+
+  /**
+   * Returns the stable logical identifier of this participant in the new TwoPhaseCommit API path.
+   *
+   * <p>Required for the multi-participant Participant implementation (constructor will throw if
+   * absent). Optional for the existing single-participant ConsensusCommit path, which never reads
+   * this property even when it is set.
+   *
+   * @return an {@code Optional} containing the configured participant ID, or empty if unset
+   */
+  public Optional<String> getParticipantId() {
+    return Optional.ofNullable(participantId);
   }
 
   public int getParallelExecutorCount() {

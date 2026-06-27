@@ -2,6 +2,7 @@ package com.scalar.db.service;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.File;
@@ -57,6 +58,30 @@ public class TransactionFactory {
   @Nullable
   public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
     return ProviderManager.createTwoPhaseCommitTransactionManager(config);
+  }
+
+  /**
+   * Returns a {@link TwoPhaseCommit.Coordinator} instance for the new multi-participant two-phase
+   * commit interface.
+   *
+   * @return a {@link TwoPhaseCommit.Coordinator} instance. If the transaction manager does not
+   *     support the two-phase commit interface, returns {@code null}.
+   */
+  @Nullable
+  public TwoPhaseCommit.Coordinator getTwoPhaseCommitCoordinator() {
+    return ProviderManager.createTwoPhaseCommitCoordinator(config);
+  }
+
+  /**
+   * Returns a {@link TwoPhaseCommit.Participant} instance for the new multi-participant two-phase
+   * commit interface.
+   *
+   * @return a {@link TwoPhaseCommit.Participant} instance. If the transaction manager does not
+   *     support the two-phase commit interface, returns {@code null}.
+   */
+  @Nullable
+  public TwoPhaseCommit.Participant getTwoPhaseCommitParticipant() {
+    return ProviderManager.createTwoPhaseCommitParticipant(config);
   }
 
   /**
