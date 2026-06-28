@@ -55,8 +55,11 @@ import org.slf4j.LoggerFactory;
  * Consensus-commit-backed {@link TwoPhaseCommit.Participant} implementation.
  *
  * <p>Maintains a per-transaction {@link TransactionContext} keyed by the canonical transaction ID
- * supplied by the Coordinator. The context is created by {@link #join} and removed after {@link
- * #commitRecords} or {@link #rollbackRecords} returns.
+ * supplied by the Coordinator. The context is created by {@link #join} and removed once the
+ * participant has run the last step the Coordinator drives for it: {@link #commitRecords} or {@link
+ * #rollbackRecords} for a participant with writes, or an earlier step for a write-less participant
+ * whose later steps the Coordinator skips — {@link #validateRecords}, or {@link #prepareRecords}
+ * when validation is not required either.
  *
  * <p>This implementation requires a stable {@code participantId} (see {@link
  * ConsensusCommitConfig#PARTICIPANT_ID}) so that {@link TwoPhaseCommit.WriteSetEntry} instances
@@ -410,7 +413,23 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
         // status). Mirrors TwoPhaseConsensusCommit.prepare, which sets needRollback in a finally.
         pc.toPrepared();
       }
-      return new PreparationResultImpl(buildWriteSetEntries(context));
+      List<TwoPhaseCommit.WriteSetEntry> writeSet = buildWriteSetEntries(context);
+      boolean validationRequired = context.isValidationRequired();
+      // commitRecords is required iff this participant has writes to commit. Derive it from the
+      // same snapshot predicate validateRecords uses for its self-release, so the commit-step skip
+      // and the validate-step self-release stay in lockstep on a single source. This drives the
+      // Coordinator's commit-step skip via PreparationResult#isCommitRequired.
+      boolean commitRequired = context.snapshot.hasWritesOrDeletes();
+      // The Coordinator skips validateRecords when validation is not required and commitRecords
+      // when commit is not required. When both are skipped, prepareRecords is this participant's
+      // last step, so release the context now (a write-less participant has written no PREPARED
+      // record). The status thus goes ACTIVE -> PREPARED -> RELEASED within this synchronized
+      // block; the transient PREPARED is harmless because a concurrent rollbackRecords sees
+      // RELEASED and no-ops.
+      if (!validationRequired && !commitRequired) {
+        release(transactionId, pc);
+      }
+      return new PreparationResultImpl(writeSet, validationRequired, commitRequired);
     }
   }
 
@@ -420,8 +439,20 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     ParticipantContext pc = getParticipantContext(transactionId);
     synchronized (pc) {
       pc.checkPrepared();
-      commit.validateRecords(pc.context());
-      pc.toValidated();
+      TransactionContext context = pc.context();
+      commit.validateRecords(context);
+      if (context.snapshot.hasWritesOrDeletes()) {
+        pc.toValidated();
+      } else {
+        // The Coordinator skips commitRecords for a write-less participant, so validateRecords is
+        // this participant's last step. Release the context now (no PREPARED records to commit).
+        // This stays in agreement with the Coordinator's commit-step skip by construction: both
+        // this self-release and PreparationResult#isCommitRequired derive from
+        // snapshot.hasWritesOrDeletes(), so the Coordinator skips commitRecords exactly when this
+        // branch has already released the context (otherwise it could drive commitRecords on a
+        // released context -> TNF).
+        release(transactionId, pc);
+      }
     }
   }
 
@@ -436,17 +467,25 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
       } finally {
         // The Coordinator has durably decided COMMITTED; release the context even on failure (lazy
         // recovery commits the records via the COMMITTED Coordinator state).
-        pc.toReleased();
-        contexts.remove(transactionId, pc);
+        release(transactionId, pc);
       }
     }
   }
 
   @Override
-  public void rollbackRecords(String transactionId) throws TransactionNotFoundException {
-    ParticipantContext pc = getParticipantContext(transactionId);
+  public void rollbackRecords(String transactionId) {
+    ParticipantContext pc = contexts.get(transactionId);
+    if (pc == null) {
+      // Unknown or already-released transaction (e.g., a write-less participant that released early
+      // when its later steps were skipped, or a prior rollback): nothing to undo. Lenient no-op,
+      // mirroring Coordinator#rollback.
+      return;
+    }
     synchronized (pc) {
-      pc.checkAlive();
+      if (pc.isReleased()) {
+        // Released by a concurrent terminal step after we fetched the reference; nothing to undo.
+        return;
+      }
       TransactionContext context = pc.context();
       try {
         try {
@@ -460,10 +499,17 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
           commit.rollbackRecords(context);
         }
       } finally {
-        pc.toReleased();
-        contexts.remove(transactionId, pc);
+        release(transactionId, pc);
       }
     }
+  }
+
+  // Releases a participant context: marks it RELEASED (visible under the lock to a concurrent op
+  // that obtained the reference before the removal) and removes it from the map. The caller must
+  // hold {@code synchronized(pc)}.
+  private void release(String transactionId, ParticipantContext pc) {
+    pc.toReleased();
+    contexts.remove(transactionId, pc);
   }
 
   // Resolves the participant context for a known transaction, or throws if none is registered
@@ -499,6 +545,12 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
   private List<TwoPhaseCommit.WriteSetEntry> buildWriteSetEntries(TransactionContext context) {
     Snapshot snapshot = context.snapshot;
     List<TwoPhaseCommit.WriteSetEntry> entries = new ArrayList<>();
+    // Returns empty iff !snapshot.hasWritesOrDeletes(), so the write set shipped to the Coordinator
+    // is empty exactly for a write-less participant. The Coordinator gates writing the COMMITTED
+    // state row on this write set being non-empty (its hasWrites), which must agree with
+    // isCommitRequired and the validate-step self-release (both derived from
+    // snapshot.hasWritesOrDeletes()); preserve this empty-iff-write-less guarantee if this method
+    // ever starts filtering entries.
     if (!snapshot.hasWritesOrDeletes()) {
       return entries;
     }
@@ -557,14 +609,31 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
 
   private static final class PreparationResultImpl implements TwoPhaseCommit.PreparationResult {
     private final List<TwoPhaseCommit.WriteSetEntry> writeSet;
+    private final boolean validationRequired;
+    private final boolean commitRequired;
 
-    PreparationResultImpl(List<TwoPhaseCommit.WriteSetEntry> writeSet) {
+    PreparationResultImpl(
+        List<TwoPhaseCommit.WriteSetEntry> writeSet,
+        boolean validationRequired,
+        boolean commitRequired) {
       this.writeSet = writeSet;
+      this.validationRequired = validationRequired;
+      this.commitRequired = commitRequired;
     }
 
     @Override
     public List<TwoPhaseCommit.WriteSetEntry> getWriteSet() {
       return writeSet;
+    }
+
+    @Override
+    public boolean isValidationRequired() {
+      return validationRequired;
+    }
+
+    @Override
+    public boolean isCommitRequired() {
+      return commitRequired;
     }
   }
 
@@ -702,11 +771,13 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
    * single-phase paths ({@code ConsensusCommit} / {@code ConsensusCommitManager}), which have no
    * such lifecycle.
    *
-   * <p>The entry is removed from {@link #contexts} at {@code commitRecords} / {@code
-   * rollbackRecords} (no terminal retention). {@link Status#RELEASED} is not for retention: it only
-   * lets a concurrent in-flight operation that obtained its reference before the removal observe
-   * the termination (under the lock) and fail with {@link TransactionNotFoundException} instead of
-   * acting on a finished transaction.
+   * <p>The entry is removed from {@link #contexts} at the participant's last driven step (no
+   * terminal retention): {@code commitRecords} / {@code rollbackRecords} for a participant with
+   * writes, or an earlier step ({@code validateRecords}, or {@code prepareRecords} when validation
+   * is not required either) for a write-less participant whose later steps the Coordinator skips.
+   * {@link Status#RELEASED} is not for retention: it only lets a concurrent in-flight operation
+   * that obtained its reference before the removal observe the termination (under the lock) and
+   * fail with {@link TransactionNotFoundException} instead of acting on a finished transaction.
    *
    * <p>Not internally synchronized: every status read/transition below must be performed while
    * synchronized on the instance (the participant holds {@code synchronized(context)} across check,
@@ -769,6 +840,11 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     /** Whether records have been PREPARED in storage (so a rollback must undo them). */
     boolean isPrepared() {
       return status == Status.PREPARED || status == Status.VALIDATED;
+    }
+
+    /** Whether the context has already been released (terminated). */
+    boolean isReleased() {
+      return status == Status.RELEASED;
     }
 
     void toPrepared() {
