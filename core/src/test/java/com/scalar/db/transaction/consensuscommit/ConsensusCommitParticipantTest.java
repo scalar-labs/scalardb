@@ -32,10 +32,12 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -449,17 +451,100 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
-  void prepareRecords_ReadOnlyWithNoWrites_ShouldReturnEmptyWriteSet() throws Exception {
+  void prepareRecords_WriteLessAndNoValidation_ShouldReturnEmptyResultAndReleaseContext()
+      throws Exception {
+    // Read-only, SNAPSHOT isolation: no writes and no validation required.
     participant.join(ANY_TX_ID, true, Collections.emptyMap());
 
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
 
-    List<TwoPhaseCommit.WriteSetEntry> entries =
-        participant.prepareRecords(ANY_TX_ID, 1000L).getWriteSet();
-    assertThat(entries).isEmpty();
+    TwoPhaseCommit.PreparationResult result = participant.prepareRecords(ANY_TX_ID, 1000L);
+    assertThat(result.getWriteSet()).isEmpty();
+    assertThat(result.isValidationRequired()).isFalse();
+    // No writes -> commit not required; parity with !getWriteSet().isEmpty().
+    assertThat(result.isCommitRequired()).isFalse();
     verify(commit).prepareRecords(any(TransactionContext.class), eq(1000L));
+
+    // The Coordinator will skip both validateRecords and commitRecords, so prepareRecords is this
+    // participant's last step: the context is released, and the entry removed from the map.
+    assertThat(getContext(ANY_TX_ID)).isNull();
+    assertThatThrownBy(() -> participant.validateRecords(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  void prepareRecords_WriteLessButValidationRequired_ShouldKeepContextForValidation()
+      throws Exception {
+    // SERIALIZABLE with a recorded read but no writes: validation is required, so prepareRecords is
+    // not the last step and the context must survive.
+    when(config.getIsolation()).thenReturn(Isolation.SERIALIZABLE);
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    recordReadForValidation(ANY_TX_ID);
+
+    doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
+    doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
+    doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
+
+    TwoPhaseCommit.PreparationResult result = participant.prepareRecords(ANY_TX_ID, 1000L);
+    assertThat(result.getWriteSet()).isEmpty();
+    assertThat(result.isValidationRequired()).isTrue();
+    // No writes -> commit not required, even though validation is.
+    assertThat(result.isCommitRequired()).isFalse();
+    // Context kept, so validateRecords can run.
+    assertThat(getContext(ANY_TX_ID)).isNotNull();
+  }
+
+  @Test
+  void validateRecords_WriteLess_ShouldReleaseContext() throws Exception {
+    // A write-less participant that required validation: validateRecords is its last step (the
+    // Coordinator skips commitRecords), so it releases the context there.
+    when(config.getIsolation()).thenReturn(Isolation.SERIALIZABLE);
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    recordReadForValidation(ANY_TX_ID);
+
+    doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
+    doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
+    doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
+    participant.prepareRecords(ANY_TX_ID, 1000L);
+
+    participant.validateRecords(ANY_TX_ID);
+
+    verify(commit).validateRecords(any(TransactionContext.class));
+    // Released at validateRecords: a subsequent commitRecords finds no context.
+    assertThat(getContext(ANY_TX_ID)).isNull();
+    assertThatThrownBy(() -> participant.commitRecords(ANY_TX_ID, 2000L))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  void validateRecords_WriteLess_WhenValidationFails_ShouldKeepContextForRollback()
+      throws Exception {
+    // A write-less SERIALIZABLE participant whose validation fails: on the throw path neither
+    // toValidated() nor the write-less release() runs, so the context must survive for the
+    // Coordinator's abort path to drive rollbackRecords on it.
+    when(config.getIsolation()).thenReturn(Isolation.SERIALIZABLE);
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    recordReadForValidation(ANY_TX_ID);
+
+    doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
+    doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
+    doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
+    participant.prepareRecords(ANY_TX_ID, 1000L);
+
+    doThrow(new ValidationConflictException("conflict", ANY_TX_ID))
+        .when(commit)
+        .validateRecords(any(TransactionContext.class));
+
+    // validateRecords surfaces the conflict ...
+    assertThatThrownBy(() -> participant.validateRecords(ANY_TX_ID))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // ... and the context survives, so rollbackRecords can still undo the (write-less) prepare.
+    assertThat(getContext(ANY_TX_ID)).isNotNull();
+    participant.rollbackRecords(ANY_TX_ID);
+    verify(commit).rollbackRecords(any(TransactionContext.class));
   }
 
   @Test
@@ -498,8 +583,10 @@ class ConsensusCommitParticipantTest {
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
 
-    List<TwoPhaseCommit.WriteSetEntry> entries =
-        participant.prepareRecords(ANY_TX_ID, 2000L).getWriteSet();
+    TwoPhaseCommit.PreparationResult result = participant.prepareRecords(ANY_TX_ID, 2000L);
+    // Has writes -> commit required; parity with !getWriteSet().isEmpty().
+    assertThat(result.isCommitRequired()).isTrue();
+    List<TwoPhaseCommit.WriteSetEntry> entries = result.getWriteSet();
     assertThat(entries).hasSize(2);
     assertThat(participant.getId()).isEqualTo(ANY_PARTICIPANT_ID);
     assertThat(entries)
@@ -632,11 +719,15 @@ class ConsensusCommitParticipantTest {
 
   @Test
   void validateRecords_ShouldDelegateToParticipantCommitHandler() throws Exception {
+    // prepare() injects a write, so this is the write-bearing validate path: the context is marked
+    // VALIDATED and kept alive for the Coordinator to drive commitRecords (it is NOT released here,
+    // unlike the write-less path in validateRecords_WriteLess_ShouldReleaseContext).
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
     prepare(ANY_TX_ID);
     doNothing().when(commit).validateRecords(any(TransactionContext.class));
     participant.validateRecords(ANY_TX_ID);
     verify(commit).validateRecords(any(TransactionContext.class));
+    assertThat(getContext(ANY_TX_ID)).isNotNull();
   }
 
   @Test
@@ -704,16 +795,30 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
-  void rollbackRecords_UnknownTransactionId_ShouldThrowTransactionNotFoundException() {
-    // An absent local context (e.g., expired) surfaces as not-found; the Coordinator drives this
-    // step best-effort and lazy recovery reconciles.
-    assertThatThrownBy(() -> participant.rollbackRecords("unknown-tx"))
-        .isInstanceOf(TransactionNotFoundException.class);
+  void rollbackRecords_UnknownTransactionId_ShouldBeNoOp() {
+    // Unlike the other record-level steps, rollbackRecords is lenient: an absent context (never
+    // joined, already released when later steps were skipped, or a prior rollback) leaves nothing
+    // to
+    // undo, so it is a no-op rather than an error.
+    participant.rollbackRecords("unknown-tx");
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
   }
 
-  // Drives the transaction to the PREPARED state with the handlers stubbed to no-op.
+  // Drives the transaction to the PREPARED state with the handlers stubbed to no-op. Injects a
+  // write
+  // into the snapshot so the participant has writes: a write-bearing participant stays alive
+  // through
+  // prepare and validate (a write-less one self-releases early under the skip-optimization), which
+  // is the state the lifecycle tests below exercise.
   private void prepare(String txId) throws Exception {
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE)
+            .partitionKey(Key.ofInt("pk", 1))
+            .intValue("v", 100)
+            .build();
+    getContext(txId).snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
@@ -726,6 +831,13 @@ class ConsensusCommitParticipantTest {
     prepare(txId);
     doNothing().when(commit).validateRecords(any(TransactionContext.class));
     participant.validateRecords(txId);
+  }
+
+  // Records a read (a scan) in the snapshot so that, under SERIALIZABLE isolation, validation is
+  // required even without writes (Snapshot#isScanSetEmpty becomes false).
+  private void recordReadForValidation(String txId) throws Exception {
+    Scan scan = Scan.newBuilder().namespace(ANY_NAMESPACE).table(ANY_TABLE).all().build();
+    getContext(txId).snapshot.putIntoScanSet(scan, new LinkedHashMap<>());
   }
 
   private TransactionContext getContext(String txId) throws Exception {
