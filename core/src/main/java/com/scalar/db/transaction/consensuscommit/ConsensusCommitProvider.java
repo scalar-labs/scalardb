@@ -32,12 +32,12 @@ public class ConsensusCommitProvider extends AbstractDistributedTransactionProvi
   }
 
   @Override
-  public TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+  public TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
     return new ConsensusCommitCoordinator(config);
   }
 
   @Override
-  public TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+  public TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
     return new ConsensusCommitParticipant(config);
   }
 }
