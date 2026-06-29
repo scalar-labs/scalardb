@@ -214,8 +214,7 @@ class ConsensusCommitCoordinatorTest {
   void commit_WhenCommitStateConflicts_ShouldRollBackPreparedRecordsOnEachParticipant()
       throws Exception {
     // Arrange — prepare/validate succeed on both participants, but the COMMITTED-state write loses
-    // a
-    // putState race that resolves to ABORTED (CommitConflictException).
+    // a putState race that resolves to ABORTED (CommitConflictException).
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
     Participant p1 = registeredWritingParticipant("tx-1", "participant-1");
     Participant p2 = registeredWritingParticipant("tx-1", "participant-2");
@@ -341,6 +340,35 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
+  void releaseContext_ShouldReleaseContextWithoutDrivingParticipantsOrWritingState()
+      throws Exception {
+    // Arrange
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant = registeredWritingParticipant("tx-1", "participant-1");
+
+    // Act
+    consensusCommitCoordinator.releaseContext("tx-1");
+
+    // Assert — reap-only terminal: the participant is NOT contacted (role-local), no Coordinator
+    // state row is written, and the context is released so a subsequent commit no longer knows the
+    // transaction.
+    verify(participant, never()).rollbackRecords(anyString());
+    verify(participant, never()).commitRecords(anyString(), anyLong());
+    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+    verify(coordinatorCommitHandler, never()).commitState(anyString(), any());
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  void releaseContext_UnknownTransaction_ShouldBeNoOp() throws Exception {
+    // Releasing a transaction never begun (or already finished) is a lenient no-op.
+    consensusCommitCoordinator.releaseContext("unknown");
+    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+    verify(coordinatorCommitHandler, never()).commitState(anyString(), any());
+  }
+
+  @Test
   void commit_AfterCommit_ShouldThrowTransactionNotFoundException() throws Exception {
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
     consensusCommitCoordinator.commit("tx-1");
@@ -368,6 +396,18 @@ class ConsensusCommitCoordinatorTest {
 
     // Rolling back an already-committed (released) transaction is a lenient no-op, not an error.
     consensusCommitCoordinator.rollback("tx-1");
+    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+  }
+
+  @Test
+  void releaseContext_AfterCommit_ShouldBeNoOp() throws Exception {
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.commit("tx-1");
+
+    // Releasing the context of an already-committed (released) transaction is a lenient no-op: the
+    // context was already discarded by commit, so there is nothing to release and no abort is
+    // written.
+    consensusCommitCoordinator.releaseContext("tx-1");
     verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
   }
 
