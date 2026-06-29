@@ -205,6 +205,24 @@ public interface TwoPhaseCommit {
     void rollback(String transactionId) throws RollbackException;
 
     /**
+     * Releases the Coordinator's in-memory state for the transaction without touching storage.
+     *
+     * <p>This is a reap-only terminal used to reclaim an in-memory context that did not reach a
+     * normal {@link #commit} / {@link #rollback} — for example, an abandoned transaction, or one
+     * reaped on idle by a decorator. It discards only this Coordinator's per-transaction state; it
+     * does <strong>not</strong> drive the participants and does <strong>not</strong> write any
+     * Coordinator state row or mutate records. The transaction's durable outcome is left to lazy
+     * recovery, which relies on the Coordinator state row if one was already written (its absence
+     * is resolved as an abort).
+     *
+     * <p>An unknown transaction ID (never begun, or already finished) is a no-op. A decorator may
+     * treat this as a terminal step, releasing any per-transaction resources it holds.
+     *
+     * @param transactionId the canonical transaction ID returned by {@link #begin}
+     */
+    void releaseContext(String transactionId);
+
+    /**
      * Closes the Coordinator and releases any resources it holds.
      *
      * <p>Does not commit or roll back transactions that are still in flight; their in-memory state
@@ -231,7 +249,7 @@ public interface TwoPhaseCommit {
    * required either. It is also discarded on a timeout if {@link Coordinator#commit} or {@link
    * Coordinator#rollback} is never reached.
    *
-   * <p>The methods on this interface have two different intended callers:
+   * <p>The methods on this interface have three different intended callers:
    *
    * <ul>
    *   <li>CRUD methods ({@link #get}, {@link #scan}, {@link #getScanner}, {@link #put(String,
@@ -241,6 +259,9 @@ public interface TwoPhaseCommit {
    *   <li>Lifecycle and record-level two-phase commit methods ({@link #join}, {@link
    *       #prepareRecords}, {@link #validateRecords}, {@link #commitRecords}, {@link
    *       #rollbackRecords}) are invoked by {@link Coordinator}.
+   *   <li>{@link #releaseContext} is invoked by neither — it is a reap-only terminal driven by a
+   *       context-reaper/decorator to reclaim an abandoned or idle-reaped context without touching
+   *       storage.
    * </ul>
    *
    * <p>Operations must follow the transaction's lifecycle: CRUD while the transaction is open, then
@@ -551,6 +572,23 @@ public interface TwoPhaseCommit {
      *     no-op
      */
     void rollbackRecords(String transactionId) throws RollbackException;
+
+    /**
+     * Releases the participant's in-memory context for the transaction without touching storage.
+     *
+     * <p>This is a reap-only terminal used to reclaim a local context that did not reach {@link
+     * #commitRecords} / {@link #rollbackRecords} — for example, an abandoned transaction, or one
+     * reaped on idle by a decorator. It closes any scanners and discards the in-memory snapshot for
+     * the transaction; it does <strong>not</strong> roll back or commit any PREPARED records —
+     * those are reconciled by lazy recovery on a subsequent read.
+     *
+     * <p>An unknown transaction — never joined, or whose context was already released — is a no-op.
+     * A decorator may treat this as a terminal step, releasing any per-transaction resources it
+     * holds.
+     *
+     * @param transactionId the canonical transaction ID
+     */
+    void releaseContext(String transactionId);
 
     /**
      * Closes the Participant and releases any resources it holds.

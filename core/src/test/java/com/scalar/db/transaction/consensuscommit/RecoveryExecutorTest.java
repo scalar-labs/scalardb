@@ -865,11 +865,9 @@ public class RecoveryExecutorTest {
           throws Exception {
     // Arrange: the coordinator state stays absent and expired, and every physical re-read shows a
     // DIFFERENT transaction has re-prepared the record (modeled by ping-ponging between two ids),
-    // so
-    // the loop keeps taking the re-prepare branch until MAX_RESOLUTION_ATTEMPTS is reached and a
+    // so the loop keeps taking the re-prepare branch until MAX_RESOLUTION_ATTEMPTS is reached and a
     // CrudConflictException is thrown. This exercises the retry limit via the re-prepare branch
-    // (the
-    // abort-conflict branch is covered by AbortKeepsConflicting above).
+    // (the abort-conflict branch is covered by AbortKeepsConflicting above).
     TransactionResult original = prepareResult(TransactionState.PREPARED);
     TransactionResult rePreparedAs1 = prepareResult(TransactionState.PREPARED, ANY_ID_1);
     TransactionResult rePreparedAs2 = prepareResult(TransactionState.PREPARED, ANY_ID_2);
@@ -898,8 +896,7 @@ public class RecoveryExecutorTest {
         .isInstanceOf(CrudConflictException.class);
 
     // The loop runs exactly MAX_RESOLUTION_ATTEMPTS passes, re-reading on each, and never aborts
-    // (it
-    // always takes the re-prepare branch).
+    // (it always takes the re-prepare branch).
     verify(storage, times(RecoveryExecutor.MAX_RESOLUTION_ATTEMPTS)).get(any(Get.class));
     verify(recovery, never()).tryAbortExpiredTransaction(any());
   }

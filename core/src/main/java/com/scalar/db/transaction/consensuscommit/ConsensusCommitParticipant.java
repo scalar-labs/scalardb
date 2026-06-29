@@ -500,6 +500,32 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     }
   }
 
+  @Override
+  public void releaseContext(String transactionId) {
+    ParticipantContext pc = contexts.get(transactionId);
+    if (pc == null) {
+      // Unknown or already-released transaction: nothing to release.
+      return;
+    }
+    synchronized (pc) {
+      if (pc.isReleased()) {
+        // Released by a concurrent terminal step after we fetched the reference; nothing to do.
+        return;
+      }
+      TransactionContext context = pc.context();
+      try {
+        // Reap-only terminal: close scanners and discard the in-memory snapshot WITHOUT touching
+        // storage. Even if the transaction is PREPARED, we must not roll its records back here (the
+        // outcome may be undetermined or COMMITTED); lazy recovery reconciles them on a later read.
+        context.closeScanners();
+      } catch (CrudException e) {
+        logger.warn("Failed to close the scanner. Transaction ID: {}", transactionId, e);
+      } finally {
+        release(transactionId, pc);
+      }
+    }
+  }
+
   // Releases a participant context: marks it RELEASED (visible under the lock to a concurrent op
   // that obtained the reference before the removal) and removes it from the map. The caller must
   // hold {@code synchronized(pc)}.

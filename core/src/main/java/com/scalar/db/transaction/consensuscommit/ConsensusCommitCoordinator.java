@@ -280,6 +280,28 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   }
 
   @Override
+  public void releaseContext(String transactionId) {
+    CoordinatorContext context = contexts.get(transactionId);
+    if (context == null) {
+      // Unknown or already-released transaction: nothing to release.
+      return;
+    }
+    synchronized (context) {
+      if (context.isReleased()) {
+        // Already terminated by a concurrent commit/rollback/release; nothing to do.
+        return;
+      }
+      // Reap-only terminal: discard this Coordinator's in-memory state only. Unlike rollback(), the
+      // participants are NOT contacted (each role reaps its own context independently), and no
+      // Coordinator state row is written and no record is mutated — the durable outcome is left to
+      // lazy recovery, which uses the Coordinator state row if one was already written (its absence
+      // is resolved as an abort).
+      context.markReleased();
+      releaseResources(transactionId);
+    }
+  }
+
+  @Override
   public void close() {
     storage.close();
   }
