@@ -1,10 +1,10 @@
 package com.scalar.db.transaction.jdbc;
 
-import com.scalar.db.api.AbstractDistributedTransactionProvider;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.common.AbstractDistributedTransactionProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import javax.annotation.Nullable;
