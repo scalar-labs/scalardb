@@ -21,9 +21,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SlotTest {
-  private Slot<String, String, String, String, String, Integer> slot;
-  @Mock private NormalGroup<String, String, String, String, String, Integer> parentGroup;
-  @Mock private DelayedGroup<String, String, String, String, String, Integer> newParentGroup;
+  private Slot<String, String, String, String, String, Integer, Void> slot;
+  @Mock private NormalGroup<String, String, String, String, String, Integer, Void> parentGroup;
+  @Mock private DelayedGroup<String, String, String, String, String, Integer, Void> newParentGroup;
 
   @BeforeEach
   void setUp() {
@@ -33,7 +33,7 @@ class SlotTest {
   @Test
   void key_WithArbitraryValue_ShouldReturnProperly() {
     // Arrange
-    Slot<String, String, String, String, String, Integer> slot =
+    Slot<String, String, String, String, String, Integer, Void> slot =
         new Slot<>("child-key", parentGroup);
 
     // Act
@@ -122,7 +122,7 @@ class SlotTest {
       assertThat(exception.get()).isNull();
       assertThat(slot.isDone()).isFalse();
     } finally {
-      slot.markAsSuccess();
+      slot.markAsSuccess(null);
     }
   }
 
@@ -146,7 +146,7 @@ class SlotTest {
             });
     executorService.shutdown();
 
-    slot.markAsSuccess();
+    slot.markAsSuccess(null);
 
     // Assert
     future.get();
@@ -206,7 +206,11 @@ class SlotTest {
             });
     executorService.shutdown();
 
-    slot.delegateTaskToWaiter(() -> result.set(42));
+    slot.delegateTaskToWaiter(
+        () -> {
+          result.set(42);
+          return null;
+        });
 
     // Assert
     future.get();
