@@ -31,7 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CoordinatorGroupCommitterTest {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
-  @Mock private Emittable<String, String, TransactionContext> emitter;
+  @Mock private Emittable<String, String, TransactionContext, Void> emitter;
   @Captor private ArgumentCaptor<List<TransactionContext>> contextsArgumentCaptor;
   @Captor private ArgumentCaptor<TransactionContext> contextArgumentCaptor;
 
