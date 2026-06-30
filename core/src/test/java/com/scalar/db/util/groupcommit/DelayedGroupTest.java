@@ -25,7 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class DelayedGroupTest {
-  @Mock private Emittable<String, String, Integer> emitter;
+  @Mock private Emittable<String, String, Integer, Void> emitter;
   private TestableGroupCommitKeyManipulator keyManipulator;
 
   @BeforeEach
@@ -39,7 +39,7 @@ class DelayedGroupTest {
   void fullKey_GivenFullKeyViaConstructor_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
 
     // Act
@@ -51,11 +51,11 @@ class DelayedGroupTest {
   void reserveNewSlot_GivenArbitrarySlot_ShouldStoreIt() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> oldGroup =
+    NormalGroup<String, String, String, String, String, Integer, Void> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot =
+    Slot<String, String, String, String, String, Integer, Void> slot =
         spy(new Slot<>("child-key", oldGroup));
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
 
     assertThat(group.size()).isNull();
@@ -75,10 +75,11 @@ class DelayedGroupTest {
   void reserveNewSlot_GivenAlreadyReservedSlot_ShouldThrowException() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> oldGroup =
+    NormalGroup<String, String, String, String, String, Integer, Void> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    Slot<String, String, String, String, String, Integer, Void> slot =
+        new Slot<>("child-key", oldGroup);
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
     group.reserveNewSlot(slot);
 
@@ -88,20 +89,22 @@ class DelayedGroupTest {
     assertThat(group.isReady()).isFalse();
   }
 
-  private Emittable<String, String, Integer> createEmitter(ThrowableRunnable<Exception> task) {
-    return new Emittable<String, String, Integer>() {
+  private Emittable<String, String, Integer, Void> createEmitter(
+      ThrowableRunnable<Exception> task) {
+    return new Emittable<String, String, Integer, Void>() {
       @Override
-      public void emitNormalGroup(String parentKey, List<Integer> values) {
+      public Void emitNormalGroup(String parentKey, List<Integer> values) {
         throw new AssertionError();
       }
 
       @Override
-      public void emitDelayedGroup(String fullKey, Integer value) {
+      public Void emitDelayedGroup(String fullKey, Integer value) {
         try {
           task.run();
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
+        return null;
       }
     };
   }
@@ -113,17 +116,18 @@ class DelayedGroupTest {
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
-    Emittable<String, String, Integer> waitableEmitter =
+    Emittable<String, String, Integer, Void> waitableEmitter =
         createEmitter(
             () -> {
               wait.await();
               emitted.set(true);
             });
 
-    NormalGroup<String, String, String, String, String, Integer> oldGroup =
+    NormalGroup<String, String, String, String, String, Integer, Void> oldGroup =
         new NormalGroup<>(config, waitableEmitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    Slot<String, String, String, String, String, Integer, Void> slot =
+        new Slot<>("child-key", oldGroup);
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", waitableEmitter, keyManipulator);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -165,16 +169,17 @@ class DelayedGroupTest {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     CountDownLatch wait = new CountDownLatch(1);
-    Emittable<String, String, Integer> failingEmitter =
+    Emittable<String, String, Integer, Void> failingEmitter =
         createEmitter(
             () -> {
               wait.await();
               throw new RuntimeException("Something is wrong");
             });
-    NormalGroup<String, String, String, String, String, Integer> oldGroup =
+    NormalGroup<String, String, String, String, String, Integer, Void> oldGroup =
         new NormalGroup<>(config, failingEmitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    Slot<String, String, String, String, String, Integer, Void> slot =
+        new Slot<>("child-key", oldGroup);
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", failingEmitter, keyManipulator);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -213,10 +218,11 @@ class DelayedGroupTest {
   void removeSlot_GivenNoReadySlot_ShouldRemoveSlotAndGetDone() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> oldGroup =
+    NormalGroup<String, String, String, String, String, Integer, Void> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    Slot<String, String, String, String, String, Integer, Void> slot =
+        new Slot<>("child-key", oldGroup);
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
 
     group.reserveNewSlot(slot);
@@ -239,16 +245,17 @@ class DelayedGroupTest {
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
-    Emittable<String, String, Integer> waitableEmitter =
+    Emittable<String, String, Integer, Void> waitableEmitter =
         createEmitter(
             () -> {
               wait.await();
               emitted.set(true);
             });
-    NormalGroup<String, String, String, String, String, Integer> oldGroup =
+    NormalGroup<String, String, String, String, String, Integer, Void> oldGroup =
         new NormalGroup<>(config, waitableEmitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot = new Slot<>("child-key", oldGroup);
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    Slot<String, String, String, String, String, Integer, Void> slot =
+        new Slot<>("child-key", oldGroup);
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", waitableEmitter, keyManipulator);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -290,7 +297,7 @@ class DelayedGroupTest {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
     long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
@@ -305,11 +312,11 @@ class DelayedGroupTest {
   void abort_ShouldAbortSlot() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> oldGroup =
+    NormalGroup<String, String, String, String, String, Integer, Void> oldGroup =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot =
+    Slot<String, String, String, String, String, Integer, Void> slot =
         spy(new Slot<>("child-key", oldGroup));
-    DelayedGroup<String, String, String, String, String, Integer> group =
+    DelayedGroup<String, String, String, String, String, Integer, Void> group =
         new DelayedGroup<>(config, "0000:full-key", emitter, keyManipulator);
     group.reserveNewSlot(slot);
 
