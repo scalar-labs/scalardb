@@ -418,7 +418,8 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void check_StateReturned_ReturnTheState() throws CoordinatorException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(new State(ANY_TX_ID, expected)));
+    when(coordinator.getState(ANY_TX_ID))
+        .thenReturn(Optional.of(new State(ANY_TX_ID, expected, System.currentTimeMillis())));
 
     // Act
     TransactionState actual = manager.getState(ANY_TX_ID);
