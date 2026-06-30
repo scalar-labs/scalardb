@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
@@ -71,6 +72,10 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -1305,11 +1310,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         verify(recovery, never())
             .tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery, never())
-            .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       } else {
         // In read-write mode, recovery should occur
         verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-        verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+        verify(recovery)
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       }
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation
@@ -1322,7 +1328,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // Recovery should occur
       verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery)
+          .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
     }
   }
 
@@ -1907,11 +1914,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         verify(recovery, never())
             .tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery, never())
-            .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       } else {
         // In read-write mode, recovery should occur
         verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-        verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+        verify(recovery)
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       }
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation
@@ -1921,7 +1929,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // Recovery should occur
       verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery)
+          .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
     }
   }
 
@@ -2475,7 +2484,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should occur (roll-forward)
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -2622,7 +2632,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should occur (roll-forward = delete committed)
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -2771,7 +2782,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     verify(recovery, times(2))
         .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, times(2))
-        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2833,7 +2844,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     verify(recovery, times(2))
         .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never())
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -2890,7 +2902,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     verify(recovery, times(1))
         .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, times(1)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never())
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   // Writes a PREPARED/DELETED record at the given account_type with the given after-image BALANCE
@@ -3133,7 +3146,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should occur (roll-forward)
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -3488,7 +3502,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should occur (roll-forward = delete committed)
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -3741,7 +3756,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
       verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery)
+          .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     }
   }
@@ -4730,7 +4746,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // In all isolations, recovery should occur
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -4983,7 +5000,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // In all isolations, recovery should occur
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -10368,7 +10386,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void put_WhenTheOtherTransactionsFails_ShouldBeCommittedWithoutBlocked() throws Exception {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
-    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any(), anyLong());
 
     // Act
     DistributedTransaction failingTxn = manager.begin();
@@ -10450,7 +10468,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     DistributedTransaction failingTxn1 = manager.begin();
     DistributedTransaction failingTxn2 = manager.begin();
 
-    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any(), anyLong());
 
     failingTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
     failingTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
@@ -10716,6 +10734,107 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     int totalEntries =
         writeSet.getEntryGroupsList().stream().mapToInt(g -> g.getEntriesCount()).sum();
     assertThat(totalEntries).isEqualTo(2);
+  }
+
+  @Test
+  void commit_WithMultiPartitionWrites_ShouldStampSingleCommittedAtOnCoordinatorRowAndAllRecords()
+      throws Exception {
+    // Unified commit-phase timestamp invariant, verified end-to-end against real storage: the
+    // COMMITTED Coordinator state row's committedAt (createdAt) equals every committed data row's
+    // COMMITTED_AT, and all data rows of the transaction share a single PREPARED_AT. This runs in
+    // both group-commit-enabled and -disabled environments. One-phase commit is disabled here and
+    // the writes span two partitions, so a Coordinator state row is always written and the
+    // two-phase path is taken.
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Act
+    DistributedTransaction txn = manager.begin();
+    txn.put(preparePut(0, 0, namespace1, TABLE_1));
+    txn.put(preparePut(1, 0, namespace1, TABLE_1)); // a different partition
+    txn.commit();
+
+    // Assert
+    long coordinatorCommittedAt = coordinator.getState(txn.getId()).get().getCreatedAt();
+
+    DistributedTransaction readTxn = manager.beginReadOnly();
+    Optional<Result> r0 = readTxn.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> r1 = readTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    readTxn.commit();
+    TransactionResult record0 = (TransactionResult) ((FilteredResult) r0.get()).getOriginalResult();
+    TransactionResult record1 = (TransactionResult) ((FilteredResult) r1.get()).getOriginalResult();
+
+    // Every committed data row shares the Coordinator row's committedAt ...
+    assertThat(record0.getCommittedAt()).isEqualTo(coordinatorCommittedAt);
+    assertThat(record1.getCommittedAt()).isEqualTo(coordinatorCommittedAt);
+    // ... and both rows share a single preparedAt.
+    assertThat(record0.getPreparedAt()).isEqualTo(record1.getPreparedAt());
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void commit_WithGroupCommit_ShouldStampOneBatchCommittedAtAcrossAllBatchedTransactionsAndRecords()
+      throws Exception {
+    // The group-commit-specific invariant: when multiple transactions are batched into one normal
+    // group, they share a single COMMITTED Coordinator (parent) row carrying one emit-time
+    // committedAt, and every committed data row of every transaction in the batch is stamped with
+    // that same value. The two transactions reserve slots in the same group at begin() time (same
+    // parent key) and are committed concurrently so the group emits them together as one batch
+    // (mirroring CoordinatorGroupCommitterTest, which reserves slots then readies them
+    // concurrently). Verified end-to-end against real storage.
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    DistributedTransaction txn1 = manager.begin();
+    DistributedTransaction txn2 = manager.begin();
+    txn1.put(preparePut(0, 0, namespace1, TABLE_1));
+    txn1.put(preparePut(1, 0, namespace1, TABLE_1)); // a different partition
+    txn2.put(preparePut(2, 0, namespace1, TABLE_1));
+
+    // The shared-timestamp invariant only applies to transactions in the same batch. Both reserve
+    // slots in the same group at begin() time, reflected by a shared parent key.
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    assertThat(keyManipulator.keysFromFullKey(txn1.getId()).parentKey)
+        .isEqualTo(keyManipulator.keysFromFullKey(txn2.getId()).parentKey);
+
+    // Act — commit concurrently so the group emits both transactions together as one batch.
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<?> future1 =
+          executor.submit(
+              () -> {
+                txn1.commit();
+                return null;
+              });
+      Future<?> future2 =
+          executor.submit(
+              () -> {
+                txn2.commit();
+                return null;
+              });
+      future1.get(10, TimeUnit.SECONDS);
+      future2.get(10, TimeUnit.SECONDS);
+    } finally {
+      executor.shutdown();
+    }
+
+    // Assert — both transactions resolve to the single batched Coordinator row, so they share one
+    // committedAt ...
+    long committedAt = coordinator.getState(txn1.getId()).get().getCreatedAt();
+    assertThat(coordinator.getState(txn2.getId()).get().getCreatedAt()).isEqualTo(committedAt);
+
+    // ... and every committed data row of both transactions carries that same committedAt.
+    DistributedTransaction readTxn = manager.beginReadOnly();
+    Optional<Result> r0 = readTxn.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> r1 = readTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    Optional<Result> r2 = readTxn.get(prepareGet(2, 0, namespace1, TABLE_1));
+    readTxn.commit();
+    TransactionResult record0 = (TransactionResult) ((FilteredResult) r0.get()).getOriginalResult();
+    TransactionResult record1 = (TransactionResult) ((FilteredResult) r1.get()).getOriginalResult();
+    TransactionResult record2 = (TransactionResult) ((FilteredResult) r2.get()).getOriginalResult();
+    assertThat(record0.getCommittedAt()).isEqualTo(committedAt);
+    assertThat(record1.getCommittedAt()).isEqualTo(committedAt);
+    assertThat(record2.getCommittedAt()).isEqualTo(committedAt);
   }
 
   @Test

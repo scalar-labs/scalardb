@@ -213,7 +213,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      commit.prepareRecords(context);
+      commit.prepareRecords(context, System.currentTimeMillis());
     } finally {
       needRollback = true;
     }
@@ -232,9 +232,15 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
           CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE.buildMessage());
     }
 
+    // commitStateWithoutWriteSet writes the COMMITTED coordinator state row and returns the
+    // committedAt it stamped; the committed data records are then stamped with the same value so
+    // the row and the records share a single committedAt.
+    long committedAt;
     try {
-      commit.commitStateWithoutWriteSet(context);
+      committedAt = commit.commitStateWithoutWriteSet(context);
     } catch (CommitConflictException e) {
+      // commitStateWithoutWriteSet only reports the conflict; this caller owns the records, so roll
+      // them back here before surfacing it.
       commit.rollbackRecords(context);
       needRollback = false;
       throw e;
@@ -242,11 +248,10 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
       // The coordinator state is unknown, so we must not roll back the records: the transaction may
       // have committed.
       needRollback = false;
-
       throw e;
     }
 
-    commit.commitRecords(context);
+    commit.commitRecords(context, committedAt);
   }
 
   @Override

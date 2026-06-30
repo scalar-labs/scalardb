@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -114,14 +116,44 @@ public class RecoveryHandlerTest {
         Optional.of(
             new Coordinator.State(
                 ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
-    doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
 
     // Act
     boolean recovered = handler.recover(selection, result, state);
 
     // Assert
     assertThat(recovered).isTrue();
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateCommitted_ShouldRollforwardWithCoordinatorStateCommittedAt()
+          throws CoordinatorException, ExecutionException {
+    // A record committed by recovery must be stamped with the Coordinator state row's committedAt
+    // (createdAt) so it shares the same committedAt as the row, rather than a fresh recovery-time
+    // timestamp. Let the real rollforwardRecord run and assert the Coordinator state's committedAt
+    // is threaded into the CommitMutationComposer, which stamps it onto the record's COMMITTED_AT
+    // (the composer's timestamp -> COMMITTED_AT mapping is covered by CommitMutationComposerTest).
+    // Arrange
+    long committedAt = 1234567890123L;
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    Optional<Coordinator.State> state =
+        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, committedAt));
+    CommitMutationComposer composer = mock(CommitMutationComposer.class);
+    doReturn(Collections.emptyList()).when(composer).get();
+    doReturn(composer)
+        .when(handler)
+        .createCommitMutationComposer(eq(selection), eq(result), anyLong());
+
+    // Act
+    handler.recover(selection, result, state);
+
+    // Assert — the Coordinator state's committedAt (createdAt) is what the commit composer is built
+    // with, i.e. what gets stamped on the rolled-forward record.
+    verify(handler).createCommitMutationComposer(eq(selection), eq(result), eq(committedAt));
   }
 
   @Test
@@ -137,13 +169,15 @@ public class RecoveryHandlerTest {
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
-    doReturn(composer).when(handler).createCommitMutationComposer(selection, result);
+    doReturn(composer)
+        .when(handler)
+        .createCommitMutationComposer(eq(selection), eq(result), anyLong());
     doThrow(NoMutationException.class).when(storage).mutate(any());
 
     // Act Assert
     assertThatCode(() -> handler.recover(selection, result, state)).doesNotThrowAnyException();
 
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(composer).get();
     verify(storage).mutate(mutations);
   }
@@ -161,14 +195,16 @@ public class RecoveryHandlerTest {
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
-    doReturn(composer).when(handler).createCommitMutationComposer(selection, result);
+    doReturn(composer)
+        .when(handler)
+        .createCommitMutationComposer(eq(selection), eq(result), anyLong());
     doThrow(ExecutionException.class).when(storage).mutate(any());
 
     // Act Assert
     assertThatThrownBy(() -> handler.recover(selection, result, state))
         .isInstanceOf(ExecutionException.class);
 
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(composer).get();
     verify(storage).mutate(mutations);
   }
@@ -324,7 +360,9 @@ public class RecoveryHandlerTest {
             Optional.of(
                 new Coordinator.State(
                     ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis())));
-    doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
 
     // Act
     boolean recovered = handler.recover(selection, result, state);
@@ -333,7 +371,7 @@ public class RecoveryHandlerTest {
     // winner's COMMITTED outcome.
     assertThat(recovered).isTrue();
     verify(coordinator).forceAbort(ANY_ID_1);
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
@@ -359,7 +397,7 @@ public class RecoveryHandlerTest {
     assertThat(recovered).isTrue();
     verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler, never()).rollbackRecord(selection, result);
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -403,7 +441,7 @@ public class RecoveryHandlerTest {
     assertThat(recovered).isTrue();
     verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -425,7 +463,7 @@ public class RecoveryHandlerTest {
     assertThat(recovered).isTrue();
     verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -449,7 +487,7 @@ public class RecoveryHandlerTest {
     assertThat(recovered).isTrue();
     verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -471,7 +509,7 @@ public class RecoveryHandlerTest {
     // Assert
     verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -492,7 +530,7 @@ public class RecoveryHandlerTest {
     // Assert
     verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -515,7 +553,7 @@ public class RecoveryHandlerTest {
     // Assert
     verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -602,13 +640,15 @@ public class RecoveryHandlerTest {
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Coordinator.State state =
         new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis());
-    doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
 
     // Act
     handler.recover(selection, result, state);
 
     // Assert — rolled forward, and the coordinator is never touched.
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(coordinator, never()).getState(anyString());
     verify(coordinator, never()).forceAbort(anyString());
   }
@@ -644,13 +684,15 @@ public class RecoveryHandlerTest {
         Optional.of(
             new Coordinator.State(
                 ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
-    doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
 
     // Act
     handler.tryRecover(selection, result, state);
 
     // Assert
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -689,7 +731,7 @@ public class RecoveryHandlerTest {
     // Assert — no coordinator re-read and no roll.
     verify(coordinator).forceAbort(ANY_ID_1);
     verify(coordinator, never()).getState(anyString());
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
@@ -706,7 +748,7 @@ public class RecoveryHandlerTest {
 
     // Assert
     verify(coordinator, never()).forceAbort(anyString());
-    verify(handler, never()).rollforwardRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(handler, never()).rollbackRecord(selection, result);
   }
 

@@ -67,7 +67,7 @@ public class RecoveryHandler {
       Selection selection, TransactionResult result, Optional<Coordinator.State> state)
       throws ExecutionException, CoordinatorException {
     if (state.isPresent()) {
-      rollRecordToState(selection, result, state.get().getState());
+      rollRecordToState(selection, result, state.get());
     } else {
       abortIfExpired(selection, result, false);
     }
@@ -128,7 +128,7 @@ public class RecoveryHandler {
    */
   public void recover(Selection selection, TransactionResult result, Coordinator.State state)
       throws ExecutionException {
-    rollRecordToState(selection, result, state.getState());
+    rollRecordToState(selection, result, state);
   }
 
   /**
@@ -141,12 +141,12 @@ public class RecoveryHandler {
    * non-terminal state is treated as a rollback.
    */
   private void rollRecordToState(
-      Selection selection, TransactionResult result, TransactionState state)
+      Selection selection, TransactionResult result, Coordinator.State state)
       throws ExecutionException {
-    if (state.equals(TransactionState.COMMITTED)) {
-      rollforwardRecord(selection, result);
+    if (state.getState().equals(TransactionState.COMMITTED)) {
+      rollforwardRecord(selection, result, state.getCreatedAt());
     } else {
-      assert state.equals(TransactionState.ABORTED);
+      assert state.getState().equals(TransactionState.ABORTED);
       rollbackRecord(selection, result);
     }
   }
@@ -195,7 +195,8 @@ public class RecoveryHandler {
   }
 
   @VisibleForTesting
-  void rollforwardRecord(Selection selection, TransactionResult result) throws ExecutionException {
+  void rollforwardRecord(Selection selection, TransactionResult result, long committedAt)
+      throws ExecutionException {
     assert selection.forFullTableName().isPresent();
 
     TransactionTableMetadata tableMetadata =
@@ -211,7 +212,7 @@ public class RecoveryHandler {
         clusteringKey,
         result.getId());
 
-    CommitMutationComposer composer = createCommitMutationComposer(selection, result);
+    CommitMutationComposer composer = createCommitMutationComposer(selection, result, committedAt);
 
     try {
       mutate(composer.get());
@@ -230,10 +231,10 @@ public class RecoveryHandler {
   }
 
   @VisibleForTesting
-  CommitMutationComposer createCommitMutationComposer(Selection selection, TransactionResult result)
-      throws ExecutionException {
+  CommitMutationComposer createCommitMutationComposer(
+      Selection selection, TransactionResult result, long committedAt) throws ExecutionException {
     CommitMutationComposer composer =
-        new CommitMutationComposer(result.getId(), tableMetadataManager);
+        new CommitMutationComposer(result.getId(), committedAt, tableMetadataManager);
     composer.add(selection, result);
     return composer;
   }
@@ -343,8 +344,7 @@ public class RecoveryHandler {
       // Guaranteed path (recover): a concurrent actor already resolved the writer. Re-read the
       // coordinator state and roll the record to the winner's outcome so it is physically resolved
       // on return.
-      Optional<TransactionState> rereadState =
-          coordinator.getState(txId).map(Coordinator.State::getState);
+      Optional<Coordinator.State> rereadState = coordinator.getState(txId);
 
       if (rereadState.isPresent()) {
         // Roll the targeted record to the winner's outcome. This is idempotent: the underlying

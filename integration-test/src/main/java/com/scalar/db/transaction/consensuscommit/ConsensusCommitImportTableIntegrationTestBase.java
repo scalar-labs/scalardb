@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -501,7 +502,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
     // Assert
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
@@ -693,7 +695,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
     // Assert
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
