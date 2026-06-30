@@ -906,8 +906,9 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void rollback_CalledAfterCommitFails_ShouldNeverAbortStateAndRollbackRecords()
-      throws TransactionException {
+  public void
+      rollback_CalledAfterCommitConflict_ShouldRollbackRecordsOnceDuringCommitAndNotAgainOnRollback()
+          throws TransactionException {
     // Arrange
     transaction.prepare();
     doThrow(CommitConflictException.class).when(commit).commitStateWithoutWriteSet(context);
@@ -917,9 +918,11 @@ public class TwoPhaseConsensusCommitTest {
     transaction.rollback();
 
     // Assert
+    // commit() rolls the prepared records back eagerly on the conflict, so rollback() is a no-op:
+    // it must not abort the state or roll the records back a second time.
     verify(context).closeScanners();
+    verify(commit).rollbackRecords(context);
     verify(commit, never()).abortStateWithoutWriteSet(ANY_TX_ID);
-    verify(commit, never()).rollbackRecords(context);
   }
 
   @Test
