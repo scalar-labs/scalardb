@@ -13,6 +13,7 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import java.util.concurrent.Future;
@@ -39,11 +40,12 @@ import org.slf4j.LoggerFactory;
  * (ConsensusCommit / TwoPhaseConsensusCommit / ConsensusCommitManager) can depend on the
  * orchestrator alone.
  *
- * <p>Public methods like {@code commitState}, {@code abortState}, {@code prepareRecords}, {@code
- * commitRecords}, {@code rollbackRecords}, {@code commitStateWithoutWriteSet}, and {@code
- * abortStateWithoutWriteSet} are exposed on this class as thin pass-throughs to the specialized
- * handlers so direct callers (notably {@link TwoPhaseConsensusCommit}) can drive individual commit
- * phases without depending on the handlers directly.
+ * <p>Several public methods are exposed on this class so direct callers (notably {@link
+ * TwoPhaseConsensusCommit}) can drive individual commit phases without depending on the specialized
+ * handlers directly. {@code prepareRecords}, {@code commitRecords}, {@code rollbackRecords}, {@code
+ * commitStateWithoutWriteSet}, and {@code abortStateWithoutWriteSet} are thin pass-throughs. {@code
+ * commitState} and {@code abortState} are not: they encode the transaction's write set via the
+ * orchestrator-owned {@link WriteSetEncoder} before delegating to the Coordinator-side handler.
  */
 @ThreadSafe
 public class CommitHandler {
@@ -51,7 +53,9 @@ public class CommitHandler {
 
   private final CoordinatorCommitHandler coordinatorCommitHandler;
   private final ParticipantCommitHandler participantCommitHandler;
+  protected final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  protected final boolean coordinatorWriteSetLoggingEnabled;
 
   @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
 
@@ -66,11 +70,9 @@ public class CommitHandler {
       boolean coordinatorWriteSetLoggingEnabled,
       boolean onePhaseCommitEnabled) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
-    this.coordinatorCommitHandler =
-        new CoordinatorCommitHandler(
-            coordinator,
-            new WriteSetEncoder(tableMetadataManager),
-            coordinatorWriteSetLoggingEnabled);
+    this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
+    this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
+    this.coordinatorCommitHandler = new CoordinatorCommitHandler(coordinator);
     this.participantCommitHandler =
         new ParticipantCommitHandler(
             storage,
@@ -87,9 +89,13 @@ public class CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   protected CommitHandler(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean coordinatorWriteSetLoggingEnabled,
+      WriteSetEncoder writeSetEncoder,
       CoordinatorCommitHandler coordinatorCommitHandler,
       ParticipantCommitHandler participantCommitHandler) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
+    this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
+    this.writeSetEncoder = checkNotNull(writeSetEncoder);
     this.coordinatorCommitHandler = checkNotNull(coordinatorCommitHandler);
     this.participantCommitHandler = checkNotNull(participantCommitHandler);
   }
@@ -296,22 +302,44 @@ public class CommitHandler {
 
   public long commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    return coordinatorCommitHandler.commitState(context);
+    return coordinatorCommitHandler.commitState(
+        context.transactionId, encodeWriteSetIfLoggingEnabled(context));
   }
 
+  // The tx_write_set column is part of the Coordinator schema only when the opt-in
+  // `coordinator.write_set_logging.enabled` config is on. When it is off, skip encoding entirely so
+  // no WriteSet is persisted (the column is not part of the schema in that case).
+  @Nullable
+  private WriteSet encodeWriteSetIfLoggingEnabled(TransactionContext context) {
+    return coordinatorWriteSetLoggingEnabled
+        ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
+        : null;
+  }
+
+  // 2PC-only. Delegates to commitState(id, null) / abortState(id, null), which the group-commit
+  // coordinator handler overrides to route through the group committer. That null never reaches the
+  // group committer here because 2PC forbids group commit
+  // (TwoPhaseConsensusCommitManager#throwIfGroupCommitIsEnabled) and never builds a
+  // CommitHandlerWithGroupCommit.
+  //
+  // TODO: revisit this if/when the Two-phase Commit I/F is removed.
   public long commitStateWithoutWriteSet(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    return coordinatorCommitHandler.commitStateWithoutWriteSet(context);
+    return coordinatorCommitHandler.commitState(context.transactionId, null);
   }
 
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
-    return coordinatorCommitHandler.abortState(context);
+    return coordinatorCommitHandler.abortState(
+        context.transactionId, encodeWriteSetIfLoggingEnabled(context));
   }
 
+  // 2PC-only; see the null-write-set note on commitStateWithoutWriteSet above.
+  //
+  // TODO: revisit this if/when the Two-phase Commit I/F is removed.
   public TransactionState abortStateWithoutWriteSet(String id)
       throws UnknownTransactionStatusException {
-    return coordinatorCommitHandler.abortStateWithoutWriteSet(id);
+    return coordinatorCommitHandler.abortState(id, null);
   }
 
   public TransactionState forceAbortState(String id) throws UnknownTransactionStatusException {

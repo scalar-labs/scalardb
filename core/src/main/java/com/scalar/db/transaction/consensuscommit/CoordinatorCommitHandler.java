@@ -18,64 +18,35 @@ import org.slf4j.LoggerFactory;
  * Handles the Coordinator-side (state-table) operations of the Consensus Commit protocol: writing
  * the COMMITTED / ABORTED records to the Coordinator state table and resolving putState conflicts.
  *
- * <p>Methods here only touch the Coordinator state table via {@link Coordinator}; they never touch
- * user data tables. When {@code commitState} loses a putState race and the persisted state turns
- * out to be ABORTED (or absent), this handler reports a {@link CommitConflictException} and leaves
- * the rollback of the transaction's prepared records to the caller. This keeps the handler free of
- * any participant-side dependency.
+ * <p>Operates on a transaction id and a pre-encoded {@link WriteSet} (plus, for the commit path,
+ * the {@code committedAt} to stamp); callers encode the write set before calling.
+ *
+ * <p>When {@code commitState} loses a putState race and the persisted state turns out to be ABORTED
+ * (or absent), this handler reports a {@link CommitConflictException} and leaves the rollback of
+ * the transaction's prepared records to the caller.
  */
 @ThreadSafe
 class CoordinatorCommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CoordinatorCommitHandler.class);
 
   private final Coordinator coordinator;
-  private final WriteSetEncoder writeSetEncoder;
-  private final boolean coordinatorWriteSetLoggingEnabled;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  CoordinatorCommitHandler(
-      Coordinator coordinator,
-      WriteSetEncoder writeSetEncoder,
-      boolean coordinatorWriteSetLoggingEnabled) {
+  CoordinatorCommitHandler(Coordinator coordinator) {
     this.coordinator = checkNotNull(coordinator);
-    this.writeSetEncoder = checkNotNull(writeSetEncoder);
-    this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
   }
 
   /**
-   * Writes the COMMITTED state. When coordinator write-set logging is enabled, the {@code
-   * tx_write_set} column is populated from the given context's snapshot; otherwise the column is
-   * omitted.
+   * Writes the COMMITTED state for the transaction identified by {@code id}, persisting the given
+   * pre-encoded {@code writeSet} (or none when {@code null}).
    *
-   * @return the {@code committedAt} timestamp written to the COMMITTED Coordinator state row. The
-   *     caller stamps the committed data records with the same value so the row and the records
-   *     share one timestamp.
+   * @return the {@code committedAt} stamped on the COMMITTED Coordinator state row — the value this
+   *     call generates, or, when this commit lost a putState race to an already-COMMITTED row, that
+   *     row's committedAt. The caller stamps the committed data records with the returned value so
+   *     the row and the records share one timestamp.
    */
-  long commitState(TransactionContext context)
+  long commitState(String id, @Nullable WriteSet writeSet)
       throws CommitConflictException, UnknownTransactionStatusException {
-    // The tx_write_set column is added only when the opt-in `coordinator.write_set_logging.enabled`
-    // config is enabled. When it's disabled the column is not part of the Coordinator schema, so we
-    // must skip encoding/persisting the WriteSet entirely.
-    WriteSet writeSet =
-        coordinatorWriteSetLoggingEnabled
-            ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
-            : null;
-    return commitStateInternal(context, writeSet);
-  }
-
-  /**
-   * Writes the COMMITTED state without persisting a {@code tx_write_set}.
-   *
-   * @return the {@code committedAt} timestamp written to the COMMITTED Coordinator state row.
-   */
-  long commitStateWithoutWriteSet(TransactionContext context)
-      throws CommitConflictException, UnknownTransactionStatusException {
-    return commitStateInternal(context, null);
-  }
-
-  private long commitStateInternal(TransactionContext context, @Nullable WriteSet writeSet)
-      throws CommitConflictException, UnknownTransactionStatusException {
-    String id = context.transactionId;
     try {
       long committedAt = System.currentTimeMillis();
       Coordinator.State state =
@@ -84,7 +55,7 @@ class CoordinatorCommitHandler {
       logger.debug("Transaction {} is committed successfully at {}", id, committedAt);
       return committedAt;
     } catch (CoordinatorConflictException e) {
-      return handleCommitConflict(context, e);
+      return handleCommitConflict(id, e);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
@@ -95,13 +66,13 @@ class CoordinatorCommitHandler {
 
   /**
    * Resolves a putState conflict. Returns the {@code committedAt} of the already-persisted
-   * COMMITTED state when this transaction turns out to be already committed; otherwise rolls back
-   * the records and throws.
+   * COMMITTED state when this transaction turns out to be already committed; otherwise reports the
+   * conflict (the caller rolls the records back) by throwing {@link CommitConflictException}.
    */
-  long handleCommitConflict(TransactionContext context, Exception cause)
+  long handleCommitConflict(String id, Exception cause)
       throws CommitConflictException, UnknownTransactionStatusException {
     try {
-      Optional<Coordinator.State> s = coordinator.getState(context.transactionId);
+      Optional<Coordinator.State> s = coordinator.getState(id);
       if (s.isPresent()) {
         Coordinator.State persisted = s.get();
         if (persisted.getState() == TransactionState.ABORTED) {
@@ -109,7 +80,7 @@ class CoordinatorCommitHandler {
               CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
                   cause.getMessage()),
               cause,
-              context.transactionId);
+              id);
         }
         // Otherwise the coordinator state is present and COMMITTED, which means this transaction
         // has already committed. Only Two-phase Commit I/F reaches this branch: there the same
@@ -163,37 +134,21 @@ class CoordinatorCommitHandler {
             CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
                 cause.getMessage()),
             cause,
-            context.transactionId);
+            id);
       }
     } catch (CoordinatorException ex) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildMessage(ex.getMessage()),
           ex,
-          context.transactionId);
+          id);
     }
   }
 
   /**
-   * Writes the ABORTED state. When coordinator write-set logging is enabled, the {@code
-   * tx_write_set} column is populated from the given context's snapshot; otherwise the column is
-   * omitted.
+   * Writes the ABORTED state for the transaction identified by {@code id}, persisting the given
+   * pre-encoded {@code writeSet} (or none when {@code null}).
    */
-  TransactionState abortState(TransactionContext context) throws UnknownTransactionStatusException {
-    // Same opt-in gating as commitState: skip WriteSet encoding when write-set logging is
-    // disabled, since the Coordinator schema does not include the column in that case.
-    WriteSet writeSet =
-        coordinatorWriteSetLoggingEnabled
-            ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
-            : null;
-    return abortStateInternal(context.transactionId, writeSet);
-  }
-
-  /** Writes the ABORTED state without persisting a {@code tx_write_set} via a single putState. */
-  TransactionState abortStateWithoutWriteSet(String id) throws UnknownTransactionStatusException {
-    return abortStateInternal(id, null);
-  }
-
-  private TransactionState abortStateInternal(String id, @Nullable WriteSet writeSet)
+  TransactionState abortState(String id, @Nullable WriteSet writeSet)
       throws UnknownTransactionStatusException {
     try {
       Coordinator.State state =

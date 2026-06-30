@@ -23,7 +23,6 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column.BigIntValue;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column.BlobValue;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column.BooleanValue;
@@ -57,8 +56,13 @@ import javax.annotation.Nullable;
  * data.
  */
 final class WriteSetEncoder {
-  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
-      new CoordinatorGroupCommitKeyManipulator();
+  /**
+   * The {@code schema_version} stamped on every persisted {@link WriteSet}. A single definition
+   * governs both write paths — the single-group encoding ({@link #encodeSingleGroupWriteSet}) and
+   * the normal-group parent-row merge ({@link #mergeChildWriteSets}) — so they cannot drift.
+   */
+  private static final int SCHEMA_VERSION = 1;
+
   private final TransactionTableMetadataManager tableMetadataManager;
 
   WriteSetEncoder(TransactionTableMetadataManager tableMetadataManager) {
@@ -81,35 +85,9 @@ final class WriteSetEncoder {
    * @return the encoded {@link WriteSet}
    */
   WriteSet encodeSingleGroupWriteSet(TransactionContext context, boolean includeColumns) {
-    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(1);
+    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(SCHEMA_VERSION);
     if (context.snapshot.hasWritesOrDeletes()) {
       builder.addEntryGroups(encodeEntryGroup(context.snapshot, null, includeColumns));
-    }
-    return builder.build();
-  }
-
-  /**
-   * Encodes a {@link WriteSet} for a normal group commit that contains multiple transactions
-   * sharing a parent state row.
-   *
-   * <p>The returned WriteSet contains one {@link EntryGroup} per writing child (tagged with the
-   * child id derived from the context's transaction id). Read-only children are omitted so the
-   * persisted payload stays minimal. {@code schema_version} is always set even when all children
-   * are read-only.
-   *
-   * @param contexts the transaction contexts in the group, in the desired emit order
-   * @param includeColumns whether to include non-key column values for {@code Put} entries
-   * @return the encoded {@link WriteSet}
-   */
-  WriteSet encodeMultiGroupWriteSet(List<TransactionContext> contexts, boolean includeColumns) {
-    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(1);
-    for (TransactionContext context : contexts) {
-      if (!context.snapshot.hasWritesOrDeletes()) {
-        // Skip read-only children: their EntryGroup would carry no entries.
-        continue;
-      }
-      String childId = KEY_MANIPULATOR.keysFromFullKey(context.transactionId).childKey;
-      builder.addEntryGroups(encodeEntryGroup(context.snapshot, childId, includeColumns));
     }
     return builder.build();
   }
@@ -118,8 +96,7 @@ final class WriteSetEncoder {
    * Encodes an {@link EntryGroup} from the {@link Snapshot}'s write/delete sets.
    *
    * <p>Visible for testing only — production callers go through {@link
-   * #encodeSingleGroupWriteSet(TransactionContext, boolean)} or {@link
-   * #encodeMultiGroupWriteSet(List, boolean)}.
+   * #encodeSingleGroupWriteSet(TransactionContext, boolean)}.
    *
    * @param snapshot the snapshot of the transaction
    * @param childId the child id within a group commit, or {@code null} for non-group-commit
@@ -311,6 +288,46 @@ final class WriteSetEncoder {
         valueBuilder.setValue(TimeRelatedColumnEncodingUtils.encode(column));
       }
       builder.setTimestamptzValue(valueBuilder);
+    }
+  }
+
+  /**
+   * Merges the per-child, already-encoded write sets of a normal group commit into one parent-row
+   * {@link WriteSet}, stamping every {@link EntryGroup} with its owning child id.
+   *
+   * <p>This is pure proto assembly over pre-encoded inputs: it neither reads a {@link Snapshot} nor
+   * derives child ids (the caller resolves those), so it carries no dependency on the group-commit
+   * key manipulator. {@code schema_version} is always set, matching {@link
+   * #encodeSingleGroupWriteSet}, so a normal-group parent row and a delayed-group single row share
+   * one schema version. Read-only children (a {@code null} or empty write set) contribute no entry
+   * group.
+   *
+   * @param children each child's id paired with its pre-encoded write set, in emit order
+   * @return the merged parent-row {@link WriteSet}
+   */
+  static WriteSet mergeChildWriteSets(List<ChildWriteSet> children) {
+    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(SCHEMA_VERSION);
+    for (ChildWriteSet child : children) {
+      if (child.writeSet == null) {
+        continue;
+      }
+      for (EntryGroup entryGroup : child.writeSet.getEntryGroupsList()) {
+        builder.addEntryGroups(entryGroup.toBuilder().setChildId(child.childId).build());
+      }
+    }
+    return builder.build();
+  }
+
+  /**
+   * A child's id paired with its pre-encoded {@link WriteSet}, for {@link #mergeChildWriteSets}.
+   */
+  static final class ChildWriteSet {
+    final String childId;
+    @Nullable final WriteSet writeSet;
+
+    ChildWriteSet(String childId, @Nullable WriteSet writeSet) {
+      this.childId = childId;
+      this.writeSet = writeSet;
     }
   }
 }
