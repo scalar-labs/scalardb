@@ -443,7 +443,8 @@ public class RecoveryExecutorTest {
           throws Exception {
     // Arrange: writing the ABORTED state conflicts because the transaction committed concurrently
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State committedState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    Coordinator.State committedState =
+        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(committedState));
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
@@ -475,7 +476,8 @@ public class RecoveryExecutorTest {
           throws Exception {
     // Arrange: writing the ABORTED state conflicts because another actor aborted the transaction
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    Coordinator.State abortedState =
+        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(abortedState));
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
@@ -662,7 +664,8 @@ public class RecoveryExecutorTest {
     // new writer's coordinator state is ABORTED, so the record is resolved (rolled back) for it.
     TransactionResult original = prepareResult(TransactionState.PREPARED);
     TransactionResult rePrepared = prepareResult(TransactionState.PREPARED, ANY_ID_1);
-    Coordinator.State abortedState = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
+    Coordinator.State abortedState =
+        new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.of(abortedState));
     when(recovery.isTransactionExpired(original)).thenReturn(true);
@@ -730,7 +733,8 @@ public class RecoveryExecutorTest {
     // transaction, whose coordinator state is ABORTED, so the record is rolled back for it.
     TransactionResult original = prepareResult(TransactionState.PREPARED);
     TransactionResult rePrepared = prepareResult(TransactionState.PREPARED, ANY_ID_1);
-    Coordinator.State abortedState = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
+    Coordinator.State abortedState =
+        new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.of(abortedState));
     when(recovery.isTransactionExpired(original)).thenReturn(true);
@@ -901,7 +905,8 @@ public class RecoveryExecutorTest {
       throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    Coordinator.State abortedState =
+        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(abortedState));
 
     // Act
@@ -930,7 +935,8 @@ public class RecoveryExecutorTest {
     // Arrange
     TransactionResult transactionResult =
         prepareResultWithoutBeforeImage(TransactionState.PREPARED);
-    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    Coordinator.State abortedState =
+        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(abortedState));
 
     // Act
@@ -958,7 +964,8 @@ public class RecoveryExecutorTest {
           throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    Coordinator.State commitState =
+        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(commitState));
 
     executor = spy(executor);
@@ -988,7 +995,8 @@ public class RecoveryExecutorTest {
           throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.DELETED);
-    Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    Coordinator.State commitState =
+        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(commitState));
 
     // Act
@@ -1128,7 +1136,8 @@ public class RecoveryExecutorTest {
       throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    Coordinator.State abortedState =
+        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(abortedState));
 
     // Act
@@ -1157,7 +1166,8 @@ public class RecoveryExecutorTest {
     // Arrange
     TransactionResult transactionResult =
         prepareResultWithoutBeforeImage(TransactionState.PREPARED);
-    Coordinator.State abortedState = new Coordinator.State(ANY_ID_2, TransactionState.ABORTED);
+    Coordinator.State abortedState =
+        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(abortedState));
 
     // Act
@@ -1185,7 +1195,8 @@ public class RecoveryExecutorTest {
           throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    Coordinator.State commitState =
+        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(commitState));
 
     executor = spy(executor);
@@ -1215,7 +1226,8 @@ public class RecoveryExecutorTest {
           throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.DELETED);
-    Coordinator.State commitState = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    Coordinator.State commitState =
+        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.of(commitState));
 
     // Act
@@ -1325,7 +1337,9 @@ public class RecoveryExecutorTest {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis()));
     when(recovery.recover(selection, transactionResult, state)).thenReturn(true);
 
     // Act
@@ -1357,7 +1371,8 @@ public class RecoveryExecutorTest {
       throws Exception {
     // Arrange
     TransactionResult transactionResult = prepareResult(TransactionState.PREPARED);
-    Coordinator.State state = new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED);
+    Coordinator.State state =
+        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis());
 
     // Act — the present-state overload is used by finishTransaction and returns nothing.
     executor.executeSynchronously(selection, transactionResult, state);

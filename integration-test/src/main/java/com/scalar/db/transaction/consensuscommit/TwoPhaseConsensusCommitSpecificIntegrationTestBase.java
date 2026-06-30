@@ -2487,7 +2487,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     if (coordinatorState == null) {
       return;
     }
-    State state = new State(ANY_ID_2, coordinatorState);
+    State state = new State(ANY_ID_2, coordinatorState, System.currentTimeMillis());
     coordinatorForStorage1.putState(state);
   }
 

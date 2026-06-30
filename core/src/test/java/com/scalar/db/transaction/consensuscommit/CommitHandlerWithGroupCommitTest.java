@@ -4,9 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -123,36 +122,46 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
     doThrow(exceptionClass)
         .when(coordinator)
-        .putStateForGroupCommit(
-            eq(anyGroupCommitParentId()),
-            anyList(),
-            any(WriteSet.class),
-            eq(targetState),
-            anyLong());
+        .putState(argThat(groupCommitStateMatcher(anyGroupCommitParentId(), targetState)));
   }
 
   @Override
   protected void doNothingWhenCoordinatorPutState() throws CoordinatorException {
-    doNothing()
-        .when(coordinator)
-        .putStateForGroupCommit(
-            anyString(), anyList(), any(WriteSet.class), any(TransactionState.class), anyLong());
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
   }
 
   @Override
   protected void verifyCoordinatorPutState(
       TransactionState expectedTransactionState, Snapshot snapshot) throws CoordinatorException {
 
-    verify(coordinator)
-        .putStateForGroupCommit(
-            eq(anyGroupCommitParentId()),
-            groupCommitFullIdsArgumentCaptor.capture(),
-            any(WriteSet.class),
-            eq(expectedTransactionState),
-            anyLong());
-    List<String> fullIds = groupCommitFullIdsArgumentCaptor.getValue();
-    assertThat(fullIds.size()).isEqualTo(1);
-    assertThat(fullIds.get(0)).isEqualTo(anyId());
+    org.mockito.ArgumentCaptor<Coordinator.State> captor =
+        org.mockito.ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinator).putState(captor.capture());
+    Coordinator.State captured = captor.getValue();
+    assertThat(captured.getId()).isEqualTo(anyGroupCommitParentId());
+    assertThat(captured.getState()).isEqualTo(expectedTransactionState);
+    List<String> childIds = captured.getChildIds();
+    assertThat(childIds.size()).isEqualTo(1);
+    // The State's child IDs are the *child* portion of each full transaction id; verify the
+    // captured value matches the child of anyId().
+    assertThat(childIds.get(0))
+        .isEqualTo(
+            new CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator()
+                .keysFromFullKey(anyId())
+                .childKey);
+  }
+
+  /**
+   * Matcher for the group-commit parent-row State emitted by Emitter#emitNormalGroup: the id equals
+   * the parent key, childIds are non-empty (one entry per tx), and the txState matches.
+   */
+  private static org.mockito.ArgumentMatcher<Coordinator.State> groupCommitStateMatcher(
+      String parentId, TransactionState state) {
+    return actual ->
+        actual != null
+            && parentId.equals(actual.getId())
+            && !actual.getChildIds().isEmpty()
+            && actual.getState() == state;
   }
 
   @ParameterizedTest
@@ -330,8 +339,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Assert
     verify(storage, never()).mutate(anyList());
     verify(coordinator, never()).putState(any());
-    verify(coordinator, never())
-        .putStateForGroupCommit(anyString(), anyList(), any(WriteSet.class), any(), anyLong());
     verify(handler, never()).abortState(any());
     verify(handler, never()).rollbackRecords(any());
     verify(handler).onFailureBeforeCommit(any());
@@ -665,17 +672,16 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Act
     emitter.emitNormalGroup(parentId, Arrays.asList(context1, context2));
 
-    // Assert — capture the WriteSet content.
-    ArgumentCaptor<WriteSet> writeSetCaptor = ArgumentCaptor.forClass(WriteSet.class);
-    verify(coordinatorMock)
-        .putStateForGroupCommit(
-            eq(parentId),
-            anyList(),
-            writeSetCaptor.capture(),
-            eq(TransactionState.COMMITTED),
-            anyLong());
+    // Assert — capture the State and inspect its WriteSet content.
+    ArgumentCaptor<Coordinator.State> stateCaptor =
+        ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinatorMock).putState(stateCaptor.capture());
 
-    WriteSet captured = writeSetCaptor.getValue();
+    Coordinator.State capturedState = stateCaptor.getValue();
+    assertThat(capturedState.getId()).isEqualTo(parentId);
+    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(capturedState.getWriteSet()).isPresent();
+    WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
     assertThat(captured.getEntryGroupsList()).hasSize(2);
     assertThat(captured.getEntryGroups(0).getChildId()).isEqualTo("child-1");
@@ -714,16 +720,14 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     emitter.emitNormalGroup(parentId, Arrays.asList(writingContext, readOnlyContext));
 
     // Assert — only the writing child appears in entry_groups.
-    ArgumentCaptor<WriteSet> writeSetCaptor = ArgumentCaptor.forClass(WriteSet.class);
-    verify(coordinatorMock)
-        .putStateForGroupCommit(
-            eq(parentId),
-            anyList(),
-            writeSetCaptor.capture(),
-            eq(TransactionState.COMMITTED),
-            anyLong());
+    ArgumentCaptor<Coordinator.State> stateCaptor =
+        ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinatorMock).putState(stateCaptor.capture());
+    Coordinator.State capturedState = stateCaptor.getValue();
+    assertThat(capturedState.getId()).isEqualTo(parentId);
+    assertThat(capturedState.getWriteSet()).isPresent();
 
-    WriteSet captured = writeSetCaptor.getValue();
+    WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getEntryGroupsList()).hasSize(1);
     assertThat(captured.getEntryGroups(0).getChildId()).isEqualTo("writing");
   }
@@ -749,23 +753,20 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     emitter.emitNormalGroup(parentId, Collections.singletonList(context));
 
     // Assert — WriteSet is still non-null with schema_version set, but has no EntryGroups.
-    ArgumentCaptor<WriteSet> writeSetCaptor = ArgumentCaptor.forClass(WriteSet.class);
-    verify(coordinatorMock)
-        .putStateForGroupCommit(
-            eq(parentId),
-            anyList(),
-            writeSetCaptor.capture(),
-            eq(TransactionState.COMMITTED),
-            anyLong());
+    ArgumentCaptor<Coordinator.State> stateCaptor =
+        ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinatorMock).putState(stateCaptor.capture());
+    Coordinator.State capturedState = stateCaptor.getValue();
+    assertThat(capturedState.getId()).isEqualTo(parentId);
+    assertThat(capturedState.getWriteSet()).isPresent();
 
-    WriteSet captured = writeSetCaptor.getValue();
+    WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
     assertThat(captured.getEntryGroupsList()).isEmpty();
   }
 
   @Test
-  void emitter_emitNormalGroup_WithEmptyContexts_ShouldNotCallPutStateForGroupCommit()
-      throws Exception {
+  void emitter_emitNormalGroup_WithEmptyContexts_ShouldNotCallPutState() throws Exception {
     groupCommitter.remove(anyId());
 
     // Arrange
@@ -780,11 +781,9 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // with an empty context list.
     emitter.emitNormalGroup(parentId, Collections.emptyList());
 
-    // Assert — putStateForGroupCommit must not be called; otherwise a spurious COMMITTED parent
-    // row would be written.
-    verify(coordinatorMock, never())
-        .putStateForGroupCommit(
-            anyString(), anyList(), any(WriteSet.class), any(TransactionState.class), anyLong());
+    // Assert — putState must not be called; otherwise a spurious COMMITTED parent row would be
+    // written.
+    verify(coordinatorMock, never()).putState(any(Coordinator.State.class));
   }
 
   @Test
@@ -881,15 +880,16 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Act
     emitter.emitNormalGroup(parentId, Collections.singletonList(context));
 
-    // Assert — putStateForGroupCommit is invoked with a null WriteSet so the BLOB column is
+    // Assert — putState is invoked with a State carrying no WriteSet so the BLOB column is
     // not populated (the column is not part of the Coordinator schema in this configuration).
-    verify(coordinatorMock)
-        .putStateForGroupCommit(
-            eq(parentId),
-            anyList(),
-            (WriteSet) eq(null),
-            eq(TransactionState.COMMITTED),
-            anyLong());
+    ArgumentCaptor<Coordinator.State> stateCaptor =
+        ArgumentCaptor.forClass(Coordinator.State.class);
+    verify(coordinatorMock).putState(stateCaptor.capture());
+
+    Coordinator.State capturedState = stateCaptor.getValue();
+    assertThat(capturedState.getId()).isEqualTo(parentId);
+    assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(capturedState.getWriteSet()).isEmpty();
   }
 
   @Test
