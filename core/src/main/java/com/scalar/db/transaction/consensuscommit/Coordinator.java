@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * <ul>
  *   <li><b>parent ID</b> — the key for a <i>normal group</i>: one record under the parent ID lists
  *       the child IDs of all transactions committed together (written by {@code
- *       CommitHandlerWithGroupCommit.Emitter#emitNormalGroup} via {@link #putState}).
+ *       CoordinatorCommitHandlerWithGroupCommit.Emitter#emitNormalGroup} via {@link #putState}).
  *   <li><b>full ID</b> ({@code parent + child}) — the key for a transaction committed on its own: a
  *       <i>delayed</i> group commit, or a transaction whose lifecycle abort writes under its own
  *       full ID.
@@ -76,14 +76,16 @@ import org.slf4j.LoggerFactory;
  * must be careful not to write under a key that does not conflict with the commit:
  *
  * <ul>
- *   <li><b>normal group commit</b> — {@code CommitHandlerWithGroupCommit.Emitter#emitNormalGroup}
- *       writes {@code COMMITTED} under the parent ID via {@link #putState}.
- *   <li><b>delayed group commit</b> — {@code CommitHandlerWithGroupCommit.Emitter#emitDelayedGroup}
- *       writes {@code putState(fullId, COMMITTED)}.
- *   <li><b>lifecycle abort</b> ({@link CommitHandlerWithGroupCommit#abortState}) — writes {@code
- *       putState(fullId, ABORTED)}. Safe because the caller first removes the slot from the group
- *       committer (so a normal group commit can no longer list this child under the parent ID), and
- *       against a delayed commit it conflicts on the same full ID.
+ *   <li><b>normal group commit</b> — {@code
+ *       CoordinatorCommitHandlerWithGroupCommit.Emitter#emitNormalGroup} writes {@code COMMITTED}
+ *       under the parent ID via {@link #putState}.
+ *   <li><b>delayed group commit</b> — {@code
+ *       CoordinatorCommitHandlerWithGroupCommit.Emitter#emitDelayedGroup} writes {@code
+ *       putState(fullId, COMMITTED)}.
+ *   <li><b>lifecycle abort</b> ({@link CoordinatorCommitHandlerWithGroupCommit#abortState}) —
+ *       writes {@code putState(fullId, ABORTED)}. Safe because the caller first removes the slot
+ *       from the group committer (so a normal group commit can no longer list this child under the
+ *       parent ID), and against a delayed commit it conflicts on the same full ID.
  *   <li><b>lazy recovery / manager-level rollback-or-abort by ID</b> — {@link #forceAbort} runs the
  *       two-step protocol: write the parent-ID conflict marker (empty {@code tx_child_ids}) first,
  *       then the full-ID {@code ABORTED} record. Needed because the caller does <i>not</i> own the

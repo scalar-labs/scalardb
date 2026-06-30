@@ -234,8 +234,13 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
     try {
       commit.commitStateWithoutWriteSet(context);
-    } catch (CommitConflictException | UnknownTransactionStatusException e) {
-      // no need to rollback because the transaction has already been rolled back
+    } catch (CommitConflictException e) {
+      commit.rollbackRecords(context);
+      needRollback = false;
+      throw e;
+    } catch (UnknownTransactionStatusException e) {
+      // The coordinator state is unknown, so we must not roll back the records: the transaction may
+      // have committed.
       needRollback = false;
 
       throw e;
