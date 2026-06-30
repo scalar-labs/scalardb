@@ -111,7 +111,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -129,7 +131,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -151,7 +155,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -173,7 +179,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -191,7 +198,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -214,7 +222,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -245,8 +254,7 @@ public class RecoveryHandlerTest {
 
     // Assert — the writer may still be in flight, so the record is not recovered.
     assertThat(recovered).isFalse();
-    verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
@@ -267,7 +275,7 @@ public class RecoveryHandlerTest {
 
     // Assert
     assertThat(recovered).isTrue();
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler).rollbackRecord(selection, result);
   }
 
@@ -280,12 +288,13 @@ public class RecoveryHandlerTest {
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
     Optional<Coordinator.State> state = Optional.empty();
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyString());
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
     // A concurrent actor already aborted the writer; the re-read returns that ABORTED state.
     when(coordinator.getState(ANY_ID_1))
-        .thenReturn(Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED)));
+        .thenReturn(
+            Optional.of(
+                new Coordinator.State(
+                    ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis())));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -294,7 +303,7 @@ public class RecoveryHandlerTest {
     // Assert — recover guarantees the record is resolved: it is rolled back to match the winner's
     // ABORTED outcome.
     assertThat(recovered).isTrue();
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler).rollbackRecord(selection, result);
   }
 
@@ -307,13 +316,14 @@ public class RecoveryHandlerTest {
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
     Optional<Coordinator.State> state = Optional.empty();
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyString());
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
     // A concurrent commit won the race; the re-read sees COMMITTED, which must be reported
     // instead of a false ABORTED.
     when(coordinator.getState(ANY_ID_1))
-        .thenReturn(Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED)));
+        .thenReturn(
+            Optional.of(
+                new Coordinator.State(
+                    ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis())));
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -322,7 +332,7 @@ public class RecoveryHandlerTest {
     // Assert — recover guarantees the record is resolved: it is rolled forward to match the
     // winner's COMMITTED outcome.
     assertThat(recovered).isTrue();
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler).rollforwardRecord(selection, result);
     verify(handler, never()).rollbackRecord(selection, result);
   }
@@ -339,9 +349,7 @@ public class RecoveryHandlerTest {
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
     Optional<Coordinator.State> state = Optional.empty();
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyString());
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
     when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
 
     // Act
@@ -349,7 +357,7 @@ public class RecoveryHandlerTest {
 
     // Assert
     assertThat(recovered).isTrue();
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler, never()).rollbackRecord(selection, result);
     verify(handler, never()).rollforwardRecord(selection, result);
   }
@@ -363,16 +371,14 @@ public class RecoveryHandlerTest {
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
     Optional<Coordinator.State> state = Optional.empty();
-    doThrow(CoordinatorException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyString());
+    doThrow(CoordinatorException.class).when(coordinator).forceAbort(anyString());
 
     // Act
     assertThatThrownBy(() -> handler.recover(selection, result, state))
         .isInstanceOf(CoordinatorException.class);
 
     // Assert
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
@@ -395,7 +401,7 @@ public class RecoveryHandlerTest {
 
     // Assert
     assertThat(recovered).isTrue();
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
     verify(handler, never()).rollforwardRecord(selection, result);
   }
@@ -417,7 +423,7 @@ public class RecoveryHandlerTest {
 
     // Assert
     assertThat(recovered).isTrue();
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
     verify(handler, never()).rollforwardRecord(selection, result);
   }
@@ -441,7 +447,7 @@ public class RecoveryHandlerTest {
 
     // Assert
     assertThat(recovered).isTrue();
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
     verify(handler, never()).rollforwardRecord(selection, result);
   }
@@ -463,7 +469,7 @@ public class RecoveryHandlerTest {
     handler.tryRecover(selection, result, state);
 
     // Assert
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
     verify(handler, never()).rollforwardRecord(selection, result);
   }
@@ -484,7 +490,7 @@ public class RecoveryHandlerTest {
     handler.tryRecover(selection, result, state);
 
     // Assert
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
     verify(handler, never()).rollforwardRecord(selection, result);
   }
@@ -507,7 +513,7 @@ public class RecoveryHandlerTest {
     handler.tryRecover(selection, result, state);
 
     // Assert
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
     verify(handler, never()).rollforwardRecord(selection, result);
   }
@@ -527,7 +533,7 @@ public class RecoveryHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.recover(selection, result, state))
         .isInstanceOf(ExecutionException.class);
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
@@ -546,7 +552,7 @@ public class RecoveryHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.tryRecover(selection, result, state))
         .isInstanceOf(ExecutionException.class);
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
@@ -558,29 +564,27 @@ public class RecoveryHandlerTest {
 
     // Assert
     assertThat(aborted).isTrue();
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
   }
 
   @Test
   public void tryAbortExpiredTransaction_Conflict_ShouldReturnFalse() throws CoordinatorException {
     // Arrange
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(ANY_ID_1);
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(ANY_ID_1);
 
     // Act
     boolean aborted = handler.tryAbortExpiredTransaction(ANY_ID_1);
 
     // Assert
     assertThat(aborted).isFalse();
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
   }
 
   @Test
   public void tryAbortExpiredTransaction_CoordinatorException_ShouldThrow()
       throws CoordinatorException {
     // Arrange
-    doThrow(CoordinatorException.class).when(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    doThrow(CoordinatorException.class).when(coordinator).forceAbort(ANY_ID_1);
 
     // Act Assert
     assertThatThrownBy(() -> handler.tryAbortExpiredTransaction(ANY_ID_1))
@@ -596,7 +600,8 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED);
+    Coordinator.State state =
+        new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis());
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -605,7 +610,7 @@ public class RecoveryHandlerTest {
     // Assert — rolled forward, and the coordinator is never touched.
     verify(handler).rollforwardRecord(selection, result);
     verify(coordinator, never()).getState(anyString());
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
   }
 
   @Test
@@ -613,7 +618,8 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
+    Coordinator.State state =
+        new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -622,7 +628,7 @@ public class RecoveryHandlerTest {
     // Assert — rolled back, and the coordinator is never touched.
     verify(handler).rollbackRecord(selection, result);
     verify(coordinator, never()).getState(anyString());
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
   }
 
   // ------------------------------------------------------------
@@ -635,7 +641,9 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+        Optional.of(
+            new Coordinator.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -651,7 +659,8 @@ public class RecoveryHandlerTest {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
     Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+        Optional.of(
+            new Coordinator.State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
@@ -672,15 +681,13 @@ public class RecoveryHandlerTest {
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
     Optional<Coordinator.State> state = Optional.empty();
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyString());
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
 
     // Act
     handler.tryRecover(selection, result, state);
 
     // Assert — no coordinator re-read and no roll.
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(coordinator, never()).getState(anyString());
     verify(handler, never()).rollforwardRecord(selection, result);
     verify(handler, never()).rollbackRecord(selection, result);
@@ -698,7 +705,7 @@ public class RecoveryHandlerTest {
     handler.tryRecover(selection, result, state);
 
     // Assert
-    verify(coordinator, never()).putStateForLazyRecoveryRollback(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollforwardRecord(selection, result);
     verify(handler, never()).rollbackRecord(selection, result);
   }
@@ -712,14 +719,14 @@ public class RecoveryHandlerTest {
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
     Optional<Coordinator.State> state = Optional.empty();
-    doNothing().when(coordinator).putStateForLazyRecoveryRollback(anyString());
+    doNothing().when(coordinator).forceAbort(anyString());
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
     handler.tryRecover(selection, result, state);
 
     // Assert
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler).rollbackRecord(selection, result);
   }
 }

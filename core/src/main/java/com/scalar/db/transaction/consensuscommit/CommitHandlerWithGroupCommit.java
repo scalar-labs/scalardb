@@ -9,6 +9,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
 import com.scalar.db.util.groupcommit.GroupCommitException;
@@ -22,6 +23,8 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class CommitHandlerWithGroupCommit extends CommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CommitHandlerWithGroupCommit.class);
+  private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
+      new CoordinatorGroupCommitKeyManipulator();
   private final CoordinatorGroupCommitter groupCommitter;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -171,18 +174,25 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       }
 
       // These transactions are contained in a normal group that has multiple transactions.
-      // Therefore, the transaction states should be put together in Coordinator.State.
-      List<String> transactionIds = new ArrayList<>(contexts.size());
+      // Therefore, the transaction states should be put together in Coordinator.State. The State
+      // carries the child IDs derived from each transaction's full ID; the parent ID is the row's
+      // partition key.
+      if (KEY_MANIPULATOR.isFullKey(parentId)) {
+        throw new AssertionError(
+            "emitNormalGroup is only for normal group commits that use a parent ID as the key");
+      }
+      List<String> childIds = new ArrayList<>(contexts.size());
       for (TransactionContext context : contexts) {
-        transactionIds.add(context.transactionId);
+        childIds.add(KEY_MANIPULATOR.keysFromFullKey(context.transactionId).childKey);
       }
 
-      coordinator.putStateForGroupCommit(
-          parentId,
-          transactionIds,
-          writeSetEncoder.encodeMultiGroupWriteSet(contexts, false),
-          TransactionState.COMMITTED,
-          System.currentTimeMillis());
+      coordinator.putState(
+          new State(
+              parentId,
+              childIds,
+              writeSetEncoder.encodeMultiGroupWriteSet(contexts, false),
+              TransactionState.COMMITTED,
+              System.currentTimeMillis()));
 
       logger.debug(
           "Transaction {} (parent ID) is committed successfully at {}",
@@ -200,7 +210,8 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
           new State(
               fullId,
               writeSetEncoder.encodeSingleGroupWriteSet(context, false),
-              TransactionState.COMMITTED));
+              TransactionState.COMMITTED,
+              System.currentTimeMillis()));
 
       logger.debug(
           "Transaction {} is committed successfully at {}", fullId, System.currentTimeMillis());
