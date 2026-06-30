@@ -30,7 +30,9 @@ public abstract class AbstractDistributedTransactionProvider
       // active transaction registry) carry the behavior of every inner decorator.
       transactionManager =
           new ActiveTransactionManagedDistributedTransactionManager(
-              transactionManager, config.getActiveTransactionManagementExpirationTimeMillis());
+              transactionManager,
+              config.getActiveTransactionManagementExpirationTimeMillis(),
+              config.getActiveTransactionManagementMaxActiveTransactions());
     }
 
     return transactionManager;
@@ -57,7 +59,9 @@ public abstract class AbstractDistributedTransactionProvider
       // Wrap the transaction manager for active transaction management
       transactionManager =
           new ActiveTransactionManagedTwoPhaseCommitTransactionManager(
-              transactionManager, config.getActiveTransactionManagementExpirationTimeMillis());
+              transactionManager,
+              config.getActiveTransactionManagementExpirationTimeMillis(),
+              config.getActiveTransactionManagementMaxActiveTransactions());
     }
 
     return transactionManager;
@@ -79,7 +83,9 @@ public abstract class AbstractDistributedTransactionProvider
       // so that the idle-expiry reap traverses every inner decorator via releaseContext.
       coordinator =
           new ActiveTransactionManagedTwoPhaseCommitCoordinator(
-              coordinator, config.getActiveTransactionManagementExpirationTimeMillis());
+              coordinator,
+              config.getActiveTransactionManagementExpirationTimeMillis(),
+              config.getActiveTransactionManagementMaxActiveTransactions());
     }
 
     return coordinator;
@@ -106,7 +112,9 @@ public abstract class AbstractDistributedTransactionProvider
       // so that the idle-expiry reap traverses every inner decorator via releaseContext.
       participant =
           new ActiveTransactionManagedTwoPhaseCommitParticipant(
-              participant, config.getActiveTransactionManagementExpirationTimeMillis());
+              participant,
+              config.getActiveTransactionManagementExpirationTimeMillis(),
+              config.getActiveTransactionManagementMaxActiveTransactions());
     }
 
     return participant;
