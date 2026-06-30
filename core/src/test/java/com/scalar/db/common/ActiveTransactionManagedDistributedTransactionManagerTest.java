@@ -6,16 +6,30 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
 import com.scalar.db.api.Isolation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.SerializableStrategy;
+import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -33,7 +47,8 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
 
     // Arrange
     transactionManager =
-        new ActiveTransactionManagedDistributedTransactionManager(wrappedTransactionManager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(
+            wrappedTransactionManager, -1, -1);
   }
 
   @Test
@@ -56,6 +71,66 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
     assertThat(transaction2)
         .isInstanceOf(
             ActiveTransactionManagedDistributedTransactionManager.ActiveTransaction.class);
+  }
+
+  @Test
+  public void getScanner_ReturnedScanner_ShouldDriveUnderlyingOneWhenIterated() throws Exception {
+    // Arrange
+    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn("txId1");
+    when(wrappedTransactionManager.begin()).thenReturn(wrappedTransaction);
+    TransactionCrudOperable.Scanner rawScanner = mock(TransactionCrudOperable.Scanner.class);
+    Result result = mock(Result.class);
+    when(rawScanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    Scan scan = Scan.newBuilder().namespace("ns").table("tbl").all().build();
+    when(wrappedTransaction.getScanner(scan)).thenReturn(rawScanner);
+
+    // Act
+    DistributedTransaction transaction = transactionManager.begin();
+    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
+    List<Result> results = new ArrayList<>();
+    scanner.iterator().forEachRemaining(results::add);
+
+    // Assert — iterating drives the underlying scanner's one() per element, so iteration flows
+    // through the idle-timer-refreshing (and synchronizing) wrapper rather than bypassing it via
+    // the
+    // raw scanner's own iterator.
+    assertThat(results).containsExactly(result);
+    verify(rawScanner, times(2)).one();
+  }
+
+  @Test
+  @SuppressWarnings({"unchecked", "deprecation"})
+  public void crudOperations_OnHeldTransaction_ShouldRefreshIdleTimerViaRegistryTouch()
+      throws Exception {
+    // Arrange — inject a mock registry so we can observe the idle-timer refresh directly.
+    ActiveTransactionRegistry<DistributedTransaction> registry =
+        mock(ActiveTransactionRegistry.class);
+    when(registry.add(anyString(), any())).thenReturn(true);
+    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn("txId1");
+    when(wrappedTransactionManager.begin()).thenReturn(wrappedTransaction);
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            wrappedTransactionManager, registry);
+
+    // Act: every CRUD op on a held transaction reference must refresh the idle timer, so a
+    // long-running begin-and-hold transaction is neither idle-reaped nor LRU-evicted mid-work.
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(mock(Get.class));
+    transaction.scan(mock(Scan.class));
+    transaction.put(mock(Put.class));
+    transaction.put(Collections.singletonList(mock(Put.class)));
+    transaction.delete(mock(Delete.class));
+    transaction.delete(Collections.singletonList(mock(Delete.class)));
+    transaction.insert(mock(Insert.class));
+    transaction.upsert(mock(Upsert.class));
+    transaction.update(mock(Update.class));
+    transaction.mutate(Collections.singletonList(mock(Put.class)));
+    transaction.batch(Collections.singletonList(mock(Get.class)));
+
+    // Assert — one refresh per CRUD operation (begin() registers but does not touch).
+    verify(registry, times(11)).touch("txId1");
   }
 
   @Test

@@ -51,12 +51,15 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ActiveTransactionManagedTwoPhaseCommitCoordinator(
-      TwoPhaseCommit.Coordinator coordinator, long expirationTimeMillis) {
+      TwoPhaseCommit.Coordinator coordinator,
+      long expirationTimeMillis,
+      int maxActiveTransactions) {
     super(coordinator);
-    // The registry stores the transaction ID itself; on expiry it is handed back so we can release
-    // the corresponding context on the wrapped coordinator.
+    // The registry stores the transaction ID itself; on expiry or eviction it is handed back so we
+    // can release the corresponding context on the wrapped coordinator.
     this.registry =
-        new ActiveTransactionRegistry<>(expirationTimeMillis, coordinator::releaseContext);
+        new ActiveTransactionRegistry<>(
+            expirationTimeMillis, maxActiveTransactions, coordinator::releaseContext);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")

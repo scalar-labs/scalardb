@@ -937,7 +937,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.begin(ANY_ID);
@@ -949,7 +949,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.start(ANY_ID);
@@ -960,7 +960,7 @@ public class JdbcTransactionManagerTest {
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
 
@@ -975,7 +975,7 @@ public class JdbcTransactionManagerTest {
   public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_ID))
@@ -987,7 +987,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.commit();
@@ -1002,7 +1002,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException, SQLException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(SQLException.class).when(connection).commit();
 
@@ -1025,7 +1025,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.rollback();
@@ -1041,7 +1041,7 @@ public class JdbcTransactionManagerTest {
           throws TransactionException, SQLException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(SQLException.class).when(connection).rollback();
 
@@ -1061,7 +1061,7 @@ public class JdbcTransactionManagerTest {
   public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction1 = manager.begin(ANY_ID);
 
@@ -1076,7 +1076,7 @@ public class JdbcTransactionManagerTest {
   public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.join(ANY_ID)).isInstanceOf(TransactionNotFoundException.class);
@@ -1087,7 +1087,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.commit();
@@ -1101,7 +1101,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException, SQLException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(SQLException.class).when(connection).commit();
 
@@ -1124,7 +1124,7 @@ public class JdbcTransactionManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_ID);
     transaction.rollback();
@@ -1139,7 +1139,7 @@ public class JdbcTransactionManagerTest {
           throws TransactionException, SQLException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(SQLException.class).when(connection).rollback();
 

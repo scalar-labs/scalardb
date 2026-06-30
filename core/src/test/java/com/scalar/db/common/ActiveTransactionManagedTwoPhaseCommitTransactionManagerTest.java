@@ -2,17 +2,27 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -30,7 +40,8 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManagerTest {
 
     // Arrange
     transactionManager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(wrappedTransactionManager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(
+            wrappedTransactionManager, -1, -1);
   }
 
   @Test
@@ -53,6 +64,68 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManagerTest {
     assertThat(transaction2)
         .isInstanceOf(
             ActiveTransactionManagedTwoPhaseCommitTransactionManager.ActiveTransaction.class);
+  }
+
+  @Test
+  @SuppressWarnings({"unchecked", "deprecation"})
+  public void crudOperations_OnHeldTransaction_ShouldRefreshIdleTimerViaRegistryTouch()
+      throws Exception {
+    // Arrange — inject a mock registry so we can observe the idle-timer refresh directly.
+    ActiveTransactionRegistry<TwoPhaseCommitTransaction> registry =
+        mock(ActiveTransactionRegistry.class);
+    when(registry.add(anyString(), any())).thenReturn(true);
+    TwoPhaseCommitTransaction wrappedTransaction = mock(TwoPhaseCommitTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn("txId1");
+    when(wrappedTransactionManager.begin()).thenReturn(wrappedTransaction);
+    ActiveTransactionManagedTwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(
+            wrappedTransactionManager, registry);
+
+    // Act: every CRUD op on a held transaction reference must refresh the idle timer, so a
+    // long-running begin-and-hold transaction is neither idle-reaped nor LRU-evicted mid-work.
+    TwoPhaseCommitTransaction transaction = manager.begin();
+    transaction.get(mock(Get.class));
+    transaction.scan(mock(Scan.class));
+    transaction.put(mock(Put.class));
+    transaction.put(Collections.singletonList(mock(Put.class)));
+    transaction.delete(mock(Delete.class));
+    transaction.delete(Collections.singletonList(mock(Delete.class)));
+    transaction.insert(mock(Insert.class));
+    transaction.upsert(mock(Upsert.class));
+    transaction.update(mock(Update.class));
+    transaction.mutate(Collections.singletonList(mock(Put.class)));
+    transaction.batch(Collections.singletonList(mock(Get.class)));
+
+    // Assert — one refresh per CRUD operation (begin() registers but does not touch).
+    verify(registry, times(11)).touch("txId1");
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void prepareAndValidate_OnHeldTransaction_ShouldRefreshIdleTimerButTerminalOpsShouldNot()
+      throws Exception {
+    // Arrange — inject a mock registry so we can observe the idle-timer refresh directly.
+    ActiveTransactionRegistry<TwoPhaseCommitTransaction> registry =
+        mock(ActiveTransactionRegistry.class);
+    when(registry.add(anyString(), any())).thenReturn(true);
+    TwoPhaseCommitTransaction wrappedTransaction = mock(TwoPhaseCommitTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn("txId1");
+    when(wrappedTransactionManager.begin()).thenReturn(wrappedTransaction);
+    ActiveTransactionManagedTwoPhaseCommitTransactionManager manager =
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(
+            wrappedTransactionManager, registry);
+
+    // Act: prepare()/validate() are non-terminal operations on a held transaction, so they must
+    // refresh the idle timer; commit() is terminal and removes the entry, so it must not touch.
+    TwoPhaseCommitTransaction transaction = manager.begin();
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert — one refresh each for prepare()/validate() only; commit() removes instead of
+    // touching.
+    verify(registry, times(2)).touch("txId1");
+    verify(registry).remove("txId1");
   }
 
   @Test
