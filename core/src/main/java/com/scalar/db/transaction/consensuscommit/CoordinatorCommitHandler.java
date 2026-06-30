@@ -40,30 +40,38 @@ class CoordinatorCommitHandler {
   /**
    * Writes the COMMITTED state with the {@code tx_write_set} populated from the given context's
    * snapshot.
+   *
+   * @return the {@code committedAt} timestamp written to the COMMITTED Coordinator state row. The
+   *     caller stamps the committed data records with the same value so the row and the records
+   *     share one timestamp.
    */
-  void commitState(TransactionContext context)
+  long commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    commitStateInternal(context, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+    return commitStateInternal(context, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
   }
 
-  /** Writes the COMMITTED state without persisting a {@code tx_write_set}. */
-  void commitStateWithoutWriteSet(TransactionContext context)
+  /**
+   * Writes the COMMITTED state without persisting a {@code tx_write_set}.
+   *
+   * @return the {@code committedAt} timestamp written to the COMMITTED Coordinator state row.
+   */
+  long commitStateWithoutWriteSet(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    commitStateInternal(context, null);
+    return commitStateInternal(context, null);
   }
 
-  private void commitStateInternal(TransactionContext context, @Nullable WriteSet writeSet)
+  private long commitStateInternal(TransactionContext context, @Nullable WriteSet writeSet)
       throws CommitConflictException, UnknownTransactionStatusException {
     String id = context.transactionId;
     try {
+      long committedAt = System.currentTimeMillis();
       Coordinator.State state =
-          new Coordinator.State(
-              id, writeSet, TransactionState.COMMITTED, System.currentTimeMillis());
+          new Coordinator.State(id, writeSet, TransactionState.COMMITTED, committedAt);
       coordinator.putState(state);
-      logger.debug(
-          "Transaction {} is committed successfully at {}", id, System.currentTimeMillis());
+      logger.debug("Transaction {} is committed successfully at {}", id, committedAt);
+      return committedAt;
     } catch (CoordinatorConflictException e) {
-      handleCommitConflict(context, e);
+      return handleCommitConflict(context, e);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
           CoreError.CONSENSUS_COMMIT_UNKNOWN_COORDINATOR_STATUS.buildMessage(e.getMessage()),
@@ -72,13 +80,18 @@ class CoordinatorCommitHandler {
     }
   }
 
-  void handleCommitConflict(TransactionContext context, Exception cause)
+  /**
+   * Resolves a putState conflict. Returns the {@code committedAt} of the already-persisted
+   * COMMITTED state when this transaction turns out to be already committed; otherwise rolls back
+   * the records and throws.
+   */
+  long handleCommitConflict(TransactionContext context, Exception cause)
       throws CommitConflictException, UnknownTransactionStatusException {
     try {
       Optional<Coordinator.State> s = coordinator.getState(context.transactionId);
       if (s.isPresent()) {
-        TransactionState state = s.get().getState();
-        if (state == TransactionState.ABORTED) {
+        Coordinator.State persisted = s.get();
+        if (persisted.getState() == TransactionState.ABORTED) {
           throw new CommitConflictException(
               CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
                   cause.getMessage()),
@@ -93,10 +106,13 @@ class CoordinatorCommitHandler {
         // putIfNotExists race and observes it here. With One-phase Commit I/F this is unreachable:
         // this commit is the only writer of the COMMITTED state and it just lost the race, so the
         // conflicting row was an ABORTED from a lazy recovery, handled above. The transaction is
-        // committed, so return normally and let the caller commit the records.
+        // committed, so return the persisted row's committedAt and let the caller commit the
+        // records with it (keeping the row and the records on a single timestamp).
         //
         // TODO: revisit this if/when the Two-phase Commit I/F is removed -- it would then be
         // unreachable (a COMMITTED state could never be observed after a conflict here).
+
+        return persisted.getCreatedAt();
       } else {
         // The coordinator state is absent: a row existed when our putIfNotExists lost the race, but
         // it is gone now. In both interfaces this means the conflicting row was an ABORTED written

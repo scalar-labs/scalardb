@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -115,17 +116,22 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   // ---------- commitState (group-commit path) ----------
 
   @Test
-  void commitState_WhenSuccessful_ShouldRouteThroughGroupCommitter() throws Exception {
+  void commitState_WhenSuccessful_ShouldRouteThroughGroupCommitterAndReturnEmitCommittedAt()
+      throws Exception {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithWrite(fullId);
     TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    long emitCommittedAt = 1234567890123L;
+    // groupCommitter is a spy, so stub with doReturn to avoid invoking the real ready().
+    doReturn(emitCommittedAt).when(groupCommitter).ready(eq(fullId), eq(context));
 
     // Act
-    handler.commitState(context);
+    long committedAt = handler.commitState(context);
 
-    // Assert — the group-committer.ready() is the dispatch boundary into the emitter.
+    // Assert — the group-committer.ready() is the dispatch boundary into the emitter, and the
+    // emit-time committedAt it returns is propagated so the caller stamps the records with it.
     verify(groupCommitter).ready(eq(fullId), eq(context));
+    assertThat(committedAt).isEqualTo(emitCommittedAt);
   }
 
   @Test
@@ -280,7 +286,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
         createContext(fullTxId2, prepareSnapshotWithWrite(fullTxId2), /* slotReserved= */ true);
 
     // Act
-    emitter.emitNormalGroup(parentId, Arrays.asList(context1, context2));
+    Long committedAt = emitter.emitNormalGroup(parentId, Arrays.asList(context1, context2));
 
     // Assert
     ArgumentCaptor<Coordinator.State> stateCaptor =
@@ -291,6 +297,9 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     assertThat(capturedState.getId()).isEqualTo(parentId);
     assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(capturedState.getChildIds()).containsExactly("child-1", "child-2");
+    // The emit returns the single committedAt it stamped on the batched row, so every transaction
+    // in the group commits its data records with the same value.
+    assertThat(committedAt).isEqualTo(capturedState.getCreatedAt());
     assertThat(capturedState.getWriteSet()).isPresent();
     WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
@@ -379,10 +388,12 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
     // Act — all buffered transactions were manually rolled back, so emitNormalGroup is invoked
     // with an empty context list.
-    emitter.emitNormalGroup(parentId, Collections.emptyList());
+    Long committedAt = emitter.emitNormalGroup(parentId, Collections.emptyList());
 
     // Assert — putState must not be called; otherwise a spurious COMMITTED parent row would be
-    // written.
+    // written. The null return is the contract that commitState's `assert committedAt != null`
+    // guard relies on.
+    assertThat(committedAt).isNull();
     verify(coordinatorMock, never()).putState(any(Coordinator.State.class));
   }
 
@@ -401,7 +412,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
         createContext(fullTxId, prepareSnapshotWithWrite(fullTxId), /* slotReserved= */ true);
 
     // Act
-    emitter.emitDelayedGroup(fullTxId, context);
+    Long committedAt = emitter.emitDelayedGroup(fullTxId, context);
 
     // Assert
     ArgumentCaptor<Coordinator.State> stateCaptor =
@@ -411,6 +422,8 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     Coordinator.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(fullTxId);
     assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
+    // The emit returns the committedAt it stamped on the row.
+    assertThat(committedAt).isEqualTo(capturedState.getCreatedAt());
     assertThat(capturedState.getWriteSet()).isPresent();
 
     WriteSet captured = capturedState.getWriteSet().get();
@@ -437,7 +450,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
         createContext(fullTxId, prepareEmptySnapshot(fullTxId), /* slotReserved= */ true);
 
     // Act
-    emitter.emitDelayedGroup(fullTxId, context);
+    Long committedAt = emitter.emitDelayedGroup(fullTxId, context);
 
     // Assert
     ArgumentCaptor<Coordinator.State> stateCaptor =
@@ -447,6 +460,8 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     Coordinator.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(fullTxId);
     assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
+    // The emit returns the committedAt it stamped on the row.
+    assertThat(committedAt).isEqualTo(capturedState.getCreatedAt());
     assertThat(capturedState.getWriteSet()).isPresent();
 
     WriteSet captured = capturedState.getWriteSet().get();

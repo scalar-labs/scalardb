@@ -60,10 +60,10 @@ class ParticipantCommitHandler {
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
   }
 
-  void prepareRecords(TransactionContext context) throws PreparationException {
+  void prepareRecords(TransactionContext context, long preparedAt) throws PreparationException {
     try {
       PrepareMutationComposer composer =
-          new PrepareMutationComposer(context.transactionId, tableMetadataManager);
+          new PrepareMutationComposer(context.transactionId, preparedAt, tableMetadataManager);
       context.snapshot.to(composer);
       List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
@@ -104,10 +104,10 @@ class ParticipantCommitHandler {
     }
   }
 
-  void commitRecords(TransactionContext context) {
+  void commitRecords(TransactionContext context, long committedAt) {
     try {
       CommitMutationComposer composer =
-          new CommitMutationComposer(context.transactionId, tableMetadataManager);
+          new CommitMutationComposer(context.transactionId, committedAt, tableMetadataManager);
       context.snapshot.to(composer);
       List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
