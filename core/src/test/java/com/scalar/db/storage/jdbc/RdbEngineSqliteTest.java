@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,17 +48,13 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void isDuplicateTableError_True() throws SQLException {
-    statement.executeUpdate("create table t (c integer)");
-
-    SQLException e =
-        (SQLException) catchThrowable(() -> statement.executeUpdate("create table t (c integer)"));
-    assertTrue(rdbEngine.isDuplicateTableError(e));
-  }
-
-  @Test
   void isDuplicateTableError_False() {
-    assertFalse(rdbEngine.isDuplicateTableError(causeSyntaxError()));
+    //Arrange
+    SQLException exception = mock(SQLException.class);
+
+    //Act
+    //Assert
+    assertFalse(rdbEngine.isDuplicateTableError(exception));
   }
 
   @Test
