@@ -296,31 +296,15 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
   }
 
   @Test
-  void commitRecords_ForOneTransaction_ShouldNotDropAnotherTransactionsAttributes()
-      throws Exception {
-    participant.join("tx-1", false, attrs("k", "v1"));
-    participant.join("tx-2", false, attrs("k", "v2"));
-
-    participant.commitRecords("tx-1", 1L);
-
-    // tx-2 is untouched by tx-1's terminal step: its attributes still merge.
-    participant.get("tx-2", get());
-    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
-    verify(delegate).get(eq("tx-2"), captor.capture());
-    assertThat(captor.getValue().getAttributes()).containsEntry("k", "v2");
-  }
-
-  @Test
-  void commitRecords_ShouldDropTheCapturedAttributes() throws Exception {
+  void commitRecords_ShouldForwardWithoutAttributeLogic() throws Exception {
     participant.join(TX, false, attrs("k", "v"));
 
     participant.commitRecords(TX, 1L);
 
-    // After the terminal step the attributes are gone: a later op for the same id merges nothing.
-    participant.get(TX, get());
-    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
-    verify(delegate).get(eq(TX), captor.capture());
-    assertThat(captor.getValue().getAttributes()).isEmpty();
+    // The captured attributes are dropped at prepareRecords, which always precedes commitRecords,
+    // so
+    // commitRecords itself is pure forwarding with no attribute handling.
+    verify(delegate).commitRecords(TX, 1L);
   }
 
   @Test
@@ -362,12 +346,46 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
   }
 
   @Test
-  void prepareRecords_ShouldForwardWithoutAttributeLogic() throws Exception {
+  void prepareRecords_ShouldForwardAndDropTheCapturedAttributes() throws Exception {
     participant.join(TX, false, attrs("k", "v"));
 
     participant.prepareRecords(TX, 100L);
 
-    // Record-level steps are pure forwarding; no attribute handling.
     verify(delegate).prepareRecords(TX, 100L);
+
+    // prepareRecords ends the CRUD phase, so the captured attributes are dropped here. This is the
+    // terminal step for a write-less transaction, whose commitRecords the Coordinator skips: a
+    // later
+    // op for the same id merges nothing.
+    participant.get(TX, get());
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(delegate).get(eq(TX), captor.capture());
+    assertThat(captor.getValue().getAttributes()).isEmpty();
+  }
+
+  @Test
+  void prepareRecords_ForOneTransaction_ShouldNotDropAnotherTransactionsAttributes()
+      throws Exception {
+    participant.join("tx-1", false, attrs("k", "v1"));
+    participant.join("tx-2", false, attrs("k", "v2"));
+
+    participant.prepareRecords("tx-1", 100L);
+
+    // tx-2 is untouched by tx-1's terminal step: its attributes still merge.
+    participant.get("tx-2", get());
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(delegate).get(eq("tx-2"), captor.capture());
+    assertThat(captor.getValue().getAttributes()).containsEntry("k", "v2");
+  }
+
+  @Test
+  void validateRecords_ShouldForwardWithoutAttributeLogic() throws Exception {
+    participant.join(TX, false, attrs("k", "v"));
+
+    participant.validateRecords(TX);
+
+    // validateRecords is pure forwarding; it does not read or drop the transaction-scoped
+    // attributes.
+    verify(delegate).validateRecords(TX);
   }
 }
