@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -59,11 +60,10 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       CoordinatorGroupCommitter groupCommitter) {
     this(
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        coordinatorWriteSetLoggingEnabled,
+        new WriteSetEncoder(tableMetadataManager),
         new CoordinatorCommitHandlerWithGroupCommit(
-            coordinator,
-            new WriteSetEncoder(tableMetadataManager),
-            groupCommitter,
-            coordinatorWriteSetLoggingEnabled),
+            coordinator, groupCommitter, coordinatorWriteSetLoggingEnabled),
         participantCommitHandler);
   }
 
@@ -72,9 +72,16 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   CommitHandlerWithGroupCommit(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
+      boolean coordinatorWriteSetLoggingEnabled,
+      WriteSetEncoder writeSetEncoder,
       CoordinatorCommitHandlerWithGroupCommit coordinatorHandler,
       ParticipantCommitHandler participantCommitHandler) {
-    super(coordinatorWriteOmissionOnReadOnlyEnabled, coordinatorHandler, participantCommitHandler);
+    super(
+        coordinatorWriteOmissionOnReadOnlyEnabled,
+        coordinatorWriteSetLoggingEnabled,
+        writeSetEncoder,
+        coordinatorHandler,
+        participantCommitHandler);
     this.coordinatorHandler = coordinatorHandler;
   }
 
@@ -87,24 +94,38 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
 
   /**
    * Releases the group-commit slot reservation when the orchestrator will not write a Coordinator
-   * state row through the normal 2-phase commit path. That happens when the transaction was begun
-   * as non-read-only (and therefore reserved a slot) but turned out to have no writes/deletes,
-   * combined with coordinator-write-omission being enabled — in which case {@link
-   * CommitHandler#commit} skips {@code commitState} entirely and the reserved slot would otherwise
-   * sit unused for the rest of the commit flow.
-   *
-   * <p>The other places that call {@link
-   * CoordinatorCommitHandlerWithGroupCommit#cancelGroupCommitIfNeeded} (one-phase commit,
-   * abort/conflict paths, before-commit failure cleanup) cannot share this predicate: at those
-   * sites the transaction has writes/deletes, so the predicate would block the cancellation that
-   * those paths actually need.
+   * state row through the normal 2-phase commit path: a non-read-only transaction (which reserved a
+   * slot) that turns out to have no writes/deletes while coordinator-write-omission is enabled, so
+   * {@link CommitHandler#commit} skips {@code commitState} and the slot would otherwise sit unused.
    */
   private void cancelGroupCommitIfCoordinatorStateOmitted(TransactionContext context) {
     if (!context.readOnly
         && !context.snapshot.hasWritesOrDeletes()
         && coordinatorWriteOmissionOnReadOnlyEnabled) {
-      coordinatorHandler.cancelGroupCommitIfNeeded(context);
+      cancelGroupCommitIfSlotReserved(context);
     }
+  }
+
+  private void cancelGroupCommitIfSlotReserved(TransactionContext context) {
+    // A transaction only holds a group commit slot when one was reserved at begin time (e.g., a
+    // read-only transaction does not reserve a slot when coordinator write omission is enabled).
+    // When no slot was reserved there is nothing to release.
+    if (!context.groupCommitSlotReserved) {
+      return;
+    }
+
+    // FIXME: When a slot was reserved (so the early return above did not fire), this can run more
+    // than once on a single failure path, because several cleanup callbacks each release the slot:
+    //   - onFailureBeforeCommit() runs on the pre-commit-state failure paths (via
+    //     safelyCallOnFailureBeforeCommit);
+    //   - abortState() additionally runs from abortStateAndRollbackRecordsIfNeeded() when the
+    //     transaction has writes/deletes, or coordinator write omission on read-only is disabled;
+    //   - onePhaseCommitRecords() pre-cancels the slot before its body, so a one-phase-commit
+    //     failure followed by onFailureBeforeCommit() also cancels twice.
+    // It is currently safe only because groupCommitter.remove() is idempotent. The cleanup paths
+    // should be reworked so the slot is released exactly once instead of relying on that
+    // idempotency.
+    coordinatorHandler.cancelGroupCommit(context.transactionId);
   }
 
   @Override
@@ -112,7 +133,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     try {
       return super.canOnePhaseCommit(context);
     } catch (CommitException e) {
-      coordinatorHandler.cancelGroupCommitIfNeeded(context);
+      cancelGroupCommitIfSlotReserved(context);
       throw e;
     }
   }
@@ -120,12 +141,21 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @Override
   void onePhaseCommitRecords(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
-    coordinatorHandler.cancelGroupCommitIfNeeded(context);
+    cancelGroupCommitIfSlotReserved(context);
     super.onePhaseCommitRecords(context);
   }
 
   @Override
   protected void onFailureBeforeCommit(TransactionContext context) {
-    coordinatorHandler.cancelGroupCommitIfNeeded(context);
+    cancelGroupCommitIfSlotReserved(context);
+  }
+
+  @Override
+  public TransactionState abortState(TransactionContext context)
+      throws UnknownTransactionStatusException {
+    // Release the group-commit slot before writing the ABORTED state so it does not sit in the
+    // group buffer waiting for a sibling.
+    cancelGroupCommitIfSlotReserved(context);
+    return super.abortState(context);
   }
 }

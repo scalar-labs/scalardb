@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -39,8 +37,8 @@ import org.mockito.MockitoAnnotations;
 
 /**
  * Direct unit tests for {@link CoordinatorCommitHandlerWithGroupCommit} and its inner {@link
- * CoordinatorCommitHandlerWithGroupCommit.Emitter}. Tests for inherited (unchanged) methods like
- * {@code forceAbortState} and {@code handleCommitConflict} live in {@link
+ * CoordinatorCommitHandlerWithGroupCommit.Emitter}. These tests pass ids and pre-encoded write sets
+ * directly. Tests for inherited methods like {@code forceAbortState} live in {@link
  * CoordinatorCommitHandlerTest}.
  */
 class CoordinatorCommitHandlerWithGroupCommitTest {
@@ -59,6 +57,8 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
+  // Builds the pre-encoded write sets the tests feed to the handler.
+  private WriteSetEncoder writeSetEncoder;
   private String fullId;
   private CoordinatorGroupCommitter groupCommitter;
   private CoordinatorCommitHandlerWithGroupCommit handler;
@@ -66,20 +66,19 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   @BeforeEach
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     groupCommitter =
         spy(new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 60000, 10)));
     // The handler's constructor wires the Emitter into the groupCommitter via setEmitter(); the
     // emitter must be in place before reserve() is called so that the slot can be emitted later.
-    handler =
-        new CoordinatorCommitHandlerWithGroupCommit(
-            coordinator, new WriteSetEncoder(tableMetadataManager), groupCommitter, true);
+    handler = new CoordinatorCommitHandlerWithGroupCommit(coordinator, groupCommitter, true);
     fullId = groupCommitter.reserve(UUID.randomUUID().toString());
   }
 
   @AfterEach
   void tearDown() {
     // Release any outstanding reserved slot so groupCommitter.close() does not block on the
-    // slot-abort timeout. Tests that drive Emitter directly never bind the slot to a result.
+    // slot-abort timeout.
     try {
       groupCommitter.remove(fullId);
     } catch (Exception ignored) {
@@ -113,38 +112,59 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     return new TransactionContext(id, snapshot, Isolation.SNAPSHOT, false, false, slotReserved);
   }
 
+  // Builds the group-commit value a caller would buffer: the full id + its pre-encoded write set.
+  private CoordinatorGroupCommitValue valueWithWrite(String id) throws CrudException {
+    Snapshot snapshot = prepareSnapshotWithWrite(id);
+    WriteSet writeSet =
+        writeSetEncoder.encodeSingleGroupWriteSet(createContext(id, snapshot, true), false);
+    return new CoordinatorGroupCommitValue(id, writeSet);
+  }
+
+  private CoordinatorGroupCommitValue valueReadOnly(String id) {
+    Snapshot snapshot = prepareEmptySnapshot(id);
+    WriteSet writeSet =
+        writeSetEncoder.encodeSingleGroupWriteSet(createContext(id, snapshot, true), false);
+    return new CoordinatorGroupCommitValue(id, writeSet);
+  }
+
   // ---------- commitState (group-commit path) ----------
 
   @Test
   void commitState_WhenSuccessful_ShouldRouteThroughGroupCommitterAndReturnEmitCommittedAt()
       throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
-    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
     long emitCommittedAt = 1234567890123L;
+    WriteSet writeSet =
+        writeSetEncoder.encodeSingleGroupWriteSet(
+            createContext(fullId, prepareSnapshotWithWrite(fullId), true), false);
     // groupCommitter is a spy, so stub with doReturn to avoid invoking the real ready().
-    doReturn(emitCommittedAt).when(groupCommitter).ready(eq(fullId), eq(context));
+    doReturn(emitCommittedAt)
+        .when(groupCommitter)
+        .ready(eq(fullId), any(CoordinatorGroupCommitValue.class));
 
     // Act
-    long committedAt = handler.commitState(context);
+    long committedAt = handler.commitState(fullId, writeSet);
 
-    // Assert — the group-committer.ready() is the dispatch boundary into the emitter, and the
+    // Assert — the group-committer.ready() is the dispatch boundary into the emitter; the
+    // (id, writeSet) it is handed is wrapped verbatim into the buffered carrier, and the
     // emit-time committedAt it returns is propagated so the caller stamps the records with it.
-    verify(groupCommitter).ready(eq(fullId), eq(context));
+    ArgumentCaptor<CoordinatorGroupCommitValue> valueCaptor =
+        ArgumentCaptor.forClass(CoordinatorGroupCommitValue.class);
+    verify(groupCommitter).ready(eq(fullId), valueCaptor.capture());
+    assertThat(valueCaptor.getValue().fullId).isEqualTo(fullId);
+    assertThat(valueCaptor.getValue().writeSet).isEqualTo(writeSet);
     assertThat(committedAt).isEqualTo(emitCommittedAt);
   }
 
   @Test
   void commitState_WhenGroupCommitConflict_ShouldCancelSlotAndHandleConflict() throws Exception {
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
-    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
     GroupCommitConflictException cause = new GroupCommitConflictException("conflict");
-    doThrow(cause).when(groupCommitter).ready(eq(fullId), eq(context));
+    doThrow(cause).when(groupCommitter).ready(eq(fullId), any(CoordinatorGroupCommitValue.class));
     when(coordinator.getState(anyString())).thenReturn(Optional.empty());
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commitState(context))
+    assertThatThrownBy(() -> handler.commitState(fullId, null))
         .isInstanceOf(CommitConflictException.class);
 
     // Slot is released on the conflict path. Record rollback is the orchestrator's responsibility
@@ -160,16 +180,16 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // CoordinatorConflictException is routed to handleCommitConflict. With the coordinator state
     // absent on re-read, that resolves to a definitive conflict (CommitConflictException).
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
-    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
     CoordinatorConflictException cause = new CoordinatorConflictException("coordinator conflict");
     GroupCommitException groupCommitException =
         new GroupCommitException("group commit failed", cause);
-    doThrow(groupCommitException).when(groupCommitter).ready(eq(fullId), eq(context));
+    doThrow(groupCommitException)
+        .when(groupCommitter)
+        .ready(eq(fullId), any(CoordinatorGroupCommitValue.class));
     when(coordinator.getState(anyString())).thenReturn(Optional.empty());
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commitState(context))
+    assertThatThrownBy(() -> handler.commitState(fullId, null))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
 
@@ -183,15 +203,15 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // A plain GroupCommitException whose cause is not a CoordinatorConflictException means the
     // group committer failed to access the coordinator state, so the transaction status is unknown.
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
-    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
     RuntimeException cause = new RuntimeException("storage unavailable");
     GroupCommitException groupCommitException =
         new GroupCommitException("group commit failed", cause);
-    doThrow(groupCommitException).when(groupCommitter).ready(eq(fullId), eq(context));
+    doThrow(groupCommitException)
+        .when(groupCommitter)
+        .ready(eq(fullId), any(CoordinatorGroupCommitValue.class));
 
     // Act Assert
-    assertThatThrownBy(() -> handler.commitState(context))
+    assertThatThrownBy(() -> handler.commitState(fullId, null))
         .isInstanceOf(UnknownTransactionStatusException.class)
         .hasMessageContaining("The coordinator status is unknown")
         .hasCause(cause);
@@ -202,41 +222,15 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     verify(coordinator, never()).getState(anyString());
   }
 
-  // ---------- abortState (cancelGroupCommitIfNeeded) ----------
+  // ---------- cancelGroupCommit (slot release; driven by the orchestrator) ----------
 
   @Test
-  void abortState_WhenSlotReserved_ShouldCancelGroupCommitAndDelegate() throws Exception {
-    // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
-    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
-
+  void cancelGroupCommit_ShouldRemoveSlot() {
     // Act
-    TransactionState result = handler.abortState(context);
+    handler.cancelGroupCommit(fullId);
 
     // Assert
-    assertThat(result).isEqualTo(TransactionState.ABORTED);
     verify(groupCommitter).remove(fullId);
-    verify(coordinator).putState(any(Coordinator.State.class));
-  }
-
-  @Test
-  void abortState_WhenSlotNotReserved_ShouldNotTouchGroupCommitter() throws Exception {
-    // Arrange — release the slot reserved by setUp() so the bare-id context starts clean and
-    // groupCommitter.close() does not block on it during teardown.
-    groupCommitter.remove(fullId);
-    clearInvocations(groupCommitter);
-
-    String bareId = UUID.randomUUID().toString();
-    Snapshot snapshot = prepareSnapshotWithWrite(bareId);
-    TransactionContext context = createContext(bareId, snapshot, /* slotReserved= */ false);
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
-
-    // Act
-    handler.abortState(context);
-
-    // Assert
-    verify(groupCommitter, never()).remove(anyString());
   }
 
   // ---------- handleCommitConflict (group-commit specific) ----------
@@ -245,21 +239,14 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   void
       handleCommitConflict_GroupCommitConflictExceptionGivenAndNoStatePersisted_ShouldThrowCommitConflict()
           throws Exception {
-    // The group-commit conflict route (commitState catches GroupCommitConflictException and calls
-    // handleCommitConflict) must, when the coordinator state is absent on re-read, resolve to a
-    // definitive conflict -- throw CommitConflictException -- the same outcome as the normal-commit
-    // conflict route. getState for a group-commit child checks both the parent and full-ID rows, so
-    // an absent state genuinely means the transaction never committed. Record rollback itself is
-    // the orchestrator's responsibility (see CommitHandlerTest).
-
+    // An absent coordinator state on re-read resolves to a definitive CommitConflictException,
+    // because getState for a group-commit child checks both the parent and full-ID rows.
     // Arrange
-    Snapshot snapshot = prepareSnapshotWithWrite(fullId);
-    TransactionContext context = createContext(fullId, snapshot, /* slotReserved= */ true);
     when(coordinator.getState(fullId)).thenReturn(Optional.empty());
     GroupCommitConflictException cause = new GroupCommitConflictException("conflict");
 
     // Act Assert
-    assertThatThrownBy(() -> handler.handleCommitConflict(context, cause))
+    assertThatThrownBy(() -> handler.handleCommitConflict(fullId, cause))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
     verify(coordinator).getState(fullId);
@@ -273,20 +260,16 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId1 = keyManipulator.fullKey(parentId, "child-1");
     String fullTxId2 = keyManipulator.fullKey(parentId, "child-2");
 
-    TransactionContext context1 =
-        createContext(fullTxId1, prepareSnapshotWithWrite(fullTxId1), /* slotReserved= */ true);
-    TransactionContext context2 =
-        createContext(fullTxId2, prepareSnapshotWithWrite(fullTxId2), /* slotReserved= */ true);
-
     // Act
-    Long committedAt = emitter.emitNormalGroup(parentId, Arrays.asList(context1, context2));
+    Long committedAt =
+        emitter.emitNormalGroup(
+            parentId, Arrays.asList(valueWithWrite(fullTxId1), valueWithWrite(fullTxId2)));
 
     // Assert
     ArgumentCaptor<Coordinator.State> stateCaptor =
@@ -316,29 +299,26 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxIdWriting = keyManipulator.fullKey(parentId, "writing");
     String fullTxIdReadOnly = keyManipulator.fullKey(parentId, "read-only");
 
-    TransactionContext writingContext =
-        createContext(
-            fullTxIdWriting, prepareSnapshotWithWrite(fullTxIdWriting), /* slotReserved= */ true);
-    TransactionContext readOnlyContext =
-        createContext(
-            fullTxIdReadOnly, prepareEmptySnapshot(fullTxIdReadOnly), /* slotReserved= */ true);
-
     // Act
-    emitter.emitNormalGroup(parentId, Arrays.asList(writingContext, readOnlyContext));
+    emitter.emitNormalGroup(
+        parentId, Arrays.asList(valueWithWrite(fullTxIdWriting), valueReadOnly(fullTxIdReadOnly)));
 
-    // Assert
+    // Assert — only the writing child contributes an EntryGroup; the read-only child carries no
+    // entries so its (empty) write set adds nothing.
     ArgumentCaptor<Coordinator.State> stateCaptor =
         ArgumentCaptor.forClass(Coordinator.State.class);
     verify(coordinatorMock).putState(stateCaptor.capture());
     Coordinator.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(parentId);
+    // The read-only child contributes no EntryGroup but is still recorded as a parent-row member
+    // (child_ids), so its committed state stays resolvable during recovery.
+    assertThat(capturedState.getChildIds()).containsExactlyInAnyOrder("writing", "read-only");
     assertThat(capturedState.getWriteSet()).isPresent();
 
     WriteSet captured = capturedState.getWriteSet().get();
@@ -352,16 +332,13 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
-    TransactionContext context =
-        createContext(fullTxId, prepareEmptySnapshot(fullTxId), /* slotReserved= */ true);
 
     // Act
-    emitter.emitNormalGroup(parentId, Collections.singletonList(context));
+    emitter.emitNormalGroup(parentId, Collections.singletonList(valueReadOnly(fullTxId)));
 
     // Assert
     ArgumentCaptor<Coordinator.State> stateCaptor =
@@ -377,17 +354,16 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   }
 
   @Test
-  void emitter_emitNormalGroup_WithEmptyContexts_ShouldNotCallPutState() throws Exception {
+  void emitter_emitNormalGroup_WithEmptyValues_ShouldNotCallPutState() throws Exception {
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, true);
 
     String parentId = keyManipulator.generateParentKey();
 
     // Act — all buffered transactions were manually rolled back, so emitNormalGroup is invoked
-    // with an empty context list.
+    // with an empty value list.
     Long committedAt = emitter.emitNormalGroup(parentId, Collections.emptyList());
 
     // Assert — putState must not be called; otherwise a spurious COMMITTED parent row would be
@@ -398,21 +374,17 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   }
 
   @Test
-  void emitter_emitDelayedGroup_WithWritingContext_ShouldPersistStateWithWriteSet()
-      throws Exception {
+  void emitter_emitDelayedGroup_WithWritingValue_ShouldPersistStateWithWriteSet() throws Exception {
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
-    TransactionContext context =
-        createContext(fullTxId, prepareSnapshotWithWrite(fullTxId), /* slotReserved= */ true);
 
     // Act
-    Long committedAt = emitter.emitDelayedGroup(fullTxId, context);
+    Long committedAt = emitter.emitDelayedGroup(fullTxId, valueWithWrite(fullTxId));
 
     // Assert
     ArgumentCaptor<Coordinator.State> stateCaptor =
@@ -436,21 +408,18 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   }
 
   @Test
-  void emitter_emitDelayedGroup_WithReadOnlyContext_ShouldPersistStateWithEmptyWriteSet()
+  void emitter_emitDelayedGroup_WithReadOnlyValue_ShouldPersistStateWithEmptyWriteSet()
       throws Exception {
     // Arrange
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), true);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, true);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
-    TransactionContext context =
-        createContext(fullTxId, prepareEmptySnapshot(fullTxId), /* slotReserved= */ true);
 
     // Act
-    Long committedAt = emitter.emitDelayedGroup(fullTxId, context);
+    Long committedAt = emitter.emitDelayedGroup(fullTxId, valueReadOnly(fullTxId));
 
     // Assert
     ArgumentCaptor<Coordinator.State> stateCaptor =
@@ -460,7 +429,6 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     Coordinator.State capturedState = stateCaptor.getValue();
     assertThat(capturedState.getId()).isEqualTo(fullTxId);
     assertThat(capturedState.getState()).isEqualTo(TransactionState.COMMITTED);
-    // The emit returns the committedAt it stamped on the row.
     assertThat(committedAt).isEqualTo(capturedState.getCreatedAt());
     assertThat(capturedState.getWriteSet()).isPresent();
 
@@ -475,16 +443,13 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // Arrange — emitter constructed with write-set logging disabled.
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), false);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, false);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
-    TransactionContext context =
-        createContext(fullTxId, prepareSnapshotWithWrite(fullTxId), /* slotReserved= */ true);
 
     // Act
-    emitter.emitNormalGroup(parentId, Collections.singletonList(context));
+    emitter.emitNormalGroup(parentId, Collections.singletonList(valueWithWrite(fullTxId)));
 
     // Assert — the State carries no WriteSet so the BLOB column is not populated (the column is not
     // part of the Coordinator schema in this configuration).
@@ -504,16 +469,13 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // Arrange — same opt-in gating, delayed-group path.
     Coordinator coordinatorMock = mock(Coordinator.class);
     CoordinatorCommitHandlerWithGroupCommit.Emitter emitter =
-        new CoordinatorCommitHandlerWithGroupCommit.Emitter(
-            coordinatorMock, new WriteSetEncoder(tableMetadataManager), false);
+        new CoordinatorCommitHandlerWithGroupCommit.Emitter(coordinatorMock, false);
 
     String parentId = keyManipulator.generateParentKey();
     String fullTxId = keyManipulator.fullKey(parentId, "child");
-    TransactionContext context =
-        createContext(fullTxId, prepareSnapshotWithWrite(fullTxId), /* slotReserved= */ true);
 
     // Act
-    emitter.emitDelayedGroup(fullTxId, context);
+    emitter.emitDelayedGroup(fullTxId, valueWithWrite(fullTxId));
 
     // Assert — the persisted State carries no WriteSet.
     ArgumentCaptor<Coordinator.State> stateCaptor =

@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -20,7 +21,7 @@ import org.mockito.InOrder;
  * Tests for {@link CommitHandlerWithGroupCommit}. Inherits the orchestration tests from {@link
  * CommitHandlerTest} (which pin which participant / coordinator handler methods are called for each
  * branch of {@code commit()}). The tests added here layer the group-commit-specific assertions on
- * top -- specifically, when the orchestrator delegates {@code cancelGroupCommitIfNeeded} to the
+ * top -- specifically, when the orchestrator delegates {@code cancelGroupCommit} to the
  * group-commit coordinator handler.
  *
  * <p>Both {@code participantCommitHandler} and the group-commit coordinator handler are mocks; the
@@ -28,7 +29,7 @@ import org.mockito.InOrder;
  */
 class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
   // Subclass-typed mock that doubles as the parent's coordinatorCommitHandler. Verifying
-  // cancelGroupCommitIfNeeded requires the subclass type.
+  // cancelGroupCommit requires the subclass type.
   private CoordinatorCommitHandlerWithGroupCommit groupCommitCoordinatorHandler;
 
   @Override
@@ -46,9 +47,16 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     coordinatorCommitHandler = groupCommitCoordinatorHandler;
     return new CommitHandlerWithGroupCommit(
         coordinatorWriteOmissionOnReadOnlyEnabled,
+        /* coordinatorWriteSetLoggingEnabled= */ true,
+        writeSetEncoder,
         groupCommitCoordinatorHandler,
         participantCommitHandler);
   }
+
+  // The commitState delegation hooks from CommitHandlerTest apply as-is: the group commit handler
+  // overrides the base CoordinatorCommitHandler#commitState(id, writeSet), so the inherited
+  // assertions (which target that signature on the coordinatorCommitHandler mock) already exercise
+  // the group-commit path.
 
   // =========================================================================
   // Group-commit-specific assertions
@@ -70,7 +78,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     handler.commit(context);
 
     // Assert
-    verify(groupCommitCoordinatorHandler, never()).cancelGroupCommitIfNeeded(context);
+    verify(groupCommitCoordinatorHandler, never()).cancelGroupCommit(any());
   }
 
   @Test
@@ -87,7 +95,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     handler.commit(context);
 
     // Assert
-    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+    verify(groupCommitCoordinatorHandler).cancelGroupCommit(context.transactionId);
   }
 
   @Test
@@ -105,14 +113,14 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     handler.commit(context);
 
     // Assert
-    verify(groupCommitCoordinatorHandler, never()).cancelGroupCommitIfNeeded(context);
+    verify(groupCommitCoordinatorHandler, never()).cancelGroupCommit(any());
   }
 
   @Test
   public void commit_OnFailure_ShouldDelegateCancelGroupCommitViaOnFailureBeforeCommit()
       throws Exception {
     // The orchestrator's onFailureBeforeCommit override delegates to
-    // coordinatorHandler.cancelGroupCommitIfNeeded.
+    // coordinatorHandler.cancelGroupCommit.
     // Arrange
     Snapshot snapshot = snapshotWithoutWrites();
     doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHook).handle(any());
@@ -123,7 +131,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
 
-    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+    verify(groupCommitCoordinatorHandler).cancelGroupCommit(context.transactionId);
   }
 
   @Test
@@ -133,8 +141,8 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // With coordinator write omission enabled, ConsensusCommitManager.begin() does not reserve a
     // group commit slot for a read-only transaction, so the context's groupCommitSlotReserved
     // stays false. When the before-preparation hook fails, commit() must still fail with
-    // CommitException, and cancelGroupCommitIfNeeded internally skips remove() because no slot
-    // was reserved.
+    // CommitException, and the orchestrator must not touch the group committer since no slot was
+    // reserved.
     // Arrange
     Snapshot snapshot = snapshotWithoutWrites();
     doThrow(new RuntimeException("Something is wrong")).when(beforePreparationHook).handle(any());
@@ -152,15 +160,30 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.commit(context)).isInstanceOf(CommitException.class);
 
-    // The orchestrator still calls cancelGroupCommitIfNeeded; the coordinator handler internally
-    // no-ops when slot is not reserved. The contract we pin here is "called once", with the
-    // internal no-op behavior covered in CoordinatorCommitHandlerWithGroupCommitTest.
-    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+    verify(groupCommitCoordinatorHandler, never()).cancelGroupCommit(any());
   }
 
   // =========================================================================
-  // Override-specific behaviour for canOnePhaseCommit / onePhaseCommitRecords
+  // Override-specific behaviour for abortState / canOnePhaseCommit / onePhaseCommitRecords
   // =========================================================================
+
+  @Test
+  public void abortState_ShouldCancelSlotBeforeDelegating() throws Exception {
+    // The group-commit override releases the reserved slot before writing the ABORTED state, so an
+    // aborted transaction does not sit in the group buffer waiting for a sibling.
+    // Arrange
+    Snapshot snapshot = snapshotWithWrites();
+    TransactionContext context =
+        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    handler.abortState(context);
+
+    // Assert
+    InOrder inOrder = inOrder(groupCommitCoordinatorHandler);
+    inOrder.verify(groupCommitCoordinatorHandler).cancelGroupCommit(context.transactionId);
+    inOrder.verify(groupCommitCoordinatorHandler).abortState(eq(context.transactionId), any());
+  }
 
   @Test
   public void onePhaseCommitRecords_ShouldCancelSlotBeforeDelegating() throws Exception {
@@ -177,7 +200,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
     // Assert
     InOrder inOrder = inOrder(groupCommitCoordinatorHandler, participantCommitHandler);
-    inOrder.verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+    inOrder.verify(groupCommitCoordinatorHandler).cancelGroupCommit(context.transactionId);
     inOrder.verify(participantCommitHandler).onePhaseCommitRecords(context);
   }
 
@@ -196,7 +219,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.onePhaseCommitRecords(context)).isSameAs(cause);
 
-    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+    verify(groupCommitCoordinatorHandler).cancelGroupCommit(context.transactionId);
   }
 
   @Test
@@ -214,7 +237,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.canOnePhaseCommit(context)).isSameAs(cause);
 
-    verify(groupCommitCoordinatorHandler).cancelGroupCommitIfNeeded(context);
+    verify(groupCommitCoordinatorHandler).cancelGroupCommit(context.transactionId);
   }
 
   // We replace the snapshot mock builders to also wire up the participant's hasWritesOrDeletes
