@@ -1,6 +1,7 @@
 package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -92,14 +93,12 @@ class AbstractDistributedTransactionProviderTest {
   }
 
   @Test
-  void createTwoPhaseCommitCoordinator_WhenRawCoordinatorIsNull_ShouldReturnNull() {
-    // Active transaction management is enabled to prove the null short-circuits before wrapping.
+  void createTwoPhaseCommitCoordinator_WhenUnsupported_ShouldThrowUnsupportedOperationException() {
+    // Active transaction management is enabled to prove the raw factory throws before wrapping.
     when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
 
-    TwoPhaseCommit.Coordinator coordinator =
-        unsupportedProvider().createTwoPhaseCommitCoordinator(config);
-
-    assertThat(coordinator).isNull();
+    assertThatThrownBy(() -> unsupportedProvider().createTwoPhaseCommitCoordinator(config))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -174,19 +173,18 @@ class AbstractDistributedTransactionProviderTest {
   }
 
   @Test
-  void createTwoPhaseCommitParticipant_WhenRawParticipantIsNull_ShouldReturnNull() {
-    // Both wrappings are enabled to prove the null short-circuits before either wrapping.
+  void createTwoPhaseCommitParticipant_WhenUnsupported_ShouldThrowUnsupportedOperationException() {
+    // Both wrappings are enabled to prove the raw factory throws before either wrapping.
     when(config.isAttributePropagationEnabled()).thenReturn(true);
     when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
 
-    TwoPhaseCommit.Participant participant =
-        unsupportedProvider().createTwoPhaseCommitParticipant(config);
-
-    assertThat(participant).isNull();
+    assertThatThrownBy(() -> unsupportedProvider().createTwoPhaseCommitParticipant(config))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
-  // A provider that does not support the two-phase commit interface: its raw factory methods return
-  // null.
+  // A provider that does not support the two-phase commit interface: its raw two-phase-commit
+  // factory
+  // methods throw UnsupportedOperationException.
   private AbstractDistributedTransactionProvider unsupportedProvider() {
     return new AbstractDistributedTransactionProvider() {
       @Override
@@ -214,13 +212,13 @@ class AbstractDistributedTransactionProviderTest {
       @Override
       protected TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(
           DatabaseConfig config) {
-        return null;
+        throw new UnsupportedOperationException();
       }
 
       @Override
       protected TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(
           DatabaseConfig config) {
-        return null;
+        throw new UnsupportedOperationException();
       }
     };
   }

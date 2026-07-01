@@ -70,10 +70,6 @@ public abstract class AbstractDistributedTransactionProvider
   public TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
     TwoPhaseCommit.Coordinator coordinator = createRawTwoPhaseCommitCoordinator(config);
 
-    if (coordinator == null) {
-      return null;
-    }
-
     if (config.isActiveTransactionManagementEnabled()) {
       // Wrap the coordinator for active transaction management. This must be the outermost wrapping
       // so that the idle-expiry reap traverses every inner decorator via releaseContext.
@@ -91,10 +87,6 @@ public abstract class AbstractDistributedTransactionProvider
   @Override
   public TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
     TwoPhaseCommit.Participant participant = createRawTwoPhaseCommitParticipant(config);
-
-    if (participant == null) {
-      return null;
-    }
 
     if (config.isAttributePropagationEnabled()) {
       // Wrap the participant for transaction-scoped attribute propagation
