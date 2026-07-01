@@ -34,6 +34,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -97,6 +98,7 @@ public class ImportCommand extends ImportCommandOptions implements Callable<Inte
               importLoggerConfig,
               logWriterFactory,
               transactionFactory);
+      importManager.addListener(new ConsoleImportProgressListener(Duration.ofSeconds(1)));
       importManager.startImport();
     }
     return 0;
