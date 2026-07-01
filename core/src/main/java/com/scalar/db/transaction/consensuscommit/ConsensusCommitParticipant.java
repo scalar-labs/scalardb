@@ -415,11 +415,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
       }
       List<TwoPhaseCommit.WriteSetEntry> writeSet = buildWriteSetEntries(context);
       boolean validationRequired = context.isValidationRequired();
-      // commitRecords is required iff this participant has writes to commit. Derive it from the
-      // same snapshot predicate validateRecords uses for its self-release, so the commit-step skip
-      // and the validate-step self-release stay in lockstep on a single source. This drives the
-      // Coordinator's commit-step skip via PreparationResult#isCommitRequired.
-      boolean commitRequired = context.snapshot.hasWritesOrDeletes();
+      boolean commitRequired = context.isCommitRequired();
       // The Coordinator skips validateRecords when validation is not required and commitRecords
       // when commit is not required. When both are skipped, prepareRecords is this participant's
       // last step, so release the context now (a write-less participant has written no PREPARED
@@ -441,14 +437,14 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
       pc.checkPrepared();
       TransactionContext context = pc.context();
       commit.validateRecords(context);
-      if (context.snapshot.hasWritesOrDeletes()) {
+      if (context.isCommitRequired()) {
         pc.toValidated();
       } else {
         // The Coordinator skips commitRecords for a write-less participant, so validateRecords is
         // this participant's last step. Release the context now (no PREPARED records to commit).
         // This stays in agreement with the Coordinator's commit-step skip by construction: both
         // this self-release and PreparationResult#isCommitRequired derive from
-        // snapshot.hasWritesOrDeletes(), so the Coordinator skips commitRecords exactly when this
+        // context.isCommitRequired(), so the Coordinator skips commitRecords exactly when this
         // branch has already released the context (otherwise it could drive commitRecords on a
         // released context -> TNF).
         release(transactionId, pc);
@@ -549,8 +545,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     // is empty exactly for a write-less participant. The Coordinator gates writing the COMMITTED
     // state row on this write set being non-empty (its hasWrites), which must agree with
     // isCommitRequired and the validate-step self-release (both derived from
-    // snapshot.hasWritesOrDeletes()); preserve this empty-iff-write-less guarantee if this method
-    // ever starts filtering entries.
+    // context.isCommitRequired(), i.e. snapshot.hasWritesOrDeletes()); preserve this
+    // empty-iff-write-less guarantee if this method ever starts filtering entries.
     if (!snapshot.hasWritesOrDeletes()) {
       return entries;
     }
