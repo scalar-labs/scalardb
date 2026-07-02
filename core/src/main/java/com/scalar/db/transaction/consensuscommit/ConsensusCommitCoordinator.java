@@ -6,6 +6,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.api.TwoPhaseCommit.Participant;
+import com.scalar.db.api.TwoPhaseCommit.PreparationResult;
 import com.scalar.db.api.TwoPhaseCommit.WriteSetEntry;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -160,30 +161,52 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
 
         // A write-less transaction (every participant returns an empty write set) writes no
         // COMMITTED Coordinator state row when coordinator-write omission on read-only is enabled.
-        // Only the Coordinator state writes (commitState/abortState) are gated on this; the
-        // record-level steps (prepareRecords / commitRecords / rollbackRecords) are still driven on
-        // every participant so their local contexts are released.
+        // The Coordinator state writes (commitState/abortState) are gated on this.
         boolean hasWrites = false;
+
+        // Drive only the steps each participant still needs (mirroring CommitHandler, minus the
+        // one-phase fast path): validateRecords only where the prepare result reports it required,
+        // and commitRecords only where the prepare result reports it required. A participant whose
+        // later steps are all skipped releases its own context at its last driven step, so the
+        // Coordinator must not drive it again.
+        List<Participant> toValidate = new ArrayList<>(participants.size());
+        List<Participant> toCommit = new ArrayList<>(participants.size());
 
         long preparedAt = System.currentTimeMillis();
         try {
           for (Participant participant : participants) {
-            List<WriteSetEntry> entries =
-                participant.prepareRecords(transactionId, preparedAt).getWriteSet();
+            PreparationResult result = participant.prepareRecords(transactionId, preparedAt);
+            List<WriteSetEntry> entries = result.getWriteSet();
+            // hasWrites tracks whether any participant produced PREPARED records; it gates writing
+            // the COMMITTED Coordinator state row.
             if (!entries.isEmpty()) {
               hasWrites = true;
+            }
+            // Drive validateRecords only on participants that still require it; a participant that
+            // does not has already self-released its context if validateRecords was its last step.
+            if (result.isValidationRequired()) {
+              toValidate.add(participant);
+            }
+            // Drive commitRecords only on participants that still require it. A write-less
+            // participant requires no commit and has already self-released its context
+            // (commitRecords would be a no-op); isCommitRequired is kept in agreement with that
+            // self-release. See ConsensusCommitParticipant#prepareRecords / #validateRecords.
+            if (result.isCommitRequired()) {
+              toCommit.add(participant);
             }
             writeSetsByParticipant
                 .computeIfAbsent(participant.getId(), k -> new ArrayList<>())
                 .addAll(entries);
           }
-          for (Participant participant : participants) {
+          for (Participant participant : toValidate) {
             participant.validateRecords(transactionId);
           }
         } catch (PreparationException | ValidationException e) {
-          // Prepare or validate failed. Abort the transaction and roll back the PREPARED records on
-          // every participant. The prepare/validate phases are internal to commit(), so the failure
-          // is reported as a commit-level exception: a conflict as CommitConflictException so the
+          // Prepare or validate failed. Abort the transaction and roll back every participant:
+          // writers undo their PREPARED records; others (not yet prepared, or already
+          // self-released) just release, and rollbackRecords is a no-op for an already-released
+          // participant. The prepare/validate phases are internal to commit(), so the failure is
+          // reported as a commit-level exception: a conflict as CommitConflictException so the
           // caller's retry logic still sees it as retriable, anything else as CommitException.
           abortAndRollbackRecords(transactionId, participants, hasWrites);
           if (e instanceof PreparationConflictException
@@ -205,19 +228,19 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
             committedAt = commitState(transactionId, writeSetsByParticipant);
           } catch (CommitConflictException e) {
             // The COMMITTED-state write lost a putState race that resolved to ABORTED: the
-            // transaction is aborted. Roll back the PREPARED records on every participant before
-            // surfacing it.
-            for (Participant participant : participants) {
+            // transaction is aborted. Only participants with writes still hold PREPARED records
+            // (and a live context); roll those back before surfacing it.
+            for (Participant participant : toCommit) {
               bestEffortRollbackRecords(participant, transactionId);
             }
             throw e;
           }
         } else {
-          // Write-less transaction with the Coordinator write omitted: committedAt is an unused
-          // placeholder for the (no-op) commitRecords calls below.
+          // Write-less transaction with the Coordinator write omitted: no participant has writes,
+          // so toCommit is empty and committedAt is an unused placeholder.
           committedAt = preparedAt;
         }
-        for (Participant participant : participants) {
+        for (Participant participant : toCommit) {
           bestEffortCommitRecords(participant, transactionId, committedAt);
         }
       } finally {
