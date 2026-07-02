@@ -66,6 +66,10 @@ final class WriteSetDecoder {
     return builder.build();
   }
 
+  // TODO: CbrlRestore.decodeColumnFromProto duplicates this proto->io column decoding (with
+  // nullable
+  // handling). Once the open PRs land, expose this (or a shared ProtoUtils) and have CbrlRestore
+  // call it instead of keeping a parallel copy.
   private static com.scalar.db.io.Column<?> decodeColumn(Column protoColumn) {
     String name = protoColumn.getName();
     switch (protoColumn.getValueCase()) {

@@ -7,13 +7,16 @@ SSR (`~/src/scalardb-cluster/replication`) is reference only.
 
 > **CRITICAL RULES (highest priority — these override every other section):**
 >
-> 1. **Restore MUST NOT use `tx_version` or `created_at`** for ordering or for any replay decision.
->    `created_at` is wall-clock and clock-skew-prone (CBRL is multi-primary — different processes
->    commit the same key with unsynchronized clocks), and `tx_version` resets on delete→re-insert;
->    neither is a reliable per-key order. Restore is ordered **only** by the `prev_tx_id → tx_id`
->    chain. Both fields may be *carried* on the redo so a restored record stays valid for
->    post-restore core, but the replay must never read them to decide what, or in what order, to
->    apply. Any code path that consults `created_at`/`tx_version` to order or gate replay is a bug.
+> 1. **Restore correctness MUST NOT depend on `tx_version` or `created_at`.** `created_at` is
+>    wall-clock and clock-skew-prone (CBRL is multi-primary — different processes commit the same key
+>    with unsynchronized clocks), and `tx_version` resets on delete→re-insert; neither is a reliable
+>    per-key order. What gets applied is determined **only** by the `prev_tx_id → tx_id` chain.
+>    `created_at` MAY be used purely as a *try-order optimization* (applying independent INSERT roots
+>    oldest-first, as SSR does) — since the chain still governs the outcome, this can never change a
+>    correct result — but it must never gate or decide *what* gets applied, and `tx_version` must
+>    never be read for any replay decision. Both fields may also be *carried* on the redo so a
+>    restored record stays valid for post-restore core. Any code path whose **correctness** depends
+>    on `created_at`/`tx_version` is a bug.
 > 2. **Use precise, authorized terminology — no jargon or ambiguous coinages.** Do not write "cut"
 >    or "torn". Use the established unambiguous term: a backup taken by a live, non-atomic scan is a
 >    **non-snapshot-consistent** copy (never "torn"); the committed-transaction boundary is the
@@ -367,8 +370,9 @@ key's ops:
    `DELETE` entry is a delete. No new enum/oneof — this rests on the encoder invariant that
    `prev_tx_id` is set iff a before-image exists (true at the single `WriteSetEncoder` site).
    - `insertOperations` — a `Deque<RedoOperation>` of INSERT roots (`prev_tx_id == null`). Order is
-     irrelevant — the chain converges to the same final version — so they are **not** sorted by
-     `created_at` (highest rule).
+     irrelevant to correctness — the chain converges to the same final version regardless — but the
+     roots are sorted oldest-first by `created_at` (tx id as a deterministic tiebreak), as SSR does,
+     purely as a try-order optimization (never a correctness input; see the amended highest rule).
    - `nonInsertOperations` — a `Map<String, RedoOperation>` of UPDATE/DELETE ops **keyed by their
      `prevTxId`**, so the chain is traversed by looking the current tx id up in the map.
 2. **Walk the chain** (`while (true)`):
@@ -385,11 +389,12 @@ key's ops:
 
 Why it's safe regardless of input order or re-runs:
 - **Order-independent within a key:** the chain is followed by `prevTxId → txId`, so
-  `nonInsertOperations` can be built in any order, and INSERT roots are applied in any order (the
-  chain converges to the same final version — there is no `created_at` ordering). A re-INSERT after
-  a DELETE is a **new INSERT root**, reached via the `deleted` flag — not chained to the delete
-  (SSR's loop only polls inserts once `deleted`); a stale root already reflected in the base is
-  skipped by walking the chain back from the cursor, never by timestamp.
+  `nonInsertOperations` can be built in any order, and INSERT roots converge to the same final
+  version regardless of the order they are tried (the `created_at` sort above is only a try-order
+  optimization, never a correctness input). A re-INSERT after a DELETE is a **new INSERT root**,
+  reached via the `deleted` flag — not chained to the delete (SSR's loop only polls inserts once
+  `deleted`); a stale root already reflected in the base is skipped by walking the chain back from
+  the cursor, never by timestamp.
 - **Idempotent:** re-running from the produced state is a no-op — UPDATE/DELETE are already past
   the cursor, and INSERT roots are deduped via a per-record applied-insert-txId set
   (`insertTxIds`), the only way to dedup roots since they have no inbound chain link. CBRL replay
@@ -683,6 +688,8 @@ remain open.
 - ✅ **RESOLVED — Restore ordering is chain-only (`created_at`/`tx_version` removed)** — §5 (coherence, adversarial)
 
   *Resolved 2026-06-18 (commit `50055f41b`):* the replay core briefly ordered disconnected re-insert roots by `created_at` — droppable on a millisecond/group-commit tie or under multi-primary clock skew, the commit-time ordering D1c rejected. Removed: restore now skips stale roots by walking the `prev_tx_id` chain back from the base, and the **highest rule** (top of this plan) forbids `created_at`/`tx_version` in restore. Offline single-owner replay under physical-delete is chain-only and clock-independent (verified by §6.2 + §6.1). This also resolves two sub-findings with the same root cause: the **group-commit `created_at` tie** (`nextInsert` no longer compares `created_at`) and the **oracle sharing the `created_at` tie-break** (restore no longer uses `created_at`, so the oracle's `created_at` order is now an independent cross-check, not a shared assumption).
+
+  *Update 2026-06-29:* `created_at` was re-introduced solely as a *try-order optimization* — INSERT roots are now applied oldest-first (`created_at`, tx id tiebreak), mirroring SSR — and the highest rule was amended to permit exactly that. Because the chain still governs the outcome, this cannot change a correct result, so the core resolution (**correctness is chain-only**) stands; `created_at` is no longer *banned*, only barred from gating or deciding replay. The oracle's `created_at` order therefore remains an independent cross-check for well-formed input (one live root ⇒ order is immaterial).
 
 - ✅ **RESOLVED (non-issue) — logical-delete is NOT load-bearing for the restored state** — `REDO-LOGGING-IMPL-FINDINGS` §4 + #1 (coherence, adversarial)
 

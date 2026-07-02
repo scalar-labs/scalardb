@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit.cbrl;
 import com.google.common.base.Preconditions;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -114,9 +115,11 @@ final class RecordApplier {
   /**
    * The replay primitive (PoC plan §5). Given the key's current state in the database being
    * restored and that key's ops, follows the {@code prevTxId -> txId} chain forward from the
-   * record's current version to the final state. Restore is ordered solely by this chain — never by
-   * {@code created_at} or {@code tx_version} (the PoC plan's highest rule). Order- and
-   * input-independent within a key, and idempotent.
+   * record's current version to the final state. Correctness — what gets applied — is determined
+   * solely by this chain, never by {@code created_at} or {@code tx_version} (the PoC plan's highest
+   * rule); {@code created_at} is used only as a try-order optimization for independent INSERT roots
+   * (see below), which cannot change the chain's outcome. Order- and input-independent within a
+   * key, and idempotent.
    *
    * <p>An op that does not connect to the chain reachable forward from the current version is left
    * unapplied, mirroring SSR's {@code findWriteOperationsToApply} (which keeps such ops as {@code
@@ -128,8 +131,7 @@ final class RecordApplier {
    * have captured a deleted or arbitrarily-advanced version, which carries no position information,
    * so — like SSR — replay does not try to tell a legitimately-below op apart from a genuinely
    * dropped mid-chain op; completeness is the backup capture's responsibility (full coordinator
-   * scan + chain closure), not this primitive's. The one structural anomaly still rejected is a
-   * fork (two ops sharing a {@code prev_tx_id}), which serializable commit cannot produce.
+   * scan + chain closure), not this primitive's.
    */
   RecordState computeWriteOps(RecordKey key, List<RedoOperation> ops) {
     RecordState current = reader.get(key);
@@ -145,25 +147,16 @@ final class RecordApplier {
       if (op.isInsert()) {
         insertList.add(op);
       } else if (op.prevTxId() != null) {
-        RedoOperation clash = nonInsertOps.put(op.prevTxId(), op);
-        if (clash != null) {
-          throw new CbrlReplayException(
-              "Two ops on "
-                  + key
-                  + " share prev_tx_id "
-                  + op.prevTxId()
-                  + " (txns "
-                  + clash.txId()
-                  + ", "
-                  + op.txId()
-                  + ") — not a linear chain");
-        }
+        // Chain by prev_tx_id. Like SSR, a later op keyed on the same prev_tx_id simply overwrites
+        // (last wins) — a fork cannot arise from serializable commit, so replay does not guard
+        // against it.
+        nonInsertOps.put(op.prevTxId(), op);
       } else {
         // A non-INSERT op with no captured prior committed version — e.g. a DELETE/UPDATE of a
         // deemed-as-committed (imported / pre-ConsensusCommit) record. Not expected for
         // ConsensusCommit-managed data, and unreachable from the chain walk (which advances only by
         // a non-null cursor), so it is left unapplied. Warn so the anomaly is visible rather than
-        // silently swallowed — and so two of them no longer trip the fork guard.
+        // silently swallowed.
         logger.warn(
             "Skipping a {} redo op on {} with no prev_tx_id (no captured prior committed version) —"
                 + " unexpected for ConsensusCommit-managed data. Transaction ID: {}",
@@ -172,9 +165,17 @@ final class RecordApplier {
             op.txId());
       }
     }
-    // INSERT roots are applied in any order — the chain converges to the same final version, so
-    // they
-    // are NOT sorted by created_at. Restore never consults created_at or tx_version (highest rule).
+    // Apply INSERT roots oldest-first by commit time, with tx id as the tiebreak that makes this a
+    // total order (so restore is reproducible regardless of scan/bucket order). created_at is a
+    // wall-clock stamp and can be skewed across nodes, so "oldest" is only a best-effort heuristic,
+    // never authoritative — correctness rests solely on the causal, skew-immune chain (prev_tx_id
+    // ->
+    // tx_id). A well-formed (chain-closed) backup has at most one live root, so this ordering never
+    // changes a correct result; it is only a safety net (a reproducible, not scan-order-dependent,
+    // result even if a malformed backup somehow left two live roots) and an optimization (fewer
+    // superseded roots tried). Mirrors SSR's RecordApplyService.
+    insertList.sort(
+        Comparator.comparingLong(RedoOperation::committedAt).thenComparing(RedoOperation::txId));
     Deque<RedoOperation> insertQueue = new ArrayDeque<>(insertList);
     // Versions the base already reflects: its current tx id and every chain-ancestor reachable by
     // walking prev_tx_id back through the captured ops. A root in this set was applied before the

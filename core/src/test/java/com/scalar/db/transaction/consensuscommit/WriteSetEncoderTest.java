@@ -30,6 +30,9 @@ class WriteSetEncoderTest {
   private static final String NAMESPACE = "ns";
   private static final String TABLE = "tbl";
   private static final String TX_ID = "tx-id";
+  // A non-null backup label opens "full redo" mode in the encoder; null means keys-only. The
+  // parameterized tests map their boolean includeColumns to this label (true) or null (false).
+  private static final String BACKUP_LABEL = "backup-1";
 
   private TransactionTableMetadataManager tableMetadataManager;
   private ParallelExecutor parallelExecutor;
@@ -87,7 +90,8 @@ class WriteSetEncoderTest {
     snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
 
     // Act
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group =
+        writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns ? BACKUP_LABEL : null);
 
     // Assert
     assertThat(group.hasChildId()).isFalse();
@@ -136,7 +140,8 @@ class WriteSetEncoderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, "child-1", includeColumns);
+    EntryGroup group =
+        writeSetEncoder.encodeEntryGroup(snapshot, "child-1", includeColumns ? BACKUP_LABEL : null);
 
     // Assert
     assertThat(group.hasChildId()).isTrue();
@@ -152,7 +157,8 @@ class WriteSetEncoderTest {
     Snapshot snapshot = newSnapshot();
 
     // Act
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group =
+        writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns ? BACKUP_LABEL : null);
 
     // Assert
     assertThat(group.hasChildId()).isFalse();
@@ -193,7 +199,8 @@ class WriteSetEncoderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group =
+        writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns ? BACKUP_LABEL : null);
 
     // Assert
     Entry entry = group.getEntries(0);
@@ -350,7 +357,7 @@ class WriteSetEncoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    return writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
+    return writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns ? BACKUP_LABEL : null);
   }
 
   @ParameterizedTest
@@ -380,7 +387,8 @@ class WriteSetEncoderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns);
+    EntryGroup group =
+        writeSetEncoder.encodeEntryGroup(snapshot, null, includeColumns ? BACKUP_LABEL : null);
 
     // Assert
     assertThat(group.getEntriesList()).hasSize(1);
@@ -406,7 +414,7 @@ class WriteSetEncoderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, true);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, BACKUP_LABEL);
 
     // Assert
     Entry putEntry = group.getEntries(0);
@@ -435,7 +443,7 @@ class WriteSetEncoderTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
 
     // Act
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, true);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, BACKUP_LABEL);
 
     // Assert — only the user column survives the filter.
     Entry putEntry = group.getEntries(0);

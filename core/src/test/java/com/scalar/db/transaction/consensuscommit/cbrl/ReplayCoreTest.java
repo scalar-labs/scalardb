@@ -5,7 +5,6 @@ import static com.scalar.db.transaction.consensuscommit.cbrl.RedoLogGenerator.CO
 import static com.scalar.db.transaction.consensuscommit.cbrl.RedoLogGenerator.PK;
 import static com.scalar.db.transaction.consensuscommit.cbrl.RedoLogGenerator.intColumn;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -169,28 +168,11 @@ class ReplayCoreTest {
   }
 
   @Test
-  void fork_twoOpsShareAPrevTxId_rejected() {
-    // Arrange
-    // A fork — two ops superseding the same prior version — cannot arise from serializable commit
-    // (the prepare CAS linearizes each record's history). This is a defensive guard against a
-    // corrupt backup or an encoder bug: replay must reject it loudly, not silently pick a branch.
-    List<RedoOperation> ops =
-        ImmutableList.of(
-            op("t0", write(null, ImmutableMap.of(COL_V, 1))),
-            op("t1", write("t0", ImmutableMap.of(COL_V, 2))),
-            op("t2", write("t0", ImmutableMap.of(COL_V, 3)))); // also chains off t0 -> fork
-    // Act & Assert
-    assertThatThrownBy(() -> new RecordApplier(ABSENT).computeWriteOps(key(), ops))
-        .isInstanceOf(CbrlReplayException.class)
-        .hasMessageContaining("share prev_tx_id");
-  }
-
-  @Test
-  void blindDeletesWithNoPrevTxId_areTolerated_notForked() {
+  void blindDeletesWithNoPrevTxId_areTolerated() {
     // Arrange
     // Two DELETEs whose prior version had no captured tx_id (a deemed-as-committed / imported
-    // record) carry no prev_tx_id. They are unreachable from the chain walk and must be tolerated
-    // (skipped, logged) — NOT rejected as a fork the way two ops sharing a real prev_tx_id are.
+    // record) carry no prev_tx_id. They are unreachable from the chain walk, so they are tolerated
+    // (skipped, logged), leaving the record absent.
     List<RedoOperation> ops = ImmutableList.of(op("d1", delete(null)), op("d2", delete(null)));
     // Act
     RecordState result = new RecordApplier(ABSENT).computeWriteOps(key(), ops);

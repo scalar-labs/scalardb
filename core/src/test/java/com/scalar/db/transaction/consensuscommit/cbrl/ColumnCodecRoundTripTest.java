@@ -24,10 +24,11 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Round-trips every ScalarDB column type through {@link CbrlRestore}'s own proto&lt;-&gt;io
- * converter pair ({@code ioColumnToProto} then {@code toIoColumn}), proving the two are mutual
- * inverses for every type and for null — so a table with any column type restores correctly, not
- * just the five the integration test happens to use. (This checks the pair against itself; it does
- * not cross-check against {@code WriteSetEncoder}'s encoder, which produces the persisted redo.)
+ * converter pair ({@code encodeColumnToProto} then {@code decodeColumnFromProto}), proving the two
+ * are mutual inverses for every type and for null — so a table with any column type restores
+ * correctly, not just the five the integration test happens to use. (This checks the pair against
+ * itself; it does not cross-check against {@code WriteSetEncoder}'s encoder, which produces the
+ * persisted redo.)
  */
 class ColumnCodecRoundTripTest {
 
@@ -74,7 +75,8 @@ class ColumnCodecRoundTripTest {
   }
 
   private static void assertRoundTrip(Column<?> column) {
-    Column<?> roundTripped = CbrlRestore.toIoColumn(CbrlRestore.ioColumnToProto(column));
+    Column<?> roundTripped =
+        CbrlRestore.decodeColumnFromProto(CbrlRestore.encodeColumnToProto(column));
     assertThat(roundTripped).as("round-trip for %s", column).isEqualTo(column);
   }
 }

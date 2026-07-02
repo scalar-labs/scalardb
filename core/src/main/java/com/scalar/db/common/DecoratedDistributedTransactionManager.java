@@ -312,8 +312,8 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
-  public void enableRedoLogging() {
-    transactionManager.enableRedoLogging();
+  public void enableRedoLogging(String backupLabel) {
+    transactionManager.enableRedoLogging(backupLabel);
   }
 
   @Override

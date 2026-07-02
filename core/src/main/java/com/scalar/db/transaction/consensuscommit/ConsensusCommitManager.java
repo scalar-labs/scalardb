@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -76,9 +77,12 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
-  // CBRL PoC: backup-window state. enable/disableRedoLogging() flip it; begin() captures it
-  // into each transaction's context, so the logging mode is decided once, at transaction start.
-  private final AtomicBoolean redoLoggingEnabled = new AtomicBoolean(false);
+  // CBRL PoC: the current backup window's label, or null when no window is open. Toggled
+  // dynamically by enableRedoLogging(label)/disableRedoLogging() (never from static config);
+  // begin()
+  // captures it into each transaction's context, so the logging mode and label are decided once, at
+  // transaction start.
+  private final AtomicReference<String> backupLabel = new AtomicReference<>();
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -228,9 +232,6 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
               config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
               config.isOnePhaseCommitEnabled());
     }
-    // CBRL PoC: seed the backup-window state from config so a benchmark can pick the mode without
-    // code. The runtime enable/disableRedoLogging() can still flip it afterward.
-    redoLoggingEnabled.set(config.isRedoLoggingEnabled());
     return handler;
   }
 
@@ -328,7 +329,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             readOnly,
             oneOperation,
             groupCommitSlotReserved,
-            redoLoggingEnabled.get());
+            backupLabel.get());
     DistributedTransaction transaction =
         new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
     if (readOnly) {
@@ -821,13 +822,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public void enableRedoLogging() {
-    redoLoggingEnabled.set(true);
+  public void enableRedoLogging(String backupLabel) {
+    checkArgument(
+        backupLabel != null && !backupLabel.isEmpty(), "backupLabel must not be null or empty");
+    this.backupLabel.set(backupLabel);
   }
 
   @Override
   public void disableRedoLogging() {
-    redoLoggingEnabled.set(false);
+    backupLabel.set(null);
   }
 
   @Override

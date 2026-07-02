@@ -53,12 +53,16 @@ import javax.annotation.Nullable;
 /**
  * Orchestrates the whole CBRL restore against a non-snapshot-consistent copy and the redo captured
  * in the coordinator backup. It uses <b>only the Storage API</b> for applying records and core's
- * record-level recovery for resolving in-flight ones — like SSR, it never runs a transaction, so a
- * restore creates <b>no coordinator rows</b> for its own work. Every record is routed by the
- * namespace and table carried in its redo {@link Entry}, so one restore spans every namespace the
- * backup window touched (the coordinator namespace alone comes from configuration). {@link
- * #restore()} reads the redo from the restored coordinator table, then for each record key — on the
- * worker that owns it — does three steps:
+ * record-level recovery for resolving in-flight ones — like SSR, it never runs a transaction of its
+ * own and adds <b>no coordinator state as bookkeeping</b>. Given the expected precondition (the
+ * coordinator restored with a terminal state for every writer, per below), recovery rolls records
+ * only and writes nothing; the sole coordinator write it can trigger is core recovery finalizing an
+ * in-flight writer that lacks a terminal state — aborting an expired, never-committed writer —
+ * which is a recovery outcome, not restore's own work. Every record is routed by the namespace and
+ * table carried in its redo {@link Entry}, so one restore spans every namespace the backup window
+ * touched (the coordinator namespace alone comes from configuration). {@link #restore()} reads the
+ * redo from the restored coordinator table, then for each record key — on the worker that owns it —
+ * does three steps:
  *
  * <ol>
  *   <li><b>C4 recovery:</b> resolve the copy's in-flight ({@code PREPARED}/{@code DELETED}) record
@@ -90,6 +94,10 @@ public final class CbrlRestore implements AutoCloseable {
       new CoordinatorGroupCommitKeyManipulator();
   // Namespace of the restored coordinator table — read for the redo and original commit times.
   private final String coordinatorNamespace;
+  // The backup window to restore: replay only the redo tagged with this label (see
+  // EntryGroup.backup_label). Keys-only and other-backup groups are skipped — the copy carries the
+  // state of the records they wrote.
+  private final String backupLabel;
   // Resolves each restored table's schema on demand (cached), so the user (non-key,
   // non-tx-metadata)
   // columns read as the replay base are derived from the table rather than supplied by the caller.
@@ -101,10 +109,11 @@ public final class CbrlRestore implements AutoCloseable {
    * Builds its own ScalarDB handles (storage, transaction manager, storage admin) from {@code
    * properties}; {@link #close()} closes them. There is no namespace argument — restore routes each
    * record by the namespace in its redo, and the coordinator namespace and replay concurrency come
-   * from {@code properties}, so the caller hand-derives nothing.
+   * from {@code properties}, so the caller hand-derives nothing. {@code backupLabel} selects which
+   * backup window's redo to replay (the label passed to {@code enableRedoLogging}).
    */
-  public CbrlRestore(Properties properties) throws ExecutionException {
-    this(properties, null, null, null);
+  public CbrlRestore(Properties properties, String backupLabel) throws ExecutionException {
+    this(properties, backupLabel, null, null, null);
   }
 
   /**
@@ -115,6 +124,7 @@ public final class CbrlRestore implements AutoCloseable {
    */
   CbrlRestore(
       Properties properties,
+      String backupLabel,
       @Nullable DistributedStorage storage,
       @Nullable DistributedTransactionManager manager,
       @Nullable DistributedStorageAdmin admin)
@@ -124,6 +134,10 @@ public final class CbrlRestore implements AutoCloseable {
       throw new IllegalArgumentException(
           "storage, manager, and admin must all be null or all non-null");
     }
+    if (backupLabel == null || backupLabel.isEmpty()) {
+      throw new IllegalArgumentException("backupLabel must not be null or empty");
+    }
+    this.backupLabel = backupLabel;
     CbrlConfig config = new CbrlConfig(properties);
     this.coordinatorNamespace = config.getCoordinatorNamespace();
     this.replayBuckets = config.getReplayBuckets();
@@ -180,12 +194,12 @@ public final class CbrlRestore implements AutoCloseable {
                 ? state.getId()
                 : keyManipulator.fullKey(state.getId(), group.getChildId());
         committedAtByTxId.put(txId, state.getCreatedAt());
+        if (!backupLabel.equals(group.getBackupLabel())) {
+          // Not this backup: a keys-only group (empty label, logging was off) or a different backup
+          // window's redo. The copy carries the state of the records this group wrote instead.
+          continue;
+        }
         for (Entry entry : group.getEntriesList()) {
-          if (!entry.hasTxVersion()) {
-            // Key-only write set from outside the backup window (logging was off): not redo. The
-            // copy carries that state instead.
-            continue;
-          }
           redoOps.add(new RedoOperation(txId, entry, state.getCreatedAt()));
         }
       }
@@ -255,7 +269,7 @@ public final class CbrlRestore implements AutoCloseable {
       for (String name : userColumnNames(metadataOf(key))) {
         Column<?> column = record.getColumns().get(name);
         if (column != null) {
-          columns.put(name, ioColumnToProto(column));
+          columns.put(name, encodeColumnToProto(column));
         }
       }
       return RecordState.of(
@@ -300,8 +314,9 @@ public final class CbrlRestore implements AutoCloseable {
    * already-committed or absent record.
    */
   private void recoverKey(RecordKey key) throws Exception {
-    Key partitionKey = toIoKey(key.partitionKey());
-    Key clusteringKey = key.clusteringKey() == null ? null : toIoKey(key.clusteringKey());
+    Key partitionKey = decodeKeyFromProto(key.partitionKey());
+    Key clusteringKey =
+        key.clusteringKey() == null ? null : decodeKeyFromProto(key.clusteringKey());
     boolean resolved =
         manager.recoverRecord(key.namespace(), key.table(), partitionKey, clusteringKey);
     if (!resolved) {
@@ -344,16 +359,16 @@ public final class CbrlRestore implements AutoCloseable {
         Put.newBuilder()
             .namespace(key.namespace())
             .table(key.table())
-            .partitionKey(toIoKey(key.partitionKey()));
+            .partitionKey(decodeKeyFromProto(key.partitionKey()));
     if (key.clusteringKey() != null) {
-      put.clusteringKey(toIoKey(key.clusteringKey()));
+      put.clusteringKey(decodeKeyFromProto(key.clusteringKey()));
     }
     TransactionTableMetadata metadata = metadataOf(key);
     for (String name : userColumnNames(metadata)) {
       com.scalar.db.transaction.consensuscommit.proto.v1.Column column = state.columns().get(name);
       put.value(
           column != null
-              ? toIoColumn(column)
+              ? decodeColumnFromProto(column)
               : nullColumnOf(name, metadata.getColumnDataType(name)));
     }
     put.textValue(Attribute.ID, state.currentTxId());
@@ -372,9 +387,9 @@ public final class CbrlRestore implements AutoCloseable {
         Delete.newBuilder()
             .namespace(key.namespace())
             .table(key.table())
-            .partitionKey(toIoKey(key.partitionKey()));
+            .partitionKey(decodeKeyFromProto(key.partitionKey()));
     if (key.clusteringKey() != null) {
-      delete.clusteringKey(toIoKey(key.clusteringKey()));
+      delete.clusteringKey(decodeKeyFromProto(key.clusteringKey()));
     }
     return delete.build();
   }
@@ -384,9 +399,9 @@ public final class CbrlRestore implements AutoCloseable {
         Get.newBuilder()
             .namespace(key.namespace())
             .table(key.table())
-            .partitionKey(toIoKey(key.partitionKey()));
+            .partitionKey(decodeKeyFromProto(key.partitionKey()));
     if (key.clusteringKey() != null) {
-      builder.clusteringKey(toIoKey(key.clusteringKey()));
+      builder.clusteringKey(decodeKeyFromProto(key.clusteringKey()));
     }
     return builder.build();
   }
@@ -423,7 +438,10 @@ public final class CbrlRestore implements AutoCloseable {
 
   // Mirrors WriteSetEncoder's ColumnEncodingVisitor exactly (same TimeRelatedColumnEncodingUtils),
   // so a value read from the copy base encodes identically to the same value carried in the redo.
-  static com.scalar.db.transaction.consensuscommit.proto.v1.Column ioColumnToProto(
+  // TODO: These proto<->io Column/Key converters duplicate WriteSetEncoder's column encoding and
+  // WriteSetDecoder's column decoding. Once the open PRs land, move them to a shared home (e.g. a
+  // ProtoUtils) and dedup instead of keeping this copy.
+  static com.scalar.db.transaction.consensuscommit.proto.v1.Column encodeColumnToProto(
       Column<?> column) {
     String name = column.getName();
     com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder =
@@ -519,16 +537,18 @@ public final class CbrlRestore implements AutoCloseable {
     throw new IllegalStateException("Unsupported column type for " + name + ": " + column);
   }
 
-  private static Key toIoKey(com.scalar.db.transaction.consensuscommit.proto.v1.Key protoKey) {
+  private static Key decodeKeyFromProto(
+      com.scalar.db.transaction.consensuscommit.proto.v1.Key protoKey) {
     Key.Builder builder = Key.newBuilder();
     for (com.scalar.db.transaction.consensuscommit.proto.v1.Column column :
         protoKey.getColumnsList()) {
-      builder.add(toIoColumn(column));
+      builder.add(decodeColumnFromProto(column));
     }
     return builder.build();
   }
 
-  static Column<?> toIoColumn(com.scalar.db.transaction.consensuscommit.proto.v1.Column column) {
+  static Column<?> decodeColumnFromProto(
+      com.scalar.db.transaction.consensuscommit.proto.v1.Column column) {
     String name = column.getName();
     if (column.hasIntValue()) {
       return column.getIntValue().hasValue()

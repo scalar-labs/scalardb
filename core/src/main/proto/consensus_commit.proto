@@ -201,6 +201,16 @@ message EntryGroup {
   // WRITE entries (puts) before DELETE entries (deletes); readers must not rely on this order
   // beyond what the EntryType field signals.
   repeated Entry entries = 2;
+
+  // The backup label of the full (redo-logging) write set this group belongs to — the backup window
+  // that was active (opened via enableRedoLogging(label)) when the transaction committed. Its
+  // entries then carry full user columns plus the prev_tx_id/tx_version chain metadata. Empty for a
+  // keys-only (active-recovery) write set, which records only primary keys. CBRL restore targets one
+  // label and replays only the groups whose backup_label matches it, so multiple backup windows can
+  // coexist in the coordinator's redo. The mode is per transaction, so the encoder sets it once for
+  // the whole group. This label is the canonical replay discriminator; readers must not infer the
+  // mode from tx_version presence.
+  string backup_label = 3;
 }
 
 // A single record write performed by a transaction. Captures the storage-layer mutation that
@@ -246,13 +256,7 @@ message Entry {
 
   // The record's resulting version after this write. Carried so CBRL restore can stamp the
   // restored record with a coherent version (it is not used for replay ordering — the chain is).
-  // Only populated for the full (redo-logging) write set. Its presence is the canonical
-  // discriminator restore uses: an entry with this field absent (hasTxVersion() == false) is from a
-  // keys-only write set and must NOT be replayed. Do not set tx_version on a keys-only entry.
-  //
-  // TODO: Using a version field's presence as the keys-only-vs-full discriminator overloads it as a
-  // boolean flag. A cleaner signal would be an explicit marker — a third EntryType
-  // (ENTRY_TYPE_KEY_ONLY) or a `bool keys_only` — set by the encoder's keys-only path; it would also
-  // read uniformly for DELETE entries, which are column-less regardless of mode.
+  // Only populated for the full (redo-logging) write set; left unset for a keys-only entry. This is
+  // not the replay discriminator — that is EntryGroup.redo_logged.
   optional int32 tx_version = 8;
 }

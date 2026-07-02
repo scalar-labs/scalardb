@@ -133,6 +133,10 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   // restore rewrites it here. (The two-namespace src/restore split is gone — restore is in-place.)
   private static final String USER_NAMESPACE = "cbrl_data";
   private static final String COORDINATOR_NAMESPACE = "cbrl_coordinator";
+  // The backup window's label: the workload opens the window with enableRedoLogging(BACKUP_LABEL)
+  // and restore targets the same label. The coordinator is truncated between tests, so one label
+  // is reused across them.
+  private static final String BACKUP_LABEL = "cbrl-backup";
 
   private static final String TABLE_A = "table_a";
   private static final String A_PK = "pk";
@@ -255,9 +259,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     properties.setProperty(
         DatabaseConfig.TRANSACTION_MANAGER, ConsensusCommitConfig.TRANSACTION_MANAGER_NAME);
     properties.setProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, COORDINATOR_NAMESPACE);
-    // Start with redo logging OFF; the test opens the backup window (enables it) explicitly so the
-    // pre-window base is unlogged and the copy is load-bearing.
-    properties.setProperty(ConsensusCommitConfig.REDO_LOGGING_ENABLED, "false");
+    // Redo logging starts OFF (its default now that it is dynamic-only); the test opens the backup
+    // window by calling enableRedoLogging() explicitly, so the pre-window base is unlogged and the
+    // copy is load-bearing.
     // Group commit is a config axis: the concrete subclass selects it. The same scenarios run with
     // it off and on (group-committed writes get full child ids — parent + child — which the redo
     // explosion and recovery must handle).
@@ -284,7 +288,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     admin.createTable(USER_NAMESPACE, TABLE_B, TABLE_B_METADATA, true);
     admin.createTable(USER_NAMESPACE, TABLE_C, TABLE_C_METADATA, true);
 
-    cbrlRestore = new CbrlRestore(properties, storage, manager, storageAdmin);
+    cbrlRestore = new CbrlRestore(properties, BACKUP_LABEL, storage, manager, storageAdmin);
   }
 
   @AfterAll
@@ -351,7 +355,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Map<Integer, Long> seed = seedPreWindowBase(PRE_WINDOW_ONLY_KEYS); // logging still OFF
     // Open the window and do a little in-window work on OTHER keys, so the backup has redo (the
     // restore path runs) but nothing touches the seeded keys.
-    manager.enableRedoLogging();
+    manager.enableRedoLogging(BACKUP_LABEL);
     for (int i = PRE_WINDOW_ONLY_KEYS; i < PRE_WINDOW_ONLY_KEYS + 2; i++) {
       long token = tokenCounter.incrementAndGet();
       int key = i;
@@ -393,7 +397,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     // Arrange
     int key = 0;
     long token = tokenCounter.incrementAndGet();
-    manager.enableRedoLogging(); // Open the backup window.
+    manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
     withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, key, token))); // T inserts + commits.
     Result committed =
         storage.get(getForTableA(USER_NAMESPACE, key)).orElseThrow(IllegalStateException::new);
@@ -437,7 +441,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     long token = tokenCounter.incrementAndGet();
     // Pre-window committed base (logging OFF): a record for T to delete.
     withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, key, token)));
-    manager.enableRedoLogging(); // Open the backup window.
+    manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
     withRetry(tx -> tx.delete(deleteForTableA(USER_NAMESPACE, key))); // T deletes + commits.
     // The pre-window base also lands in the backup as a keys-only row (a logging-off commit still
     // writes a tx_write_set, just without redo), so pick the in-window DELETE writer by entry type.
@@ -470,7 +474,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   void restore_ForAllColumnTypes_ShouldRoundTripEveryType() throws Exception {
     // Arrange
     int key = 0;
-    manager.enableRedoLogging(); // Open the backup window.
+    manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
     withRetry(tx -> tx.put(allTypesPut(key)));
     Map<String, List<Put>> copy = captureCopy();
     installCopy(copy);
@@ -511,7 +515,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     long baseToken = tokenCounter.incrementAndGet();
     // Pre-window committed base with EVERY table_a column set (logging off).
     withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, key, baseToken)));
-    manager.enableRedoLogging(); // Open the backup window.
+    manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
     // Capture the copy at the full-column base, before the in-window delete + re-insert.
     Map<String, List<Put>> copy = captureCopy();
     // In-window: delete, then re-insert with ONLY the token column, so the chain nets to a present
@@ -603,7 +607,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           });
     }
 
-    manager.enableRedoLogging(); // Open the backup window.
+    manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
 
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startDisjointWorkload(stop, present, history);
@@ -977,7 +981,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     seedBalances(SEEDED_KEYS, initialBalance); // Half seeded; the rest are created in-window.
     long total = (long) SEEDED_KEYS * initialBalance;
 
-    manager.enableRedoLogging(); // Open the backup window.
+    manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
 
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
@@ -1080,7 +1084,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     seedBalances(SEEDED_KEYS, initialBalance); // Half seeded; the rest are created in-window.
     long total = (long) SEEDED_KEYS * initialBalance;
 
-    manager.enableRedoLogging(); // Open the backup window.
+    manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
@@ -1167,7 +1171,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     // The storage admin is the real one: schema is read lazily through it (not the crashing
     // handles), so a crash lands on recovery (manager) or read/write-back (storage), never
     // metadata.
-    return new CbrlRestore(properties(), crashingStorage, crashingManager, storageAdmin);
+    return new CbrlRestore(
+        properties(), BACKUP_LABEL, crashingStorage, crashingManager, storageAdmin);
   }
 
   /**
@@ -1354,7 +1359,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     // Arrange
     long initialBalance = 1_000L;
     seedBalances(RECORD_COUNT, initialBalance);
-    manager.enableRedoLogging();
+    manager.enableRedoLogging(BACKUP_LABEL);
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);

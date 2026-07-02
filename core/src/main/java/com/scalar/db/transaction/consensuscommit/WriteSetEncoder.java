@@ -77,8 +77,9 @@ final class WriteSetEncoder {
    * storage backend, distinguishing it from a NULL column (which indicates "no info" for
    * lazy-recovery aborts or pre-feature rows).
    *
-   * <p>Whether non-key column values are included (full redo vs. keys-only) is taken from {@code
-   * context.redoLoggingEnabled}, captured at the transaction's begin.
+   * <p>Whether non-key column values are included (full redo vs. keys-only), and the label the
+   * group is tagged with, are taken from {@code context.backupLabel} (null = keys-only), captured
+   * at the transaction's begin.
    *
    * @param context the transaction context
    * @return the encoded {@link WriteSet}
@@ -86,7 +87,7 @@ final class WriteSetEncoder {
   WriteSet encodeSingleGroupWriteSet(TransactionContext context) {
     WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(1);
     if (context.snapshot.hasWritesOrDeletes()) {
-      builder.addEntryGroups(encodeEntryGroup(context.snapshot, null, context.redoLoggingEnabled));
+      builder.addEntryGroups(encodeEntryGroup(context.snapshot, null, context.backupLabel));
     }
     return builder.build();
   }
@@ -100,9 +101,9 @@ final class WriteSetEncoder {
    * persisted payload stays minimal. {@code schema_version} is always set even when all children
    * are read-only.
    *
-   * <p>The redo mode is taken per child from {@code context.redoLoggingEnabled} (captured at each
-   * transaction's begin), so a batch that straddles a backup-window flip records each child
-   * faithfully — restore filters per entry.
+   * <p>The redo mode and label are taken per child from {@code context.backupLabel} (captured at
+   * each transaction's begin), so a batch that straddles a backup-window flip records each child
+   * faithfully — restore filters per group by label.
    *
    * @param contexts the transaction contexts in the group, in the desired emit order
    * @return the encoded {@link WriteSet}
@@ -115,8 +116,7 @@ final class WriteSetEncoder {
         continue;
       }
       String childId = KEY_MANIPULATOR.keysFromFullKey(context.transactionId).childKey;
-      builder.addEntryGroups(
-          encodeEntryGroup(context.snapshot, childId, context.redoLoggingEnabled));
+      builder.addEntryGroups(encodeEntryGroup(context.snapshot, childId, context.backupLabel));
     }
     return builder.build();
   }
@@ -129,16 +129,22 @@ final class WriteSetEncoder {
    *
    * @param snapshot the snapshot of the transaction
    * @param childId the child id within a group commit, or {@code null} for non-group-commit
-   * @param includeColumns whether to include non-key column values for {@code Put} entries; when
-   *     {@code false}, only primary keys are recorded. Transaction-meta columns are always filtered
-   *     out when {@code includeColumns} is true
+   * @param backupLabel the active backup window's label, or {@code null} when redo logging is off.
+   *     When set, non-key column values (minus transaction-meta columns) plus the prev_tx_id/
+   *     tx_version chain metadata are recorded and the group is tagged with this label; when {@code
+   *     null}, only primary keys are recorded.
    * @return the encoded {@link EntryGroup}
    */
   @VisibleForTesting
-  EntryGroup encodeEntryGroup(Snapshot snapshot, @Nullable String childId, boolean includeColumns) {
+  EntryGroup encodeEntryGroup(
+      Snapshot snapshot, @Nullable String childId, @Nullable String backupLabel) {
+    boolean includeColumns = backupLabel != null;
     EntryGroup.Builder builder = EntryGroup.newBuilder();
     if (childId != null) {
       builder.setChildId(childId);
+    }
+    if (includeColumns) {
+      builder.setBackupLabel(backupLabel);
     }
     for (Map.Entry<Snapshot.Key, Put> e : snapshot.getWriteSet()) {
       Put put = e.getValue();
@@ -184,6 +190,13 @@ final class WriteSetEncoder {
     } catch (ExecutionException e) {
       // Table metadata is expected to be cached by commit time. Surface the unexpected failure
       // loudly rather than silently emitting an unfiltered payload.
+      // TODO: This WriteSetEncoder has diverged from the main branch's newer one; on reconciliation
+      // we should use main's new encode API (encodeSingleGroupWriteSet / mergeChildWriteSets)
+      // instead of this fork, re-applying the CBRL chain metadata (prev_tx_id/tx_version) on top,
+      // and fix this metadata-fetch failure there: on the commit path the AssertionError escapes
+      // the
+      // CommitException/UnknownTransactionStatusException contract (main carries the same code
+      // today).
       throw new AssertionError(
           "Failed to retrieve transaction table metadata while encoding the write set. Operation: "
               + mutation,
@@ -232,6 +245,10 @@ final class WriteSetEncoder {
     return builder.build();
   }
 
+  // TODO: CbrlRestore.encodeColumnToProto duplicates this io->proto column encoding. Once the open
+  // PRs land, expose this (or a shared ProtoUtils) and have CbrlRestore call it instead of keeping
+  // a
+  // parallel copy.
   private static com.scalar.db.transaction.consensuscommit.proto.v1.Column encodeColumn(
       Column<?> column) {
     com.scalar.db.transaction.consensuscommit.proto.v1.Column.Builder builder =

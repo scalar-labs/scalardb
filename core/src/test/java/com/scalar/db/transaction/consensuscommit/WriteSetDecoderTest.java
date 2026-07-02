@@ -82,7 +82,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, false);
+    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, null);
     return group.getEntries(0);
   }
 
@@ -184,7 +184,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, false).getEntries(0);
+    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, null).getEntries(0);
 
     // Act
     Get get = WriteSetDecoder.toGet(entry);
@@ -210,7 +210,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, false).getEntries(0);
+    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, null).getEntries(0);
 
     // Act
     Get get = WriteSetDecoder.toGet(entry);
@@ -247,7 +247,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, false).getEntries(0);
+    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, null).getEntries(0);
 
     // Act
     Get get = WriteSetDecoder.toGet(entry);
