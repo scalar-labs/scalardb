@@ -39,7 +39,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     MockitoAnnotations.openMocks(this).close();
     when(delegate.begin(any(), eq(false), any(), any())).thenReturn(TX);
     coordinator =
-        new ActiveTransactionManagedTwoPhaseCommitCoordinator(delegate, EXPIRATION_MILLIS);
+        new ActiveTransactionManagedTwoPhaseCommitCoordinator(
+            delegate, EXPIRATION_MILLIS, /* maxActiveTransactions= */ -1);
   }
 
   @Test

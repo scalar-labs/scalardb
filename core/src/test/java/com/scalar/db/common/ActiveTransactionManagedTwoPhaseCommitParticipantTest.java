@@ -16,6 +16,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
@@ -51,7 +52,8 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     participant =
-        new ActiveTransactionManagedTwoPhaseCommitParticipant(delegate, EXPIRATION_MILLIS);
+        new ActiveTransactionManagedTwoPhaseCommitParticipant(
+            delegate, EXPIRATION_MILLIS, /* maxActiveTransactions= */ -1);
   }
 
   private static Get get() {
@@ -94,6 +96,27 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.insert(TX, insert);
 
     verify(delegate).insert(TX, insert);
+  }
+
+  @Test
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  void getScanner_ReturnedScanner_ShouldRefreshIdleTimerOnEachRead() throws Exception {
+    ActiveTransactionRegistry registry = mock(ActiveTransactionRegistry.class);
+    ActiveTransactionManagedTwoPhaseCommitParticipant p =
+        new ActiveTransactionManagedTwoPhaseCommitParticipant(delegate, registry);
+    Scan scan = Scan.newBuilder().namespace(NS).table(TBL).all().build();
+    TransactionCrudOperable.Scanner rawScanner = mock(TransactionCrudOperable.Scanner.class);
+    when(rawScanner.one()).thenReturn(Optional.empty());
+    when(rawScanner.all()).thenReturn(Collections.emptyList());
+    when(delegate.getScanner(TX, scan)).thenReturn(rawScanner);
+
+    TransactionCrudOperable.Scanner scanner = p.getScanner(TX, scan);
+    scanner.one();
+    scanner.all();
+
+    // getScanner refreshes once; then each one()/all() on the returned scanner refreshes too, so a
+    // slowly-consumed scan is not reaped mid-iteration.
+    verify(registry, times(3)).touch(TX);
   }
 
   @Test

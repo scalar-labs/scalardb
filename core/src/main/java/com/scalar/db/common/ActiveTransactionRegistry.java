@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class ActiveTransactionRegistry<T> {
 
-  private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
-
   private static final Logger logger = LoggerFactory.getLogger(ActiveTransactionRegistry.class);
 
   private final ActiveExpiringMap<String, T> activeTransactions;
@@ -24,26 +22,46 @@ public class ActiveTransactionRegistry<T> {
    * Constructs an ActiveTransactionRegistry.
    *
    * @param expirationTimeMillis the expiration time in milliseconds
-   * @param expirationHandler the handler invoked when a transaction expires
+   * @param maxActiveTransactions the maximum number of active transactions to keep; when exceeded,
+   *     a transaction is evicted (disposed via {@code disposalHandler}) per the cache's recency-
+   *     and frequency-aware policy to make room. Non-positive means unbounded.
+   * @param disposalHandler the handler invoked to dispose a transaction when it expires or is
+   *     evicted
    */
   public ActiveTransactionRegistry(
-      long expirationTimeMillis, ExpirationHandler<T> expirationHandler) {
+      long expirationTimeMillis, int maxActiveTransactions, DisposalHandler<T> disposalHandler) {
     this.activeTransactions =
         new ActiveExpiringMap<>(
             expirationTimeMillis,
-            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+            maxActiveTransactions,
             (id, t) -> {
               logger.warn("The transaction is expired. Transaction ID: {}", id);
-              try {
-                expirationHandler.onExpired(t);
-              } catch (Exception e) {
-                logger.warn("Failed to handle the expired transaction. Transaction ID: {}", id, e);
-              }
+              dispose(id, t, disposalHandler, "expired");
+            },
+            (id, t) -> {
+              logger.warn(
+                  "The transaction is evicted because the maximum number of active transactions "
+                      + "({}) was exceeded. Transaction ID: {}",
+                  maxActiveTransactions,
+                  id);
+              dispose(id, t, disposalHandler, "evicted");
             });
+  }
+
+  private void dispose(String id, T transaction, DisposalHandler<T> disposalHandler, String cause) {
+    try {
+      disposalHandler.onDisposed(transaction);
+    } catch (Exception e) {
+      logger.warn("Failed to handle the {} transaction. Transaction ID: {}", cause, id, e);
+    }
   }
 
   /**
    * Adds a transaction to the registry.
+   *
+   * <p>A {@code true} return means the transaction was inserted, not that it will remain
+   * registered: at the cap, a just-added transaction can be evicted (and disposed) moments later.
+   * Callers must not assume a successful add keeps the transaction alive.
    *
    * @param id the transaction ID
    * @param transaction the transaction to add
@@ -84,13 +102,14 @@ public class ActiveTransactionRegistry<T> {
   }
 
   /**
-   * Functional interface invoked when a transaction expires, to dispose of its resources (e.g.,
-   * roll it back, or release its context without a storage rollback).
+   * Functional interface invoked to dispose of a transaction's resources (e.g., roll it back, or
+   * release its context without a storage rollback) when the transaction either expires (idle
+   * timeout) or is evicted because the maximum number of active transactions was exceeded.
    *
    * @param <T> the type of transaction
    */
   @FunctionalInterface
-  public interface ExpirationHandler<T> {
-    void onExpired(T transaction) throws Exception;
+  public interface DisposalHandler<T> {
+    void onDisposed(T transaction) throws Exception;
   }
 }

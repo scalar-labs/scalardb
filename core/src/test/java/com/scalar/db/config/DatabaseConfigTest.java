@@ -39,6 +39,8 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -69,6 +71,8 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
@@ -100,6 +104,8 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
@@ -133,6 +139,8 @@ public class DatabaseConfigTest {
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
     assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isFalse();
@@ -337,6 +345,7 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, "false");
     props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, "3600");
+    props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS, "5000");
 
     // Act
     DatabaseConfig config = new DatabaseConfig(props);
@@ -350,6 +359,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.isActiveTransactionManagementEnabled()).isFalse();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(3600);
+    assertThat(config.getActiveTransactionManagementMaxActiveTransactions()).isEqualTo(5000);
   }
 
   @Test
