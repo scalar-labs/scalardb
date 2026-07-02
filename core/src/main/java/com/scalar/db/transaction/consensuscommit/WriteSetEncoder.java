@@ -8,6 +8,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -289,6 +290,68 @@ final class WriteSetEncoder {
       }
       builder.setTimestamptzValue(valueBuilder);
     }
+  }
+
+  /**
+   * Encodes a {@link WriteSet} from the per-participant write sets aggregated across a
+   * multi-participant transaction.
+   *
+   * <p>One {@link EntryGroup} is emitted per participant (in the map's iteration order), and every
+   * {@link Entry} it produces is stamped with the owning participant's id. Participants with no
+   * writes are skipped. {@code child_id} is not used in this path (it is reserved for the existing
+   * group-commit grouping).
+   *
+   * <p>When {@code includeColumns} is true, each {@code WRITE} entry's non-key columns are encoded
+   * too; when false, only primary keys are persisted (the default commit-state convention). The
+   * supplied {@link TwoPhaseCommit.WriteSetEntry}s already exclude ConsensusCommit-internal
+   * columns, so no meta-column filtering is needed here.
+   *
+   * @param writeSetsByParticipant the write set produced by each participant, keyed by participant
+   *     ID
+   * @param includeColumns whether to include non-key column values for {@code WRITE} entries
+   * @return the encoded {@link WriteSet}
+   */
+  static WriteSet encodeFromWriteSetEntries(
+      Map<String, List<TwoPhaseCommit.WriteSetEntry>> writeSetsByParticipant,
+      boolean includeColumns) {
+    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(SCHEMA_VERSION);
+    for (Map.Entry<String, List<TwoPhaseCommit.WriteSetEntry>> e :
+        writeSetsByParticipant.entrySet()) {
+      String participantId = checkNotNull(e.getKey());
+      List<TwoPhaseCommit.WriteSetEntry> entries = e.getValue();
+      if (entries.isEmpty()) {
+        continue;
+      }
+      EntryGroup.Builder groupBuilder = EntryGroup.newBuilder();
+      for (TwoPhaseCommit.WriteSetEntry entry : entries) {
+        groupBuilder.addEntries(encodeWriteSetEntry(entry, participantId, includeColumns));
+      }
+      builder.addEntryGroups(groupBuilder.build());
+    }
+    return builder.build();
+  }
+
+  private static Entry encodeWriteSetEntry(
+      TwoPhaseCommit.WriteSetEntry entry, String participantId, boolean includeColumns) {
+    Entry.Builder builder =
+        Entry.newBuilder()
+            .setEntryType(
+                entry.getType() == TwoPhaseCommit.WriteSetEntry.Type.WRITE
+                    ? Entry.EntryType.ENTRY_TYPE_WRITE
+                    : Entry.EntryType.ENTRY_TYPE_DELETE)
+            .setNamespaceName(entry.getNamespaceName())
+            .setTableName(entry.getTableName())
+            .setPartitionKey(encodeKey(entry.getPartitionKey()))
+            .setParticipantId(participantId);
+    entry.getClusteringKey().ifPresent(ck -> builder.setClusteringKey(encodeKey(ck)));
+    if (includeColumns && entry.getType() == TwoPhaseCommit.WriteSetEntry.Type.WRITE) {
+      // The entry's columns are already free of ConsensusCommit-internal columns (filtered when the
+      // participant built the write set), so encode them as-is.
+      for (Column<?> column : entry.getColumns()) {
+        builder.addColumns(encodeColumn(column));
+      }
+    }
+    return builder.build();
   }
 
   /**
