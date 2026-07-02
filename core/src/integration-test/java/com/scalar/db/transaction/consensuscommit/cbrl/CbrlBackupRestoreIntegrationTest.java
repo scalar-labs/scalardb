@@ -569,10 +569,12 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * txId} is in the backup's captured set (a clean prefix, since one owner commits a key
    * sequentially). Every restored column must equal the value derived from its last-in-prefix
    * writer — proving window-consistency, that replay never lets an older write overwrite a newer
-   * one (a regression yields a smaller token), that untouched columns are carried forward (a
-   * replace-not-merge bug nulls them), and that post-backup writes do not leak in (their ids are
-   * not in the captured set). Keys in {@code [0, PRE_WINDOW_ONLY_KEYS)} are seeded but never
-   * touched in-window, so they also prove the copy is load-bearing (restored with no redo).
+   * one (a regression yields a smaller token), that an update's untouched columns are carried
+   * forward (a replace-not-merge bug nulls them), that a re-insert which drops columns CLEARS them
+   * (a stale-column bug leaves the copy's value under the partial-column write-back), and that
+   * post-backup writes do not leak in (their ids are not in the captured set). Keys in {@code [0,
+   * PRE_WINDOW_ONLY_KEYS)} are seeded but never touched in-window, so they also prove the copy is
+   * load-bearing (restored with no redo).
    */
   @Test
   void restore_AfterDisjointOwnerWorkload_ShouldYieldLatestValuePerColumn() throws Exception {
@@ -676,15 +678,15 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * One transaction on an owned key: a full insert if absent, else a delete or a partial update of
-   * the columns selected by {@code token % 6}. Appends the committed op (with its {@code txId}) to
-   * the key's history for the prefix oracle.
+   * One transaction on an owned key: a re-insert if absent, else a delete or a partial update of
+   * the columns selected by {@code token % 6}. A re-insert often DROPS columns the copy still holds
+   * (see {@link #reinsertMask}), so restore must clear them rather than leave the stale copy value.
+   * Appends the committed op (with its {@code txId}) to the key's history for the prefix oracle.
    */
   private void mutateOwnedKey(int key, boolean[] present, Map<Integer, List<OwnedOp>> history) {
     long token = tokenCounter.incrementAndGet();
     boolean delete = present[key] && rollDelete();
-    int mask =
-        present[key] ? columnMask(token) : ALL_COLUMNS; // absent -> full deterministic insert
+    int mask = present[key] ? columnMask(token) : reinsertMask(token); // absent -> re-insert
     String txId = commitOwnedOp(key, token, delete, mask);
     history.get(key).add(new OwnedOp(txId, delete, mask, token));
     present[key] = !delete;
@@ -761,21 +763,32 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       long[] seedToken, Map<Integer, List<OwnedOp>> history, Set<String> committedInBackup) {
     List<String> violations = new ArrayList<>();
     for (int i = 0; i < RECORD_COUNT; i++) {
-      // Un-seeded keys (i >= SEEDED_KEYS) start absent; their first in-window op is a full INSERT.
+      // Un-seeded keys (i >= SEEDED_KEYS) start absent; seeded keys start present with all columns.
       boolean present = i < SEEDED_KEYS;
-      long[] cols = new long[USER_COLUMN_COUNT];
-      Arrays.fill(cols, seedToken[i]);
+      // Per column, the token that last wrote it, or null if the column is currently absent. A
+      // re-insert REPLACES (columns it omits become null); an update MERGES (only its columns
+      // change). The distinction is read off the running present state: a non-delete op on an
+      // absent
+      // key is a re-insert, on a present key an update.
+      Long[] cols = new Long[USER_COLUMN_COUNT];
+      if (present) {
+        Arrays.fill(cols, seedToken[i]); // The seed wrote every column.
+      }
       for (OwnedOp op : history.get(i)) {
         if (!committedInBackup.contains(op.txId)) {
           continue; // Committed after the cut (divergence) — not in the restored image.
         }
         if (op.delete) {
           present = false;
-        } else {
+        } else if (!present) {
+          for (int c = 0; c < USER_COLUMN_COUNT; c++) {
+            cols[c] = (op.mask & (1 << c)) != 0 ? op.token : null; // re-insert: replace
+          }
           present = true;
+        } else {
           for (int c = 0; c < USER_COLUMN_COUNT; c++) {
             if ((op.mask & (1 << c)) != 0) {
-              cols[c] = op.token;
+              cols[c] = op.token; // update: merge
             }
           }
         }
@@ -794,17 +807,13 @@ public abstract class CbrlBackupRestoreIntegrationTest {
       }
       Result ra = a.get();
       Result rb = b.get();
-      checkColumn(violations, i, "a.token", ra.getBigInt(A_TOKEN) == cols[COL_TOKEN]);
-      checkColumn(violations, i, "a.int", ra.getInt(A_INT) == deriveInt(cols[COL_INT]));
-      checkColumn(violations, i, "a.text", ra.getText(A_TEXT).equals(deriveText(cols[COL_TEXT])));
-      checkColumn(violations, i, "a.bool", ra.getBoolean(A_BOOL) == deriveBool(cols[COL_BOOL]));
-      checkColumn(
-          violations,
-          i,
-          "a.blob",
-          Arrays.equals(ra.getBlobAsBytes(A_BLOB), deriveBlob(cols[COL_BLOB])));
-      checkColumn(violations, i, "b.token", rb.getBigInt(B_TOKEN) == cols[COL_TOKEN]);
-      checkColumn(violations, i, "b.text", rb.getText(B_TEXT).equals(deriveText(cols[COL_TEXT])));
+      checkColumn(violations, i, "a.token", bigIntMatches(ra, A_TOKEN, cols[COL_TOKEN]));
+      checkColumn(violations, i, "a.int", intMatches(ra, A_INT, cols[COL_INT]));
+      checkColumn(violations, i, "a.text", textMatches(ra, A_TEXT, cols[COL_TEXT]));
+      checkColumn(violations, i, "a.bool", boolMatches(ra, A_BOOL, cols[COL_BOOL]));
+      checkColumn(violations, i, "a.blob", blobMatches(ra, A_BLOB, cols[COL_BLOB]));
+      checkColumn(violations, i, "b.token", bigIntMatches(rb, B_TOKEN, cols[COL_TOKEN]));
+      checkColumn(violations, i, "b.text", textMatches(rb, B_TEXT, cols[COL_TEXT]));
     }
     return violations;
   }
@@ -813,6 +822,37 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     if (!ok) {
       violations.add(String.format("key %d %s mismatch", key, what));
     }
+  }
+
+  // Each column matches the oracle iff: it is absent when the expected token is null (the column
+  // was
+  // dropped by a re-insert), or holds the value derived from the expected token otherwise.
+  private static boolean bigIntMatches(Result r, String column, @Nullable Long token) {
+    return token == null ? r.isNull(column) : !r.isNull(column) && r.getBigInt(column) == token;
+  }
+
+  private static boolean intMatches(Result r, String column, @Nullable Long token) {
+    return token == null
+        ? r.isNull(column)
+        : !r.isNull(column) && r.getInt(column) == deriveInt(token);
+  }
+
+  private static boolean textMatches(Result r, String column, @Nullable Long token) {
+    return token == null
+        ? r.isNull(column)
+        : !r.isNull(column) && deriveText(token).equals(r.getText(column));
+  }
+
+  private static boolean boolMatches(Result r, String column, @Nullable Long token) {
+    return token == null
+        ? r.isNull(column)
+        : !r.isNull(column) && r.getBoolean(column) == deriveBool(token);
+  }
+
+  private static boolean blobMatches(Result r, String column, @Nullable Long token) {
+    return token == null
+        ? r.isNull(column)
+        : !r.isNull(column) && Arrays.equals(r.getBlobAsBytes(column), deriveBlob(token));
   }
 
   // Column values are deterministic functions of the writing token, so the oracle can reconstruct
@@ -831,6 +871,29 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
   private static byte[] deriveBlob(long token) {
     return ByteBuffer.allocate(Long.BYTES).putLong(token).array();
+  }
+
+  /**
+   * A re-insert's column mask: always the shared token (so both tables are re-created and stay
+   * token-consistent), plus a token-varied subset of the rest. So a re-insert usually OMITS some
+   * columns the copy still physically holds — exercising whether restore CLEARS them (a replace) or
+   * leaves the stale copy value. token % 16 == 0 drops every optional column; == 15 keeps them all.
+   */
+  private static int reinsertMask(long token) {
+    int mask = 1 << COL_TOKEN;
+    if ((token & 1L) != 0) {
+      mask |= 1 << COL_INT;
+    }
+    if ((token & 2L) != 0) {
+      mask |= 1 << COL_TEXT;
+    }
+    if ((token & 4L) != 0) {
+      mask |= 1 << COL_BOOL;
+    }
+    if ((token & 8L) != 0) {
+      mask |= 1 << COL_BLOB;
+    }
+    return mask;
   }
 
   /** Columns of table_a to write, as a bitmask over the COL_* indices, selected by token % 6. */
