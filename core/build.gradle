@@ -215,6 +215,13 @@ dependencies {
     testImplementation "com.github.stefanbirkner:system-lambda:${stefanbirknerSystemLambdaVersion}"
     testImplementation project(':integration-test')
 
+    // Byteman for the CBRL restore crash-injection integration test (PoC). The agent is loaded at
+    // JVM start via -javaagent with a listener (see the integrationTestJdbc task), and the test
+    // submits/removes rules over that listener with the Submit socket API — no self-attach, so no
+    // tools.jar or JUnit5 BMUnit extension is needed on JDK 8.
+    integrationTestJdbcImplementation "org.jboss.byteman:byteman-submit:${bytemanVersion}"
+    integrationTestJdbcRuntimeOnly "org.jboss.byteman:byteman:${bytemanVersion}"
+
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
     testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
@@ -285,6 +292,14 @@ task integrationTestJdbc(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
+    }
+    // Load the Byteman agent (with its rule-submission listener) at JVM start for the CBRL restore
+    // crash-injection test. Inert until that test submits rules; harmless to the other JDBC tests.
+    doFirst {
+        def bytemanJar = classpath.find { it.name.matches('byteman-\\d.*\\.jar') }
+        if (bytemanJar != null) {
+            jvmArgs "-javaagent:${bytemanJar.absolutePath}=listener:true"
+        }
     }
     maxHeapSize = "4g"
 }

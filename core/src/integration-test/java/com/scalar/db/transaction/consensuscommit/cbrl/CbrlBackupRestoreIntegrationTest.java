@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit.cbrl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Delete;
@@ -57,6 +58,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
+import org.jboss.byteman.agent.submit.ScriptText;
+import org.jboss.byteman.agent.submit.Submit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -1203,6 +1206,201 @@ public abstract class CbrlBackupRestoreIntegrationTest {
               }
               return result;
             });
+  }
+
+  // Byteman rules that turn five named methods of the restore pipeline into crash points. Each is a
+  // no-op until CrashInjector is armed for its site, then throws on exactly the k-th call. Verified
+  // against the code: RedoOperation.<init> (redo load), CbrlRestore.recoverKey / applyToRestore,
+  // RecordApplier.applyBucket, and JdbcDatabase.put (at exit, after the write has committed).
+  private static final String CRASH_RULES =
+      String.join(
+          "\n",
+          crashRule("cbrl-redo-load", "RedoOperation", "<init>", "AT ENTRY", "redoLoad"),
+          crashRule("cbrl-recover-key", "CbrlRestore", "recoverKey", "AT ENTRY", "recoverKey"),
+          crashRule("cbrl-apply-bucket", "RecordApplier", "applyBucket", "AT ENTRY", "applyBucket"),
+          crashRule(
+              "cbrl-write-back", "CbrlRestore", "applyToRestore", "AT ENTRY", "writeBackEntry"),
+          jdbcPutExitRule());
+
+  private static final String CBRL_PACKAGE = "com.scalar.db.transaction.consensuscommit.cbrl";
+
+  private static String crashRule(
+      String name, String simpleClass, String method, String location, String site) {
+    return String.join(
+        "\n",
+        "RULE " + name,
+        "CLASS " + CBRL_PACKAGE + "." + simpleClass,
+        "METHOD " + method,
+        location,
+        "IF TRUE",
+        "DO " + CBRL_PACKAGE + ".CrashInjector.hit(\"" + site + "\")",
+        "ENDRULE");
+  }
+
+  /**
+   * The JDBC put-after-commit rule targets a framework class (a proxy could not reach its exit).
+   */
+  private static String jdbcPutExitRule() {
+    return String.join(
+        "\n",
+        "RULE cbrl-jdbc-put-exit",
+        "CLASS com.scalar.db.storage.jdbc.JdbcDatabase",
+        "METHOD put",
+        "AT EXIT",
+        "IF TRUE",
+        "DO " + CBRL_PACKAGE + ".CrashInjector.hit(\"jdbcPutExit\")",
+        "ENDRULE");
+  }
+
+  /**
+   * The same crash-safety claim as {@link #restore_CrashedMidway_ShouldConvergeOnReRun()}, but the
+   * crash is injected at <b>named methods of the restore pipeline</b> via Byteman rather than by a
+   * timing sweep over storage/manager proxies. Byteman reaches call sites a proxy cannot — package-
+   * private methods ({@code RedoOperation} construction during the redo load, {@code recoverKey},
+   * {@code applyBucket}, {@code applyToRestore}) and {@code JdbcDatabase.put} <b>at exit</b> (after
+   * the write has committed) — so each stage of recover&rarr;replay&rarr;write-back is killed
+   * precisely.
+   *
+   * <p>Determinism: the restore runs with a single replay worker, so the Byteman counter has no
+   * thread races and the crash fires on exactly the k-th call of the armed site. A disarmed
+   * baseline restore first establishes the converged oracle image; then each site is armed in turn,
+   * the restore is killed mid-flight, and a re-run from the same backup must re-derive the
+   * identical image and stay consistent + conserved — no matter where the first attempt died.
+   *
+   * <p>Teeth: every site asserts the injection fired exactly once ({@link
+   * CrashInjector#firedCount()} {@code == 1}). If a rule failed to bind (renamed method / wrong
+   * signature) the crash would never fire, the fired count would be 0, and that assertion would
+   * fail loudly rather than passing a test that silently injects nothing.
+   */
+  @Test
+  void restore_CrashInjectedAtNamedSites_ShouldConvergeOnReRun() throws Exception {
+    // Arrange: install the crash rules on the running JVM's Byteman agent, run the conservation
+    // workload, capture a non-snapshot-consistent copy + restored coordinator, and build a
+    // single-worker restore so the crash counter is race-free (crash fires on exactly the k-th
+    // call).
+    Submit submit = new Submit();
+    submit.addScripts(Arrays.asList(new ScriptText("cbrl-crash-rules.btm", CRASH_RULES)));
+    try {
+      long initialBalance = 1_000L;
+      seedBalances(SEEDED_KEYS, initialBalance); // Half seeded; the rest are created in-window.
+      long total = (long) SEEDED_KEYS * initialBalance;
+      manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
+      AtomicBoolean stop = new AtomicBoolean(false);
+      List<Future<?>> workload = startTransferWorkload(stop);
+      Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
+      Map<String, List<Put>> copy = captureCopy();
+      Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_COPY);
+      Map<String, Coordinator.State> backup = backupCoordinator();
+      stop.set(true);
+      for (Future<?> future : workload) {
+        future.get();
+      }
+      installCopy(copy);
+      arrangeRestoredCoordinator(backup);
+      CbrlRestore restore = newSingleWorkerRestore();
+
+      // Act (baseline, disarmed): a clean restore establishes the converged oracle image.
+      CrashInjector.disarm();
+      restore.restore();
+      Map<Integer, Long> oracle = readRestoredTokens();
+
+      // Assert (baseline): the oracle is itself consistent and conserved before any crash.
+      assertThat(findConsistencyViolations()).as("baseline restore consistent").isEmpty();
+      assertThat(sumRestoredBalances(TABLE_A, A_TOKEN)).as("baseline conserved").isEqualTo(total);
+      assertThat(oracle).as("baseline restored the seeded accounts").isNotEmpty();
+
+      // Act & Assert (each named site): kill the restore there, then re-run to convergence.
+      crashAtSiteThenConverge("redoLoad", 3, restore, copy, oracle, total);
+      crashAtSiteThenConverge("recoverKey", 3, restore, copy, oracle, total);
+      crashAtSiteThenConverge("applyBucket", 2, restore, copy, oracle, total);
+      crashAtSiteThenConverge("writeBackEntry", 3, restore, copy, oracle, total);
+      crashAtSiteThenConverge("jdbcPutExit", 3, restore, copy, oracle, total);
+    } finally {
+      CrashInjector.disarm();
+      submit.deleteScripts(Arrays.asList(new ScriptText("cbrl-crash-rules.btm", CRASH_RULES)));
+    }
+  }
+
+  /**
+   * Reinstalls the non-snapshot base, arms the crash at {@code site} on its {@code fireAt}-th call,
+   * runs the restore (which must die there), then re-runs it to completion on the partial state the
+   * crash left and asserts the re-derived image equals the no-crash {@code oracle} and is still
+   * consistent and conserved.
+   */
+  private void crashAtSiteThenConverge(
+      String site,
+      int fireAt,
+      CbrlRestore restore,
+      Map<String, List<Put>> copy,
+      Map<Integer, Long> oracle,
+      long total)
+      throws Exception {
+    // Arrange: fresh non-snapshot base for this attempt, and arm the crash at the named site.
+    installCopy(copy);
+    CrashInjector.arm(site, fireAt);
+
+    // Act: the armed restore must be killed at the injection point; then re-run on the partial
+    // state (no re-install) so convergence is proven from wherever the crash left off.
+    Throwable crash = catchThrowable(restore::restore);
+    int fired = CrashInjector.firedCount();
+    // The state the crash left, read before the re-run. It must differ from the converged oracle:
+    // that proves the crash interrupted the restore before completion, so the re-run genuinely
+    // recovers rather than finding the work already done (a crash that fired only after the restore
+    // finished would make the re-run a no-op and the convergence trivial). A transactional read
+    // here
+    // triggers Consensus Commit lazy recovery on in-flight copy records, yet the state still
+    // differs
+    // — restore's forward chain replay is exactly what the re-run must (re)do.
+    Map<Integer, Long> afterCrash = readRestoredTokens();
+    CrashInjector.disarm();
+    restore.restore();
+    Map<Integer, Long> reRun = readRestoredTokens();
+
+    // Assert: the injection fired exactly once (teeth), the restore was actually killed, and the
+    // re-derived image is identical to the no-crash oracle and still consistent + conserved.
+    assertThat(fired)
+        .as("crash at %s fired exactly once — its Byteman rule bound and tripped", site)
+        .isEqualTo(1);
+    assertThat(crash).as("the armed restore at %s was killed mid-flight", site).isNotNull();
+    assertThat(causedByCrashInjection(crash))
+        .as("the restore at %s died from the injected crash, not an unrelated error", site)
+        .isTrue();
+    assertThat(afterCrash)
+        .as("crash at %s left the restore incomplete, so the re-run genuinely recovers", site)
+        .isNotEqualTo(oracle);
+    assertThat(reRun)
+        .as("re-run after crash at %s re-derives the identical final image", site)
+        .isEqualTo(oracle);
+    assertThat(findConsistencyViolations())
+        .as("re-run after crash at %s: cross-table consistency", site)
+        .isEmpty();
+    assertThat(sumRestoredBalances(TABLE_A, A_TOKEN))
+        .as("re-run after crash at %s: table_a conserved", site)
+        .isEqualTo(total);
+    assertThat(sumRestoredBalances(TABLE_B, B_TOKEN))
+        .as("re-run after crash at %s: table_b conserved", site)
+        .isEqualTo(total);
+  }
+
+  /** Whether the injected crash appears anywhere in the throwable's cause chain. */
+  private static boolean causedByCrashInjection(Throwable thrown) {
+    for (Throwable cause = thrown; cause != null; cause = cause.getCause()) {
+      if (cause instanceof CrashInjector.CrashInjectionError) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * A {@link CbrlRestore} on the real (non-proxy) handles that Byteman intercepts, pinned to a
+   * single replay worker so the injected crash fires on exactly the k-th call of a site with no
+   * thread races on the counter.
+   */
+  private CbrlRestore newSingleWorkerRestore() throws Exception {
+    Properties properties = properties();
+    properties.setProperty(CbrlConfig.REPLAY_WORKERS, "1");
+    return new CbrlRestore(properties, BACKUP_LABEL, storage, manager, storageAdmin);
   }
 
   private List<Future<?>> startTransferWorkload(AtomicBoolean stop) {
