@@ -60,7 +60,7 @@ public class CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,

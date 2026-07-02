@@ -8,7 +8,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import com.scalar.db.util.AdminTestUtils;
 import java.util.Collections;
 import java.util.Map;
@@ -328,7 +328,7 @@ public abstract class DistributedTransactionAdminRepairIntegrationTestBase {
     String coordinatorNamespace =
         new ConsensusCommitConfig(new DatabaseConfig(getProperties(TEST_NAME)))
             .getCoordinatorNamespace()
-            .orElse(Coordinator.NAMESPACE);
+            .orElse(CoordinatorStateAccessor.NAMESPACE);
     return storageAdmin.namespaceExists(coordinatorNamespace);
   }
 
