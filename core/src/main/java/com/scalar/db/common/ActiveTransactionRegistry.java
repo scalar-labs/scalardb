@@ -24,10 +24,10 @@ public class ActiveTransactionRegistry<T> {
    * Constructs an ActiveTransactionRegistry.
    *
    * @param expirationTimeMillis the expiration time in milliseconds
-   * @param rollbackFunction the function to rollback a transaction
+   * @param expirationHandler the handler invoked when a transaction expires
    */
   public ActiveTransactionRegistry(
-      long expirationTimeMillis, TransactionRollback<T> rollbackFunction) {
+      long expirationTimeMillis, ExpirationHandler<T> expirationHandler) {
     this.activeTransactions =
         new ActiveExpiringMap<>(
             expirationTimeMillis,
@@ -35,9 +35,9 @@ public class ActiveTransactionRegistry<T> {
             (id, t) -> {
               logger.warn("The transaction is expired. Transaction ID: {}", id);
               try {
-                rollbackFunction.rollback(t);
+                expirationHandler.onExpired(t);
               } catch (Exception e) {
-                logger.warn("Rollback failed. Transaction ID: {}", id, e);
+                logger.warn("Failed to handle the expired transaction. Transaction ID: {}", id, e);
               }
             });
   }
@@ -74,12 +74,23 @@ public class ActiveTransactionRegistry<T> {
   }
 
   /**
-   * Functional interface for rolling back a transaction.
+   * Refreshes the expiration timer of a transaction, treating it as recently active. Does nothing
+   * if no transaction with the given ID is registered.
+   *
+   * @param id the transaction ID
+   */
+  public void touch(String id) {
+    activeTransactions.updateExpirationTime(id);
+  }
+
+  /**
+   * Functional interface invoked when a transaction expires, to dispose of its resources (e.g.,
+   * roll it back, or release its context without a storage rollback).
    *
    * @param <T> the type of transaction
    */
   @FunctionalInterface
-  public interface TransactionRollback<T> {
-    void rollback(T transaction) throws Exception;
+  public interface ExpirationHandler<T> {
+    void onExpired(T transaction) throws Exception;
   }
 }

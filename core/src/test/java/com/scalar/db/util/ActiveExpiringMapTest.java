@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
@@ -206,6 +207,31 @@ public class ActiveExpiringMapTest {
 
     // Assert
     assertThat(lastUpdateTimeAfterUpdate).isGreaterThan(lastUpdateTimeBeforeUpdate);
+  }
+
+  @Test
+  public void valueExpirationThread_ShouldNotEvictRecentlyUpdatedValue_ButEvictsIdleValue() {
+    // Arrange: a 300ms lifetime with a 25ms sweep interval. This asserts the contract the higher
+    // layers rely on — refreshing the expiration time (via touch/updateExpirationTime) actually
+    // prevents the background reaper from evicting an entry — not merely that the timestamp field
+    // moves (covered by updateExpirationTime_ShouldBehaveCorrectly).
+    Set<String> expired = ConcurrentHashMap.newKeySet();
+    ActiveExpiringMap<String, String> activeExpiringMap =
+        new ActiveExpiringMap<>(300, 25, (k, v) -> expired.add(k));
+    activeExpiringMap.put("touched", "v");
+    activeExpiringMap.put("idle", "v");
+
+    // Act: keep refreshing "touched" across more than one lifetime window; never touch "idle".
+    for (int i = 0; i < 6; i++) {
+      Uninterruptibles.sleepUninterruptibly(80, TimeUnit.MILLISECONDS);
+      activeExpiringMap.updateExpirationTime("touched");
+    }
+
+    // Assert: the reaper evicted the idle value and fired its handler, but honored the refreshed
+    // timer of the touched value, which is still present.
+    assertThat(expired).contains("idle");
+    assertThat(expired).doesNotContain("touched");
+    assertThat(activeExpiringMap.get("touched")).hasValue("v");
   }
 
   @Test

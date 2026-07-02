@@ -36,13 +36,13 @@ public class JdbcTransactionProvider extends AbstractDistributedTransactionProvi
 
   @Nullable
   @Override
-  public TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+  public TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
     return null;
   }
 
   @Nullable
   @Override
-  public TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+  public TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
     return null;
   }
 }
