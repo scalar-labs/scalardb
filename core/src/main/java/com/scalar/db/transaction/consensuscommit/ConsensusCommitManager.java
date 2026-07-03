@@ -48,13 +48,13 @@ import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.lang.management.ManagementFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -77,12 +77,19 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
-  // CBRL PoC: the current backup window's label, or null when no window is open. Toggled
-  // dynamically by enableRedoLogging(label)/disableRedoLogging() (never from static config);
-  // begin()
-  // captures it into each transaction's context, so the logging mode and label are decided once, at
-  // transaction start.
-  private final AtomicReference<String> backupLabel = new AtomicReference<>();
+  // CBRL: the daemon-fed cache of open backup windows. begin() reads it to capture each
+  // transaction's backup label once, at transaction start. Null only in the test-only constructor,
+  // where backup mode is not exercised.
+  @Nullable private final BackupModeDaemon backupModeDaemon;
+  // The oldest cache age begin() accepts before forcing a synchronous scan, and the
+  // transaction-lifetime bound stamped into each transaction's context.
+  private final long backupStalenessBoundMillis;
+  private final long transactionTimeoutMillis;
+  // The operator/process id recorded on backup-table transitions for observability.
+  private final String backupUpdatedBy = ManagementFactory.getRuntimeMXBean().getName();
+  // The label of the backup window this manager opened, so disableRedoLogging() (which takes no
+  // label) knows which window to close. Null when no window is open locally.
+  @Nullable private volatile String openBackupLabel;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -123,6 +130,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIncludeMetadataEnabled());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
+
+    backupStalenessBoundMillis = config.getBackupStalenessBoundMillis();
+    transactionTimeoutMillis = config.getTransactionTimeoutMillis();
+    backupModeDaemon = new BackupModeDaemon(coordinator, config.getBackupCheckIntervalMillis());
+    backupModeDaemon.start();
   }
 
   protected ConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -163,6 +175,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIncludeMetadataEnabled());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
+
+    backupStalenessBoundMillis = config.getBackupStalenessBoundMillis();
+    transactionTimeoutMillis = config.getTransactionTimeoutMillis();
+    backupModeDaemon = new BackupModeDaemon(coordinator, config.getBackupCheckIntervalMillis());
+    backupModeDaemon.start();
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -203,6 +220,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             virtualTableInfoManager,
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
+    this.backupStalenessBoundMillis = config.getBackupStalenessBoundMillis();
+    this.transactionTimeoutMillis = config.getTransactionTimeoutMillis();
+    // The test-only constructor does not run the backup-mode daemon; begin() then captures no
+    // label.
+    this.backupModeDaemon = null;
   }
 
   // `groupCommitter` must be set before calling this method.
@@ -320,6 +342,13 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       txId = groupCommitter.reserve(txId);
       groupCommitSlotReserved = true;
     }
+    // Capture the active backup label from the daemon cache once, at begin. A stale cache is
+    // refreshed synchronously first so a process resuming from a stall cannot begin under a stale
+    // flag.
+    String activeBackupLabel =
+        backupModeDaemon == null
+            ? null
+            : backupModeDaemon.activeBackupLabel(backupStalenessBoundMillis);
     Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
         new TransactionContext(
@@ -329,7 +358,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             readOnly,
             oneOperation,
             groupCommitSlotReserved,
-            backupLabel.get());
+            activeBackupLabel,
+            System.nanoTime(),
+            transactionTimeoutMillis);
     DistributedTransaction transaction =
         new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
     if (readOnly) {
@@ -825,12 +856,56 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   public void enableRedoLogging(String backupLabel) {
     checkArgument(
         backupLabel != null && !backupLabel.isEmpty(), "backupLabel must not be null or empty");
-    this.backupLabel.set(backupLabel);
+    try {
+      coordinator.enterBackupMode(backupLabel, backupUpdatedBy);
+    } catch (CoordinatorConflictException e) {
+      // A row for this label already exists. Treat an already-open window as success (idempotent);
+      // reject a label whose window has already been closed or otherwise transitioned.
+      if (!isBackingUp(backupLabel)) {
+        throw new IllegalStateException(
+            "A backup window for label '" + backupLabel + "' already exists and is not BACKING_UP",
+            e);
+      }
+    } catch (CoordinatorException e) {
+      throw new IllegalStateException(
+          "Failed to open the backup window for label '" + backupLabel + "'", e);
+    }
+    openBackupLabel = backupLabel;
+    refreshBackupCache();
   }
 
   @Override
   public void disableRedoLogging() {
-    backupLabel.set(null);
+    String label = openBackupLabel;
+    if (label != null) {
+      try {
+        coordinator.exitBackupMode(label, backupUpdatedBy);
+      } catch (CoordinatorConflictException e) {
+        // The window is not BACKING_UP (already closed or never opened here). Nothing to close.
+      } catch (CoordinatorException e) {
+        throw new IllegalStateException(
+            "Failed to close the backup window for label '" + label + "'", e);
+      }
+      openBackupLabel = null;
+    }
+    refreshBackupCache();
+  }
+
+  // Whether the backup table currently holds a BACKING_UP row for the given label.
+  private boolean isBackingUp(String backupLabel) {
+    try {
+      return coordinator.scanBackingUpLabels().contains(backupLabel);
+    } catch (CoordinatorException e) {
+      return false;
+    }
+  }
+
+  // Refreshes the local daemon cache so this process's own begin() sees the transition immediately,
+  // without waiting for the next periodic scan.
+  private void refreshBackupCache() {
+    if (backupModeDaemon != null) {
+      backupModeDaemon.refreshNow();
+    }
   }
 
   @Override
@@ -839,6 +914,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     admin.close();
     parallelExecutor.close();
     recoveryExecutor.close();
+    if (backupModeDaemon != null) {
+      backupModeDaemon.close();
+    }
     if (isGroupCommitEnabled()) {
       assert groupCommitter != null;
       groupCommitter.close();

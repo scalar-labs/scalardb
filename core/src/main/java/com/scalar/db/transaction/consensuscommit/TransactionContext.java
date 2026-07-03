@@ -5,6 +5,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 
 public class TransactionContext {
@@ -39,6 +40,17 @@ public class TransactionContext {
   // label; when null, only primary keys.
   @Nullable public final String backupLabel;
 
+  // A monotonic timestamp (System.nanoTime()) captured when the transaction began, used to enforce
+  // the transaction timeout on the commit path. nanoTime, not wall-clock, so a backward clock step
+  // cannot make a frozen transaction look un-expired.
+  public final long beginAtNanos;
+
+  // The transaction-lifetime bound in millis; a value <= 0 disables the timeout. When enabled, the
+  // commit path self-aborts (retryable) a transaction that has run longer than this, bounding how
+  // long a pre-backup-flag transaction can drain and killing any transaction frozen across a
+  // backup-window transition.
+  public final long transactionTimeoutMillis;
+
   // A list of scanners opened in the transaction
   public final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
@@ -64,6 +76,28 @@ public class TransactionContext {
       boolean oneOperation,
       boolean groupCommitSlotReserved,
       @Nullable String backupLabel) {
+    this(
+        transactionId,
+        snapshot,
+        isolation,
+        readOnly,
+        oneOperation,
+        groupCommitSlotReserved,
+        backupLabel,
+        System.nanoTime(),
+        0);
+  }
+
+  public TransactionContext(
+      String transactionId,
+      Snapshot snapshot,
+      Isolation isolation,
+      boolean readOnly,
+      boolean oneOperation,
+      boolean groupCommitSlotReserved,
+      @Nullable String backupLabel,
+      long beginAtNanos,
+      long transactionTimeoutMillis) {
     this.transactionId = transactionId;
     this.snapshot = snapshot;
     this.isolation = isolation;
@@ -71,6 +105,8 @@ public class TransactionContext {
     this.oneOperation = oneOperation;
     this.groupCommitSlotReserved = groupCommitSlotReserved;
     this.backupLabel = backupLabel;
+    this.beginAtNanos = beginAtNanos;
+    this.transactionTimeoutMillis = transactionTimeoutMillis;
   }
 
   @VisibleForTesting
@@ -81,6 +117,18 @@ public class TransactionContext {
       boolean readOnly,
       boolean oneOperation) {
     this(transactionId, snapshot, isolation, readOnly, oneOperation, false);
+  }
+
+  /**
+   * Returns whether the transaction has exceeded its lifetime bound at the given time. Always
+   * {@code false} when the timeout is disabled ({@code transactionTimeoutMillis <= 0}).
+   *
+   * @param nowNanos the current monotonic time from {@link System#nanoTime()}
+   * @return {@code true} if the transaction has run longer than {@code transactionTimeoutMillis}
+   */
+  public boolean isExpired(long nowNanos) {
+    return transactionTimeoutMillis > 0
+        && nowNanos - beginAtNanos > TimeUnit.MILLISECONDS.toNanos(transactionTimeoutMillis);
   }
 
   public boolean isSnapshotReadRequired() {

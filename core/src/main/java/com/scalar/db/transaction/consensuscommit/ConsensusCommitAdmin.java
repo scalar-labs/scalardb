@@ -83,6 +83,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
     admin.createNamespace(coordinatorNamespace, options);
     admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+    admin.createTable(
+        coordinatorNamespace, Coordinator.BACKUP_TABLE, Coordinator.BACKUP_TABLE_METADATA, options);
   }
 
   @Override
@@ -92,6 +94,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
           CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND.buildMessage());
     }
 
+    admin.dropTable(coordinatorNamespace, Coordinator.BACKUP_TABLE);
     admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
     admin.dropNamespace(coordinatorNamespace);
   }
@@ -104,11 +107,13 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     }
 
     admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
+    admin.truncateTable(coordinatorNamespace, Coordinator.BACKUP_TABLE);
   }
 
   @Override
   public boolean coordinatorTablesExist() throws ExecutionException {
-    return admin.tableExists(coordinatorNamespace, Coordinator.TABLE);
+    return admin.tableExists(coordinatorNamespace, Coordinator.TABLE)
+        && admin.tableExists(coordinatorNamespace, Coordinator.BACKUP_TABLE);
   }
 
   @Override
@@ -335,6 +340,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
     admin.repairNamespace(coordinatorNamespace, options);
     admin.repairTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+    admin.repairTable(
+        coordinatorNamespace, Coordinator.BACKUP_TABLE, Coordinator.BACKUP_TABLE_METADATA, options);
   }
 
   @Override

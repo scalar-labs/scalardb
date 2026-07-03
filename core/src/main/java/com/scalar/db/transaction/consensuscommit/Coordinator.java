@@ -15,6 +15,8 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -25,6 +27,7 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,6 +52,23 @@ public class Coordinator {
           .addColumn(Attribute.STATE, DataType.INT)
           .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
           .addPartitionKey(Attribute.ID)
+          .build();
+
+  // The CBRL `backup` coordinator table (see cbrl-draft-design.md). Every backup row shares a fixed
+  // constant partition key so the whole set lives in one partition and can be listed with a single
+  // ordinary single-partition scan; the label is the clustering key.
+  public static final String BACKUP_TABLE = "backup";
+  public static final String BACKUP_PARTITION_KEY_VALUE = "backup";
+  public static final TableMetadata BACKUP_TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn(Attribute.BACKUP_ID, DataType.TEXT)
+          .addColumn(Attribute.BACKUP_LABEL, DataType.TEXT)
+          .addColumn(Attribute.BACKUP_STATE, DataType.TEXT)
+          .addColumn(Attribute.BACKUP_CREATED_AT, DataType.BIGINT)
+          .addColumn(Attribute.BACKUP_UPDATED_AT, DataType.BIGINT)
+          .addColumn(Attribute.BACKUP_UPDATED_BY, DataType.TEXT)
+          .addPartitionKey(Attribute.BACKUP_ID)
+          .addClusteringKey(Attribute.BACKUP_LABEL)
           .build();
 
   private static final int MAX_RETRY_COUNT = 5;
@@ -418,6 +438,104 @@ public class Coordinator {
     } catch (ExecutionException e) {
       throw new CoordinatorException("Couldn't delete coordinator state", e);
     }
+  }
+
+  /**
+   * Opens a backup window for the given label by inserting a {@code BACKING_UP} row into the {@code
+   * backup} table with {@code putIfNotExists}. The insert is the enter transition of the backup
+   * state machine.
+   *
+   * @param label the backup label (the clustering key)
+   * @param updatedBy an operator/process id recorded for observability
+   * @throws CoordinatorConflictException if a row already exists for the label
+   * @throws CoordinatorException if the row cannot be written
+   */
+  public void enterBackupMode(String label, String updatedBy) throws CoordinatorException {
+    long now = System.currentTimeMillis();
+    Put put =
+        Put.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(BACKUP_TABLE)
+            .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
+            .clusteringKey(Key.ofText(Attribute.BACKUP_LABEL, label))
+            .textValue(Attribute.BACKUP_STATE, BackupState.BACKING_UP.name())
+            .bigIntValue(Attribute.BACKUP_CREATED_AT, now)
+            .bigIntValue(Attribute.BACKUP_UPDATED_AT, now)
+            .textValue(Attribute.BACKUP_UPDATED_BY, updatedBy)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    putBackup(put, label);
+  }
+
+  /**
+   * Closes the backup window for the given label by transitioning its row from {@code BACKING_UP}
+   * to {@code BACKED_UP} with a {@code putIf} guarded on the current state, so a window that is not
+   * open (or already closed) is rejected rather than silently reopened.
+   *
+   * @param label the backup label (the clustering key)
+   * @param updatedBy an operator/process id recorded for observability
+   * @throws CoordinatorConflictException if no {@code BACKING_UP} row exists for the label
+   * @throws CoordinatorException if the row cannot be written
+   */
+  public void exitBackupMode(String label, String updatedBy) throws CoordinatorException {
+    Put put =
+        Put.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(BACKUP_TABLE)
+            .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
+            .clusteringKey(Key.ofText(Attribute.BACKUP_LABEL, label))
+            .textValue(Attribute.BACKUP_STATE, BackupState.BACKED_UP.name())
+            .bigIntValue(Attribute.BACKUP_UPDATED_AT, System.currentTimeMillis())
+            .textValue(Attribute.BACKUP_UPDATED_BY, updatedBy)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column(Attribute.BACKUP_STATE)
+                            .isEqualToText(BackupState.BACKING_UP.name()))
+                    .build())
+            .build();
+    putBackup(put, label);
+  }
+
+  private void putBackup(Put put, String label) throws CoordinatorException {
+    try {
+      storage.put(put);
+    } catch (NoMutationException e) {
+      throw new CoordinatorConflictException("Backup mutation seems applied already", e);
+    } catch (ExecutionException e) {
+      throw new CoordinatorException("Couldn't put the backup state. Label: " + label, e);
+    }
+  }
+
+  /**
+   * Lists the labels currently in the {@code BACKING_UP} state with a single-partition {@code
+   * LINEARIZABLE} scan of the {@code backup} table. Under the single-window assumption the result
+   * holds at most one label.
+   *
+   * @return the backing-up labels, ordered by label (the clustering key)
+   * @throws CoordinatorException if the scan fails
+   */
+  public List<String> scanBackingUpLabels() throws CoordinatorException {
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(BACKUP_TABLE)
+            .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    List<String> labels = new ArrayList<>();
+    try (Scanner scanner = storage.scan(scan)) {
+      for (Result result : scanner.all()) {
+        if (!result.isNull(Attribute.BACKUP_STATE)
+            && BackupState.BACKING_UP.name().equals(result.getText(Attribute.BACKUP_STATE))) {
+          labels.add(result.getText(Attribute.BACKUP_LABEL));
+        }
+      }
+    } catch (ExecutionException | IOException e) {
+      throw new CoordinatorException("Couldn't scan the backup table", e);
+    }
+    return labels;
   }
 
   private void exponentialBackoff(int counter) {

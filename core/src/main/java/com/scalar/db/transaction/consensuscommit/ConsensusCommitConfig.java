@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
 
 import com.scalar.db.config.DatabaseConfig;
@@ -57,6 +58,14 @@ public class ConsensusCommitConfig {
   public static final String COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED =
       COORDINATOR_GROUP_COMMIT_PREFIX + "metrics_monitor_log_enabled";
 
+  // CBRL backup-mode config keys (see cbrl-draft-design.md).
+  public static final String BACKUP_CHECK_INTERVAL_MILLIS = PREFIX + "backup.check_interval_millis";
+  public static final String BACKUP_STALENESS_BOUND_MILLIS =
+      PREFIX + "backup.staleness_bound_millis";
+  public static final String TRANSACTION_TIMEOUT_MILLIS = PREFIX + "transaction_timeout_millis";
+
+  public static final long DEFAULT_BACKUP_CHECK_INTERVAL_MILLIS = 5000;
+
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
 
   public static final int DEFAULT_COORDINATOR_GROUP_COMMIT_SLOT_CAPACITY = 20;
@@ -89,6 +98,10 @@ public class ConsensusCommitConfig {
   private final int coordinatorGroupCommitOldGroupAbortTimeoutMillis;
   private final int coordinatorGroupCommitTimeoutCheckIntervalMillis;
   private final boolean coordinatorGroupCommitMetricsMonitorLogEnabled;
+
+  private final long backupCheckIntervalMillis;
+  private final long backupStalenessBoundMillis;
+  private final long transactionTimeoutMillis;
 
   public ConsensusCommitConfig(DatabaseConfig databaseConfig) {
     String transactionManager = databaseConfig.getTransactionManager();
@@ -185,6 +198,15 @@ public class ConsensusCommitConfig {
             DEFAULT_COORDINATOR_GROUP_COMMIT_TIMEOUT_CHECK_INTERVAL_MILLIS);
     coordinatorGroupCommitMetricsMonitorLogEnabled =
         getBoolean(properties, COORDINATOR_GROUP_COMMIT_METRICS_MONITOR_LOG_ENABLED, false);
+
+    backupCheckIntervalMillis =
+        getLong(properties, BACKUP_CHECK_INTERVAL_MILLIS, DEFAULT_BACKUP_CHECK_INTERVAL_MILLIS);
+    // The staleness bound and transaction timeout default to 3x the check interval, so overriding
+    // the check interval scales them too.
+    backupStalenessBoundMillis =
+        getLong(properties, BACKUP_STALENESS_BOUND_MILLIS, 3 * backupCheckIntervalMillis);
+    transactionTimeoutMillis =
+        getLong(properties, TRANSACTION_TIMEOUT_MILLIS, 3 * backupCheckIntervalMillis);
   }
 
   public Isolation getIsolation() {
@@ -269,6 +291,18 @@ public class ConsensusCommitConfig {
 
   public boolean isCoordinatorGroupCommitMetricsMonitorLogEnabled() {
     return coordinatorGroupCommitMetricsMonitorLogEnabled;
+  }
+
+  public long getBackupCheckIntervalMillis() {
+    return backupCheckIntervalMillis;
+  }
+
+  public long getBackupStalenessBoundMillis() {
+    return backupStalenessBoundMillis;
+  }
+
+  public long getTransactionTimeoutMillis() {
+    return transactionTimeoutMillis;
   }
 
   private void validateCrossPartitionScanConfig(DatabaseConfig databaseConfig) {

@@ -30,6 +30,68 @@ public class TransactionContextTest {
         .build();
   }
 
+  private TransactionContext contextWithTimeout(long beginAtNanos, long transactionTimeoutMillis) {
+    return new TransactionContext(
+        ANY_ID,
+        snapshot,
+        Isolation.SNAPSHOT,
+        false,
+        false,
+        false,
+        null,
+        beginAtNanos,
+        transactionTimeoutMillis);
+  }
+
+  @Test
+  public void isExpired_WhenElapsedEqualsTimeout_ShouldReturnFalse() {
+    // Arrange (timeout 100 ms = 100_000_000 ns, begin at an arbitrary nanoTime origin)
+    TransactionContext context = contextWithTimeout(1_000_000_000L, 100);
+
+    // Act
+    boolean actual =
+        context.isExpired(1_100_000_000L); // elapsed == timeout, exactly on the boundary
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isExpired_WhenElapsedJustPastTimeout_ShouldReturnTrue() {
+    // Arrange (timeout 100 ms = 100_000_000 ns)
+    TransactionContext context = contextWithTimeout(1_000_000_000L, 100);
+
+    // Act
+    boolean actual = context.isExpired(1_100_000_001L); // elapsed == timeout + 1 ns
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isExpired_WhenElapsedWellWithinTimeout_ShouldReturnFalse() {
+    // Arrange (timeout 100 ms = 100_000_000 ns)
+    TransactionContext context = contextWithTimeout(1_000_000_000L, 100);
+
+    // Act
+    boolean actual = context.isExpired(1_050_000_000L);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isExpired_WhenTimeoutIsZero_ShouldAlwaysReturnFalse() {
+    // Arrange (timeout disabled)
+    TransactionContext context = contextWithTimeout(1_000_000_000L, 0);
+
+    // Act
+    boolean actual = context.isExpired(Long.MAX_VALUE);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
   @Test
   public void isValidationRequired_WhenSnapshotIsolation_ShouldReturnFalse() {
     // Arrange
