@@ -19,6 +19,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -1343,15 +1344,16 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     // state (no re-install) so convergence is proven from wherever the crash left off.
     Throwable crash = catchThrowable(restore::restore);
     int fired = CrashInjector.firedCount();
-    // The state the crash left, read before the re-run. It must differ from the converged oracle:
-    // that proves the crash interrupted the restore before completion, so the re-run genuinely
-    // recovers rather than finding the work already done (a crash that fired only after the restore
-    // finished would make the re-run a no-op and the convergence trivial). A transactional read
-    // here
-    // triggers Consensus Commit lazy recovery on in-flight copy records, yet the state still
-    // differs
-    // — restore's forward chain replay is exactly what the re-run must (re)do.
-    Map<Integer, Long> afterCrash = readRestoredTokens();
+    // The physical state the crash left, read with a raw storage get (no transaction, so Consensus
+    // Commit lazy recovery does not mask it) before the re-run. It must differ from the converged
+    // oracle: the crash fires at the k-th of many keys, so most keys still hold their non-snapshot
+    // copy values, proving the crash interrupted the restore before completion — the re-run
+    // genuinely
+    // recovers rather than finding the work already done. (Reading it transactionally would let
+    // lazy
+    // recovery resolve in-flight copy records toward the committed image and could spuriously equal
+    // the oracle.)
+    Map<Integer, Long> afterCrash = readRestoredTokensRaw();
     CrashInjector.disarm();
     restore.restore();
     Map<Integer, Long> reRun = readRestoredTokens();
@@ -1796,6 +1798,21 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     for (int i = 0; i < RECORD_COUNT; i++) {
       Optional<Result> a = getWithRetry(getForTableA(USER_NAMESPACE, i));
       if (a.isPresent()) {
+        tokens.put(i, a.get().getBigInt(A_TOKEN));
+      }
+    }
+    return tokens;
+  }
+
+  // Like readRestoredTokens, but a raw storage get (no transaction) so it reflects the physical
+  // state without triggering Consensus Commit lazy recovery — used to observe the incomplete state
+  // a
+  // crash left, which must not be masked into the converged image.
+  private Map<Integer, Long> readRestoredTokensRaw() throws ExecutionException {
+    Map<Integer, Long> tokens = new HashMap<>();
+    for (int i = 0; i < RECORD_COUNT; i++) {
+      Optional<Result> a = storage.get(getForTableA(USER_NAMESPACE, i));
+      if (a.isPresent() && !a.get().isNull(A_TOKEN)) {
         tokens.put(i, a.get().getBigInt(A_TOKEN));
       }
     }
