@@ -1,0 +1,4 @@
+# Built fat jar staged into the Docker build context (156MB; rebuilt by run.sh build).
+app/*.jar
+# Transient workload log written by run.sh.
+transfer.out

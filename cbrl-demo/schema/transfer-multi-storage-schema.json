@@ -1,0 +1,30 @@
+{
+  "transfer.tx_transfer": {
+    "transaction": true,
+    "partition-key": [
+      "account_id"
+    ],
+    "clustering-key": [
+      "account_type"
+    ],
+    "columns": {
+      "account_id": "INT",
+      "account_type": "INT",
+      "balance": "INT"
+    }
+  },
+  "transfer_pg.tx_transfer": {
+    "transaction": true,
+    "partition-key": [
+      "account_id"
+    ],
+    "clustering-key": [
+      "account_type"
+    ],
+    "columns": {
+      "account_id": "INT",
+      "account_type": "INT",
+      "balance": "INT"
+    }
+  }
+}

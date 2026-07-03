@@ -1,0 +1,126 @@
+# CBRL end-to-end demo — fully self-contained, isolated docker-compose project.
+#
+# Everything runs inside this one compose project (name: cbrl-demo) on a dedicated
+# network with named volumes; nothing is published to the host. The app steps run as
+# one-shot jobs: `docker compose run --rm app <MainClass> <args...>`.
+#
+#   mysql          -> "transfer" service namespace (user data)                [PRIMARY]
+#   postgres       -> "transfer_pg" service namespace + "coordinator"         [PRIMARY]
+#   mysql-copy     -> restore target for the MySQL primary                    [COPY]
+#   postgres-copy  -> restore target for the PostgreSQL primary               [COPY]
+#   app            -> local CBRL runner (schema-loader / driver / restore)    [one-shot]
+#
+# The shared "cbrl-backups" volume (mounted at /backups on every DB service) holds the
+# physical dumps: the primaries write them, the copies read them.
+#
+# Run the whole demo:   bash run.sh
+# Tear everything down: docker compose -p cbrl-demo down -v
+
+name: cbrl-demo
+
+networks:
+  cbrl-net:
+    name: cbrl-demo-net
+
+volumes:
+  cbrl-mysql-data:
+  cbrl-pg-data:
+  cbrl-mysql-copy-data:
+  cbrl-pg-copy-data:
+  cbrl-backups:
+
+services:
+  # --- Primaries -----------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: cbrl-demo-mysql
+    networks: [cbrl-net]
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      # ScalarDB needs a reasonably large packet for blob write-sets (redo).
+      - --max-allowed-packet=64M
+    volumes:
+      - cbrl-mysql-data:/var/lib/mysql
+      - cbrl-backups:/backups
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pmysql"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  postgres:
+    image: postgres:15
+    container_name: cbrl-demo-postgres
+    networks: [cbrl-net]
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - cbrl-pg-data:/var/lib/postgresql/data
+      - cbrl-backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  # --- Copy / restore targets ---------------------------------------------
+  # Separate MySQL + PostgreSQL servers holding the SAME ScalarDB namespaces
+  # (transfer / transfer_pg / coordinator / scalardb) under the SAME database and
+  # schema names, so CbrlRestore — which routes each record by the namespace name
+  # carried in its redo — finds them unchanged. The physical backups of the primaries
+  # are restored here, then CbrlRestore repairs this copy in place.
+  mysql-copy:
+    image: mysql:8.0
+    container_name: cbrl-demo-mysql-copy
+    networks: [cbrl-net]
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --max-allowed-packet=64M
+    volumes:
+      - cbrl-mysql-copy-data:/var/lib/mysql
+      - cbrl-backups:/backups
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pmysql"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  postgres-copy:
+    image: postgres:15
+    container_name: cbrl-demo-postgres-copy
+    networks: [cbrl-net]
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - cbrl-pg-copy-data:/var/lib/postgresql/data
+      - cbrl-backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  # --- App runner (one-shot jobs) -----------------------------------------
+  # Built from the local CBRL fat jar. Under the "tools" profile so `docker compose up`
+  # never starts it; it is invoked only via `docker compose run --rm app <MainClass> ...`.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cbrl-demo-app:local
+    networks: [cbrl-net]
+    profiles: ["tools"]
+    volumes:
+      - cbrl-backups:/backups
