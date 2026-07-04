@@ -153,6 +153,52 @@ class ReplayCoreTest {
   }
 
   @Test
+  void baseAtReinsertRoot_thenDeleted_belowBaseSegmentDoesNotRevive_absent() {
+    // Arrange
+    // The copy caught k1 at the RE-INSERT version "t2" (present). The redo also holds the earlier
+    // insert->delete segment (t0, t1) that sits below the base, and a DELETE after the base (t3):
+    //   insert(t0) -> delete(t0->t1) -> insert(t2) -> delete(t2->t3)
+    // Replay applies delete(t3) first from the base (deleted), then resumes from the below-base
+    // insert(t0)->delete(t1) segment, which also ends deleted. The re-insert root t2 is skipped
+    // because the base already reflects it (reflectedVersions), so the record is NOT revived to t2.
+    // Final state: absent, matching t3 — not present at t2.
+    RecordState base = present("t2", ImmutableMap.of(COL_V, 7));
+    List<RedoOperation> ops =
+        ImmutableList.of(
+            op("t0", write(null, ImmutableMap.of(COL_V, 1))),
+            op("t1", delete("t0")),
+            op("t2", write(null, ImmutableMap.of(COL_V, 7))), // re-insert root the base reflects
+            op("t3", delete("t2"))); // delete after the base
+    // Act
+    RecordState result = new RecordApplier(k -> base).computeWriteOps(key(), ops);
+    // Assert
+    assertThat(result.present()).isFalse();
+  }
+
+  @Test
+  void baseAtUpdateAfterReinsert_thenDeleted_belowBaseSegmentDoesNotRevive_absent() {
+    // Arrange
+    // Like the previous case but the base is at an UPDATE that follows the re-insert:
+    //   insert(t0) -> delete(t0->t1) -> insert(t2) -> update(t2->t3) -> delete(t3->t4)
+    // The copy caught k1 at "t3" (present). reflectedVersions walks prev from t3: t3(update)->t2
+    // (insert root)->null, so BOTH t2 and t3 are reflected. Replay applies delete(t4) (deleted),
+    // resumes from the below-base insert(t0)->delete(t1) segment (deleted), and skips the reflected
+    // re-insert root t2 — so the record is never revived. Final: absent (t4).
+    RecordState base = present("t3", ImmutableMap.of(COL_V, 7));
+    List<RedoOperation> ops =
+        ImmutableList.of(
+            op("t0", write(null, ImmutableMap.of(COL_V, 1))),
+            op("t1", delete("t0")),
+            op("t2", write(null, ImmutableMap.of(COL_V, 5))), // re-insert root
+            op("t3", write("t2", ImmutableMap.of(COL_V, 7))), // update chaining off the re-insert
+            op("t4", delete("t3"))); // delete after the base
+    // Act
+    RecordState result = new RecordApplier(k -> base).computeWriteOps(key(), ops);
+    // Assert
+    assertThat(result.present()).isFalse();
+  }
+
+  @Test
   void reorderedInput_sameResult() {
     // Arrange
     RedoOperation a = op("t0", write(null, ImmutableMap.of(COL_V, 1, COL_W, 2)));

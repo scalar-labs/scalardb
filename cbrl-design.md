@@ -203,7 +203,13 @@ well-formed, chain-closed backup this is order-independent: exactly one root sur
 roots are tried in never changes the outcome (ordering roots by commit time is only a try-order
 optimization, and the reproducible tiebreak used *only if* a malformed backup left two live roots).
 Because DELETE is a **logical tombstone**, a deleted-then-reinserted record still carries its chain
-position, so replay skips a segment the copy already reflects.
+position: replay marks the caught version *and its chain-ancestors* (walking `prev_tx_id` back) as
+**reflected** and never re-applies a reflected INSERT root. For example, if the copy caught K-A at T4
+and a later `DELETE (T4 -> T5)` was logged: replay marks T4 and its ancestor T3 reflected, applies the
+delete (K-A now absent), then re-tries segment 1 — which again ends in `DELETE (T1 -> T2)` — and skips
+the reflected re-insert root T3. So K-A ends **absent**, never revived to the re-inserted version it
+already reflects. (Below-base segments are always safe to re-try: a re-insert is only possible after a
+delete, so such a segment must end in a DELETE.)
 
 **Crash-safety.** Write-back is per record, not atomic, so a crash mid-restore leaves a partial set.
 Safety comes from **convergence, not atomicity**: re-running from the same backup re-derives the
