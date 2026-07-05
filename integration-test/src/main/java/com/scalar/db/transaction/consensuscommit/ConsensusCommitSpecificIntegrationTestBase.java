@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -197,7 +198,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @AfterEach
   public void tearDown() {
-    recoveryExecutor.close();
+    if (recoveryExecutor != null) {
+      recoveryExecutor.close();
+    }
     if (groupCommitter != null) {
       groupCommitter.close();
     }
@@ -2513,11 +2516,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // (BALANCE=NEW_BALANCE) leave two physical rows belonging to the same writer transaction: a
     // DELETED record (the deleted one) and a PREPARED record (the inserted one). A single-row index
     // Get would throw GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION here. Reading via a Scan
-    // with
-    // index lets lazy recovery (coordinator COMMITTED -> roll forward) resolve the transient
-    // duplicate so that exactly one record (the inserted one) survives.
-    // (This example happens to share a partition key, but the bug is about distinct primary keys
-    // sharing an index value, not about clustering keys.)
+    // with index lets lazy recovery (coordinator COMMITTED -> roll forward) resolve the transient
+    // duplicate so that exactly one record (the inserted one) survives. (This example happens to
+    // share a partition key, but the bug is about distinct primary keys sharing an index value, not
+    // about clustering keys.)
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
     // Old record being deleted (account_type 0); its committed before-image is INITIAL_BALANCE.
@@ -2550,8 +2552,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Act
     Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
     // The key assertion is that this does NOT throw
-    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION
-    // even though two physical rows transiently match the index value.
+    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION even though two physical rows transiently
+    // match the index value.
     Optional<Result> result = transaction.get(get);
 
     // Assert
@@ -2590,8 +2592,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // The same transient DELETED(old) + PREPARED(new) duplicate as the rollforward case, but the
     // writer transaction ABORTED. Both rows roll back to their committed before-image
     // (BALANCE=INITIAL_BALANCE), which no longer matches the queried index value NEW_BALANCE, so
-    // the
-    // index Get resolves to no record in every isolation - and still never throws
+    // the index Get resolves to no record in every isolation - and still never throws
     // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION. (Correctness invariant case 2.)
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
@@ -2651,11 +2652,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Arrange
     // An already-committed record (account_type 0, BALANCE=NEW_BALANCE) exists. A concurrent
     // transaction's in-flight insert (account_type 1, PREPARED, same BALANCE) transiently shares
-    // the
-    // index value, then aborts. A single-row index Get would throw
+    // the index value, then aborts. A single-row index Get would throw
     // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION on the two physical rows; resolving via a
-    // Scan
-    // with index returns the existing committed record in every isolation -- including
+    // Scan with index returns the existing committed record in every isolation -- including
     // READ_COMMITTED, since the surviving record is genuinely committed (no before-image needed).
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long current = System.currentTimeMillis();
@@ -3659,6 +3658,34 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         true, isolation);
   }
 
+  /**
+   * Whether the storage engine allows a concurrent write to a row that an open scan cursor is still
+   * reading. The scan-path variants of the finalize/cleanup-race recovery tests synchronously write
+   * the scanned row from within lazy recovery while the storage scanner is still open. Engines that
+   * take shared/range locks for a scan under the highest isolation level (MySQL, MariaDB, SQL
+   * Server, Db2) block that write until the scan finishes, so the simulation self-deadlocks and
+   * times out. Returns {@code true} by default; the highest-isolation JDBC subclass overrides it to
+   * {@code false} for those engines. The Get variants are unaffected because a point Get releases
+   * its connection immediately.
+   */
+  protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
+    return true;
+  }
+
+  /**
+   * Skips a scan-path recovery-simulation test on engines that cannot support a concurrent write to
+   * a row an open scan is still reading. These tests synchronously write the scanned row from
+   * within lazy recovery while the storage scanner is still open, which self-deadlocks on
+   * pessimistic-lock engines under the highest isolation level. The Get path is unaffected because
+   * a point Get releases its connection immediately. See {@link
+   * #isConcurrentWriteToRowUnderOpenScanSupported()}.
+   */
+  private void assumeConcurrentWriteToRowUnderOpenScanSupported(Selection s) {
+    if (s instanceof Scan) {
+      assumeTrue(isConcurrentWriteToRowUnderOpenScanSupported());
+    }
+  }
+
   // Sets up the cleanup race for the transaction that wrote a record: the read path looks up the
   // coordinator state and finds none. Intercept only that first lookup to roll the record forward
   // to its committed after-image (a real write) as a side effect, modeling the writer committing,
@@ -3745,6 +3772,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           boolean readOnly,
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
@@ -3860,6 +3889,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
           Selection s, boolean useScanner, Isolation isolation, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
     // Arrange — a prepared record with no coordinator state, expired. The cleanup race is injected
     // into the abort attempt itself (see simulateRecordFinalizedAndCleanedUpDuringAbort).
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
@@ -3966,12 +3997,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   // attempt: the record is still physically PREPARED, the writer already committed via group commit
   // (a COMMITTED parent row with this child's ID existed), and the coordinator cleanup process
   // removed the parent row in the small window between our parent-id insert conflicting and the
-  // subsequent re-read inside forceAbortForGroupCommit. The fall-through then
-  // writes a spurious full-ID ABORTED coordinator state -- the same outcome as the unit test
-  // forceAbort_FullIdGivenWhenParentRowAlreadyCleanedUpAndNoFullIdRecord.
-  // Crucially, the record is already rolled forward at conflict time (rollRecordForwardToCommitted
-  // models the writer's commit), so the background rollback is a conditional no-op and the data
-  // record stays committed despite the spurious ABORTED.
+  // subsequent re-read inside forceAbortForGroupCommit. The fall-through then writes a spurious
+  // full-ID ABORTED coordinator state -- the same outcome as the unit test
+  // forceAbort_FullIdGivenWhenParentRowAlreadyCleanedUpAndNoFullIdRecord. Crucially, the record is
+  // already rolled forward at conflict time (rollRecordForwardToCommitted models the writer's
+  // commit), so the background rollback is a conditional no-op and the data record stays committed
+  // despite the spurious ABORTED.
   private void simulateGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback(String ongoingTxId)
       throws CoordinatorException {
     CoordinatorGroupCommitKeyManipulator keyManipulator =
@@ -4001,6 +4032,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
           Selection s, boolean useScanner, Isolation isolation)
           throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
     // Arrange — a prepared record under a group-commit full ID with no coordinator state, expired.
     // The group-commit parent-row cleanup race is injected via
     // simulateGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback.
@@ -4186,6 +4219,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
           Selection s, boolean useScanner, Isolation isolation, CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
     // Arrange — a prepared record with no coordinator state, expired. The ABA cleanup race is
     // injected into the abort attempt itself (see
     // simulateRecordRePreparedByDifferentTxDuringAbort).
@@ -4335,6 +4370,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           boolean readOnly,
           CommitType commitType)
           throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
     // Arrange — a prepared DELETE with no coordinator state, expired.
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
@@ -11113,12 +11150,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Arrange — record (0,0) is PREPARED by a group-commit transaction (its tx_id is a full
     // group-commit key) with no Coordinator state and an expired prepared-at. This is an abandoned
     // group-commit writer (the group never reached commit). recoverRecord must abort it through the
-    // group-commit-aware path (Coordinator.forceAbortForGroupCommit), which
-    // writes both the lazy-recovery-abort-with-parent-id row and the full-id ABORTED row — the same
-    // rows that conflict-protect against a racing real group commit. This is the expired
-    // counterpart
-    // of the not-expired test above and confirms recoverRecord drives the no-state group-commit
-    // branch identically to lazy recovery.
+    // group-commit-aware path (Coordinator.forceAbortForGroupCommit), which writes both the
+    // lazy-recovery-abort-with-parent-id row and the full-id ABORTED row — the same rows that
+    // conflict-protect against a racing real group commit. This is the expired counterpart of the
+    // not-expired test above and confirms recoverRecord drives the no-state group-commit branch
+    // identically to lazy recovery.
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
     String txId =
         populatePreparedRecordAndCoordinatorStateRecord(

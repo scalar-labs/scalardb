@@ -18,6 +18,7 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
     extends ConsensusCommitSpecificIntegrationTestBase {
 
   private JdbcAdminTestUtils jdbcAdminTestUtils;
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -25,13 +26,14 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
 
     // Set the isolation level to the highest level
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(config);
-    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
-      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
-    }
+    rdbEngine = RdbEngineFactory.create(config);
     properties.setProperty(
         JdbcConfig.ISOLATION_LEVEL,
         JdbcTestUtils.getIsolationLevel(rdbEngine.getHighestIsolationLevel()).name());
+
+    if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
+      jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
+    }
 
     return properties;
   }
@@ -61,6 +63,19 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
       return;
     }
     super.truncateCoordinatorTables();
+  }
+
+  @Override
+  protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
+    // MySQL, MariaDB, SQL Server and Db2 take shared/range locks for an open scan under
+    // SERIALIZABLE (the highest isolation level this class sets), so a concurrent write to a row
+    // the scan still holds blocks until the scan finishes. The scan-path finalize/cleanup-race
+    // recovery tests simulate exactly such a write from within lazy recovery while the scanner is
+    // open, so they self-deadlock on these engines.
+    return !(JdbcTestUtils.isMysql(rdbEngine)
+        || JdbcTestUtils.isMariaDB(rdbEngine)
+        || JdbcTestUtils.isSqlServer(rdbEngine)
+        || JdbcTestUtils.isDb2(rdbEngine));
   }
 
   @Override
