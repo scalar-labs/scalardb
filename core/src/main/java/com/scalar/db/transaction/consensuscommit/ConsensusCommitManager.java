@@ -718,6 +718,18 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       }
     }
 
+    // CBRL: skip the state-row deletion while a backup window is open. A committed transaction's
+    // Coordinator.State row carries the tx_write_set redo that restore replays; deleting it here
+    // would
+    // drop that redo. The per-record recovery above still ran — only the row reclamation is
+    // deferred
+    // until the window closes (a later cleanup pass reclaims it). This returns normally rather than
+    // throwing so finishTransaction does not disrupt transactions during a backup. Fail closed: if
+    // backup mode cannot be confirmed, skip as well.
+    if (backupWindowOpenOrUnconfirmable()) {
+      return true;
+    }
+
     // Perform the Coordinator state cleanup (delete the state row). state.getId() is the parent ID
     // for group-commit rows because Coordinator#getState(fullChildId) routes through
     // getStateForGroupCommit() and returns the parent row, so the delete targets the right row in
@@ -734,6 +746,23 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     }
 
     return true;
+  }
+
+  /**
+   * Whether a CBRL backup window is open — or cannot be confirmed. Used to block coordinator-state
+   * cleanup during a window (deleting a committed row drops its {@code tx_write_set} redo). Returns
+   * {@code false} only when backup mode is confirmed off (or CBRL is not wired); a daemon that
+   * fails closed is treated as open, so cleanup never runs on unconfirmed backup state.
+   */
+  private boolean backupWindowOpenOrUnconfirmable() {
+    if (backupModeDaemon == null) {
+      return false;
+    }
+    try {
+      return backupModeDaemon.activeBackupLabel(backupStalenessBoundMillis) != null;
+    } catch (IllegalStateException e) {
+      return true;
+    }
   }
 
   /**

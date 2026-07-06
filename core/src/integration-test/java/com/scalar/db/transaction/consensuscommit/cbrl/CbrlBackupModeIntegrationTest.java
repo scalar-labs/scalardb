@@ -195,6 +195,59 @@ public class CbrlBackupModeIntegrationTest {
         .isZero();
   }
 
+  @Test
+  void finishTransaction_WhileBackupWindowOpen_ShouldSkipDeletingCoordinatorState()
+      throws Exception {
+    // Arrange
+    manager.enableRedoLogging(BACKUP_LABEL);
+    DistributedTransaction tx = manager.begin();
+    tx.put(
+        Put.newBuilder()
+            .namespace(USER_NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(PK, 3))
+            .bigIntValue(COL, 9L)
+            .build());
+    tx.commit();
+    String txId = tx.getId();
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+    Optional<Result> state = getCoordinatorState(txId);
+
+    // Assert
+    assertThat(finished).as("finishTransaction does not fail during a backup window").isTrue();
+    assertThat(state).as("the coordinator state row is not deleted").isPresent();
+    assertThat(state.get().isNull(Attribute.WRITE_SET))
+        .as("its tx_write_set redo survives")
+        .isFalse();
+  }
+
+  @Test
+  void finishTransaction_AfterBackupWindowClosed_ShouldDeleteCoordinatorState() throws Exception {
+    // Arrange
+    manager.enableRedoLogging(BACKUP_LABEL);
+    DistributedTransaction tx = manager.begin();
+    tx.put(
+        Put.newBuilder()
+            .namespace(USER_NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(PK, 4))
+            .bigIntValue(COL, 11L)
+            .build());
+    tx.commit();
+    String txId = tx.getId();
+    manager.disableRedoLogging();
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+    Optional<Result> state = getCoordinatorState(txId);
+
+    // Assert
+    assertThat(finished).as("cleanup proceeds once the window is closed").isTrue();
+    assertThat(state).as("the coordinator state row is deleted").isNotPresent();
+  }
+
   private List<Result> scanBackupTable() throws Exception {
     Scan scan =
         Scan.newBuilder()
@@ -208,14 +261,17 @@ public class CbrlBackupModeIntegrationTest {
   }
 
   private WriteSet readWriteSet(String txId) throws Exception {
-    Get get =
+    Optional<Result> result = getCoordinatorState(txId);
+    assertThat(result).isPresent();
+    return WriteSet.parseFrom(result.get().getBlobAsBytes(Attribute.WRITE_SET));
+  }
+
+  private Optional<Result> getCoordinatorState(String txId) throws Exception {
+    return storage.get(
         Get.newBuilder()
             .namespace(COORDINATOR_NAMESPACE)
             .table(Coordinator.TABLE)
             .partitionKey(Key.ofText(Attribute.ID, txId))
-            .build();
-    Optional<Result> result = storage.get(get);
-    assertThat(result).isPresent();
-    return WriteSet.parseFrom(result.get().getBlobAsBytes(Attribute.WRITE_SET));
+            .build());
   }
 }

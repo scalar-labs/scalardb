@@ -280,10 +280,10 @@ still restores correctly.
 
 ## Assumptions & preconditions
 
-Correctness depends on all of these; violating any is a **silent** wrong restore. The three
-correctness-critical ones below (atomic coordinator snapshot, cleanup suspension,
-coordinator-restored-first) are **designed but not yet enforced** — each notes what enforcing it would
-take.
+Correctness depends on all of these; violating any is a **silent** wrong restore. Of the three
+correctness-critical ones below, **cleanup suspension is now enforced** (in `finishTransaction`); the
+atomic coordinator snapshot is the backup tool's job, and coordinator-restored-first is not yet
+enforced.
 
 ### Atomic coordinator snapshot, taken strictly last
 
@@ -301,34 +301,21 @@ backends that cannot snapshot atomically.
 
 ### Coordinator-state cleanup suspended for the window
 
-**This is the one correctness guarantee CBRL must provide itself** — the atomic snapshot is the backup
-tool's job, and consistent-prefix and cross-DB atomicity are inherited (see *Inherited properties*). It
-is **required**, not deferrable, before any coordinator-state cleanup runs alongside CBRL.
+This is the one correctness guarantee CBRL must provide itself — the atomic snapshot is the backup
+tool's job, and consistent-prefix and cross-DB atomicity are inherited (see *Inherited properties*).
 
-`finishTransaction` (and any Cluster coordinator-state cleanup) deletes a committed transaction's
-coordinator row *and its redo*. If that runs during the window, the committed write's redo is gone
-before the coordinator copy → the record is rolled back at restore and lost. Cleanup must be paused from
-window open until the coordinator snapshot completes. (Today `finishTransaction` is an externally-invoked
-API with no automatic caller, so nothing deletes coordinator state in a normal run; the guard is what
-must exist before cleanup and CBRL are ever run together.)
+`finishTransaction` deletes a committed transaction's coordinator row *and its `tx_write_set` redo*. If
+that runs during a window, the redo is gone before the coordinator copy → the record is rolled back at
+restore and lost.
 
-*Plan to enforce:*
-
-1. **Enumerate the delete paths.** Every path that removes a COMMITTED coordinator row and its
-   `tx_write_set`: `finishTransaction` (the explicit post-commit cleanup), the async lazy-recovery
-   roll-forward that finishes a transaction after committing its records, and any Cluster-side
-   coordinator GC.
-2. **One global guard, reusing the daemon.** `backupModeDaemon.activeBackupLabel(...)` is already the
-   authoritative, fail-closed view of backup mode. Check it at the top of each delete path: if any
-   label is `BACKING_UP`, **skip** the delete (leave the row and its redo). Because the daemon already
-   fails closed when backup state is unknown, an unreadable flag table blocks cleanup rather than
-   risking loss — no separate fail-closed logic is needed.
-3. **Resume on window close.** After `disableRedoLogging` (`→ BACKED_UP`, once the coordinator snapshot
-   is taken), the guard opens and the skipped rows are reclaimed on the next cleanup pass. No per-row
-   bookkeeping: the guard is global to the window, so nothing needs to remember which rows were
-   deferred.
-4. **Test.** Open a window, commit and `finishTransaction` a transaction, assert its coordinator row
-   and `tx_write_set` survive; close the window and assert cleanup then reclaims them.
+**Enforced (core path).** `finishTransaction` **skips** the state-row deletion while a backup window is
+open: it still runs the per-record recovery and returns normally — it does *not* throw, so it never
+disrupts a transaction whose caller finishes it during a backup — and only the row reclamation is
+deferred until the window closes, when a later cleanup pass reclaims the still-present row. The check
+reuses the backup-mode daemon and **fails closed**: if backup mode cannot be confirmed, the delete is
+skipped too. This is the complete core enforcement — `deleteState` has exactly one caller
+(`finishTransaction`), and lazy recovery deliberately never deletes coordinator state. A **Cluster-side
+coordinator GC**, if one exists, would need its own equivalent skip.
 
 ### Coordinator restored before user records are recovered
 
