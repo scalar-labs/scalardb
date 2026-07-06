@@ -255,9 +255,9 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void commit_NoWrites_WithWriteOmission_WhenValidateFails_ShouldSkipAbortStateButRollback()
+  void commit_NoWrites_WithWriteOmission_WhenValidateFails_ShouldStillWriteAbortedAndRollback()
       throws Exception {
-    // Arrange — omission enabled, no writes, but validation fails.
+    // Arrange — omission enabled, no writes observed, but validation fails.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
@@ -266,14 +266,14 @@ class ConsensusCommitCoordinatorTest {
         .when(participant)
         .validateRecords("tx-1");
 
-    // Act Assert — the validate conflict surfaces as a retriable CommitConflictException, no
-    // ABORTED
-    // state row is written (an absent row is treated as ABORTED), but the participant records are
-    // still rolled back.
+    // Act Assert — the validate conflict surfaces as a retriable CommitConflictException. The abort
+    // path always writes ABORTED even though no writes were observed: a prepare/validate failure
+    // can leave records PREPARED that hasWrites did not capture, so the write-omission is not
+    // applied here (it only applies on the commit-success path). Records are also rolled back.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(ValidationConflictException.class);
-    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+    verify(coordinatorCommitHandler).abortState("tx-1", null);
     verify(participant).rollbackRecords("tx-1");
   }
 

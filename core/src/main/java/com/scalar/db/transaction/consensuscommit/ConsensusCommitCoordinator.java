@@ -160,9 +160,10 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
 
         // A write-less transaction (every participant returns an empty write set) writes no
         // COMMITTED Coordinator state row when coordinator-write omission on read-only is enabled.
-        // Only the Coordinator state writes (commitState/abortState) are gated on this; the
-        // record-level steps (prepareRecords / commitRecords / rollbackRecords) are still driven on
-        // every participant so their local contexts are released.
+        // Only the commit-success path is gated on this; the abort path always writes ABORTED (see
+        // abortAndRollbackRecords). The record-level steps (prepareRecords / commitRecords /
+        // rollbackRecords) are still driven on every participant so their local contexts are
+        // released.
         boolean hasWrites = false;
 
         long preparedAt = System.currentTimeMillis();
@@ -185,7 +186,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
           // every participant. The prepare/validate phases are internal to commit(), so the failure
           // is reported as a commit-level exception: a conflict as CommitConflictException so the
           // caller's retry logic still sees it as retriable, anything else as CommitException.
-          abortAndRollbackRecords(transactionId, participants, hasWrites);
+          abortAndRollbackRecords(transactionId, participants);
           if (e instanceof PreparationConflictException
               || e instanceof ValidationConflictException) {
             throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
@@ -196,7 +197,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
           // expired). The transaction cannot commit: abort it and roll back the records already
           // PREPARED on the other participants, then surface the TransactionNotFoundException as-is
           // (the facade maps it to a retriable conflict).
-          abortAndRollbackRecords(transactionId, participants, hasWrites);
+          abortAndRollbackRecords(transactionId, participants);
           throw e;
         }
         long committedAt;
@@ -262,15 +263,20 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   }
 
   // Aborts the transaction and rolls back the PREPARED records on every participant. The ABORTED
-  // Coordinator state write is skipped for a write-less transaction when coordinator-write omission
-  // on read-only is enabled, since an absent Coordinator state row is treated as ABORTED by lazy
-  // recovery.
-  private void abortAndRollbackRecords(
-      String transactionId, List<Participant> participants, boolean hasWrites)
+  // Coordinator state row is always written here, unconditionally: a prepare/validate failure can
+  // leave records PREPARED that hasWrites has not observed (a participant that threw part-way
+  // through prepareRecords never returned its write set, and the first writer to throw leaves
+  // hasWrites false), so the write-less/read-only omission cannot be applied safely on the abort
+  // path. Writing ABORTED lets lazy recovery abort those records on the next read instead of
+  // leaving them locked until the transaction lifetime expires. This is more conservative than
+  // CommitHandler, which gates its abort on hasWritesOrDeletesInSnapshot -- a flag it derives
+  // accurately up-front from the snapshot; the Coordinator only learns each participant's write set
+  // incrementally during prepare, so it cannot compute that flag cheaply and always writes ABORTED
+  // here. (The omission still applies on the commit-success path, where hasWrites accurately
+  // reflects every participant's returned write set.)
+  private void abortAndRollbackRecords(String transactionId, List<Participant> participants)
       throws UnknownTransactionStatusException {
-    if (hasWrites || !coordinatorWriteOmissionOnReadOnlyEnabled) {
-      abortState(transactionId);
-    }
+    abortState(transactionId);
     for (Participant participant : participants) {
       bestEffortRollbackRecords(participant, transactionId);
     }
