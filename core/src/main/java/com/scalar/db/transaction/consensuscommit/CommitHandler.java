@@ -201,6 +201,26 @@ public class CommitHandler {
     waitBeforePreparationHookFuture(
         context, beforePreparationHookFuture.orElse(null), hasWritesOrDeletesInSnapshot);
 
+    // Enforce the transaction timeout once, at the point of no return: right before the coordinator
+    // commit-state write (putState) durably commits the transaction. Prepare and validation may
+    // have
+    // pushed the transaction past the timeout; aborting here rolls the prepared records back. This
+    // bounds how late a transaction that began before a backup flag can commit across a
+    // backup-window
+    // transition (begin-time flag capture keeps its logging consistent; this keeps it from
+    // committing
+    // unlogged long after the window opened). A timeout is not an OCC conflict, so this is a plain
+    // CommitException, not CommitConflictException.
+    if (context.isExpired(System.nanoTime())) {
+      safelyCallOnFailureBeforeCommit(context);
+      abortStateAndRollbackRecordsIfNeeded(context, hasWritesOrDeletesInSnapshot);
+      throw new CommitException(
+          "The transaction exceeded the transaction timeout ("
+              + context.transactionTimeoutMillis
+              + " ms) and was aborted before commit. Retry the transaction.",
+          context.transactionId);
+    }
+
     if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
       commitState(context);
     }

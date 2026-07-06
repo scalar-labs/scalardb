@@ -190,18 +190,6 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       throw new IllegalStateException(CoreError.CONSENSUS_COMMIT_SCANNER_NOT_CLOSED.buildMessage());
     }
 
-    // Self-abort a transaction that has outlived the transaction timeout before it can commit. No
-    // coordinator state or prepared records exist yet at this point, so there is nothing to roll
-    // back. The exception is retryable, so the caller begins a fresh transaction under the current
-    // backup flag.
-    if (context.isExpired(System.nanoTime())) {
-      throw new CommitConflictException(
-          "The transaction exceeded the transaction timeout ("
-              + context.transactionTimeoutMillis
-              + " ms) and was aborted. Retry the transaction.",
-          getId());
-    }
-
     // Execute implicit pre-read
     try {
       crud.readIfImplicitPreReadEnabled(context);

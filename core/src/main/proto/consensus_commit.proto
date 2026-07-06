@@ -257,6 +257,6 @@ message Entry {
   // The record's resulting version after this write. Carried so CBRL restore can stamp the
   // restored record with a coherent version (it is not used for replay ordering — the chain is).
   // Only populated for the full (redo-logging) write set; left unset for a keys-only entry. This is
-  // not the replay discriminator — that is EntryGroup.redo_logged.
+  // not the replay discriminator — that is EntryGroup.backup_label.
   optional int32 tx_version = 8;
 }

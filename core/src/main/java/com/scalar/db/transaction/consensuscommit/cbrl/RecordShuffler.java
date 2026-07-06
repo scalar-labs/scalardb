@@ -8,7 +8,11 @@ import java.util.List;
  * floorMod(hash(recordKey), N)}. All ops sharing a {@link RecordKey} land in exactly one bucket, so
  * pass 2 can own whole buckets with no intra-key concurrency (no CAS, no locks). Append order
  * within a bucket is irrelevant — the replay primitive is cursor-driven and order-independent
- * within a key.
+ * within a key. Each bucket spills its ops to a temp file (see {@link RedoBucket}), so a large redo
+ * stream is never all resident at once; the caller must {@link RedoBucket#delete} the returned
+ * buckets when done. The restore path streams the coordinator scan straight into buckets rather
+ * than materializing the op list first — this convenience overload is for callers (tests) that
+ * already hold the ops in memory.
  */
 final class RecordShuffler {
 
@@ -26,6 +30,9 @@ final class RecordShuffler {
     }
     for (RedoOperation op : ops) {
       buckets.get(bucketOf(op.key(), bucketCount)).add(op);
+    }
+    for (RedoBucket bucket : buckets) {
+      bucket.seal();
     }
     return buckets;
   }

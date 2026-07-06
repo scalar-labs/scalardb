@@ -65,6 +65,11 @@ public class ConsensusCommitConfig {
   public static final String TRANSACTION_TIMEOUT_MILLIS = PREFIX + "transaction_timeout_millis";
 
   public static final long DEFAULT_BACKUP_CHECK_INTERVAL_MILLIS = 5000;
+  // A general transaction-lifetime bound, independent of the backup check interval. Default 1
+  // minute
+  // — long enough not to abort normal transactions, short enough to bound how long a pre-flag
+  // transaction can linger across a backup-window transition.
+  public static final long DEFAULT_TRANSACTION_TIMEOUT_MILLIS = 60000;
 
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 128;
 
@@ -201,12 +206,14 @@ public class ConsensusCommitConfig {
 
     backupCheckIntervalMillis =
         getLong(properties, BACKUP_CHECK_INTERVAL_MILLIS, DEFAULT_BACKUP_CHECK_INTERVAL_MILLIS);
-    // The staleness bound and transaction timeout default to 3x the check interval, so overriding
-    // the check interval scales them too.
+    // The staleness bound genuinely tracks the poll interval (a cache is stale after a few
+    // intervals), so it defaults to 3x the check interval. The transaction timeout is independent —
+    // a general transaction-lifetime bound — so it has its own standalone default, not derived from
+    // the check interval.
     backupStalenessBoundMillis =
         getLong(properties, BACKUP_STALENESS_BOUND_MILLIS, 3 * backupCheckIntervalMillis);
     transactionTimeoutMillis =
-        getLong(properties, TRANSACTION_TIMEOUT_MILLIS, 3 * backupCheckIntervalMillis);
+        getLong(properties, TRANSACTION_TIMEOUT_MILLIS, DEFAULT_TRANSACTION_TIMEOUT_MILLIS);
   }
 
   public Isolation getIsolation() {

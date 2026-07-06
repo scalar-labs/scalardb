@@ -104,7 +104,7 @@ final class RecordApplier {
    */
   private void applyBucket(RedoBucket bucket, RecordSink sink) throws Exception {
     Map<RecordKey, List<RedoOperation>> byKey = new HashMap<>();
-    for (RedoOperation op : bucket.operations()) {
+    for (RedoOperation op : bucket.read()) {
       byKey.computeIfAbsent(op.key(), k -> new ArrayList<>()).add(op);
     }
     for (Map.Entry<RecordKey, List<RedoOperation>> entry : byKey.entrySet()) {

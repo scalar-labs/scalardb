@@ -64,14 +64,18 @@ class ReplayPropertyTest {
       for (int bucketCount : new int[] {1, 3, NUM_KEYS}) {
         // Act
         List<RedoBucket> buckets = RecordShuffler.shuffle(shuffled, bucketCount);
-        Map<RecordKey, RecordState> actual =
-            applyCollect(new RecordApplier(ABSENT), buckets, Math.max(1, bucketCount / 2));
+        try {
+          Map<RecordKey, RecordState> actual =
+              applyCollect(new RecordApplier(ABSENT), buckets, Math.max(1, bucketCount / 2));
 
-        // Assert
-        for (RecordKey key : expected.keySet()) {
-          assertThat(actual.get(key).observablyEquals(expected.get(key)))
-              .as("seed %d, N=%d, %s", seed, bucketCount, key)
-              .isTrue();
+          // Assert
+          for (RecordKey key : expected.keySet()) {
+            assertThat(actual.get(key).observablyEquals(expected.get(key)))
+                .as("seed %d, N=%d, %s", seed, bucketCount, key)
+                .isTrue();
+          }
+        } finally {
+          buckets.forEach(RedoBucket::delete);
         }
       }
     }
@@ -101,15 +105,19 @@ class ReplayPropertyTest {
     List<RedoOperation> ops = new RedoLogGenerator(7).generate(NUM_KEYS);
     List<RedoBucket> buckets = RecordShuffler.shuffle(ops, 4);
 
-    // Act
-    Map<RecordKey, RecordState> first = applyCollect(new RecordApplier(ABSENT), buckets, 4);
-    Map<RecordKey, RecordState> second =
-        applyCollect(
-            new RecordApplier(key -> first.getOrDefault(key, RecordState.absent())), buckets, 4);
+    try {
+      // Act
+      Map<RecordKey, RecordState> first = applyCollect(new RecordApplier(ABSENT), buckets, 4);
+      Map<RecordKey, RecordState> second =
+          applyCollect(
+              new RecordApplier(key -> first.getOrDefault(key, RecordState.absent())), buckets, 4);
 
-    // Assert
-    assertThat(first).isNotEmpty();
-    assertThat(second).as("apply() re-run from its own output is a no-op").isEqualTo(first);
+      // Assert
+      assertThat(first).isNotEmpty();
+      assertThat(second).as("apply() re-run from its own output is a no-op").isEqualTo(first);
+    } finally {
+      buckets.forEach(RedoBucket::delete);
+    }
   }
 
   /**

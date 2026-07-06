@@ -14,6 +14,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -32,7 +33,9 @@ import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.Attribute;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorException;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadata;
 import com.scalar.db.transaction.consensuscommit.TransactionTableMetadataManager;
@@ -49,6 +52,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Orchestrates the whole CBRL restore against a non-snapshot-consistent copy and the redo captured
@@ -82,9 +87,14 @@ import javax.annotation.Nullable;
  * test, arranged) before calling only {@link #restore()}.
  */
 public final class CbrlRestore implements AutoCloseable {
+  private static final Logger logger = LoggerFactory.getLogger(CbrlRestore.class);
+  // The updated_by recorded when restore neutralizes a resurrected backup window.
+  private static final String RESTORE_UPDATED_BY = "cbrl-restore";
   private final DistributedStorage storage;
   private final DistributedTransactionManager manager;
   private final DistributedStorageAdmin admin;
+  // Used only to neutralize resurrected backup-flag rows at the end of restore (see restore()).
+  private final Coordinator coordinator;
   // True if this instance built storage/manager/admin (and so must close them); false if they were
   // injected by the caller, who then owns their lifecycle.
   private final boolean ownsResources;
@@ -158,6 +168,8 @@ public final class CbrlRestore implements AutoCloseable {
     // The schema does not change during a one-shot restore, so cache it for the whole run (no
     // expiry).
     this.metadataManager = new TransactionTableMetadataManager(this.admin, -1);
+    this.coordinator =
+        new Coordinator(this.storage, new ConsensusCommitConfig(new DatabaseConfig(properties)));
   }
 
   /** Closes the ScalarDB handles only if this instance built them. */
@@ -178,64 +190,90 @@ public final class CbrlRestore implements AutoCloseable {
    */
   public void restore() throws Exception {
     // Original commit time (the coordinator's tx_created_at) per transaction id, used to stamp the
-    // restored records so they keep their commit timestamp instead of the restore-time clock.
+    // restored records so they keep their commit timestamp instead of the restore-time clock. This
+    // is the one structure still held whole in the heap (a tx id -> long map, no column data); the
+    // redo itself is spilled to the buckets below.
     Map<String, Long> committedAtByTxId = new HashMap<>();
-    List<RedoOperation> redoOps = new ArrayList<>();
-    for (Coordinator.State state : readCoordinatorTable()) {
-      // The column is filtered to present in readCoordinatorTable().
-      WriteSet writeSet = state.getWriteSet().get();
-      for (EntryGroup group : writeSet.getEntryGroupsList()) {
-        // The writing transaction's full id is what records store and what other ops' prev_tx_id
-        // chains to. For a normal group commit the row is keyed by the parent id and each child's
-        // EntryGroup carries its child_id, so the full id = parent + child; otherwise the row's key
-        // already is the full id.
-        String txId =
-            group.getChildId().isEmpty()
-                ? state.getId()
-                : keyManipulator.fullKey(state.getId(), group.getChildId());
-        committedAtByTxId.put(txId, state.getCreatedAt());
-        if (!backupLabel.equals(group.getBackupLabel())) {
-          // Not this backup: a keys-only group (empty label, logging was off) or a different backup
-          // window's redo. The copy carries the state of the records this group wrote instead.
-          continue;
-        }
-        for (Entry entry : group.getEntriesList()) {
-          redoOps.add(new RedoOperation(txId, entry, state.getCreatedAt()));
+    // Pass 1 streams the coordinator scan straight into these buckets, each spilling its ops to a
+    // temp file (see RedoBucket), so the whole redo stream is never resident at once; pass 2 reads
+    // one bucket back at a time. The finally deletes the spill files whether restore succeeds or
+    // throws (including the crash-injection tests, whose "crash" is a thrown exception).
+    List<RedoBucket> buckets = new ArrayList<>(replayBuckets);
+    for (int i = 0; i < replayBuckets; i++) {
+      buckets.add(new RedoBucket());
+    }
+    try {
+      try (Scanner scanner =
+          storage.scan(
+              Scan.newBuilder()
+                  .namespace(coordinatorNamespace)
+                  .table(Coordinator.TABLE)
+                  .all()
+                  .build())) {
+        for (Result result : scanner.all()) {
+          if (result.isNull(Attribute.STATE)
+              || result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()
+              || result.isNull(Attribute.WRITE_SET)) {
+            // Not a committed-with-redo row (e.g. an ABORTED in-doubt marker): no redo to replay.
+            continue;
+          }
+          Coordinator.State state = new Coordinator.State(result);
+          // The column is filtered to present just above.
+          WriteSet writeSet = state.getWriteSet().get();
+          for (EntryGroup group : writeSet.getEntryGroupsList()) {
+            // The writing transaction's full id is what records store and what other ops'
+            // prev_tx_id
+            // chains to. For a normal group commit the row is keyed by the parent id and each
+            // child's EntryGroup carries its child_id, so the full id = parent + child; otherwise
+            // the row's key already is the full id.
+            String txId =
+                group.getChildId().isEmpty()
+                    ? state.getId()
+                    : keyManipulator.fullKey(state.getId(), group.getChildId());
+            committedAtByTxId.put(txId, state.getCreatedAt());
+            if (!backupLabel.equals(group.getBackupLabel())) {
+              // Not this backup: a keys-only group (empty label, logging was off) or a different
+              // backup window's redo. The copy carries the state of the records this group wrote.
+              continue;
+            }
+            for (Entry entry : group.getEntriesList()) {
+              RedoOperation op = new RedoOperation(txId, entry, state.getCreatedAt());
+              buckets.get(RecordShuffler.bucketOf(op.key(), replayBuckets)).add(op);
+            }
+          }
         }
       }
+      for (RedoBucket bucket : buckets) {
+        bucket.seal();
+      }
+      new RecordApplier(key -> readCopyState(key, committedAtByTxId))
+          .apply(buckets, replayWorkers, this::applyToRestore);
+      cancelResurrectedBackupWindows();
+    } finally {
+      for (RedoBucket bucket : buckets) {
+        bucket.delete();
+      }
     }
-
-    List<RedoBucket> buckets = RecordShuffler.shuffle(redoOps, replayBuckets);
-    new RecordApplier(key -> readCopyState(key, committedAtByTxId))
-        .apply(buckets, replayWorkers, this::applyToRestore);
   }
 
   /**
-   * The coordinator backup, read from the restored coordinator table itself (the caller has
-   * physically restored it like any other table): every {@code COMMITTED} row carrying a {@code
-   * tx_write_set}. This is both the redo source and the original-commit-time source — CBRL reads it
-   * from the database rather than receiving it, so every restore input is the database.
+   * After a successful restore, neutralize any {@code BACKING_UP} backup-flag row that came back
+   * with the restored coordinator namespace, transitioning it to {@code CANCELED} so the restored
+   * cluster's daemon does not re-enter backup mode (a phantom window that would re-log redo).
+   * {@code BACKED_UP} rows are already inert. Best effort: a failure here does not undo the
+   * completed restore, so it is logged rather than thrown.
    */
-  private List<Coordinator.State> readCoordinatorTable() throws Exception {
-    List<Coordinator.State> states = new ArrayList<>();
-    try (Scanner scanner =
-        storage.scan(
-            Scan.newBuilder()
-                .namespace(coordinatorNamespace)
-                .table(Coordinator.TABLE)
-                .all()
-                .build())) {
-      for (Result result : scanner.all()) {
-        if (result.isNull(Attribute.STATE)
-            || result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()
-            || result.isNull(Attribute.WRITE_SET)) {
-          // Not a committed-with-redo row (e.g. an ABORTED in-doubt marker): no redo to replay.
-          continue;
-        }
-        states.add(new Coordinator.State(result));
+  private void cancelResurrectedBackupWindows() {
+    try {
+      for (String label : coordinator.scanBackingUpLabels()) {
+        coordinator.cancelBackupMode(label, RESTORE_UPDATED_BY);
       }
+    } catch (CoordinatorException e) {
+      logger.warn(
+          "Failed to neutralize backup-flag rows after restore; the restored cluster may re-enter"
+              + " backup mode until they are canceled manually.",
+          e);
     }
-    return states;
   }
 
   /**

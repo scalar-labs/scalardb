@@ -2,10 +2,10 @@
 
 Status: **PoC.** The restore/replay engine and the *enter/exit* half of the embedded-Core backup-mode
 machinery are implemented and exercised end-to-end by a containerized demo (single-Postgres +
-single-MySQL). The lifecycle's cancel and restore-side states, and several production preconditions
-below, are **designed but not yet built or enforced** — see *Assumptions & preconditions* and *Known
-gaps* before relying on this beyond the demo. This is an overall design; it describes the concept, not
-every implementation detail.
+single-MySQL). The backup-flag lifecycle (enter/exit/cancel) is implemented; several production
+preconditions below are **designed but not yet enforced** — see *Assumptions & preconditions* and
+*Known gaps* before relying on this beyond the demo. This is an overall design; it describes the
+concept, not every implementation detail.
 
 A plain physical backup of ScalarDB's databases, taken online while transactions keep running, is
 **not** transactionally consistent: a record may be caught mid-commit, stale, or missing, and
@@ -74,21 +74,18 @@ returned sorted by label. Created alongside `coordinator.state`; timestamps are 
 | `created_at`, `updated_at` | BIGINT | backup started / last transition |
 | `updated_by` | TEXT | operator id (observability) |
 
-**Lifecycle.** The intended state machine is below. **As built, only `enterBackupMode`
-(`→ BACKING_UP`) and `exitBackupMode` (`BACKING_UP → BACKED_UP`) exist**; the cancel and restore-side
-states are declared but not yet written by any code, and `CbrlRestore` does not touch this table (it
-takes a bare label). Each *implemented* transition is a `putIf` on the current `state`; re-opening an
-already-`BACKING_UP` label is idempotent success, and opening a label that has already transitioned is
-rejected.
+**Lifecycle.** The state machine is below: `enterBackupMode` (`→ BACKING_UP`), `exitBackupMode`
+(`BACKING_UP → BACKED_UP`), and `cancelBackupMode` (`BACKING_UP → CANCELED`) are all implemented, and
+`CbrlRestore` calls `cancelBackupMode` at the end of a restore to neutralize any resurrected
+`BACKING_UP` row (see *Redo bloat carried forward on restore* under *Known gaps*). Each transition is a
+`putIf` on the current `state`; re-opening an already-`BACKING_UP` label is idempotent success, and
+transitioning a label that is not in the required state is rejected.
 
 ```mermaid
 stateDiagram-v2
     [*] --> BACKING_UP: enableRedoLogging(label)
     BACKING_UP --> BACKED_UP: disableRedoLogging()
-    BACKING_UP --> BACKUP_CANCELED: cancel (planned)
-    BACKED_UP --> RESTORING: start restore (planned)
-    RESTORING --> RESTORED: (planned)
-    RESTORING --> RESTORE_CANCELED: cancel (planned)
+    BACKING_UP --> CANCELED: cancelBackupMode() (also used by restore)
 ```
 
 **Protocol.** Each app process runs a daemon that polls the flag table every `check-interval` and
@@ -122,11 +119,14 @@ absolute guarantee** (see *Known gaps*):
   older than the staleness bound; once the flag has been read at least once, if it still can't be
   confirmed `begin()` **fails closed** (refuses), so a process resuming from a stall — or during a
   coordinator partition — can't begin under a stale flag.
-- **Transaction timeout** — a transaction self-aborts (retryable) if it runs longer than
-  `transaction-timeout`, killing one frozen across the transition. **This is global and always-on**
-  (default `3 × check-interval`), applied to *every* Consensus Commit transaction whether or not a
-  backup is in progress — not a backup-scoped knob. See *Known gaps* for its blast radius and why the
-  check (once, before prepare) does not bound the whole commit protocol.
+- **Transaction timeout** — a transaction self-aborts (as a `CommitException`) if it runs longer than
+  `transaction-timeout`, killing one frozen across the transition. The check runs once, right before
+  the coordinator commit-state write (the point of no return), so a slow prepare or validation can no
+  longer let an unlogged commit land arbitrarily late. It is **global and always-on** (default 60s,
+  independent of `check-interval`), applied to *every* Consensus Commit transaction. That breadth is a
+  deliberate **trade-off**, not a defect: the timeout is what bounds the pre-flag drain, so the cache
+  wait above must cover it. An OLTP workload keeps the 60s default; a workload with legitimately long
+  transactions raises the timeout and accepts a proportionally longer cache wait.
 
 ```mermaid
 sequenceDiagram
@@ -135,9 +135,9 @@ sequenceDiagram
     P->>Tx: begin, stamp beginAt
     Note over Tx: does work, or is GC-paused across the flag transition
     P->>Tx: commit
-    Note over Tx: check elapsed since beginAt (before prepare)
+    Note over Tx: check elapsed since beginAt (right before the commit-state write)
     alt elapsed exceeds transaction-timeout
-        Tx-->>P: abort, retryable
+        Tx-->>P: abort (CommitException)
         P->>Tx: begin a fresh txn under the current flag
     else within the timeout
         Tx-->>P: commit succeeds
@@ -228,8 +228,8 @@ still restores correctly.
   recommended 5–10s).
 - `scalar.db.consensus_commit.backup.staleness_bound_millis` — oldest cache `begin()` accepts before a
   forced fresh scan (default ~`3 × check_interval`).
-- `scalar.db.consensus_commit.transaction_timeout_millis` — **global** transaction-lifetime bound
-  (default `3 × check_interval`); see *Known gaps*.
+- `scalar.db.consensus_commit.transaction_timeout_millis` — **global** transaction-lifetime bound,
+  independent of the check interval (default 60000 ms / 1 min); see *Known gaps*.
 - `scalar.db.cross_partition_scan.enabled=true` — required by restore, which scans the coordinator
   table for redo.
 - Restore concurrency: `replay_buckets` / `replay_workers` (each key's whole recover→replay→write-back
@@ -237,8 +237,9 @@ still restores correctly.
 
 ## Implementation notes
 
-- **Restore engine (built):** `CbrlRestore` → `RecordShuffler` (buckets by key) → `RecordApplier`
-  (per-key recover via `recoverRecord`, read base, chain-replay, write back). Capture uses
+- **Restore engine (built):** `CbrlRestore` → per-key buckets that **spill to temp files**
+  (`RecordShuffler`/`RedoBucket`) → `RecordApplier` (per-key recover via `recoverRecord`, read base,
+  chain-replay, write back), so a large window's redo never sits in the heap at once. Capture uses
   `WriteSetEncoder`; the redo proto (`WriteSet`/`EntryGroup`/`Entry`) carries `backup_label`,
   `prev_tx_id`, `tx_version`, and columns in the coordinator's `tx_write_set`.
 - **Backup mode (partly built):** the `coordinator.backup` `TableMetadata` (wired into
@@ -246,29 +247,69 @@ still restores correctly.
   (periodic single-partition scan + one synchronous scan at startup; logs an error if a scan returns
   more than one `BACKING_UP` row), `enableRedoLogging`/`disableRedoLogging` writing the row, and
   `begin()` reading the daemon cache + stamping the begin time so the commit path can enforce the
-  transaction timeout. Only the enter/exit transitions are wired (see *Lifecycle*).
+  transaction timeout. The enter/exit/cancel transitions are wired, and restore calls
+  `cancelBackupMode` to neutralize a resurrected window (see *Lifecycle*).
 
 ## Assumptions & preconditions
 
-Correctness depends on all of these; violating any is a **silent** wrong restore.
+Correctness depends on all of these; violating any is a **silent** wrong restore. The three
+correctness-critical ones below (atomic coordinator snapshot, cleanup suspension,
+coordinator-restored-first) are **designed but not yet enforced** — each notes what enforcing it would
+take.
 
-1. **Atomic coordinator snapshot.** The coordinator table must be copied as a single-point-in-time,
-   read-from-closed snapshot (e.g. `pg_dump --single-transaction` on a single DB). A torn/multi-partition
-   read of the coordinator can include a transaction but miss one it read from → non-serializable restore.
-2. **Coordinator snapshotted strictly last.** Every user-table snapshot must be no newer than the
-   coordinator snapshot, and each user-table copy should itself be single-instant (`mysqldump
-   --single-transaction`, InnoDB, or a quiesced storage snapshot). Redo only rolls records *forward* to
-   the cut; a user record newer than the cut cannot be rolled back.
-3. **Coordinator-state cleanup suspended for the window.** `finishTransaction` (and any Cluster
-   coordinator-state cleanup) deletes a committed transaction's coordinator row *and its redo*. If that
-   runs during the window, the committed write's redo is gone before the coordinator copy → the record
-   is rolled back at restore and lost. Cleanup must be paused from window open until the coordinator
-   snapshot completes.
-4. **Coordinator restored before user records are recovered.** `CbrlRestore` recovers in-flight copy
-   records against the restored coordinator; if the coordinator isn't fully restored first, an ancient
-   PREPARED record is judged expired and rolled back (committed write lost), with no error.
-5. **Single active window.** The write path stamps one `EntryGroup.backup_label` per commit; only one
-   `BACKING_UP` label may be open at a time.
+### Atomic coordinator snapshot, taken strictly last
+
+The coordinator copy *defines* the consistency point, so it must be a single-point-in-time,
+read-from-committed snapshot (e.g. `pg_dump --single-transaction` on a single DB), and it must be taken
+**after** every user-table snapshot. A torn or multi-partition read of the coordinator can include a
+transaction but miss one it read from (non-serializable restore); and because redo only rolls records
+*forward* to the cut, a user record newer than the cut cannot be rolled back — so every user-table copy
+must be no newer than the coordinator snapshot and should itself be single-instant (`mysqldump
+--single-transaction`/InnoDB, or a quiesced storage snapshot).
+
+*To enforce:* mandate a single-DB coordinator with an atomic dump; record the max user-snapshot
+completion time and verify the coordinator snapshot began after it; reject multi-partition coordinator
+backends that cannot snapshot atomically.
+
+### Coordinator-state cleanup suspended for the window
+
+`finishTransaction` (and any Cluster coordinator-state cleanup) deletes a committed transaction's
+coordinator row *and its redo*. If that runs during the window, the committed write's redo is gone
+before the coordinator copy → the record is rolled back at restore and lost. Cleanup must be paused from
+window open until the coordinator snapshot completes.
+
+*Plan to enforce:*
+
+1. **Enumerate the delete paths.** Every path that removes a COMMITTED coordinator row and its
+   `tx_write_set`: `finishTransaction` (the explicit post-commit cleanup), the async lazy-recovery
+   roll-forward that finishes a transaction after committing its records, and any Cluster-side
+   coordinator GC.
+2. **One global guard, reusing the daemon.** `backupModeDaemon.activeBackupLabel(...)` is already the
+   authoritative, fail-closed view of backup mode. Check it at the top of each delete path: if any
+   label is `BACKING_UP`, **skip** the delete (leave the row and its redo). Because the daemon already
+   fails closed when backup state is unknown, an unreadable flag table blocks cleanup rather than
+   risking loss — no separate fail-closed logic is needed.
+3. **Resume on window close.** After `disableRedoLogging` (`→ BACKED_UP`, once the coordinator snapshot
+   is taken), the guard opens and the skipped rows are reclaimed on the next cleanup pass. No per-row
+   bookkeeping: the guard is global to the window, so nothing needs to remember which rows were
+   deferred.
+4. **Test.** Open a window, commit and `finishTransaction` a transaction, assert its coordinator row
+   and `tx_write_set` survive; close the window and assert cleanup then reclaims them.
+
+### Coordinator restored before user records are recovered
+
+`CbrlRestore` recovers in-flight copy records against the restored coordinator; if the coordinator
+isn't fully restored first, an ancient PREPARED record is judged expired and rolled back (committed
+write lost), with no error.
+
+*To enforce:* at restore start, assert the restored coordinator table is present/non-empty; and when a
+copy record is PREPARED but its writer's coordinator state is absent, fail closed (throw) instead of
+letting recovery age-abort it.
+
+### Single active window
+
+The write path stamps one `EntryGroup.backup_label` per commit, so only one `BACKING_UP` label may be
+open at a time (see the multi-window gap under *Known gaps*).
 
 ## Known gaps
 
@@ -277,25 +318,23 @@ Ranked roughly by severity — residual limitations to harden or accept for the 
 - **Completeness is undetectable.** Replay cannot distinguish a dropped mid-chain op from a
   legitimately-below-base op, so any capture hole yields a wrong-but-plausible record, never an error.
   The preconditions above exist to prevent capture holes; there is no post-restore integrity check.
-- **Timeout is checked once, before prepare.** The transaction-timeout check runs once at the top of
-  `commit()` (using a monotonic `System.nanoTime()` clock), not across prepare→commitState — so a
-  pause *inside* the commit protocol can still land an unlogged commit arbitrarily late. The
-  cache-wait is therefore a strong mitigation, not a hard upper bound; a re-check just before the
-  coordinator commit write would tighten it.
-- **Global always-on transaction timeout.** The 15 s (default) cap applies to *every* transaction, not
-  just during backups, so enabling CBRL breaks any legitimately long transaction; "retryable" is
-  misleading because a transaction that inherently needs >15 s re-times-out forever. Consider defaulting
-  it off and enabling it only while a window is open, or decoupling it from `check_interval`.
 - **Multi-window mis-attribution.** `enableRedoLogging` doesn't check for a *different* open label, so a
   second window can open; the write path then logs all redo under the first sorted label, silently
   corrupting the other backup. The `>1 BACKING_UP` log is after-the-fact detection, not prevention.
-- **Restore is single-JVM, in-memory.** It materializes the full window redo plus the whole
-  coordinator txId→commit-time map (the latter for *all* committed rows, before the label filter) in one
-  heap — OOM risk on large or long-lived windows. Needs paging/spill or sharding.
+- **Restore still holds the commit-time map in heap.** The redo now **spills to per-bucket temp files**
+  — restore streams the coordinator scan straight into the spill files and replays one bucket at a
+  time, so the redo is no longer heap-bound (raise `replay_buckets` to shrink each bucket). The one
+  structure still held whole is the txId→commit-time map (built for *all* committed-with-redo rows,
+  before the label filter). It is small per entry (a tx id plus a `long`), so it is acceptable for now;
+  if a window ever grows large enough to matter, back it with an embedded file-based key-value store
+  rather than the heap. Restore is also still single-JVM (no sharding across processes).
 - **Write-set size vs backend item limits.** The redo is an inline BLOB on the coordinator row
   (aggregated across children under group commit); on DynamoDB (400 KB) / Cosmos (2 MB) a large or
   batched transaction that commits normally can fail *only while a window is open*.
-- **Flag rows resurrect on restore.** The `backup` table is in the backed-up coordinator namespace, so a
-  restored cluster re-enters backup mode on daemon startup (phantom window, redo overhead) and carries
-  every `tx_write_set` blob forward as bloat. Reset tooling isn't built; the alternative is a separate,
-  excluded system namespace.
+- **Redo bloat carried forward on restore (window resurrection fixed).** The `backup` table is in the
+  backed-up coordinator namespace, so its rows return with a restore. The phantom-window problem is
+  fixed: restore transitions any resurrected `BACKING_UP` row to `CANCELED` (`cancelBackupMode`), so the
+  restored cluster's daemon does not re-enter backup mode. What remains is bloat — the restored
+  coordinator still carries every window's `tx_write_set` blob on its committed rows (and the terminal
+  flag rows), which normal coordinator cleanup should reclaim; putting the flag table in an excluded
+  system namespace would also keep it out of the backup set.

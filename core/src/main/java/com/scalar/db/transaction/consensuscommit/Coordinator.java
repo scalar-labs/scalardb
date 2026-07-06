@@ -498,6 +498,37 @@ public class Coordinator {
     putBackup(put, label);
   }
 
+  /**
+   * Neutralizes a backup window by transitioning its row from {@code BACKING_UP} to {@code
+   * CANCELED} with a {@code putIf} guarded on the current state. Used to abandon an in-progress
+   * backup and, on a restored cluster, to stop a resurrected {@code BACKING_UP} row (restored with
+   * the coordinator namespace) from re-entering backup mode.
+   *
+   * @param label the backup label (the clustering key)
+   * @param updatedBy an operator/process id recorded for observability
+   * @throws CoordinatorConflictException if no {@code BACKING_UP} row exists for the label
+   * @throws CoordinatorException if the row cannot be written
+   */
+  public void cancelBackupMode(String label, String updatedBy) throws CoordinatorException {
+    Put put =
+        Put.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(BACKUP_TABLE)
+            .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
+            .clusteringKey(Key.ofText(Attribute.BACKUP_LABEL, label))
+            .textValue(Attribute.BACKUP_STATE, BackupState.CANCELED.name())
+            .bigIntValue(Attribute.BACKUP_UPDATED_AT, System.currentTimeMillis())
+            .textValue(Attribute.BACKUP_UPDATED_BY, updatedBy)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.putIf(
+                        ConditionBuilder.column(Attribute.BACKUP_STATE)
+                            .isEqualToText(BackupState.BACKING_UP.name()))
+                    .build())
+            .build();
+    putBackup(put, label);
+  }
+
   private void putBackup(Put put, String label) throws CoordinatorException {
     try {
       storage.put(put);
