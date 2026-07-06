@@ -32,6 +32,17 @@ sequenceDiagram
     Note over DB: now the committed state as of the consistency point
 ```
 
+## Requirements & goals
+
+The consistency contract CBRL targets (from the product owner): **database consistency is required;
+client-ACK inconsistency is allowed.**
+
+- **Goal** — the restored databases are transactionally consistent: atomic across databases, a prefix of
+  the commit history, and per-record coherent.
+- **Non-goal** — zero acknowledged-write loss. `RPO > 0` is acceptable, so CBRL **never blocks a commit
+  to wait for durability**; it logs the redo in the same commit and reconstructs consistency after the
+  fact. A window-time commit that is lost is an RPO matter, not a consistency violation.
+
 ## Backup phase
 
 - **Open a backup window.** While it is open, every Consensus Commit transaction logs its **write
@@ -47,11 +58,9 @@ sequenceDiagram
   storage snapshot) taken while the database keeps serving — a **non-snapshot-consistent copy**.
   Replay tolerates this because it walks each record forward.
 - **Snapshot the coordinator table last, and atomically.** Its set of committed transactions *defines*
-  the consistency point, so — unlike the user tables — the coordinator copy is not just data to be
-  repaired; it must be a single-point-in-time, read-from-closed snapshot, and every user-table
-  snapshot must be no newer than it (see *Assumptions & preconditions*). Because the redo lives in
-  `tx_write_set` and each commit time in `tx_created_at`, an atomic backup of the coordinator table
-  captures both; there is no separate redo log or timestamp export to manage.
+  the consistency point (why it must be atomic and last is in *Assumptions & preconditions*). Because
+  the redo lives in `tx_write_set` and each commit time in `tx_created_at`, one atomic backup of the
+  coordinator captures both — there is no separate redo log or timestamp export to manage.
 
 ### Backup mode — entering and quitting (embedded Core)
 
@@ -153,8 +162,12 @@ incomplete capture; see *Known gaps*). Restore uses the **Storage API only**: no
 own, and no extra coordinator bookkeeping.
 
 The operator physically restores the coordinator and user tables first, then runs restore for a chosen
-**backup label** — multiple labels can accumulate in the long-lived redo over time, and only the
-matching one is replayed. For each record, restore recovers the copy's in-flight version, reads it as
+**backup label** — the coordinator's `tx_write_set` is long-lived and shared, so multiple windows' redo
+accumulate in it and restore must replay **only** the label being restored. Replaying an older window's
+redo would resurrect deleted records: one inserted in an earlier window, then physically deleted during
+a logging-off gap (delete unlogged) and absent from the copy, would have its stale earlier-window INSERT
+replayed against the absent base and wrongly come back. The label is the discriminator — not cleanup
+ordering, not `created_at`. For each record, restore recovers the copy's in-flight version, reads it as
 the base, replays the chain forward, and writes the result back with the Storage API. Records are
 routed by the namespace and table carried in their redo, so one run spans every namespace the window
 touched. Each reconstructed record is stamped with its **original** commit time (the coordinator's
@@ -177,9 +190,25 @@ The write operations, each carrying `previous txn ID -> current txn ID`, grouped
 
 Each operation's `previous txn ID` must match the `current txn ID` of the operation before it, so
 K-A's only valid order is INSERT(->T0), UPDATE(T0->T1), DELETE(T1->T2) — whatever order the operations
-happen to be read in. The *ordering* of the ops a record has is thus fixed by the causal chain, never
-by a timestamp, so it is immune to clock skew. (This is about ordering, not completeness — see the
-caveat under *Known gaps*.)
+happen to be read in. So the order is fixed by the chain, not by arrival order or any timestamp (the
+chain-only rule below says why timestamps are never trusted).
+
+**The chain-only rule.** Replay decides what to apply **only** from the `prev_tx_id -> tx_id` chain —
+never from `created_at` or `tx_version`. Both are *carried* on the redo (so a restored record stays
+valid for later Consensus Commit logic), but neither may gate a replay decision:
+
+- `created_at` is a wall-clock stamp, and CBRL is **multi-primary** (different processes commit with
+  unsynchronized clocks), so it is skew-prone and gives no reliable per-record order. It is used *only*
+  as a try-order optimization (independent INSERT roots oldest-first, as SSR does); the chain still
+  governs the outcome, so that can never change a correct result.
+- `tx_version` gives an order but not a *linkage* — restore rolls the copy forward from whatever version
+  it happened to catch, and picking the next write needs "this write's before-image is exactly that
+  version," which `prev_tx_id -> tx_id` states directly. It also assumes a dense, gap-free sequence, but
+  window-scoped logging never captures the versions below the copied base, and it **resets on
+  delete→reinsert**, so a re-inserted record's versions can collide with its prior incarnation's.
+
+The replay primitive is **SSR's** (`RecordApplyService`), reused; this rule is the one constraint to
+honor on top of it, not a new algorithm.
 
 Replay starts from whatever version the copy caught for a record and follows the chain **forward** to
 the consistency point:
@@ -238,17 +267,16 @@ still restores correctly.
 ## Implementation notes
 
 - **Restore engine (built):** `CbrlRestore` → per-key buckets that **spill to temp files**
-  (`RecordShuffler`/`RedoBucket`) → `RecordApplier` (per-key recover via `recoverRecord`, read base,
-  chain-replay, write back), so a large window's redo never sits in the heap at once. Capture uses
+  (`RecordShuffler`/`RedoBucket`) → `RecordApplier`. Each key is owned by one worker (bucketed by key),
+  so replay needs no locks or CAS: per key it recovers via `recoverRecord`, reads the base,
+  chain-replays, and writes back — and a large window's redo never sits in the heap at once. Capture uses
   `WriteSetEncoder`; the redo proto (`WriteSet`/`EntryGroup`/`Entry`) carries `backup_label`,
   `prev_tx_id`, `tx_version`, and columns in the coordinator's `tx_write_set`.
-- **Backup mode (partly built):** the `coordinator.backup` `TableMetadata` (wired into
-  `ConsensusCommitAdmin`'s coordinator-table create/drop/truncate/exists/repair), a `BackupModeDaemon`
-  (periodic single-partition scan + one synchronous scan at startup; logs an error if a scan returns
-  more than one `BACKING_UP` row), `enableRedoLogging`/`disableRedoLogging` writing the row, and
-  `begin()` reading the daemon cache + stamping the begin time so the commit path can enforce the
-  transaction timeout. The enter/exit/cancel transitions are wired, and restore calls
-  `cancelBackupMode` to neutralize a resurrected window (see *Lifecycle*).
+- **Backup mode (partly built):** a `coordinator.backup` `TableMetadata` wired into
+  `ConsensusCommitAdmin`, a `BackupModeDaemon` (the cached poll), `enableRedoLogging` /
+  `disableRedoLogging` / `cancelBackupMode` writing the row, and `begin()` reading the daemon cache and
+  stamping the begin time. Enter/exit/cancel are wired; restore calls `cancelBackupMode` to neutralize a
+  resurrected window.
 
 ## Assumptions & preconditions
 
@@ -273,10 +301,16 @@ backends that cannot snapshot atomically.
 
 ### Coordinator-state cleanup suspended for the window
 
+**This is the one correctness guarantee CBRL must provide itself** — the atomic snapshot is the backup
+tool's job, and consistent-prefix and cross-DB atomicity are inherited (see *Inherited properties*). It
+is **required**, not deferrable, before any coordinator-state cleanup runs alongside CBRL.
+
 `finishTransaction` (and any Cluster coordinator-state cleanup) deletes a committed transaction's
 coordinator row *and its redo*. If that runs during the window, the committed write's redo is gone
 before the coordinator copy → the record is rolled back at restore and lost. Cleanup must be paused from
-window open until the coordinator snapshot completes.
+window open until the coordinator snapshot completes. (Today `finishTransaction` is an externally-invoked
+API with no automatic caller, so nothing deletes coordinator state in a normal run; the guard is what
+must exist before cleanup and CBRL are ever run together.)
 
 *Plan to enforce:*
 
@@ -311,6 +345,17 @@ letting recovery age-abort it.
 The write path stamps one `EntryGroup.backup_label` per commit, so only one `BACKING_UP` label may be
 open at a time (see the multi-window gap under *Known gaps*).
 
+### Inherited properties (not CBRL's to provide)
+
+Two correctness properties are listed so they aren't mistaken for CBRL mechanisms — CBRL only has to
+avoid breaking them:
+
+- **Consistent prefix** (the cut has no dangling read-dependency) is produced by the atomic coordinator
+  snapshot above.
+- **Cross-DB atomicity** (a multi-database transaction restores all-or-nothing) comes from Consensus
+  Commit's single commit record per transaction, given restore replays only `COMMITTED` redo and treats
+  a coordinator row's `EntryGroup`s as all-or-nothing.
+
 ## Known gaps
 
 Ranked roughly by severity — residual limitations to harden or accept for the PoC.
@@ -325,9 +370,9 @@ Ranked roughly by severity — residual limitations to harden or accept for the 
   — restore streams the coordinator scan straight into the spill files and replays one bucket at a
   time, so the redo is no longer heap-bound (raise `replay_buckets` to shrink each bucket). The one
   structure still held whole is the txId→commit-time map (built for *all* committed-with-redo rows,
-  before the label filter). It is small per entry (a tx id plus a `long`), so it is acceptable for now;
-  if a window ever grows large enough to matter, back it with an embedded file-based key-value store
-  rather than the heap. Restore is also still single-JVM (no sharding across processes).
+  before the label filter); it is small per entry (a tx id plus a `long`), so it is acceptable for the
+  PoC (see *Future improvements* for the large-window path). Restore is also still single-JVM (no
+  sharding across processes).
 - **Write-set size vs backend item limits.** The redo is an inline BLOB on the coordinator row
   (aggregated across children under group commit); on DynamoDB (400 KB) / Cosmos (2 MB) a large or
   batched transaction that commits normally can fail *only while a window is open*.
@@ -338,3 +383,11 @@ Ranked roughly by severity — residual limitations to harden or accept for the 
   coordinator still carries every window's `tx_write_set` blob on its committed rows (and the terminal
   flag rows), which normal coordinator cleanup should reclaim; putting the flag table in an excluded
   system namespace would also keep it out of the backup set.
+
+## Future improvements
+
+- **Spill the commit-time map to a file-based store.** The txId→commit-time map is the one restore
+  structure still held whole in the heap (see *Known gaps*). It is small per entry, so it is fine for
+  the PoC; for a very large or long-lived window it should be backed by an embedded file-based
+  key-value store rather than the heap — the same treatment the redo already gets with per-bucket spill
+  files.
