@@ -3661,11 +3661,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   /**
    * Whether the storage engine allows a concurrent write to a row that an open scan cursor is still
    * reading. The scan-path variants of the finalize/cleanup-race recovery tests synchronously write
-   * the scanned row from within lazy recovery while the storage scanner is still open. Engines that
-   * take shared/range locks for a scan under the highest isolation level (MySQL, MariaDB, SQL
-   * Server, Db2) block that write until the scan finishes, so the simulation self-deadlocks and
-   * times out. Returns {@code true} by default; the highest-isolation JDBC subclass overrides it to
-   * {@code false} for those engines. The Get variants are unaffected because a point Get releases
+   * the scanned row from within lazy recovery while the storage scanner is still open. On engines
+   * that hold a lock for an open scan, that write blocks until the scan finishes and the simulation
+   * self-deadlocks.
+   *
+   * <p>Returns {@code true} by default; subclasses override it to {@code false} for the engines
+   * that cannot support such a write. The Get variants are unaffected because a point Get releases
    * its connection immediately.
    */
   protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
@@ -3675,10 +3676,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   /**
    * Skips a scan-path recovery-simulation test on engines that cannot support a concurrent write to
    * a row an open scan is still reading. These tests synchronously write the scanned row from
-   * within lazy recovery while the storage scanner is still open, which self-deadlocks on
-   * pessimistic-lock engines under the highest isolation level. The Get path is unaffected because
-   * a point Get releases its connection immediately. See {@link
-   * #isConcurrentWriteToRowUnderOpenScanSupported()}.
+   * within lazy recovery while the storage scanner is still open, which self-deadlocks on engines
+   * that hold a lock for an open scan. The Get path is unaffected because a point Get releases its
+   * connection immediately. See {@link #isConcurrentWriteToRowUnderOpenScanSupported()}.
    */
   private void assumeConcurrentWriteToRowUnderOpenScanSupported(Selection s) {
     if (s instanceof Scan) {

@@ -72,8 +72,7 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
     // the scan still holds blocks until the scan finishes. The scan-path finalize/cleanup-race
     // recovery tests simulate exactly such a write from within lazy recovery while the scanner is
     // open, so they self-deadlock on these engines.
-    return !(JdbcTestUtils.isMysql(rdbEngine)
-        || JdbcTestUtils.isMariaDB(rdbEngine)
+    return !((JdbcTestUtils.isMysql(rdbEngine) && !JdbcTestUtils.isTidb(rdbEngine))
         || JdbcTestUtils.isSqlServer(rdbEngine)
         || JdbcTestUtils.isDb2(rdbEngine));
   }
