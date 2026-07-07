@@ -11,7 +11,8 @@ public abstract class AbstractDistributedTransactionProvider
     implements DistributedTransactionProvider {
 
   @Override
-  public DistributedTransactionManager createDistributedTransactionManager(DatabaseConfig config) {
+  public final DistributedTransactionManager createDistributedTransactionManager(
+      DatabaseConfig config) {
     DistributedTransactionManager transactionManager =
         createRawDistributedTransactionManager(config);
 
@@ -41,7 +42,7 @@ public abstract class AbstractDistributedTransactionProvider
 
   @Nullable
   @Override
-  public TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
+  public final TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
       DatabaseConfig config) {
     TwoPhaseCommitTransactionManager transactionManager =
         createRawTwoPhaseCommitTransactionManager(config);
@@ -63,11 +64,12 @@ public abstract class AbstractDistributedTransactionProvider
     return transactionManager;
   }
 
+  @Nullable
   protected abstract TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
       DatabaseConfig config);
 
   @Override
-  public TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+  public final TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
     TwoPhaseCommit.Coordinator coordinator = createRawTwoPhaseCommitCoordinator(config);
 
     if (config.isActiveTransactionManagementEnabled()) {
@@ -85,7 +87,7 @@ public abstract class AbstractDistributedTransactionProvider
       DatabaseConfig config);
 
   @Override
-  public TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+  public final TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
     TwoPhaseCommit.Participant participant = createRawTwoPhaseCommitParticipant(config);
 
     if (config.isAttributePropagationEnabled()) {
