@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit.cbrl;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +21,10 @@ final class RecordShuffler {
     return Math.floorMod(key.hashCode(), bucketCount);
   }
 
+  // Test-only: the restore path streams the coordinator scan straight into buckets and does not
+  // call
+  // this. Kept for the property tests, which build buckets from an in-memory op list.
+  @VisibleForTesting
   static List<RedoBucket> shuffle(Iterable<RedoOperation> ops, int bucketCount) {
     if (bucketCount < 1) {
       throw new IllegalArgumentException("bucketCount must be >= 1, was " + bucketCount);

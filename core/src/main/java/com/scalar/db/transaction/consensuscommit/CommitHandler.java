@@ -235,6 +235,16 @@ public class CommitHandler {
       return false;
     }
 
+    // CBRL: during a backup window, force two-phase commit. One-phase commit writes records
+    // directly
+    // with no Coordinator.State row, so it would log no tx_write_set redo and skip the commit-path
+    // timeout — an in-window one-phase commit would be silently uncaptured by restore. backupLabel
+    // is
+    // set at begin for a transaction that started under the flag.
+    if (context.backupLabel != null) {
+      return false;
+    }
+
     // If validation is required, we cannot one-phase commit the transaction
     if (context.isValidationRequired()) {
       return false;

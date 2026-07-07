@@ -1,11 +1,11 @@
 package com.scalar.db.transaction.consensuscommit.cbrl;
 
 /**
- * Thrown when CBRL chain replay detects a structural anomaly it cannot safely resolve — a fork: two
- * ops on one key sharing a {@code prevTxId}, which serializable commit cannot produce. Replay fails
- * loud rather than silently picking a branch. (A redo op that simply does not connect to the chain
- * is NOT an error — it is tolerated and skipped, as window-scoped logging makes such gaps
- * legitimate.)
+ * Wraps a failure surfaced from a CBRL restore-replay worker — a storage error, an I/O error, or
+ * another unexpected exception during {@code RecordApplier.apply} — so it propagates out of the
+ * worker pool as a single restore-replay failure. Chain replay does not treat a redo op that fails
+ * to connect to the chain as an error: window-scoped logging makes such below-base links
+ * legitimate, so the op is tolerated and skipped rather than raised here.
  */
 class CbrlReplayException extends RuntimeException {
   CbrlReplayException(String message) {

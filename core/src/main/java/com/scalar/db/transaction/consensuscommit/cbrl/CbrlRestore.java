@@ -199,10 +199,10 @@ public final class CbrlRestore implements AutoCloseable {
     // one bucket back at a time. The finally deletes the spill files whether restore succeeds or
     // throws (including the crash-injection tests, whose "crash" is a thrown exception).
     List<RedoBucket> buckets = new ArrayList<>(replayBuckets);
-    for (int i = 0; i < replayBuckets; i++) {
-      buckets.add(new RedoBucket());
-    }
     try {
+      for (int i = 0; i < replayBuckets; i++) {
+        buckets.add(new RedoBucket());
+      }
       try (Scanner scanner =
           storage.scan(
               Scan.newBuilder()
@@ -210,7 +210,10 @@ public final class CbrlRestore implements AutoCloseable {
                   .table(Coordinator.TABLE)
                   .all()
                   .build())) {
-        for (Result result : scanner.all()) {
+        // Iterate the scanner directly so rows stream one at a time (scanner.all() would buffer the
+        // whole coordinator table, every tx_write_set BLOB included, in the heap first — defeating
+        // the per-bucket spill).
+        for (Result result : scanner) {
           if (result.isNull(Attribute.STATE)
               || result.getInt(Attribute.STATE) != TransactionState.COMMITTED.get()
               || result.isNull(Attribute.WRITE_SET)) {
@@ -257,16 +260,17 @@ public final class CbrlRestore implements AutoCloseable {
   }
 
   /**
-   * After a successful restore, neutralize any {@code BACKING_UP} backup-flag row that came back
-   * with the restored coordinator namespace, transitioning it to {@code CANCELED} so the restored
-   * cluster's daemon does not re-enter backup mode (a phantom window that would re-log redo).
-   * {@code BACKED_UP} rows are already inert. Best effort: a failure here does not undo the
-   * completed restore, so it is logged rather than thrown.
+   * After a successful restore, neutralize the restored label's own {@code BACKING_UP} row if it
+   * came back with the restored coordinator namespace, transitioning it to {@code CANCELED} so the
+   * restored cluster's daemon does not re-enter this window (a phantom window that would re-log
+   * redo). Only the label being restored is touched — any other open window is left alone. {@code
+   * BACKED_UP} rows are already inert. Best effort: a failure here does not undo the completed
+   * restore, so it is logged rather than thrown.
    */
   private void cancelResurrectedBackupWindows() {
     try {
-      for (String label : coordinator.scanBackingUpLabels()) {
-        coordinator.cancelBackupMode(label, RESTORE_UPDATED_BY);
+      if (coordinator.scanBackingUpLabels().contains(backupLabel)) {
+        coordinator.cancelBackupMode(backupLabel, RESTORE_UPDATED_BY);
       }
     } catch (CoordinatorException e) {
       logger.warn(

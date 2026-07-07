@@ -939,13 +939,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public void close() {
+    // Stop and drain the backup-mode daemon before closing storage: its periodic scan uses storage,
+    // so tearing storage down first could race an in-flight scan.
+    if (backupModeDaemon != null) {
+      backupModeDaemon.close();
+    }
     storage.close();
     admin.close();
     parallelExecutor.close();
     recoveryExecutor.close();
-    if (backupModeDaemon != null) {
-      backupModeDaemon.close();
-    }
     if (isGroupCommitEnabled()) {
       assert groupCommitter != null;
       groupCommitter.close();

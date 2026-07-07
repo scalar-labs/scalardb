@@ -353,6 +353,10 @@ Ranked roughly by severity — residual limitations to harden or accept for the 
 - **Multi-window mis-attribution.** `enableRedoLogging` doesn't check for a *different* open label, so a
   second window can open; the write path then logs all redo under the first sorted label, silently
   corrupting the other backup. The `>1 BACKING_UP` log is after-the-fact detection, not prevention.
+- **Commit-mode coverage.** One-phase commit writes no coordinator row, so a transaction that began
+  under the flag is forced to two-phase during a window (otherwise its write would be logged nowhere);
+  a *pre-flag* one-phase transaction relies on the same drain as any other pre-flag commit. Two-phase
+  commit (`TwoPhaseConsensusCommit`) logs no redo at all and is out of CBRL's scope.
 - **Restore still holds the commit-time map in heap.** The redo now **spills to per-bucket temp files**
   — restore streams the coordinator scan straight into the spill files and replays one bucket at a
   time, so the redo is no longer heap-bound (raise `replay_buckets` to shrink each bucket). The one

@@ -46,6 +46,9 @@ final class BackupModeDaemon {
   private final AtomicReference<Cache> cache = new AtomicReference<>(Cache.empty());
   @Nullable private ScheduledFuture<?> scheduledTask;
 
+  // Bound on how long close() waits for an in-flight scan to drain before returning.
+  private static final long SHUTDOWN_TIMEOUT_SECONDS = 10;
+
   BackupModeDaemon(Coordinator coordinator, long checkIntervalMillis) {
     this(
         coordinator,
@@ -163,6 +166,15 @@ final class BackupModeDaemon {
       scheduledTask.cancel(true);
     }
     scheduler.shutdownNow();
+    try {
+      // An in-flight scan does not honor interruption (storage calls don't), so wait for it to
+      // finish before the caller tears storage down.
+      if (!scheduler.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        logger.warn("BackupModeDaemon scan did not terminate within the shutdown timeout.");
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   private static final class Cache {
