@@ -78,14 +78,14 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  *
  * <p><b>Logging is window-scoped</b>: a pre-window base is seeded with redo logging OFF (those
  * commits carry no redo), then the backup window opens (logging ON) and only in-window commits are
- * logged. The non-snapshot-consistent copy of the user tables is taken while the in-window workload
- * commits; the coordinator is backed up (self-contained, closed over the chain); at restore the
- * coordinator table is reloaded from that backup and the copy's in-flight records are recovered
- * against it (<b>C4: PREPARED-record recovery</b>: resolving records the copy caught mid-commit, in
- * the PREPARED state, to a clean committed-or-absent state — using the backed-up coordinator, never
- * the live one, which has diverged past the consistency point — before replay anchors on them); and
- * the committed redo is replayed <b>forward from each record's copied version</b> onto the copy via
- * the §5 core — not a full rebuild.
+ * logged. The non-snapshot-consistent backup of the user tables is taken while the in-window
+ * workload commits; the coordinator is backed up (self-contained, closed over the chain); at
+ * restore the coordinator table is reloaded from that backup and the copy's in-flight records are
+ * recovered against it (<b>C4: PREPARED-record recovery</b>: resolving records the backup caught
+ * mid-commit, in the PREPARED state, to a clean committed-or-absent state — using the backed-up
+ * coordinator, never the live one, which has diverged past the consistency point — before replay
+ * anchors on them); and the committed redo is replayed <b>forward from each record's copied
+ * version</b> onto the copy via the §5 core — not a full rebuild.
  *
  * <p>Two complementary workloads exercise the restore:
  *
@@ -100,7 +100,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  *       keys untouched in-window — that the copy is load-bearing.
  *   <li>{@link #restore_AfterConcurrentSameKeyTransfers_ShouldPreserveConservation()} — many
  *       workers run balance-preserving transfers on shared accounts, so the same record is written
- *       concurrently and conflicts. This is the same-key contention that leaves the copy with
+ *       concurrently and conflicts. This is the same-key contention that leaves the backup with
  *       in-flight PREPARED records (recovered forward) and conflict-aborted records (recovered
  *       back); the conservation invariant (total balance and per-account cross-table equality) must
  *       survive restore. The backup is taken WHILE the workload runs, proving it does not pause.
@@ -133,7 +133,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
   private static final String TEST_NAME = "cbrl";
   // One user namespace, restored in place: CbrlRestore routes each record by the namespace carried
-  // in its redo, so the workload writes here, the non-snapshot-consistent copy is captured here,
+  // in its redo, so the workload writes here, the non-snapshot-consistent backup is captured here,
   // and
   // restore rewrites it here. (The two-namespace src/restore split is gone — restore is in-place.)
   private static final String USER_NAMESPACE = "cbrl_data";
@@ -209,7 +209,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
           .addPartitionKey(C_PK)
           .build();
 
-  // Every user table, for the copy/recover/snapshot loops that operate on all of them uniformly.
+  // Every user table, for the backup/recover/snapshot loops that operate on all of them uniformly.
   private static final String[] USER_TABLES = {TABLE_A, TABLE_B, TABLE_C};
 
   private static final int RECORD_COUNT = 40;
@@ -217,7 +217,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   // restored from the copy alone (the load-bearing proof). The rest are split into one disjoint
   // range per worker in the disjoint-owner test.
   private static final int PRE_WINDOW_ONLY_KEYS = 4;
-  // Half-and-half: keys [0, SEEDED_KEYS) are seeded pre-window (so they exist in the copy);
+  // Half-and-half: keys [0, SEEDED_KEYS) are seeded pre-window (so they exist in the backup);
   // [SEEDED_KEYS, RECORD_COUNT) start ABSENT and are created in-window, so restore exercises both
   // the copied-base path AND replaying a redo INSERT onto a base the copy never had (a chain
   // root).
@@ -409,7 +409,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Artificial roll-forward case (plan §4.5): the copy caught a record in the PREPARED state, but
+   * Artificial roll-forward case (plan §4.5): the backup caught a record in the PREPARED state, but
    * its writer committed during the window. On restore the record must roll forward to COMMITTED
    * under the ORIGINAL writer's tx id, carry the writer's after-image, and — critically — keep its
    * ORIGINAL commit time (the coordinator's {@code tx_created_at}), not the recovery-time clock
@@ -429,7 +429,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     String txId = committed.getText(Attribute.ID);
     int version = committed.getInt(Attribute.VERSION);
     // Rewind the record to PREPARED, as if the scan caught T mid-commit, then capture it as the
-    // copy
+    // backup
     // (insert-style: no before-image — roll-forward ignores it anyway, so it need not be rebuilt).
     storage.put(preparedRecordForTableA(USER_NAMESPACE, key, committed, txId, version));
     Map<String, List<Put>> userTableBackup = captureUserTableBackup();
@@ -455,7 +455,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Artificial roll-forward case (plan §4.5), delete variant: the copy caught a record in the
+   * Artificial roll-forward case (plan §4.5), delete variant: the backup caught a record in the
    * DELETED state whose writer committed during the window. On restore the record must roll forward
    * to physically absent. A single record suffices.
    */
@@ -473,7 +473,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     Map<String, Coordinator.State> backup = backupCoordinator();
     String txId = deleteWriterFullId(backup);
     // Re-create the record as the DELETED tombstone T left mid-commit, then capture it as the
-    // copy
+    // backup
     // so the restore base carries the in-flight image.
     storage.put(deletedRecordForTableA(USER_NAMESPACE, key, txId));
     Map<String, List<Put>> userTableBackup = captureUserTableBackup();
@@ -493,7 +493,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   /**
    * Every ScalarDB column type survives restore end-to-end. The other tables exercise only
    * INT/BIGINT/TEXT/BOOLEAN/BLOB; this writes a record with all 11 types to {@code table_c}, takes
-   * the copy, and restores — driving the {@code cbrl} proto&lt;-&gt;io converters for every type
+   * the backup, and restores — driving the {@code cbrl} proto&lt;-&gt;io converters for every type
    * through the full pipeline (beyond the codec unit test).
    */
   @Test
@@ -542,7 +542,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     // Pre-window committed base with EVERY table_a column set (logging off).
     withRetry(tx -> tx.put(putForTableA(USER_NAMESPACE, key, baseToken)));
     manager.enableRedoLogging(BACKUP_LABEL); // Open the backup window.
-    // Capture the copy at the full-column base, before the in-window delete + re-insert.
+    // Capture the backup at the full-column base, before the in-window delete + re-insert.
     Map<String, List<Put>> userTableBackup = captureUserTableBackup();
     // In-window: delete, then re-insert with ONLY the token column, so the chain nets to a present
     // record that drops col_int/col_text/col_bool/col_blob — columns the copy base still holds.
@@ -638,7 +638,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startDisjointWorkload(stop, present, history);
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_WARMUP);
-    // Live, non-snapshot-consistent copy; catches in-flight records to recover at restore.
+    // Live, non-snapshot-consistent backup; catches in-flight records to recover at restore.
     Map<String, List<Put>> userTableBackup = captureUserTableBackup();
     Uninterruptibles.sleepUninterruptibly(WORKLOAD_AFTER_USER_BACKUP);
 
@@ -992,7 +992,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
    * Concurrent same-key consistency check, in the conservation-invariant (bank-transfer) style.
    * Many workers run balance-preserving transfers between random accounts, so the same accounts are
    * written concurrently and conflict — the contention disjoint-owner avoids, and the contention
-   * that leaves the copy with in-flight PREPARED records (recovered forward) and conflict-aborted
+   * that leaves the backup with in-flight PREPARED records (recovered forward) and conflict-aborted
    * records (recovered back). Each account's balance lives in both tables and the total is
    * invariant, so a transactionally-consistent restored image must conserve it: a torn transfer
    * (debit without credit, or one table updated and not the other) breaks the sum or the
@@ -1058,7 +1058,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     // workloadStart);
     // isNotEmpty rejects a vacuous pass. (committed_at can come from either the writer's
     // coordinator
-    // tx_created_at or the copy record's own tx_committed_at, so we bound it rather than match
+    // tx_created_at or the backup record's own tx_committed_at, so we bound it rather than match
     // exact.)
     assertThat(restoredCommitTimes())
         .as("restored records keep their original commit time, not the restore-time clock")
@@ -1114,7 +1114,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     AtomicBoolean stop = new AtomicBoolean(false);
     List<Future<?>> workload = startTransferWorkload(stop);
     Uninterruptibles.sleepUninterruptibly(CRASH_TEST_BACKUP_WINDOW);
-    // The non-snapshot-consistent copy, captured so each crash iteration restarts from the same
+    // The non-snapshot-consistent backup, captured so each crash iteration restarts from the same
     // base. The wide window gives the restore enough work that a time-proportional crash reliably
     // lands mid-flight (see CRASH_TEST_BACKUP_WINDOW).
     Map<String, List<Put>> userTableBackup = captureUserTableBackup();
@@ -1310,7 +1310,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   @Test
   void restore_CrashInjectedAtNamedSites_ShouldConvergeOnReRun() throws Exception {
     // Arrange: install the crash rules on the running JVM's Byteman agent, run the conservation
-    // workload, capture a non-snapshot-consistent copy + restored coordinator, and build a
+    // workload, capture a non-snapshot-consistent backup + restored coordinator, and build a
     // single-worker restore so the crash counter is race-free (crash fires on exactly the k-th
     // call).
     Submit submit = new Submit();
@@ -1547,11 +1547,11 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Captures a raw, storage-level copy of the user tables (all columns, with transaction metadata)
-   * — the non-snapshot-consistent copy of the user-table data. Taken WHILE the workload runs, so it
-   * catches in-flight (PREPARED/DELETED) records and a different instant per row. Held in memory
-   * and re-installed by {@link #restoreUserTableBackup} before restore, modelling the user-table
-   * physical backup that is restored ahead of CBRL.
+   * Captures a raw, storage-level backup of the user tables (all columns, with transaction
+   * metadata) — the non-snapshot-consistent backup of the user-table data. Taken WHILE the workload
+   * runs, so it catches in-flight (PREPARED/DELETED) records and a different instant per row. Held
+   * in memory and re-installed by {@link #restoreUserTableBackup} before restore, modelling the
+   * user-table physical backup that is restored ahead of CBRL.
    */
   private Map<String, List<Put>> captureUserTableBackup() throws Exception {
     Map<String, List<Put>> userTableBackup = new LinkedHashMap<>();
@@ -1580,9 +1580,9 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Installs the captured copy as the restore base, in place: truncate each user table, then
-   * rewrite the copy verbatim. This models the physical restore of the user-table backup
-   * (discarding the live post-copy state) before CBRL runs, and resets the base between crash
+   * Installs the captured backup as the restore base, in place: truncate each user table, then
+   * rewrite the backup verbatim. This models the physical restore of the user-table backup
+   * (discarding the live post-backup state) before CBRL runs, and resets the base between crash
    * iterations.
    */
   private void restoreUserTableBackup(Map<String, List<Put>> userTableBackup) throws Exception {
@@ -1649,7 +1649,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
 
   /**
    * Test arrange: simulate the physical restore of the coordinator table into the target — every
-   * backed-up transaction COMMITTED, and every in-flight copy record whose writer is absent from
+   * backed-up transaction COMMITTED, and every in-flight backup record whose writer is absent from
    * the backup ABORTED. In production this is the backup tool restoring the coordinator table like
    * any other; {@link CbrlRestore} itself never writes or truncates the coordinator.
    */
@@ -1663,7 +1663,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
     for (Coordinator.State state : backup.values()) {
       storage.put(coordinatorRowPut(state));
     }
-    // Compare copy records' tx_id against the FULL committed ids (a group-commit child record
+    // Compare backup records' tx_id against the FULL committed ids (a group-commit child record
     // carries its parent+child id, not the parent row key), so committed children are not
     // misclassified as in-doubt and given a spurious ABORTED state.
     for (String txId : inDoubtBackupTxIds(committedFullIdsIn(backup))) {
@@ -1688,7 +1688,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * An ABORTED coordinator row for an in-doubt copy record's writer (created_at must be non-zero).
+   * An ABORTED coordinator row for an in-doubt backup record's writer (created_at must be
+   * non-zero).
    */
   private Put abortedCoordinatorRowPut(String txId) {
     return Put.newBuilder()
@@ -1701,8 +1702,8 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * Transaction ids of copy records still in an in-flight state (PREPARED/DELETED) whose
-   * transaction is not in the backup — in flight at copy time, never committed by the consistency
+   * Transaction ids of backup records still in an in-flight state (PREPARED/DELETED) whose
+   * transaction is not in the backup — in flight at backup time, never committed by the consistency
    * point.
    */
   private Set<String> inDoubtBackupTxIds(Set<String> committedInBackup) throws Exception {
@@ -2000,7 +2001,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * A raw PREPARED copy record carrying the writer's after-image (insert-style: no before-image),
+   * A raw PREPARED backup record carrying the writer's after-image (insert-style: no before-image),
    * fabricated to simulate the raw scan catching a record mid-commit. Mirrors what {@code
    * PrepareMutationComposer} writes for an initial record: user columns + {@code tx_id}, {@code
    * tx_state = PREPARED}, {@code tx_prepared_at}, {@code tx_version}.
@@ -2020,7 +2021,7 @@ public abstract class CbrlBackupRestoreIntegrationTest {
   }
 
   /**
-   * A raw DELETED copy record (a tombstone: tx metadata only, no user columns), fabricated like
+   * A raw DELETED backup record (a tombstone: tx metadata only, no user columns), fabricated like
    * {@link #preparedRecordForTableA}. The version is arbitrary — delete roll-forward keys off
    * {@code tx_state = DELETED} and {@code tx_id} only.
    */
