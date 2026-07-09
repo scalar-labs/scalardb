@@ -18,6 +18,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
     extends ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestBase {
 
   private JdbcAdminTestUtils jdbcAdminTestUtils;
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
@@ -25,7 +26,7 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
 
     // Set the isolation level for consistency reads for virtual tables
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    RdbEngineStrategy rdbEngine = RdbEngineFactory.create(config);
+    rdbEngine = RdbEngineFactory.create(config);
     if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
       jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     }
@@ -36,6 +37,16 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
             .name());
 
     return properties;
+  }
+
+  @Override
+  protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
+    // SQL Server and Db2 use lock-based concurrency even at READ COMMITTED, so an open scan keeps a
+    // shared lock that blocks the scan-path recovery simulation's concurrent write to a scanned row
+    // (indefinitely, as their lock wait is unbounded). MySQL and MariaDB are MVCC at this class's
+    // isolation and do not block; they only block under SERIALIZABLE (see the highest-isolation
+    // subclass).
+    return !(JdbcTestUtils.isSqlServer(rdbEngine) || JdbcTestUtils.isDb2(rdbEngine));
   }
 
   @AfterAll
