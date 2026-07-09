@@ -33,6 +33,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -303,7 +304,10 @@ class ConsensusCommitParticipantTest {
   @Test
   void prepareRecords_OnUnknownTransactionId_ShouldThrowTransactionNotFoundException() {
     // An absent local context (e.g., expired) surfaces as not-found.
-    assertThatThrownBy(() -> participant.prepareRecords("unknown-tx", 1234L))
+    assertThatThrownBy(
+            () ->
+                participant.prepareRecords(
+                    "unknown-tx", 1234L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
@@ -331,7 +335,10 @@ class ConsensusCommitParticipantTest {
     participant.getScanner(ANY_TX_ID, scan);
 
     // prepareRecords must reject a transaction that still has an open scanner ...
-    assertThatThrownBy(() -> participant.prepareRecords(ANY_TX_ID, 1000L))
+    assertThatThrownBy(
+            () ->
+                participant.prepareRecords(
+                    ANY_TX_ID, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY))
         .isInstanceOf(IllegalStateException.class);
     // ... and the record-level prepare is never driven.
     verify(commit, never()).prepareRecords(any(TransactionContext.class), anyLong());
@@ -460,7 +467,8 @@ class ConsensusCommitParticipantTest {
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
 
-    TwoPhaseCommit.PreparationResult result = participant.prepareRecords(ANY_TX_ID, 1000L);
+    TwoPhaseCommit.PreparationResult result =
+        participant.prepareRecords(ANY_TX_ID, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
     assertThat(result.getWriteSet()).isEmpty();
     assertThat(result.isValidationRequired()).isFalse();
     // No writes -> commit not required; parity with !getWriteSet().isEmpty().
@@ -487,7 +495,8 @@ class ConsensusCommitParticipantTest {
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
 
-    TwoPhaseCommit.PreparationResult result = participant.prepareRecords(ANY_TX_ID, 1000L);
+    TwoPhaseCommit.PreparationResult result =
+        participant.prepareRecords(ANY_TX_ID, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
     assertThat(result.getWriteSet()).isEmpty();
     assertThat(result.isValidationRequired()).isTrue();
     // No writes -> commit not required, even though validation is.
@@ -507,7 +516,7 @@ class ConsensusCommitParticipantTest {
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
-    participant.prepareRecords(ANY_TX_ID, 1000L);
+    participant.prepareRecords(ANY_TX_ID, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
     participant.validateRecords(ANY_TX_ID);
 
@@ -531,7 +540,7 @@ class ConsensusCommitParticipantTest {
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
-    participant.prepareRecords(ANY_TX_ID, 1000L);
+    participant.prepareRecords(ANY_TX_ID, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
     doThrow(new ValidationConflictException("conflict", ANY_TX_ID))
         .when(commit)
@@ -550,6 +559,72 @@ class ConsensusCommitParticipantTest {
   @Test
   void prepareRecords_WithWriteAndDelete_ShouldReturnEntriesStampedWithParticipantId()
       throws Exception {
+    TwoPhaseCommit.PreparationResult result =
+        prepareRecordsWithWriteAndDelete(TwoPhaseCommit.WriteSetDetailLevel.FULL);
+    // Has writes -> commit required; parity with !getWriteSet().isEmpty().
+    assertThat(result.isCommitRequired()).isTrue();
+    List<TwoPhaseCommit.WriteSetEntry> entries = result.getWriteSet();
+    assertThat(entries).hasSize(2);
+    assertThat(participant.getId()).isEqualTo(ANY_PARTICIPANT_ID);
+    assertThat(entries)
+        .extracting(TwoPhaseCommit.WriteSetEntry::getType)
+        .containsExactlyInAnyOrder(
+            TwoPhaseCommit.WriteSetEntry.Type.WRITE, TwoPhaseCommit.WriteSetEntry.Type.DELETE);
+    assertThat(entries)
+        .allSatisfy(
+            e -> {
+              assertThat(e.getNamespaceName()).isEqualTo(ANY_NAMESPACE);
+              assertThat(e.getTableName()).isEqualTo(ANY_TABLE);
+            });
+  }
+
+  @Test
+  void prepareRecords_Full_ShouldCarryUserColumnsAndExcludeTransactionMetaColumns()
+      throws Exception {
+    TwoPhaseCommit.PreparationResult result =
+        prepareRecordsWithWriteAndDelete(TwoPhaseCommit.WriteSetDetailLevel.FULL);
+    List<TwoPhaseCommit.WriteSetEntry> entries = result.getWriteSet();
+    assertThat(entries).hasSize(2);
+    for (TwoPhaseCommit.WriteSetEntry entry : entries) {
+      if (entry.getType() == TwoPhaseCommit.WriteSetEntry.Type.WRITE) {
+        // The injected Put carries the user column "v" plus the ConsensusCommit-internal "tx_id";
+        // only the user column may appear in the write set.
+        assertThat(entry.getColumns()).extracting(Column::getName).containsExactly("v");
+      } else {
+        // DELETE entries never carry columns.
+        assertThat(entry.getColumns()).isEmpty();
+      }
+    }
+  }
+
+  @Test
+  void prepareRecords_KeysOnly_ShouldReturnSameEntriesWithoutColumns() throws Exception {
+    TwoPhaseCommit.PreparationResult result =
+        prepareRecordsWithWriteAndDelete(TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
+    // KEYS_ONLY never changes which entries are returned — only their column payload: same entry
+    // count and keys as FULL, but every getColumns() is empty (the must-not-carry-columns
+    // contract).
+    List<TwoPhaseCommit.WriteSetEntry> entries = result.getWriteSet();
+    assertThat(entries).hasSize(2);
+    assertThat(entries)
+        .extracting(TwoPhaseCommit.WriteSetEntry::getType)
+        .containsExactlyInAnyOrder(
+            TwoPhaseCommit.WriteSetEntry.Type.WRITE, TwoPhaseCommit.WriteSetEntry.Type.DELETE);
+    assertThat(entries)
+        .allSatisfy(
+            e -> {
+              assertThat(e.getPartitionKey().getColumns()).isNotEmpty();
+              assertThat(e.getColumns()).isEmpty();
+            });
+    // Skipping the column pass must also skip the table-metadata lookup (needed only to filter
+    // transaction-meta columns), so a KEYS_ONLY prepare cannot fail on metadata retrieval.
+    verify(tableMetadataManager, never()).getTransactionTableMetadata(any());
+  }
+
+  // Populates the snapshot with one write (user column "v" plus the transaction-meta column
+  // "tx_id") and one delete, then drives prepareRecords at the given write-set detail.
+  private TwoPhaseCommit.PreparationResult prepareRecordsWithWriteAndDelete(
+      TwoPhaseCommit.WriteSetDetailLevel detailLevel) throws Exception {
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
 
     Insert insert =
@@ -573,9 +648,10 @@ class ConsensusCommitParticipantTest {
 
     // CrudHandler is mocked, so the snapshot stays empty unless we populate it directly. Reach
     // into the per-tx Snapshot and inject a write + delete, mirroring what the real CrudHandler
-    // would do for the insert + delete above.
+    // would do for the insert + delete above. The write additionally carries the "tx_id"
+    // transaction-meta column so the FULL meta-column filtering is observable.
     TransactionContext context = getContext(ANY_TX_ID);
-    Put put = buildPutFromInsert(insert);
+    Put put = Put.newBuilder(buildPutFromInsert(insert)).textValue("tx_id", "meta").build();
     context.snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     context.snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
 
@@ -583,22 +659,7 @@ class ConsensusCommitParticipantTest {
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
 
-    TwoPhaseCommit.PreparationResult result = participant.prepareRecords(ANY_TX_ID, 2000L);
-    // Has writes -> commit required; parity with !getWriteSet().isEmpty().
-    assertThat(result.isCommitRequired()).isTrue();
-    List<TwoPhaseCommit.WriteSetEntry> entries = result.getWriteSet();
-    assertThat(entries).hasSize(2);
-    assertThat(participant.getId()).isEqualTo(ANY_PARTICIPANT_ID);
-    assertThat(entries)
-        .extracting(TwoPhaseCommit.WriteSetEntry::getType)
-        .containsExactlyInAnyOrder(
-            TwoPhaseCommit.WriteSetEntry.Type.WRITE, TwoPhaseCommit.WriteSetEntry.Type.DELETE);
-    assertThat(entries)
-        .allSatisfy(
-            e -> {
-              assertThat(e.getNamespaceName()).isEqualTo(ANY_NAMESPACE);
-              assertThat(e.getTableName()).isEqualTo(ANY_TABLE);
-            });
+    return participant.prepareRecords(ANY_TX_ID, 2000L, detailLevel);
   }
 
   @Test
@@ -606,7 +667,10 @@ class ConsensusCommitParticipantTest {
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
     prepare(ANY_TX_ID);
     // A second prepare is out of phase (no idempotency under the strict state machine).
-    assertThatThrownBy(() -> participant.prepareRecords(ANY_TX_ID, 2000L))
+    assertThatThrownBy(
+            () ->
+                participant.prepareRecords(
+                    ANY_TX_ID, 2000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY))
         .isInstanceOf(IllegalStateException.class);
   }
 
@@ -634,7 +698,10 @@ class ConsensusCommitParticipantTest {
         .when(commit)
         .prepareRecords(any(TransactionContext.class), anyLong());
 
-    assertThatThrownBy(() -> participant.prepareRecords(ANY_TX_ID, 3000L))
+    assertThatThrownBy(
+            () ->
+                participant.prepareRecords(
+                    ANY_TX_ID, 3000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY))
         .isInstanceOf(PreparationConflictException.class);
 
     // Context kept; caller may still call rollbackRecords.
@@ -651,7 +718,10 @@ class ConsensusCommitParticipantTest {
         .when(crud)
         .readIfImplicitPreReadEnabled(any(TransactionContext.class));
 
-    assertThatThrownBy(() -> participant.prepareRecords(ANY_TX_ID, 1000L))
+    assertThatThrownBy(
+            () ->
+                participant.prepareRecords(
+                    ANY_TX_ID, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY))
         .isInstanceOf(PreparationConflictException.class);
     verify(commit, never()).prepareRecords(any(TransactionContext.class), anyLong());
   }
@@ -666,7 +736,10 @@ class ConsensusCommitParticipantTest {
         .when(crud)
         .readIfImplicitPreReadEnabled(any(TransactionContext.class));
 
-    assertThatThrownBy(() -> participant.prepareRecords(ANY_TX_ID, 1000L))
+    assertThatThrownBy(
+            () ->
+                participant.prepareRecords(
+                    ANY_TX_ID, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY))
         .isInstanceOf(PreparationException.class)
         .isNotInstanceOf(PreparationConflictException.class);
     verify(commit, never()).prepareRecords(any(TransactionContext.class), anyLong());
@@ -707,7 +780,10 @@ class ConsensusCommitParticipantTest {
     doThrow(new PreparationConflictException("boom", ANY_TX_ID))
         .when(commit)
         .prepareRecords(any(TransactionContext.class), anyLong());
-    assertThatThrownBy(() -> participant.prepareRecords(ANY_TX_ID, 3000L))
+    assertThatThrownBy(
+            () ->
+                participant.prepareRecords(
+                    ANY_TX_ID, 3000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY))
         .isInstanceOf(PreparationConflictException.class);
 
     participant.rollbackRecords(ANY_TX_ID);
@@ -872,7 +948,7 @@ class ConsensusCommitParticipantTest {
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
-    participant.prepareRecords(txId, 1000L);
+    participant.prepareRecords(txId, 1000L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
   }
 
   // Drives the transaction to the VALIDATED state — the normal path the Coordinator drives before

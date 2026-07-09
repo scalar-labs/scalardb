@@ -77,8 +77,8 @@ class DecoratedTwoPhaseCommitParticipantTest {
 
   @Test
   void prepareRecords_ShouldDelegate() throws Exception {
-    participant.prepareRecords(TX, 100L);
-    verify(delegate).prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
+    verify(delegate).prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
   }
 
   @Test

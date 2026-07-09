@@ -483,6 +483,14 @@ public interface TwoPhaseCommit {
      * <p>Invoked by {@link Coordinator#commit}, which aggregates the returned write sets across all
      * participants.
      *
+     * <p>{@code detailLevel} controls only how much of each record the returned {@link
+     * WriteSetEntry}s carry (see {@link WriteSetDetailLevel}): under {@link
+     * WriteSetDetailLevel#KEYS_ONLY} every entry's {@link WriteSetEntry#getColumns()} must be
+     * empty, while under {@link WriteSetDetailLevel#FULL} every {@link WriteSetEntry.Type#WRITE}
+     * entry carries the non-key columns it writes. It never changes which entries are returned: the
+     * entries and their keys are identical at either level, so an empty write set means a
+     * write-less participant regardless of the requested detail.
+     *
      * <p>Throws {@link IllegalStateException} if any scanner opened on this transaction via {@link
      * #getScanner} is still open; the application must close such scanners before the transaction
      * proceeds to commit.
@@ -490,6 +498,7 @@ public interface TwoPhaseCommit {
      * @param transactionId the canonical transaction ID
      * @param preparedAt the timestamp written as the {@code prepared_at} column on the PREPARED
      *     records
+     * @param detailLevel how much detail the returned {@link WriteSetEntry}s must carry
      * @return the result of the prepare phase, including the write set produced by this participant
      *     (see {@link PreparationResult})
      * @throws PreparationConflictException if the transaction fails to prepare due to transient
@@ -502,7 +511,8 @@ public interface TwoPhaseCommit {
      *     programming error); being unchecked, it propagates out of {@link Coordinator#commit}
      *     rather than being reported as a commit-level exception
      */
-    PreparationResult prepareRecords(String transactionId, long preparedAt)
+    PreparationResult prepareRecords(
+        String transactionId, long preparedAt, WriteSetDetailLevel detailLevel)
         throws PreparationConflictException, PreparationException, TransactionNotFoundException;
 
     /**
@@ -693,12 +703,47 @@ public interface TwoPhaseCommit {
     /**
      * Returns the non-key columns written by this entry.
      *
-     * <p>Always empty when {@link #getType} is {@link Type#DELETE}. May also be empty for {@link
-     * Type#WRITE} when the implementation chose to persist only the keys (for example, for the
-     * active-recovery use case).
+     * <p>Always empty when {@link #getType} is {@link Type#DELETE}, and always empty — even for
+     * {@link Type#WRITE} — when the Coordinator requested {@link WriteSetDetailLevel#KEYS_ONLY}
+     * from {@link Participant#prepareRecords}.
      *
      * @return the columns
      */
     List<Column<?>> getColumns();
+  }
+
+  /**
+   * How much of the record content the {@link WriteSetEntry}s returned by {@link
+   * Participant#prepareRecords} must carry, as requested by the Coordinator.
+   *
+   * <p>The detail level never affects which entries a write set contains — the entries and their
+   * primary keys are identical at every level; it only controls whether {@link
+   * WriteSetEntry#getColumns()} is populated. {@link WriteSetEntry.Type#DELETE} entries never carry
+   * columns at any level.
+   *
+   * <p>This enum is a single ordered axis of record-content detail, and {@link #FULL} is its
+   * permanent ceiling. Additions that go beyond the record content of a write — transaction
+   * metadata, before images, and the like — are not higher levels; they belong on a separate axis
+   * (for example, dedicated {@link WriteSetEntry} fields gated by their own flag), so that {@code
+   * FULL} keeps meaning exactly "the whole record content".
+   */
+  enum WriteSetDetailLevel {
+    /**
+     * Every entry carries only its primary keys; {@link WriteSetEntry#getColumns()} must be empty.
+     * Sufficient when the Coordinator does not persist column values (for example, when the write
+     * set is recorded for the active-recovery use case), and keeps the prepare result minimal.
+     */
+    KEYS_ONLY,
+
+    /**
+     * Every {@link WriteSetEntry.Type#WRITE} entry additionally carries the non-key columns it
+     * writes — the full user-visible record content of the write. Implementation-internal columns
+     * (for example, transaction-metadata columns) are not part of the record content at this
+     * interface and are never included. Note that this is the write's own content, not a full row
+     * image: a partial update carries exactly the columns it sets, not the rest of the row.
+     * Intended for use cases that persist the record content (for example, backup/changelog
+     * capture).
+     */
+    FULL
   }
 }
