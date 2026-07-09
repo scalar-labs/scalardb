@@ -214,7 +214,7 @@ jdbc:
   - label: sqlite_3
     display_name: SQLite 3
     setup: sudo apt-get install -y sqlite3
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000&journal_mode=WAL"
 
   - label: yugabytedb
     display_name: YugabyteDB 2025.2
