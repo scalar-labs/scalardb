@@ -7,6 +7,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.api.TwoPhaseCommit.Participant;
 import com.scalar.db.api.TwoPhaseCommit.PreparationResult;
+import com.scalar.db.api.TwoPhaseCommit.WriteSetDetailLevel;
 import com.scalar.db.api.TwoPhaseCommit.WriteSetEntry;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -176,7 +177,9 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         long preparedAt = System.currentTimeMillis();
         try {
           for (Participant participant : participants) {
-            PreparationResult result = participant.prepareRecords(transactionId, preparedAt);
+            PreparationResult result =
+                participant.prepareRecords(
+                    transactionId, preparedAt, WriteSetDetailLevel.KEYS_ONLY);
             List<WriteSetEntry> entries = result.getWriteSet();
             // hasWrites tracks whether any participant produced PREPARED records; it gates writing
             // the COMMITTED Coordinator state row.
