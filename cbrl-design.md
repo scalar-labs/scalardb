@@ -1,11 +1,12 @@
 # CBRL — Design: backup and restore
 
-Status: **PoC.** The restore/replay engine and the *enter/exit* half of the embedded-Core backup-mode
-machinery are implemented and exercised end-to-end by a containerized demo (single-Postgres +
-single-MySQL). The backup-flag lifecycle (enter/exit/cancel) is implemented; several production
-preconditions below are **designed but not yet enforced** — see *Assumptions & preconditions* and
-*Known gaps* before relying on this beyond the demo. This is an overall design; it describes the
-concept, not every implementation detail.
+Status: **PoC.** The restore/replay engine and the open/close/cancel embedded-Core backup-mode
+machinery are implemented, covered by unit and integration tests, and exercised end-to-end by a
+containerized demo (single-Postgres + single-MySQL). The flag storage is a single-record `backup`
+table plus an append-only `backup_histories` table (a revision of the earlier one-row-per-label
+table). Several production preconditions below are **designed but not yet enforced**; see *Assumptions
+& preconditions* and *Known gaps* before relying on this beyond the demo. This is an overall design;
+it describes the concept, not every implementation detail.
 
 A plain physical backup of ScalarDB's databases, taken online while transactions keep running, is
 **not** transactionally consistent: a record may be caught mid-commit, stale, or missing, and
@@ -70,51 +71,80 @@ coordinator-DB table that each process reads on a periodic, cached poll. (In Sca
 can be pushed directly, like pause, so none of this machinery is needed — the concern below is
 specifically embedded Core.)
 
-**The flag table `<coordinator-ns>.backup`.** One row per backup. The **partition key is a fixed
-constant** so every row lives in one partition, and the **`label` is the clustering key** — so the
-daemon lists all backups with an ordinary **single-partition scan** (not a cross-partition one),
-returned sorted by label. Created alongside `coordinator.state`; timestamps are `BIGINT` epoch-millis.
+**The flag tables.** Two tables in `<coordinator-ns>`, created alongside `coordinator.state`;
+timestamps are `BIGINT` epoch-millis.
+
+`backup` is the **live flag: at most one row, present only while a window is open.** The partition key
+is a fixed constant and there is **no clustering key**, so the whole table is a single row keyed by
+that constant, and the row's presence *is* the open window. This makes single-window a **structural
+invariant** rather than a convention (opening is `putIfNotExists` on that one row, so a second
+overlapping open necessarily fails), and the daemon reads it with a **point `get`**, not a scan.
 
 | column | type | notes |
 |---|---|---|
-| `id` | TEXT (PK) | fixed constant (e.g. `"backup"`) — co-locates every row in one partition |
-| `label` | TEXT (CK) | the backup label, usually its timestamp; also the redo's `EntryGroup.backup_label` and the `CbrlRestore` argument |
-| `state` | TEXT | lifecycle (below); a process logs redo **iff** `state = BACKING_UP` |
-| `created_at`, `updated_at` | BIGINT | backup started / last transition |
+| `id` | TEXT (PK) | fixed constant (e.g. `"backup"`) — the single-row key |
+| `label` | TEXT | the backup label, usually its timestamp; also the redo's `EntryGroup.backup_label` and the `CbrlRestore` argument |
+| `created_at` | BIGINT | when the window opened |
 | `updated_by` | TEXT | operator id (observability) |
 
-**Lifecycle.** The state machine is below: `enterBackupMode` (`→ BACKING_UP`), `exitBackupMode`
-(`BACKING_UP → BACKED_UP`), and `cancelBackupMode` (`BACKING_UP → CANCELED`) are all implemented, and
-`CbrlRestore` calls `cancelBackupMode` at the end of a restore to neutralize any resurrected
-`BACKING_UP` row (see *Redo bloat carried forward on restore* under *Known gaps*). Each transition is a
-`putIf` on the current `state`; re-opening an already-`BACKING_UP` label is idempotent success, and
-transitioning a label that is not in the required state is rejected.
+There is no `state` column: the row exists **iff** the window is open (what `state = BACKING_UP` used
+to mean), so its presence carries that.
+
+`backup_histories` is an **append-only log of past windows**, observability only and never on any
+correctness path. One row per window, keyed by its (unique) label:
+
+| column | type | notes |
+|---|---|---|
+| `label` | TEXT (PK) | the window's label — its natural unique key, so the append is idempotent and no two windows collide |
+| `created_at` | BIGINT | the window's open time |
+| `state` | TEXT | terminal outcome: `BACKED_UP` (normal close) or `CANCELED` (neutralized, including by restore) |
+| `closed_at` | BIGINT | when the window closed |
+| `updated_by` | TEXT | operator id |
+
+**Lifecycle.** Three transitions on `Coordinator`, each pure Storage API (no transaction, so no
+isolation level to reason about):
+
+- **open** — `enterBackupMode(label)` (public `enableRedoLogging(label)`): `putIfNotExists` the
+  `backup` row. A row already present makes the conditional put fail and the open is rejected; this is
+  what enforces single-window.
+- **close** — `exitBackupMode(label)` (public `disableRedoLogging()`): append a `BACKED_UP` history
+  row (idempotent, keyed by the label), then delete the `backup` row **conditioned on its `label`** so a
+  wrong label cannot close another window. The history append is best-effort: a failed append is
+  logged and the close still proceeds (observability must never wedge the window open), and a crash
+  between the two steps leaves the flag present, which is safe (a retry re-appends as a no-op, then
+  deletes).
+- **cancel** — `cancelBackupMode(label)`: like close but records `CANCELED`. `CbrlRestore` calls it to
+  neutralize a `backup` row that returned with a restored coordinator namespace, so the restored
+  cluster does not re-enter backup mode; on that path it is simply `DeleteIfExists` on the row.
+
+"No window open" is therefore just the `backup` row being **absent**.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> BACKING_UP: enableRedoLogging(label)
-    BACKING_UP --> BACKED_UP: disableRedoLogging()
-    BACKING_UP --> CANCELED: cancelBackupMode() (also used by restore)
+    [*] --> open: enableRedoLogging(label), putIfNotExists
+    open --> [*]: disableRedoLogging(), append BACKED_UP history then delete
+    open --> [*]: cancelBackupMode(), append CANCELED history then delete (also used by restore)
 ```
 
-**Protocol.** Each app process runs a daemon that polls the flag table every `check-interval` and
-caches the set of `BACKING_UP` labels; `begin()` reads the cache (not the DB) to decide logging.
+**Protocol.** Each app process runs a daemon that polls the `backup` table every `check-interval` with
+a point `get` and caches the open label if any; `begin()` reads the cache (not the DB) to decide
+logging.
 
 ```mermaid
 sequenceDiagram
     participant Op as Operator
     participant T as backup table
     participant P as App process
-    Op->>T: putIfNotExists row for label, state BACKING_UP
+    Op->>T: putIfNotExists the single row (label); a second open is rejected
     loop every check-interval, 5s
-        P->>T: scan the partition
-        T-->>P: BACKING_UP rows, cache the labels and log redo
+        P->>T: get the single row
+        T-->>P: present, cache the label and log redo; absent, stop
     end
     Note over Op,P: cache wait spans interval + staleness-bound + tx-timeout + skew
     Note over Op,P: every process sees the flag and pre-flag txns drain
     Note over Op: consistency point valid, snapshot the coordinator
-    Op->>T: putIf state BACKING_UP to BACKED_UP
-    P->>T: next scan, label not BACKING_UP, stop logging
+    Op->>T: append BACKED_UP history, delete the row
+    P->>T: next get, row absent, stop logging
 ```
 
 **Keeping the backup complete.** Because the poll is periodic, three mechanisms *aim* to ensure no
@@ -329,8 +359,9 @@ letting recovery age-abort it.
 
 ### Single active window
 
-The write path stamps one `EntryGroup.backup_label` per commit, so only one `BACKING_UP` label may be
-open at a time (see the multi-window gap under *Known gaps*).
+The write path stamps one `EntryGroup.backup_label` per commit, and the single-record `backup` table
+(a fixed-key row opened with `putIfNotExists`) makes at most one window openable at a time: a second
+overlapping open fails structurally, so there is no second label to mis-attribute redo to.
 
 ### Inherited properties (not CBRL's to provide)
 
@@ -350,9 +381,6 @@ Ranked roughly by severity — residual limitations to harden or accept for the 
 - **Completeness is undetectable.** Replay cannot distinguish a dropped mid-chain op from a
   legitimately-below-base op, so any capture hole yields a wrong-but-plausible record, never an error.
   The preconditions above exist to prevent capture holes; there is no post-restore integrity check.
-- **Multi-window mis-attribution.** `enableRedoLogging` doesn't check for a *different* open label, so a
-  second window can open; the write path then logs all redo under the first sorted label, silently
-  corrupting the other backup. The `>1 BACKING_UP` log is after-the-fact detection, not prevention.
 - **Commit-mode coverage.** One-phase commit writes no coordinator row, so a transaction that began
   under the flag is forced to two-phase during a window (otherwise its write would be logged nowhere);
   a *pre-flag* one-phase transaction relies on the same drain as any other pre-flag commit. Two-phase
@@ -368,12 +396,12 @@ Ranked roughly by severity — residual limitations to harden or accept for the 
   (aggregated across children under group commit); on DynamoDB (400 KB) / Cosmos (2 MB) a large or
   batched transaction that commits normally can fail *only while a window is open*.
 - **Redo bloat carried forward on restore (window resurrection fixed).** The `backup` table is in the
-  backed-up coordinator namespace, so its rows return with a restore. The phantom-window problem is
-  fixed: restore transitions any resurrected `BACKING_UP` row to `CANCELED` (`cancelBackupMode`), so the
-  restored cluster's daemon does not re-enter backup mode. What remains is bloat — the restored
-  coordinator still carries every window's `tx_write_set` blob on its committed rows (and the terminal
-  flag rows), which normal coordinator cleanup should reclaim; putting the flag table in an excluded
-  system namespace would also keep it out of the backup set.
+  backed-up coordinator namespace, so a mid-window backup returns with its `backup` row present. The
+  phantom-window problem is fixed: restore deletes any resurrected `backup` row (`DeleteIfExists`,
+  recording a `CANCELED` history entry), so the restored cluster's daemon does not re-enter backup
+  mode. What remains is bloat: the restored coordinator still carries every window's `tx_write_set`
+  blob on its committed rows, which normal coordinator cleanup should reclaim; putting the flag tables
+  in an excluded system namespace would also keep them out of the backup set.
 
 ## Future improvements
 

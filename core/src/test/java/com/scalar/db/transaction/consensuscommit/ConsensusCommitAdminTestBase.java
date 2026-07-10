@@ -80,6 +80,12 @@ public abstract class ConsensusCommitAdminTestBase {
             Coordinator.BACKUP_TABLE,
             Coordinator.BACKUP_TABLE_METADATA,
             Collections.emptyMap());
+    verify(distributedStorageAdmin)
+        .createTable(
+            coordinatorNamespaceName,
+            Coordinator.BACKUP_HISTORIES_TABLE,
+            Coordinator.BACKUP_HISTORIES_TABLE_METADATA,
+            Collections.emptyMap());
   }
 
   @Test
@@ -90,6 +96,9 @@ public abstract class ConsensusCommitAdminTestBase {
     when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
         .thenReturn(true);
     when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.BACKUP_TABLE))
+        .thenReturn(true);
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, Coordinator.BACKUP_HISTORIES_TABLE))
         .thenReturn(true);
 
     // Act Assert
@@ -117,6 +126,12 @@ public abstract class ConsensusCommitAdminTestBase {
             Coordinator.BACKUP_TABLE,
             Coordinator.BACKUP_TABLE_METADATA,
             options);
+    verify(distributedStorageAdmin)
+        .createTable(
+            coordinatorNamespaceName,
+            Coordinator.BACKUP_HISTORIES_TABLE,
+            Coordinator.BACKUP_HISTORIES_TABLE_METADATA,
+            options);
   }
 
   @Test
@@ -127,6 +142,9 @@ public abstract class ConsensusCommitAdminTestBase {
         .thenReturn(true);
     when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.BACKUP_TABLE))
         .thenReturn(true);
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, Coordinator.BACKUP_HISTORIES_TABLE))
+        .thenReturn(true);
 
     // Act
     admin.truncateCoordinatorTables();
@@ -135,6 +153,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin).truncateTable(coordinatorNamespaceName, Coordinator.TABLE);
     verify(distributedStorageAdmin)
         .truncateTable(coordinatorNamespaceName, Coordinator.BACKUP_TABLE);
+    verify(distributedStorageAdmin)
+        .truncateTable(coordinatorNamespaceName, Coordinator.BACKUP_HISTORIES_TABLE);
   }
 
   @Test
@@ -157,6 +177,9 @@ public abstract class ConsensusCommitAdminTestBase {
         .thenReturn(true);
     when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.BACKUP_TABLE))
         .thenReturn(true);
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, Coordinator.BACKUP_HISTORIES_TABLE))
+        .thenReturn(true);
 
     // Act
     admin.dropCoordinatorTables();
@@ -164,6 +187,8 @@ public abstract class ConsensusCommitAdminTestBase {
     // Assert
     verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.TABLE);
     verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.BACKUP_TABLE);
+    verify(distributedStorageAdmin)
+        .dropTable(coordinatorNamespaceName, Coordinator.BACKUP_HISTORIES_TABLE);
     verify(distributedStorageAdmin).dropNamespace(coordinatorNamespaceName);
   }
 
@@ -789,6 +814,12 @@ public abstract class ConsensusCommitAdminTestBase {
             coordinatorNamespaceName,
             Coordinator.BACKUP_TABLE,
             Coordinator.BACKUP_TABLE_METADATA,
+            options);
+    verify(distributedStorageAdmin)
+        .repairTable(
+            coordinatorNamespaceName,
+            Coordinator.BACKUP_HISTORIES_TABLE,
+            Coordinator.BACKUP_HISTORIES_TABLE_METADATA,
             options);
   }
 

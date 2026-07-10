@@ -1,15 +1,13 @@
 package com.scalar.db.transaction.consensuscommit;
 
 /**
- * Lifecycle states of a CBRL backup row (see the {@code backup} coordinator table). A backup row's
- * {@code state} column walks this small state machine, and each transition is a conditional {@code
- * putIf} on the current state. An app process logs redo <b>only</b> while a label's state is {@link
- * #BACKING_UP}. {@link #BACKED_UP} (window closed after the coordinator snapshot) and {@link
- * #CANCELED} (window abandoned, or neutralized on a restored cluster so its daemon does not
- * re-enter backup mode) are terminal.
+ * Terminal outcome of a CBRL backup window, recorded in the {@code backup_histories} coordinator
+ * table when the window closes: {@link #BACKED_UP} (closed normally after the coordinator snapshot)
+ * or {@link #CANCELED} (abandoned, or neutralized on a restored cluster so its daemon does not
+ * re-enter backup mode). An open window is not a state here; it is the mere presence of the single
+ * {@code backup} row.
  */
 enum BackupState {
-  BACKING_UP,
   BACKED_UP,
   CANCELED
 }

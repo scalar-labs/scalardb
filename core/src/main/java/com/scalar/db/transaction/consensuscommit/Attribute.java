@@ -16,12 +16,13 @@ public final class Attribute {
   public static final String BEFORE_PREPARED_AT = BEFORE_PREFIX + PREPARED_AT;
   public static final String BEFORE_COMMITTED_AT = BEFORE_PREFIX + COMMITTED_AT;
 
-  // Column names of the CBRL `backup` coordinator table. Unlike the state table's `tx_`-prefixed
-  // columns, these are unprefixed because the backup table is a standalone status table.
+  // Column names of the CBRL `backup` and `backup_histories` coordinator tables. Unlike the state
+  // table's `tx_`-prefixed columns, these are unprefixed because they are standalone status tables.
+  // `backup` uses id/label/created_at/updated_by; `backup_histories` adds state/closed_at.
   public static final String BACKUP_ID = "id";
   public static final String BACKUP_LABEL = "label";
   public static final String BACKUP_STATE = "state";
   public static final String BACKUP_CREATED_AT = "created_at";
-  public static final String BACKUP_UPDATED_AT = "updated_at";
+  public static final String BACKUP_CLOSED_AT = "closed_at";
   public static final String BACKUP_UPDATED_BY = "updated_by";
 }

@@ -34,14 +34,14 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 /**
- * Integration test for the CBRL enter/quit backup mode feature: {@code enableRedoLogging(label)}
- * writes a {@code BACKING_UP} row to the {@code backup} coordinator table, a subsequent {@code
- * begin()} captures that label so its commit logs full redo tagged with it, and {@code
- * disableRedoLogging()} transitions the row to {@code BACKED_UP} so later commits stop logging
+ * Integration test for the CBRL backup-mode feature: {@code enableRedoLogging(label)} writes the
+ * single {@code backup} coordinator row, a subsequent {@code begin()} captures that label so its
+ * commit logs full redo tagged with it, and {@code disableRedoLogging()} deletes the {@code backup}
+ * row (recording a {@code BACKED_UP} row in {@code backup_histories}) so later commits stop logging
  * redo.
  *
- * <p>The staleness bound is set to 0 so {@code begin()} always forces a synchronous scan of the
- * backup table, making label capture deterministic without waiting for the periodic daemon scan.
+ * <p>The staleness bound is set to 0 so {@code begin()} always forces a synchronous read of the
+ * backup table, making label capture deterministic without waiting for the periodic daemon poll.
  *
  * <p>Requires PostgreSQL on localhost:5432 (override with {@code -Dscalardb.jdbc.url}).
  */
@@ -115,7 +115,7 @@ public class CbrlBackupModeIntegrationTest {
   }
 
   @Test
-  void enableRedoLogging_ShouldWriteBackingUpRowToBackupTable() throws Exception {
+  void enableRedoLogging_ShouldWriteTheBackupRow() throws Exception {
     // Arrange
 
     // Act
@@ -127,9 +127,7 @@ public class CbrlBackupModeIntegrationTest {
     Result row = backupRows.get(0);
     assertThat(row.getText(Attribute.BACKUP_ID)).isEqualTo(Coordinator.BACKUP_PARTITION_KEY_VALUE);
     assertThat(row.getText(Attribute.BACKUP_LABEL)).isEqualTo(BACKUP_LABEL);
-    assertThat(row.getText(Attribute.BACKUP_STATE)).isEqualTo("BACKING_UP");
     assertThat(row.getBigInt(Attribute.BACKUP_CREATED_AT)).isPositive();
-    assertThat(row.getBigInt(Attribute.BACKUP_UPDATED_AT)).isPositive();
     assertThat(row.getText(Attribute.BACKUP_UPDATED_BY)).isNotEmpty();
   }
 
@@ -164,13 +162,14 @@ public class CbrlBackupModeIntegrationTest {
   }
 
   @Test
-  void disableRedoLogging_ShouldTransitionRowToBackedUpAndStopLoggingRedo() throws Exception {
+  void disableRedoLogging_ShouldDeleteBackupRowRecordHistoryAndStopLoggingRedo() throws Exception {
     // Arrange
     manager.enableRedoLogging(BACKUP_LABEL);
     manager.disableRedoLogging();
 
     // Act
     List<Result> backupRows = scanBackupTable();
+    Optional<Result> history = getBackupHistory(BACKUP_LABEL);
     DistributedTransaction tx = manager.begin();
     tx.put(
         Put.newBuilder()
@@ -183,8 +182,11 @@ public class CbrlBackupModeIntegrationTest {
     WriteSet writeSet = readWriteSet(tx.getId());
 
     // Assert
-    assertThat(backupRows).hasSize(1);
-    assertThat(backupRows.get(0).getText(Attribute.BACKUP_STATE)).isEqualTo("BACKED_UP");
+    assertThat(backupRows).as("the backup row is deleted on close").isEmpty();
+    assertThat(history).isPresent();
+    assertThat(history.get().getText(Attribute.BACKUP_LABEL)).isEqualTo(BACKUP_LABEL);
+    assertThat(history.get().getText(Attribute.BACKUP_STATE)).isEqualTo("BACKED_UP");
+    assertThat(history.get().getBigInt(Attribute.BACKUP_CLOSED_AT)).isPositive();
     assertThat(writeSet.getEntryGroupsCount()).isEqualTo(1);
     EntryGroup group = writeSet.getEntryGroups(0);
     assertThat(group.getBackupLabel())
@@ -258,6 +260,15 @@ public class CbrlBackupModeIntegrationTest {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
+  }
+
+  private Optional<Result> getBackupHistory(String label) throws Exception {
+    return storage.get(
+        Get.newBuilder()
+            .namespace(COORDINATOR_NAMESPACE)
+            .table(Coordinator.BACKUP_HISTORIES_TABLE)
+            .partitionKey(Key.ofText(Attribute.BACKUP_LABEL, label))
+            .build());
   }
 
   private WriteSet readWriteSet(String txId) throws Exception {

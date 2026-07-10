@@ -15,8 +15,6 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -27,7 +25,6 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,21 +51,35 @@ public class Coordinator {
           .addPartitionKey(Attribute.ID)
           .build();
 
-  // The CBRL `backup` coordinator table (see cbrl-draft-design.md). Every backup row shares a fixed
-  // constant partition key so the whole set lives in one partition and can be listed with a single
-  // ordinary single-partition scan; the label is the clustering key.
+  // The CBRL `backup` coordinator table (see cbrl-design.md): the live backup-window flag. It holds
+  // at most one row, keyed only by a fixed-constant partition key with no clustering key, so the
+  // whole table is a single row and the row's presence IS the open window. Opening is a
+  // putIfNotExists on that row (a second overlapping open fails); closing deletes it. The daemon
+  // reads it with a point get, not a scan.
   public static final String BACKUP_TABLE = "backup";
   public static final String BACKUP_PARTITION_KEY_VALUE = "backup";
   public static final TableMetadata BACKUP_TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(Attribute.BACKUP_ID, DataType.TEXT)
           .addColumn(Attribute.BACKUP_LABEL, DataType.TEXT)
-          .addColumn(Attribute.BACKUP_STATE, DataType.TEXT)
           .addColumn(Attribute.BACKUP_CREATED_AT, DataType.BIGINT)
-          .addColumn(Attribute.BACKUP_UPDATED_AT, DataType.BIGINT)
           .addColumn(Attribute.BACKUP_UPDATED_BY, DataType.TEXT)
           .addPartitionKey(Attribute.BACKUP_ID)
-          .addClusteringKey(Attribute.BACKUP_LABEL)
+          .build();
+
+  // The CBRL `backup_histories` coordinator table: an append-only log of past windows,
+  // observability
+  // only and never on any correctness path. One row per window, keyed by its (unique) label, so the
+  // append is idempotent on the label and no two windows can collide.
+  public static final String BACKUP_HISTORIES_TABLE = "backup_histories";
+  public static final TableMetadata BACKUP_HISTORIES_TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn(Attribute.BACKUP_LABEL, DataType.TEXT)
+          .addColumn(Attribute.BACKUP_CREATED_AT, DataType.BIGINT)
+          .addColumn(Attribute.BACKUP_STATE, DataType.TEXT)
+          .addColumn(Attribute.BACKUP_CLOSED_AT, DataType.BIGINT)
+          .addColumn(Attribute.BACKUP_UPDATED_BY, DataType.TEXT)
+          .addPartitionKey(Attribute.BACKUP_LABEL)
           .build();
 
   private static final int MAX_RETRY_COUNT = 5;
@@ -441,26 +452,24 @@ public class Coordinator {
   }
 
   /**
-   * Opens a backup window for the given label by inserting a {@code BACKING_UP} row into the {@code
-   * backup} table with {@code putIfNotExists}. The insert is the enter transition of the backup
-   * state machine.
+   * Opens the backup window for the given label by inserting the single {@code backup} row with
+   * {@code putIfNotExists}. Because the table holds at most one row (fixed partition key, no
+   * clustering key), a second overlapping open fails the conditional put and is rejected: this is
+   * what structurally enforces the single-window invariant.
    *
-   * @param label the backup label (the clustering key)
+   * @param label the backup label
    * @param updatedBy an operator/process id recorded for observability
-   * @throws CoordinatorConflictException if a row already exists for the label
+   * @throws CoordinatorConflictException if a window is already open
    * @throws CoordinatorException if the row cannot be written
    */
   public void enterBackupMode(String label, String updatedBy) throws CoordinatorException {
-    long now = System.currentTimeMillis();
     Put put =
         Put.newBuilder()
             .namespace(coordinatorNamespace)
             .table(BACKUP_TABLE)
             .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
-            .clusteringKey(Key.ofText(Attribute.BACKUP_LABEL, label))
-            .textValue(Attribute.BACKUP_STATE, BackupState.BACKING_UP.name())
-            .bigIntValue(Attribute.BACKUP_CREATED_AT, now)
-            .bigIntValue(Attribute.BACKUP_UPDATED_AT, now)
+            .textValue(Attribute.BACKUP_LABEL, label)
+            .bigIntValue(Attribute.BACKUP_CREATED_AT, System.currentTimeMillis())
             .textValue(Attribute.BACKUP_UPDATED_BY, updatedBy)
             .consistency(Consistency.LINEARIZABLE)
             .condition(ConditionBuilder.putIfNotExists())
@@ -469,64 +478,49 @@ public class Coordinator {
   }
 
   /**
-   * Closes the backup window for the given label by transitioning its row from {@code BACKING_UP}
-   * to {@code BACKED_UP} with a {@code putIf} guarded on the current state, so a window that is not
-   * open (or already closed) is rejected rather than silently reopened.
+   * Closes the backup window for the given label normally: appends a {@code BACKED_UP} row to
+   * {@code backup_histories} (best-effort, idempotent) and then deletes the single {@code backup}
+   * row. Called after the coordinator snapshot has been taken.
    *
-   * @param label the backup label (the clustering key)
+   * @param label the backup label
    * @param updatedBy an operator/process id recorded for observability
-   * @throws CoordinatorConflictException if no {@code BACKING_UP} row exists for the label
+   * @throws CoordinatorConflictException if no window is open for the label
    * @throws CoordinatorException if the row cannot be written
    */
   public void exitBackupMode(String label, String updatedBy) throws CoordinatorException {
-    Put put =
-        Put.newBuilder()
-            .namespace(coordinatorNamespace)
-            .table(BACKUP_TABLE)
-            .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
-            .clusteringKey(Key.ofText(Attribute.BACKUP_LABEL, label))
-            .textValue(Attribute.BACKUP_STATE, BackupState.BACKED_UP.name())
-            .bigIntValue(Attribute.BACKUP_UPDATED_AT, System.currentTimeMillis())
-            .textValue(Attribute.BACKUP_UPDATED_BY, updatedBy)
-            .consistency(Consistency.LINEARIZABLE)
-            .condition(
-                ConditionBuilder.putIf(
-                        ConditionBuilder.column(Attribute.BACKUP_STATE)
-                            .isEqualToText(BackupState.BACKING_UP.name()))
-                    .build())
-            .build();
-    putBackup(put, label);
+    closeBackup(label, updatedBy, BackupState.BACKED_UP, /* requireOpen= */ true);
   }
 
   /**
-   * Neutralizes a backup window by transitioning its row from {@code BACKING_UP} to {@code
-   * CANCELED} with a {@code putIf} guarded on the current state. Used to abandon an in-progress
-   * backup and, on a restored cluster, to stop a resurrected {@code BACKING_UP} row (restored with
-   * the coordinator namespace) from re-entering backup mode.
+   * Neutralizes the backup window for the given label: appends a {@code CANCELED} row to {@code
+   * backup_histories} and deletes the single {@code backup} row. Used to abandon an in-progress
+   * backup and, on a restored cluster, to remove a {@code backup} row that returned with the
+   * restored coordinator namespace so the restored cluster's daemon does not re-enter backup mode.
+   * Tolerant of an absent or non-matching row: there is simply nothing to neutralize.
    *
-   * @param label the backup label (the clustering key)
+   * @param label the backup label
    * @param updatedBy an operator/process id recorded for observability
-   * @throws CoordinatorConflictException if no {@code BACKING_UP} row exists for the label
    * @throws CoordinatorException if the row cannot be written
    */
   public void cancelBackupMode(String label, String updatedBy) throws CoordinatorException {
-    Put put =
-        Put.newBuilder()
-            .namespace(coordinatorNamespace)
-            .table(BACKUP_TABLE)
-            .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
-            .clusteringKey(Key.ofText(Attribute.BACKUP_LABEL, label))
-            .textValue(Attribute.BACKUP_STATE, BackupState.CANCELED.name())
-            .bigIntValue(Attribute.BACKUP_UPDATED_AT, System.currentTimeMillis())
-            .textValue(Attribute.BACKUP_UPDATED_BY, updatedBy)
-            .consistency(Consistency.LINEARIZABLE)
-            .condition(
-                ConditionBuilder.putIf(
-                        ConditionBuilder.column(Attribute.BACKUP_STATE)
-                            .isEqualToText(BackupState.BACKING_UP.name()))
-                    .build())
-            .build();
-    putBackup(put, label);
+    closeBackup(label, updatedBy, BackupState.CANCELED, /* requireOpen= */ false);
+  }
+
+  // Record history, then delete the flag. The delete is conditioned on the label so a wrong label
+  // cannot close another window; the history append comes first and is idempotent (keyed by the
+  // window's created_at), so a retry after a crash between the two steps does not duplicate; and it
+  // is best-effort, so a history failure never wedges the window open.
+  private void closeBackup(String label, String updatedBy, BackupState state, boolean requireOpen)
+      throws CoordinatorException {
+    Optional<Result> row = getBackupRow();
+    if (!row.isPresent() || !label.equals(row.get().getText(Attribute.BACKUP_LABEL))) {
+      if (requireOpen) {
+        throw new CoordinatorConflictException("No open backup window for label: " + label);
+      }
+      return;
+    }
+    appendBackupHistory(row.get().getBigInt(Attribute.BACKUP_CREATED_AT), label, state, updatedBy);
+    deleteBackup(label);
   }
 
   private void putBackup(Put put, String label) throws CoordinatorException {
@@ -539,34 +533,77 @@ public class Coordinator {
     }
   }
 
-  /**
-   * Lists the labels currently in the {@code BACKING_UP} state with a single-partition {@code
-   * LINEARIZABLE} scan of the {@code backup} table. Under the single-window assumption the result
-   * holds at most one label.
-   *
-   * @return the backing-up labels, ordered by label (the clustering key)
-   * @throws CoordinatorException if the scan fails
-   */
-  public List<String> scanBackingUpLabels() throws CoordinatorException {
-    Scan scan =
-        Scan.newBuilder()
+  // Best-effort, idempotent (putIfNotExists keyed by the unique label): a failed append is logged
+  // and closing proceeds, since backup_histories is observability only.
+  private void appendBackupHistory(
+      long createdAt, String label, BackupState state, String updatedBy) {
+    Put put =
+        Put.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(BACKUP_HISTORIES_TABLE)
+            .partitionKey(Key.ofText(Attribute.BACKUP_LABEL, label))
+            .bigIntValue(Attribute.BACKUP_CREATED_AT, createdAt)
+            .textValue(Attribute.BACKUP_STATE, state.name())
+            .bigIntValue(Attribute.BACKUP_CLOSED_AT, System.currentTimeMillis())
+            .textValue(Attribute.BACKUP_UPDATED_BY, updatedBy)
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(ConditionBuilder.putIfNotExists())
+            .build();
+    try {
+      storage.put(put);
+    } catch (NoMutationException e) {
+      // Already recorded (a retried close, or a reused label); idempotent, so nothing to do.
+    } catch (ExecutionException e) {
+      logger.warn("Couldn't append the backup history row. Label: {}", label, e);
+    }
+  }
+
+  private void deleteBackup(String label) throws CoordinatorException {
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(coordinatorNamespace)
+            .table(BACKUP_TABLE)
+            .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
+            .consistency(Consistency.LINEARIZABLE)
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column(Attribute.BACKUP_LABEL).isEqualToText(label))
+                    .build())
+            .build();
+    try {
+      storage.delete(delete);
+    } catch (NoMutationException e) {
+      // The row changed (concurrent re-open under a different label) or is already gone; nothing to
+      // do.
+    } catch (ExecutionException e) {
+      throw new CoordinatorException("Couldn't delete the backup row. Label: " + label, e);
+    }
+  }
+
+  private Optional<Result> getBackupRow() throws CoordinatorException {
+    Get get =
+        Get.newBuilder()
             .namespace(coordinatorNamespace)
             .table(BACKUP_TABLE)
             .partitionKey(Key.ofText(Attribute.BACKUP_ID, BACKUP_PARTITION_KEY_VALUE))
             .consistency(Consistency.LINEARIZABLE)
             .build();
-    List<String> labels = new ArrayList<>();
-    try (Scanner scanner = storage.scan(scan)) {
-      for (Result result : scanner.all()) {
-        if (!result.isNull(Attribute.BACKUP_STATE)
-            && BackupState.BACKING_UP.name().equals(result.getText(Attribute.BACKUP_STATE))) {
-          labels.add(result.getText(Attribute.BACKUP_LABEL));
-        }
-      }
-    } catch (ExecutionException | IOException e) {
-      throw new CoordinatorException("Couldn't scan the backup table", e);
+    try {
+      return storage.get(get);
+    } catch (ExecutionException e) {
+      throw new CoordinatorException("Couldn't read the backup table", e);
     }
-    return labels;
+  }
+
+  /**
+   * Returns the label of the currently open backup window, or empty if none is open, with a point
+   * {@code LINEARIZABLE} get of the single {@code backup} row (its presence is the open window).
+   *
+   * @return the open window's label, or empty
+   * @throws CoordinatorException if the read fails
+   */
+  public Optional<String> getBackupLabel() throws CoordinatorException {
+    return getBackupRow().map(result -> result.getText(Attribute.BACKUP_LABEL));
   }
 
   private void exponentialBackoff(int counter) {

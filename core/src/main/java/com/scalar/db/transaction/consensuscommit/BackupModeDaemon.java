@@ -1,10 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -18,21 +14,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Per-{@link ConsensusCommitManager} daemon that keeps a local cache of the currently open CBRL
- * backup windows. Every {@code checkIntervalMillis} it runs a single-partition {@code LINEARIZABLE}
- * scan of the {@code backup} coordinator table and refreshes the cache of {@code BACKING_UP}
- * labels. Because embedded Core cannot push a flag to every process, each process reads the flag
- * from this cache; {@code begin()} consults it to decide the transaction's backup label.
+ * backup window. Every {@code checkIntervalMillis} it does a single-row {@code LINEARIZABLE} point
+ * get of the {@code backup} coordinator table and refreshes the cached label. Because embedded Core
+ * cannot push a flag to every process, each process reads the flag from this cache; {@code begin()}
+ * consults it to decide the transaction's backup label. The {@code backup} table holds at most one
+ * row (its presence is the open window), so the cache is a single nullable label.
  *
- * <p>Under the single-window assumption a scan returns at most one {@code BACKING_UP} label; if it
- * ever returns more than one, the daemon logs a warning because the single-window invariant is
- * broken.
- *
- * <p><b>Fail-closed on staleness.</b> A failing scan does <b>not</b> advance the cache's last
+ * <p><b>Fail-closed on staleness.</b> A failing read does <b>not</b> advance the cache's last
  * <i>successful</i> read time, so {@link #activeBackupLabel(long)} can tell when the flag can no
- * longer be confirmed. Once the daemon has read the flag at least once, if the last successful scan
+ * longer be confirmed. Once the daemon has read the flag at least once, if the last successful read
  * is older than the staleness bound (e.g. the coordinator is unreachable), {@code
  * activeBackupLabel} throws so {@code begin()} refuses rather than start a transaction that could
- * commit inside a backup window without logging redo. Before the first successful scan — when the
+ * commit inside a backup window without logging redo. Before the first successful read — when the
  * {@code backup} table may simply not exist (CBRL not in use) — it returns {@code null}: there is
  * no window it could miss, and a transaction cannot commit without the coordinator anyway.
  */
@@ -46,7 +39,7 @@ final class BackupModeDaemon {
   private final AtomicReference<Cache> cache = new AtomicReference<>(Cache.empty());
   @Nullable private ScheduledFuture<?> scheduledTask;
 
-  // Bound on how long close() waits for an in-flight scan to drain before returning.
+  // Bound on how long close() waits for an in-flight read to drain before returning.
   private static final long SHUTDOWN_TIMEOUT_SECONDS = 10;
 
   BackupModeDaemon(Coordinator coordinator, long checkIntervalMillis) {
@@ -74,14 +67,14 @@ final class BackupModeDaemon {
   }
 
   /**
-   * Runs one synchronous scan so the cache is populated before the manager serves transactions,
+   * Runs one synchronous read so the cache is populated before the manager serves transactions,
    * then schedules the periodic refresh.
    */
   void start() {
-    scanAndUpdate();
+    readAndUpdate();
     scheduledTask =
         scheduler.scheduleWithFixedDelay(
-            this::scanAndUpdate, checkIntervalMillis, checkIntervalMillis, TimeUnit.MILLISECONDS);
+            this::readAndUpdate, checkIntervalMillis, checkIntervalMillis, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -101,14 +94,14 @@ final class BackupModeDaemon {
     }
     // A non-positive staleness bound disables freshness enforcement (as the transaction timeout
     // does
-    // for <= 0): trust the daemon's periodically refreshed cache without forcing a scan or failing
+    // for <= 0): trust the daemon's periodically refreshed cache without forcing a read or failing
     // closed.
     if (stalenessBoundMillis > 0) {
       refreshIfStale(stalenessBoundMillis);
       current = cache.get();
       if (clockMillis.getAsLong() - current.lastSuccessfulReadAtMillis >= stalenessBoundMillis) {
         throw new IllegalStateException(
-            "Cannot confirm CBRL backup mode: the last successful scan of the backup table is older "
+            "Cannot confirm CBRL backup mode: the last successful read of the backup table is older "
                 + "than the staleness bound ("
                 + stalenessBoundMillis
                 + " ms). Failing closed and refusing to begin a transaction that might commit inside "
@@ -116,18 +109,18 @@ final class BackupModeDaemon {
                 + "again.");
       }
     }
-    Set<String> labels = current.labels;
-    return labels.isEmpty() ? null : labels.iterator().next();
+    return current.label;
   }
 
   /** Forces a synchronous refresh of the cache (used right after a local enter/quit transition). */
   void refreshNow() {
-    scanAndUpdate();
+    readAndUpdate();
   }
 
   @VisibleForTesting
-  Set<String> backingUpLabels() {
-    return cache.get().labels;
+  @Nullable
+  String activeLabel() {
+    return cache.get().label;
   }
 
   @VisibleForTesting
@@ -137,27 +130,21 @@ final class BackupModeDaemon {
 
   private synchronized void refreshIfStale(long stalenessBoundMillis) {
     if (clockMillis.getAsLong() - cache.get().lastSuccessfulReadAtMillis >= stalenessBoundMillis) {
-      scanAndUpdate();
+      readAndUpdate();
     }
   }
 
   @VisibleForTesting
-  void scanAndUpdate() {
+  void readAndUpdate() {
     try {
-      List<String> labels = coordinator.scanBackingUpLabels();
-      if (labels.size() > 1) {
-        logger.warn(
-            "The backup table has more than one BACKING_UP label, which breaks the single-window "
-                + "invariant. Labels: {}",
-            labels);
-      }
-      cache.set(new Cache(new LinkedHashSet<>(labels), clockMillis.getAsLong()));
+      String label = coordinator.getBackupLabel().orElse(null);
+      cache.set(new Cache(label, clockMillis.getAsLong()));
     } catch (CoordinatorException | RuntimeException e) {
-      // Keep the last-known labels AND the last SUCCESSFUL read time — do NOT advance freshness on
+      // Keep the last-known label AND the last SUCCESSFUL read time — do NOT advance freshness on
       // failure. That way begin()'s staleness check keeps firing and fails closed once the last
-      // successful read is too old, instead of treating a persistently failing scan as fresh.
+      // successful read is too old, instead of treating a persistently failing read as fresh.
       logger.debug(
-          "Failed to scan the backup table; keeping the last successful backup-label cache", e);
+          "Failed to read the backup table; keeping the last successful backup-label cache", e);
     }
   }
 
@@ -167,10 +154,10 @@ final class BackupModeDaemon {
     }
     scheduler.shutdownNow();
     try {
-      // An in-flight scan does not honor interruption (storage calls don't), so wait for it to
+      // An in-flight read does not honor interruption (storage calls don't), so wait for it to
       // finish before the caller tears storage down.
       if (!scheduler.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-        logger.warn("BackupModeDaemon scan did not terminate within the shutdown timeout.");
+        logger.warn("BackupModeDaemon read did not terminate within the shutdown timeout.");
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -178,18 +165,19 @@ final class BackupModeDaemon {
   }
 
   private static final class Cache {
-    private final Set<String> labels;
-    // The clock time of the last SUCCESSFUL scan (0 = never succeeded). Only a successful scan
-    // advances it, so a run of failing scans lets begin() detect staleness and fail closed.
+    // The label of the open backup window, or null if no window is open.
+    @Nullable private final String label;
+    // The clock time of the last SUCCESSFUL read (0 = never succeeded). Only a successful read
+    // advances it, so a run of failing reads lets begin() detect staleness and fail closed.
     private final long lastSuccessfulReadAtMillis;
 
-    private Cache(Set<String> labels, long lastSuccessfulReadAtMillis) {
-      this.labels = Collections.unmodifiableSet(labels);
+    private Cache(@Nullable String label, long lastSuccessfulReadAtMillis) {
+      this.label = label;
       this.lastSuccessfulReadAtMillis = lastSuccessfulReadAtMillis;
     }
 
     private static Cache empty() {
-      return new Cache(Collections.emptySet(), 0L);
+      return new Cache(null, 0L);
     }
   }
 }

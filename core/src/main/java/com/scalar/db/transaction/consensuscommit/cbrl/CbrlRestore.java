@@ -260,18 +260,16 @@ public final class CbrlRestore implements AutoCloseable {
   }
 
   /**
-   * After a successful restore, neutralize the restored label's own {@code BACKING_UP} row if it
-   * came back with the restored coordinator namespace, transitioning it to {@code CANCELED} so the
-   * restored cluster's daemon does not re-enter this window (a phantom window that would re-log
-   * redo). Only the label being restored is touched — any other open window is left alone. {@code
-   * BACKED_UP} rows are already inert. Best effort: a failure here does not undo the completed
-   * restore, so it is logged rather than thrown.
+   * After a successful restore, neutralize the restored label's own {@code backup} row if it came
+   * back with the restored coordinator namespace, so the restored cluster's daemon does not
+   * re-enter this window (a phantom window that would re-log redo). {@code cancelBackupMode}
+   * records a {@code CANCELED} history entry and deletes the row; it is a no-op when the row is
+   * absent or belongs to a different label, so any other window is left alone. Best effort: a
+   * failure here does not undo the completed restore, so it is logged rather than thrown.
    */
   private void cancelResurrectedBackupWindows() {
     try {
-      if (coordinator.scanBackingUpLabels().contains(backupLabel)) {
-        coordinator.cancelBackupMode(backupLabel, RESTORE_UPDATED_BY);
-      }
+      coordinator.cancelBackupMode(backupLabel, RESTORE_UPDATED_BY);
     } catch (CoordinatorException e) {
       logger.warn(
           "Failed to neutralize backup-flag rows after restore; the restored cluster may re-enter"

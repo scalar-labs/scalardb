@@ -888,11 +888,13 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     try {
       coordinator.enterBackupMode(backupLabel, backupUpdatedBy);
     } catch (CoordinatorConflictException e) {
-      // A row for this label already exists. Treat an already-open window as success (idempotent);
-      // reject a label whose window has already been closed or otherwise transitioned.
+      // A window is already open. Treat re-opening the same label as success (idempotent); reject a
+      // different label, since only one window may be open at a time.
       if (!isBackingUp(backupLabel)) {
         throw new IllegalStateException(
-            "A backup window for label '" + backupLabel + "' already exists and is not BACKING_UP",
+            "A different backup window is already open; cannot open one for label '"
+                + backupLabel
+                + "'",
             e);
       }
     } catch (CoordinatorException e) {
@@ -920,17 +922,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     refreshBackupCache();
   }
 
-  // Whether the backup table currently holds a BACKING_UP row for the given label.
+  // Whether the open backup window (if any) is for the given label.
   private boolean isBackingUp(String backupLabel) {
     try {
-      return coordinator.scanBackingUpLabels().contains(backupLabel);
+      return coordinator.getBackupLabel().filter(backupLabel::equals).isPresent();
     } catch (CoordinatorException e) {
       return false;
     }
   }
 
   // Refreshes the local daemon cache so this process's own begin() sees the transition immediately,
-  // without waiting for the next periodic scan.
+  // without waiting for the next periodic read.
   private void refreshBackupCache() {
     if (backupModeDaemon != null) {
       backupModeDaemon.refreshNow();
