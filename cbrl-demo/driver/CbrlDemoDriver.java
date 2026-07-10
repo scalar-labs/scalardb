@@ -41,14 +41,15 @@ import java.util.concurrent.atomic.AtomicLong;
  *       cross-storage transfer workload under the open window (re-opens idempotently first so this
  *       process's own commits are redo-logged).
  *   <li>{@code restore <copyProps> <label>} — run CbrlRestore over the restored copy.
- *   <li>{@code validate <copyProps> <numAccounts> <initialBalance> <consistent|broken>} — the oracle
- *       for both runs: read the copy through a single Consensus Commit cross-partition {@code
- *       ScanAll}, which applies lazy recovery to every in-flight record it touches, then assert the
- *       grand total and row counts. {@code consistent} (the with-CBRL run) requires a complete,
- *       conserved copy; {@code broken} (the without-CBRL run) requires the copy to remain drifted
- *       AFTER recovery alone, proving that only the CBRL redo can reconstruct the torn committed
- *       writes. {@code broken} fails loudly if the copy is already consistent, which would mean the
- *       torn-write scenario was never produced.
+ *   <li>{@code validate <copyProps> <numAccounts> <initialBalance> [consistent|broken]} — the
+ *       oracle for both runs, and a standalone way to inspect a copy: read it through a single
+ *       Consensus Commit cross-partition {@code ScanAll}, which applies lazy recovery to every
+ *       in-flight record it touches, then report the grand total and row counts. With no
+ *       expectation it just reports and exits 0. {@code consistent} (the with-CBRL run) requires a
+ *       complete, conserved copy; {@code broken} (the without-CBRL run) requires the copy to remain
+ *       drifted AFTER recovery alone, proving that only the CBRL redo can reconstruct the torn
+ *       committed writes. {@code broken} fails loudly if the copy is already consistent, which would
+ *       mean the torn-write scenario was never produced.
  * </ul>
  */
 public final class CbrlDemoDriver {
@@ -60,6 +61,7 @@ public final class CbrlDemoDriver {
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";
   private static final int ACCOUNT_TYPE_VALUE = 0;
+  private static final long PROGRESS_INTERVAL_MS = 5000L;
 
   private CbrlDemoDriver() {}
 
@@ -89,7 +91,11 @@ public final class CbrlDemoDriver {
         CbrlRestoreMain.main(new String[] {args[1], args[2]});
         break;
       case "validate":
-        validate(args[1], Integer.parseInt(args[2]), Integer.parseInt(args[3]), args[4]);
+        validate(
+            args[1],
+            Integer.parseInt(args[2]),
+            Integer.parseInt(args[3]),
+            args.length > 4 ? args[4] : "");
         break;
       default:
         System.err.println("Unknown command: " + command);
@@ -133,6 +139,10 @@ public final class CbrlDemoDriver {
         for (int accountId = 0; accountId < numAccounts; accountId++) {
           DistributedTransaction tx = manager.start();
           try {
+            // Read before write so re-seeding an already-populated primary updates the existing row
+            // instead of blindly inserting it. A blind Put prepares with PutIfNotExists and would
+            // conflict on a dirty database, which is why populate failed when run without a reset.
+            tx.get(getBalance(namespace, accountId));
             tx.put(putBalance(namespace, accountId, initialBalance));
             tx.commit();
           } catch (Exception e) {
@@ -188,7 +198,24 @@ public final class CbrlDemoDriver {
                   }
                 }));
       }
-      Thread.sleep(runSeconds * 1000L);
+      // Report progress periodically while the workers commit, so a long run is visibly live instead
+      // of silent until it finishes.
+      long start = System.currentTimeMillis();
+      long deadline = start + runSeconds * 1000L;
+      while (true) {
+        long remaining = deadline - System.currentTimeMillis();
+        if (remaining <= 0) {
+          break;
+        }
+        Thread.sleep(Math.min(PROGRESS_INTERVAL_MS, remaining));
+        long elapsedSeconds = (System.currentTimeMillis() - start) / 1000L;
+        long done = committed.get();
+        double rate = elapsedSeconds > 0 ? done / (double) elapsedSeconds : done;
+        System.out.printf(
+            "  progress: %ds/%ds elapsed, committed=%d (%.0f tx/s), aborted/retried=%d%n",
+            elapsedSeconds, (long) runSeconds, done, rate, aborted.get());
+        System.out.flush();
+      }
       stop.set(true);
       for (Future<?> future : futures) {
         future.get();
@@ -254,9 +281,11 @@ public final class CbrlDemoDriver {
    * expired or aborted, forward if it committed), so this observes the copy after ALL the repair
    * that recovery alone can do. It then sums the balances and counts the rows present.
    *
-   * <p>The same read backs both runs; only the expectation differs:
+   * <p>The same read backs every caller; the {@code expect} argument only changes the verdict:
    *
    * <ul>
+   *   <li>empty (running the validation alone): report completeness and conservation and exit 0
+   *       without asserting anything, for inspecting a copy's current state.
    *   <li>{@code consistent} (the with-CBRL run): require every account present in each namespace
    *       and the grand total restored to the initial one.
    *   <li>{@code broken} (the without-CBRL run): require the opposite. Recovery resolves in-flight
@@ -290,7 +319,20 @@ public final class CbrlDemoDriver {
           pgRows++;
         }
       } catch (Exception e) {
-        tx.abort();
+        try {
+          tx.abort();
+        } catch (Exception ignored) {
+          // Best-effort abort.
+        }
+        // DB-CORE-10016 is "the table does not exist": the copy has not been loaded yet. Report it
+        // plainly instead of a stack trace, since validate reads the copy that restore-load fills.
+        if (e.getMessage() != null && e.getMessage().contains("DB-CORE-10016")) {
+          System.out.println(
+              "The copy has no user tables to validate yet. Load a backup into the copy first"
+                  + " (run `restore-load`, or a full `run-all-without-cbrl` / `run-all-with-cbrl`),"
+                  + " then validate.");
+          System.exit(2);
+        }
         throw e;
       }
     }
@@ -298,32 +340,33 @@ public final class CbrlDemoDriver {
     boolean complete = mysqlRows == numAccounts && pgRows == numAccounts;
     boolean conserved = total == expected;
     System.out.printf(
-        "Consensus Commit ScanAll of the copy: %s=%d/%d rows, %s=%d/%d rows, grand total = %d,"
+        "Consensus Commit ScanAll: %s=%d/%d rows, %s=%d/%d rows, grand total = %d,"
             + " expected = %d, drift = %d%n",
         NS_MYSQL, mysqlRows, numAccounts, NS_PG, pgRows, numAccounts, total, expected,
         total - expected);
 
-    if ("consistent".equals(expect)) {
+    if (expect.isEmpty()) {
+      System.out.printf(
+          "REPORT: complete=%b, conserved=%b (no expectation asserted).%n", complete, conserved);
+    } else if ("consistent".equals(expect)) {
       if (complete && conserved) {
-        System.out.println(
-            "PASS (with CBRL): the restored copy is complete and conserved under Consensus Commit.");
+        System.out.println("PASS (expect consistent): complete and conserved.");
       } else {
         System.out.printf(
-            "FAIL (with CBRL): the copy is still broken (complete=%b, conserved=%b).%n",
-            complete, conserved);
+            "FAIL (expect consistent): complete=%b, conserved=%b.%n", complete, conserved);
         System.exit(1);
       }
     } else if ("broken".equals(expect)) {
       if (!complete || !conserved) {
         System.out.printf(
-            "PASS (without CBRL): recovery alone leaves the copy BROKEN — CBRL redo is required"
-                + " (complete=%b, conserved=%b).%n",
+            "PASS (expect broken): still inconsistent after recovery alone, which only the redo can"
+                + " repair (complete=%b, conserved=%b).%n",
             complete, conserved);
       } else {
         System.out.println(
-            "FAIL (without CBRL): the copy is already consistent without the CBRL redo, so the"
-                + " torn-write scenario was not produced. Widen the backup window"
-                + " (BACKUP_GAP_SECONDS / WARMUP_SECONDS) or raise the workload rate.");
+            "FAIL (expect broken): already complete and conserved, so the torn-write scenario was"
+                + " not produced. Widen the backup window (BACKUP_GAP_SECONDS / WARMUP_SECONDS) or"
+                + " raise the workload rate.");
         System.exit(1);
       }
     } else {

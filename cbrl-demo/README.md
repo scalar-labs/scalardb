@@ -36,9 +36,12 @@ bash run.sh down                  # tear everything down (containers, network, v
 
 Each `run-all-*` resets the volumes first, so the with-CBRL run repairs its own independent,
 freshly torn copy. Single steps are available too:
-`bash run.sh <build|up|schema|populate|cbrl-open|workload|backup|restore-load|expire|cbrl-restore|validate-broken|validate-consistent|down>`,
+`bash run.sh <build|up|schema|populate|cbrl-open|workload|backup|restore-load|expire|cbrl-restore|validate [primary|restored] [consistent|broken]|down>`,
 and `bash run.sh resume-without-cbrl` / `resume-with-cbrl` run the second half (window phase →
-restore → validate) on an already-seeded primary.
+restore → validate) on an already-seeded primary. Run the validation on its own with `bash run.sh
+validate` to report the copy's current state (rows, grand total, drift), or `bash run.sh validate
+primary` to check the live primary right after `populate` (no restore-load needed); add `consistent`
+or `broken` to turn the report into an assertion.
 
 Expected shape of a successful run (the without-CBRL oracle finds the copy still broken after
 recovery, then the with-CBRL oracle finds it fixed). The exact sums and drift vary per run, and
@@ -48,15 +51,15 @@ the drift is even signed differently run to run, but the without-CBRL grand tota
 ```
 === PHASE 1/2 — WITHOUT CBRL (expect BROKEN) ===
 ...
-=== Validate (without CBRL): Consensus Commit ScanAll — expect the copy STILL broken after recovery ===
-Consensus Commit ScanAll of the copy: transfer=100/100 rows, transfer_pg=100/100 rows, grand total = 1997584, expected = 2000000, drift = -2416
-PASS (without CBRL): recovery alone leaves the copy BROKEN — CBRL redo is required (complete=true, conserved=false).
+=== Validate restored (expect broken): Consensus Commit ScanAll ===
+Consensus Commit ScanAll: transfer=100/100 rows, transfer_pg=100/100 rows, grand total = 1997584, expected = 2000000, drift = -2416
+PASS (expect broken): still inconsistent after recovery alone, which only the redo can repair (complete=true, conserved=false).
 ...
 === PHASE 2/2 — WITH CBRL (expect FIXED) ===
 ...
-=== Validate (with CBRL): Consensus Commit ScanAll — expect the copy complete + conserved ===
-Consensus Commit ScanAll of the copy: transfer=100/100 rows, transfer_pg=100/100 rows, grand total = 2000000, expected = 2000000, drift = 0
-PASS (with CBRL): the restored copy is complete and conserved under Consensus Commit.
+=== Validate restored (expect consistent): Consensus Commit ScanAll ===
+Consensus Commit ScanAll: transfer=100/100 rows, transfer_pg=100/100 rows, grand total = 2000000, expected = 2000000, drift = 0
+PASS (expect consistent): complete and conserved.
 ```
 
 ## Architecture (isolated compose project `cbrl-demo`)
@@ -132,16 +135,17 @@ back, resetting the volumes between so each starts from a clean, independently t
    tables, `coordinator.state`, and the CBRL `backup` / `backup_histories` tables.
 3. **populate** — seed 100 accounts/namespace at balance 10000 (window **closed**, so
    this pre-window base is carried only by the physical copy).
-4. **workload** — start the cross-storage transfer and let the app run continuously; it never
-   pauses for the backup (`RPO > 0`). Each transfer debits an account in `transfer` (MySQL) and
-   credits one in `transfer_pg` (PostgreSQL) in a single transaction, so every commit spans both
-   storages plus the PG coordinator. Three things happen while it runs:
-   - **pre-window** — for the first `WARMUP_SECONDS` (default 8s) no window is open, so these
-     commits are the pre-window base carried only by the physical copy.
-   - **cbrl-open (mid-run)** — `enableRedoLogging(label)` writes the single `backup` flag row while
-     the app keeps committing; after the cache interval each process's daemon observes it and
-     in-window commits log full redo.
-   - **backup (mid-flight)** — `mysqldump` first; then, after `BACKUP_GAP_SECONDS` (default 3s)
+4. **window phase** — three separate steps run concurrently: the **workload** commits in the
+   background the whole time while **cbrl-open** and **backup** fire mid-run, so the app never
+   pauses for the backup (`RPO > 0`).
+   - 4a. **workload** — the cross-storage transfer. Each transfer debits an account in `transfer`
+     (MySQL) and credits one in `transfer_pg` (PostgreSQL) in a single transaction, so every commit
+     spans both storages plus the PG coordinator. Its first `WARMUP_SECONDS` (default 8s) run before
+     any window is open, so those commits are the pre-window base carried only by the physical copy.
+   - 4b. **cbrl-open (mid-run)** — once the warm-up elapses, `enableRedoLogging(label)` writes the
+     single `backup` flag row while the workload keeps committing; after the cache interval each
+     process's daemon observes it and in-window commits log full redo.
+   - 4c. **backup (mid-flight)** — `mysqldump` first; then, after `BACKUP_GAP_SECONDS` (default 3s)
      during which transfers keep committing, the `pg_dump` (PG + coordinator) last. The gap
      guarantees cross-storage commits land on the PG side but not the frozen MySQL side, so the
      copy is torn (and the coordinator backup is a superset of the user dumps).
@@ -151,19 +155,22 @@ back, resetting the volumes between so each starts from a clean, independently t
 
 **`run-all-without-cbrl` tail:**
 
-7. **validate-broken** — read the copy through a single Consensus Commit cross-partition
-   `ScanAll`, which triggers lazy recovery on every in-flight record it touches. Assert the copy
-   is **still BROKEN**: the grand total has drifted from `2000000` even after recovery, which is
-   the drift only the redo can repair. Fails loudly if the copy is already consistent (the
-   torn-write scenario was not produced, so CBRL was not exercised).
+7. **`validate broken`** — read the copy through a single Consensus Commit cross-partition
+   `ScanAll`, which triggers lazy recovery on every in-flight record it touches, then evaluate the
+   same two invariants the with-CBRL run checks: completeness (100 rows per namespace) and
+   conservation (grand total `= 2000000`). Assert they do **not** both hold, so the copy is **still
+   BROKEN** after recovery alone; in practice the total is still drifted, which only the redo can
+   repair. Fails loudly if the copy is already consistent (the torn-write scenario was not produced,
+   so CBRL was not exercised).
 
 **`run-all-with-cbrl` tail:**
 
 7. **cbrl-restore** — `CbrlRestore` reads the redo off the restored coordinator, recovers each
    in-flight copy record, replays the committed redo, and writes the result back via the Storage
    API.
-8. **validate-consistent** — the same Consensus Commit `ScanAll` now asserts the copy is
-   **FIXED**: exactly 100 rows per namespace and the grand total back to
+8. **`validate consistent`** — the identical step and `ScanAll` with the same two invariants, now
+   asserted to **both** hold: the copy is **FIXED**, with 100 rows per namespace and the grand total
+   back to
    `2 * 100 * 10000 = 2000000`.
 
 ## Notes

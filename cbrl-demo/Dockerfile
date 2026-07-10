@@ -31,4 +31,11 @@ COPY schema/transfer-multi-storage-schema.json /app/schema.json
 
 # Driver classes first, then the fat jar. The command (main class + args) is appended by
 # `docker compose run app ...`.
-ENTRYPOINT ["java", "-cp", "/app/classes:/app/scalardb-app.jar"]
+#
+# Under the contended transfer workload, transactions constantly read records another transaction
+# left PREPARED and race to roll them forward; the loser gets a benign NoMutationException that
+# RecoveryHandler catches and ignores, but logs at INFO with a stack trace. Raise just that logger to
+# WARN so the demo output (progress lines, backup steps) stays readable. Genuine warnings still show.
+ENTRYPOINT ["java", \
+  "-Dorg.slf4j.simpleLogger.log.com.scalar.db.transaction.consensuscommit.RecoveryHandler=warn", \
+  "-cp", "/app/classes:/app/scalardb-app.jar"]

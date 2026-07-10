@@ -19,7 +19,7 @@
 #   bash run.sh run-all-without-cbrl  # full pipeline, stopping before the redo; validate expects a STILL-broken copy
 #   bash run.sh run-all-with-cbrl     # full pipeline including the redo replay; validate expects a fixed copy
 #   bash run.sh <step>                # single step: build|up|schema|populate|cbrl-open|workload|backup|
-#                                     #              restore-load|expire|cbrl-restore|validate-broken|validate-consistent|down
+#                                     #              restore-load|expire|cbrl-restore|validate <consistent|broken>|down
 #   bash run.sh resume-without-cbrl   # from the window phase on an already-seeded primary, without the redo
 #   bash run.sh resume-with-cbrl      # from the window phase on an already-seeded primary, with the redo
 #
@@ -51,9 +51,9 @@ COPY_PROPS=/app/scalardb-multi-storage-copy.properties
 SCHEMA=/app/schema.json
 
 # Workload parameters.
-NUM_ACCOUNTS="${NUM_ACCOUNTS:-100}"
+NUM_ACCOUNTS="${NUM_ACCOUNTS:-1000}"
 INITIAL_BALANCE="${INITIAL_BALANCE:-10000}"
-RUN_SECONDS="${RUN_SECONDS:-30}"
+RUN_SECONDS="${RUN_SECONDS:-300}"
 THREADS="${THREADS:-4}"
 BACKUP_LABEL="${BACKUP_LABEL:-demo-window}"
 
@@ -129,8 +129,9 @@ step_backup() {
 # with open + backup (below). The app just commits and never opens the window itself. --
 step_workload() {
   log "Workload: cross-storage transfer for ${RUN_SECONDS}s"
+  # tee so the periodic progress lines show live on the console AND persist to transfer.out.
   run_app CbrlDemoDriver transfer "${PROPS}" "${BACKUP_LABEL}" \
-      "${NUM_ACCOUNTS}" "${RUN_SECONDS}" "${THREADS}" > "${DEMO_DIR}/transfer.out" 2>&1
+      "${NUM_ACCOUNTS}" "${RUN_SECONDS}" "${THREADS}" 2>&1 | tee "${DEMO_DIR}/transfer.out"
 }
 
 # --- window phase: run the workload in parallel, opening the window mid-run and backing up live. --
@@ -144,9 +145,8 @@ run_window_phase() {
   sleep "${WARMUP_SECONDS}"
   step_cbrl_open  # open the window WHILE the workload keeps committing, in parallel
   step_backup  # take the physical backups mid-flight, without pausing the workload
+  # The workload streams its own progress and summary live (via tee), so just wait for it here.
   wait "${workload_pid}"
-  echo "--- transfer output ---"
-  cat "${DEMO_DIR}/transfer.out"
 }
 
 # --- restore-load: load the dumps into the COPY servers (physical restore). -----------
@@ -160,11 +160,25 @@ step_restore_load() {
   echo "  loaded PostgreSQL copy"
 }
 
-# --- validate-broken: without-CBRL oracle. A Consensus Commit ScanAll must find the copy STILL
-# broken after recovery alone, proving the CBRL redo is what repairs the torn committed writes. ----
-step_validate_broken() {
-  log "Validate (without CBRL): Consensus Commit ScanAll — expect the copy STILL broken after recovery"
-  run_app CbrlDemoDriver validate "${COPY_PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}" broken
+# --- validate: the oracle for both runs, and a standalone way to inspect either database. One
+# Consensus Commit ScanAll evaluates the same two invariants (completeness + conservation) over the
+# chosen target and reports its state; an optional expectation turns the report into an assertion.
+# The target is `restored` (the demo's oracle, default) or `primary` (handy right after populate, with
+# no restore-load needed). `broken` requires the target to stay inconsistent after recovery alone;
+# `consistent` requires it complete and conserved. ----
+step_validate() {
+  # First arg is a target (primary|restored) when it names one, otherwise it is the expectation and
+  # the target defaults to restored. Second arg is then the expectation.
+  local target=restored expect=
+  case "${1:-}" in
+    primary | restored) target="$1"; expect="${2:-}" ;;
+    "") ;;
+    *) expect="$1" ;;
+  esac
+  local props="${COPY_PROPS}"
+  if [ "${target}" = "primary" ]; then props="${PROPS}"; fi
+  log "Validate ${target}${expect:+ (expect ${expect})}: Consensus Commit ScanAll"
+  run_app CbrlDemoDriver validate "${props}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}" "${expect}"
 }
 
 # --- expire: wait past the tx lifetime so orphaned PREPARED records can self-abort. ---
@@ -177,13 +191,6 @@ step_expire() {
 step_cbrl_restore() {
   log "CbrlRestore: replay redo + recover in-flight records on the copy, label '${BACKUP_LABEL}'"
   run_app CbrlDemoDriver restore "${COPY_PROPS}" "${BACKUP_LABEL}"
-}
-
-# --- validate-consistent: with-CBRL oracle. A Consensus Commit ScanAll must find the copy complete
-# and conserved after the redo replay. --------
-step_validate_consistent() {
-  log "Validate (with CBRL): Consensus Commit ScanAll — expect the copy complete + conserved"
-  run_app CbrlDemoDriver validate "${COPY_PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}" consistent
 }
 
 step_down() {
@@ -205,7 +212,7 @@ run_all_without_cbrl() {
   run_window_phase
   step_restore_load
   step_expire
-  step_validate_broken
+  step_validate broken
   log "Without-CBRL run complete: recovery alone left the copy broken."
 }
 
@@ -221,7 +228,7 @@ run_all_with_cbrl() {
   step_restore_load
   step_expire
   step_cbrl_restore
-  step_validate_consistent
+  step_validate consistent
   log "With-CBRL run complete: the redo replay repaired the copy."
 }
 
@@ -240,7 +247,7 @@ resume_without_cbrl() {
   run_window_phase
   step_restore_load
   step_expire
-  step_validate_broken
+  step_validate broken
   log "Without-CBRL resume complete."
 }
 
@@ -249,7 +256,7 @@ resume_with_cbrl() {
   step_restore_load
   step_expire
   step_cbrl_restore
-  step_validate_consistent
+  step_validate consistent
   log "With-CBRL resume complete."
 }
 
@@ -270,8 +277,7 @@ main() {
     restore-load) step_restore_load ;;
     expire) step_expire ;;
     cbrl-restore) step_cbrl_restore ;;
-    validate-broken) step_validate_broken ;;
-    validate-consistent) step_validate_consistent ;;
+    validate) step_validate "${2:-}" "${3:-}" ;;
     down) step_down ;;
     *) echo "Unknown step: $1" ; exit 2 ;;
   esac
