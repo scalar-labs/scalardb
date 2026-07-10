@@ -15,16 +15,21 @@
 # named volumes, nothing published to the host. The app steps are one-shot compose jobs.
 #
 # Usage:
-#   bash run.sh              # build image + run the whole pipeline
-#   bash run.sh <step>       # single step: build|up|schema|populate|open|workload|restore-load|
-#                            #              check-raw|expire|cbrl-restore|check|down
-#   bash run.sh resume       # workload + backup + restore + check on an already-seeded primary
+#   bash run.sh                       # run both variants: WITHOUT CBRL (expect broken), then WITH CBRL (expect fixed)
+#   bash run.sh run-all-without-cbrl  # full pipeline, stopping before the redo; validate expects a STILL-broken copy
+#   bash run.sh run-all-with-cbrl     # full pipeline including the redo replay; validate expects a fixed copy
+#   bash run.sh <step>                # single step: build|up|schema|populate|cbrl-open|workload|backup|
+#                                     #              restore-load|expire|cbrl-restore|validate-broken|validate-consistent|down
+#   bash run.sh resume-without-cbrl   # from the window phase on an already-seeded primary, without the redo
+#   bash run.sh resume-with-cbrl      # from the window phase on an already-seeded primary, with the redo
 #
-# The demo is a correctness test, not just a smoke test: after loading the mid-flight physical
-# backups into the copy servers (restore-load), the `check-raw` negative control asserts the raw
-# copy is BROKEN (drifted total and/or in-flight records) — proving CBRL is actually needed — then
-# `cbrl-restore` replays the coordinator redo and the final `check` asserts the copy is now complete,
-# all-COMMITTED, and conserved. The demo thus shows: raw copy = BROKEN -> CBRL replay -> FIXED.
+# The demo is a correctness test, not just a smoke test, and it isolates what the CBRL redo actually
+# buys. BOTH variants validate the copy the same way: a Consensus Commit cross-partition ScanAll that
+# applies lazy recovery to every in-flight record it reads. `run-all-without-cbrl` stops after the
+# physical restore, so that ScanAll observes the copy after recovery ALONE and must find it STILL
+# broken, because recovery cannot reconstruct a committed write that never reached the frozen-earlier
+# storage. `run-all-with-cbrl` first replays the coordinator redo, and the same ScanAll must then find
+# the copy complete and conserved. The demo thus shows: recovery alone = BROKEN -> CBRL redo -> FIXED.
 #
 # Requires: Docker Desktop running. Run unsandboxed (docker needs host access).
 
@@ -54,7 +59,7 @@ BACKUP_LABEL="${BACKUP_LABEL:-demo-window}"
 
 # Timing.
 CACHE_WAIT_SECONDS="${CACHE_WAIT_SECONDS:-8}"    # let BackupModeDaemon observe the window
-WARMUP_SECONDS="${WARMUP_SECONDS:-8}"            # commit some transfers before dumping
+WARMUP_SECONDS="${WARMUP_SECONDS:-8}"            # the app commits this long BEFORE the window opens
 BACKUP_GAP_SECONDS="${BACKUP_GAP_SECONDS:-3}"    # gap between the MySQL and PG dumps: guarantees
                                                  # cross-storage commits land on the PG side but not
                                                  # the frozen MySQL side, so the raw copy is broken
@@ -95,8 +100,8 @@ step_populate() {
   run_app CbrlDemoDriver populate "${PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}"
 }
 
-# --- open: open the backup window (writes coordinator.backup BACKING_UP + enables redo). --
-step_open() {
+# --- cbrl-open: open the backup window (writes coordinator.backup BACKING_UP + enables redo). --
+step_cbrl_open() {
   log "Open: open backup window '${BACKUP_LABEL}' (enableRedoLogging)"
   run_app CbrlDemoDriver open "${PROPS}" "${BACKUP_LABEL}"
   log "Cache-wait ${CACHE_WAIT_SECONDS}s (let BackupModeDaemon observe the window)"
@@ -120,19 +125,28 @@ step_backup() {
   echo "  wrote /backups/pg.sql (coordinator + PG, taken later than MySQL)"
 }
 
-# --- workload: run the cross-storage transfer under the open window WHILE backups are taken. --
+# --- workload: the cross-storage transfer. A standalone step; the orchestrator runs it in parallel
+# with open + backup (below). The app just commits and never opens the window itself. --
 step_workload() {
-  log "Workload: cross-storage transfer for ${RUN_SECONDS}s; back up mid-flight"
-  local log_file="${DEMO_DIR}/transfer.out"
+  log "Workload: cross-storage transfer for ${RUN_SECONDS}s"
   run_app CbrlDemoDriver transfer "${PROPS}" "${BACKUP_LABEL}" \
-      "${NUM_ACCOUNTS}" "${RUN_SECONDS}" "${THREADS}" > "${log_file}" 2>&1 &
-  local tpid=$!
-  echo "  transfer job PID ${tpid} (logging to ${log_file})"
+      "${NUM_ACCOUNTS}" "${RUN_SECONDS}" "${THREADS}" > "${DEMO_DIR}/transfer.out" 2>&1
+}
+
+# --- window phase: run the workload in parallel, opening the window mid-run and backing up live. --
+# Models real usage: the app is already committing before the window opens and never pauses for the
+# backup (RPO > 0). Pre-open commits are the pre-window base carried only by the physical copy;
+# commits after the window is opened (and the daemon observes it) log full redo.
+run_window_phase() {
+  step_workload &
+  local workload_pid=$!
+  log "Pre-window ${WARMUP_SECONDS}s: the app commits with no window open (base carried by the copy)"
   sleep "${WARMUP_SECONDS}"
-  step_backup
-  wait "${tpid}"
+  step_cbrl_open  # open the window WHILE the workload keeps committing, in parallel
+  step_backup  # take the physical backups mid-flight, without pausing the workload
+  wait "${workload_pid}"
   echo "--- transfer output ---"
-  cat "${log_file}"
+  cat "${DEMO_DIR}/transfer.out"
 }
 
 # --- restore-load: load the dumps into the COPY servers (physical restore). -----------
@@ -146,10 +160,11 @@ step_restore_load() {
   echo "  loaded PostgreSQL copy"
 }
 
-# --- check-raw: negative control — assert the raw copy is BROKEN before CBRL repairs it. ----
-step_check_raw() {
-  log "Check-raw (negative control): assert the RAW restored copy is INCONSISTENT before CBRL"
-  run_app CbrlDemoDriver check-raw "${COPY_PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}"
+# --- validate-broken: without-CBRL oracle. A Consensus Commit ScanAll must find the copy STILL
+# broken after recovery alone, proving the CBRL redo is what repairs the torn committed writes. ----
+step_validate_broken() {
+  log "Validate (without CBRL): Consensus Commit ScanAll — expect the copy STILL broken after recovery"
+  run_app CbrlDemoDriver validate "${COPY_PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}" broken
 }
 
 # --- expire: wait past the tx lifetime so orphaned PREPARED records can self-abort. ---
@@ -164,10 +179,11 @@ step_cbrl_restore() {
   run_app CbrlDemoDriver restore "${COPY_PROPS}" "${BACKUP_LABEL}"
 }
 
-# --- check: verify the RESTORED copy is complete, all-committed, and conserved. --------
-step_check() {
-  log "Check (final oracle): copy is complete + all-COMMITTED + conserved on the restored copy"
-  run_app CbrlDemoDriver check "${COPY_PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}"
+# --- validate-consistent: with-CBRL oracle. A Consensus Commit ScanAll must find the copy complete
+# and conserved after the redo replay. --------
+step_validate_consistent() {
+  log "Validate (with CBRL): Consensus Commit ScanAll — expect the copy complete + conserved"
+  run_app CbrlDemoDriver validate "${COPY_PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}" consistent
 }
 
 step_down() {
@@ -178,48 +194,84 @@ step_down() {
   docker network rm cbrl-demo_default >/dev/null 2>&1 || true
 }
 
-run_all() {
+# --- run-all-without-cbrl: full pipeline that STOPS before the CBRL redo. The Consensus Commit
+# ScanAll oracle must still find the copy broken — physical restore + recovery alone is not enough. --
+run_all_without_cbrl() {
+  step_down
   step_build
   step_up
   step_schema
   step_populate
-  step_open
-  step_workload
+  run_window_phase
   step_restore_load
-  step_check_raw
+  step_expire
+  step_validate_broken
+  log "Without-CBRL run complete: recovery alone left the copy broken."
+}
+
+# --- run-all-with-cbrl: the full pipeline INCLUDING the CBRL redo replay. The same Consensus Commit
+# ScanAll oracle must now find the copy complete and conserved. --
+run_all_with_cbrl() {
+  step_down
+  step_build
+  step_up
+  step_schema
+  step_populate
+  run_window_phase
+  step_restore_load
   step_expire
   step_cbrl_restore
-  step_check
+  step_validate_consistent
+  log "With-CBRL run complete: the redo replay repaired the copy."
+}
+
+# --- default: run both, so one command tells the whole story. Each run resets the volumes first, so
+# the with-CBRL run repairs its own independent, freshly torn copy. --
+run_both() {
+  log "PHASE 1/2 — WITHOUT CBRL (expect BROKEN)"
+  run_all_without_cbrl
+  log "PHASE 2/2 — WITH CBRL (expect FIXED)"
+  run_all_with_cbrl
   log "Demo complete"
 }
 
-run_resume() {
-  step_open
-  step_workload
+# --- resume variants: reuse an already-seeded primary (skip build/up/schema/populate). --
+resume_without_cbrl() {
+  run_window_phase
   step_restore_load
-  step_check_raw
+  step_expire
+  step_validate_broken
+  log "Without-CBRL resume complete."
+}
+
+resume_with_cbrl() {
+  run_window_phase
+  step_restore_load
   step_expire
   step_cbrl_restore
-  step_check
-  log "Resume complete"
+  step_validate_consistent
+  log "With-CBRL resume complete."
 }
 
 main() {
-  if [ "$#" -eq 0 ]; then run_all; return; fi
+  if [ "$#" -eq 0 ]; then run_both; return; fi
   case "$1" in
-    resume) run_resume ;;
+    run-all-without-cbrl) run_all_without_cbrl ;;
+    run-all-with-cbrl) run_all_with_cbrl ;;
+    resume-without-cbrl) resume_without_cbrl ;;
+    resume-with-cbrl) resume_with_cbrl ;;
     build) step_build ;;
     up) step_up ;;
     schema) step_schema ;;
     populate) step_populate ;;
-    open) step_open ;;
+    cbrl-open) step_cbrl_open ;;
     backup) step_backup ;;
     workload) step_workload ;;
     restore-load) step_restore_load ;;
-    check-raw) step_check_raw ;;
     expire) step_expire ;;
     cbrl-restore) step_cbrl_restore ;;
-    check) step_check ;;
+    validate-broken) step_validate_broken ;;
+    validate-consistent) step_validate_consistent ;;
     down) step_down ;;
     *) echo "Unknown step: $1" ; exit 2 ;;
   esac
