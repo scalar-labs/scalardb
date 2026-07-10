@@ -61,6 +61,37 @@ Dedicated network `cbrl-demo-net`, named volumes, nothing published to the host.
 the network the app reaches the databases by service hostname (`mysql:3306` /
 `postgres:5432`).
 
+```mermaid
+flowchart LR
+    App["app<br/>(transfer workload,<br/>multi-storage Consensus Commit)"]
+
+    subgraph Primary["Primary site — live, writes in flight"]
+        MySQL[("MySQL<br/>transfer (user data)")]
+        Postgres[("PostgreSQL<br/>transfer_pg (user data)<br/>+ coordinator namespace:<br/>state · backup · backup_histories")]
+    end
+
+    App -->|"1 txn: debit transfer, credit transfer_pg,<br/>logs redo to coordinator.state"| MySQL
+    App --> Postgres
+    App -->|"enableRedoLogging(label):<br/>write the backup flag row"| Postgres
+
+    Backups[("backup storage<br/>(physical dumps)")]
+    MySQL -->|"mysqldump (frozen first)"| Backups
+    Postgres -->|"pg_dump (3s later, mid-flight)"| Backups
+
+    subgraph Copy["Restore site — copy servers"]
+        MySQLc[("mysql-copy")]
+        Postgresc[("postgres-copy")]
+    end
+    Backups ==>|"restore-load"| MySQLc
+    Backups ==>|"restore-load"| Postgresc
+
+    Restore["CbrlRestore<br/>read redo for label →<br/>replay chain + recover in-flight"]
+    Postgresc -->|"coordinator redo"| Restore
+    Restore ==> MySQLc
+    Restore ==> Postgresc
+    Postgresc -.->|"raw = BROKEN → after CBRL = FIXED,<br/>total conserved"| Result(["consistent copy<br/>@ consistency point"])
+```
+
 | Service | Role |
 | --- | --- |
 | `mysql` | `transfer` service namespace (user data) — **primary** |
