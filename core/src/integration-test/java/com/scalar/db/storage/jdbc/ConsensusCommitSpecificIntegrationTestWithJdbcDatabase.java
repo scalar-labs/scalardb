@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
@@ -17,14 +18,26 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
     extends ConsensusCommitSpecificIntegrationTestBase {
 
   private JdbcAdminTestUtils jdbcAdminTestUtils;
+  private RdbEngineStrategy rdbEngine;
 
   @Override
   protected Properties getProperties(String testName) {
     Properties properties = ConsensusCommitJdbcEnv.getProperties(testName);
+    rdbEngine = RdbEngineFactory.create(new JdbcConfig(new DatabaseConfig(properties)));
     if (JdbcEnv.isYugabyte() && jdbcAdminTestUtils == null) {
       jdbcAdminTestUtils = new JdbcAdminTestUtils(properties);
     }
     return properties;
+  }
+
+  @Override
+  protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
+    // SQL Server and Db2 use lock-based concurrency even at their default isolation (READ
+    // COMMITTED), so an open scan keeps a shared lock that blocks the scan-path recovery
+    // simulation's concurrent write to a scanned row, and their lock wait is effectively unbounded,
+    // so it hangs. MySQL and MariaDB are MVCC at this class's (default) isolation and do not block;
+    // they only block under SERIALIZABLE (see the highest-isolation subclass).
+    return !(JdbcTestUtils.isSqlServer(rdbEngine) || JdbcTestUtils.isDb2(rdbEngine));
   }
 
   @AfterAll
