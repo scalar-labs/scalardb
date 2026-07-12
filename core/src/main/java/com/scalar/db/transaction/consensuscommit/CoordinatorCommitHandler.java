@@ -29,10 +29,10 @@ import org.slf4j.LoggerFactory;
 class CoordinatorCommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(CoordinatorCommitHandler.class);
 
-  private final Coordinator coordinator;
+  private final CoordinatorStateAccessor coordinator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  CoordinatorCommitHandler(Coordinator coordinator) {
+  CoordinatorCommitHandler(CoordinatorStateAccessor coordinator) {
     this.coordinator = checkNotNull(coordinator);
   }
 
@@ -49,8 +49,8 @@ class CoordinatorCommitHandler {
       throws CommitConflictException, UnknownTransactionStatusException {
     try {
       long committedAt = System.currentTimeMillis();
-      Coordinator.State state =
-          new Coordinator.State(id, writeSet, TransactionState.COMMITTED, committedAt);
+      CoordinatorStateAccessor.State state =
+          new CoordinatorStateAccessor.State(id, writeSet, TransactionState.COMMITTED, committedAt);
       coordinator.putState(state);
       logger.debug("Transaction {} is committed successfully at {}", id, committedAt);
       return committedAt;
@@ -72,9 +72,9 @@ class CoordinatorCommitHandler {
   long handleCommitConflict(String id, Exception cause)
       throws CommitConflictException, UnknownTransactionStatusException {
     try {
-      Optional<Coordinator.State> s = coordinator.getState(id);
+      Optional<CoordinatorStateAccessor.State> s = coordinator.getState(id);
       if (s.isPresent()) {
-        Coordinator.State persisted = s.get();
+        CoordinatorStateAccessor.State persisted = s.get();
         if (persisted.getState() == TransactionState.ABORTED) {
           throw new CommitConflictException(
               CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
@@ -151,8 +151,9 @@ class CoordinatorCommitHandler {
   TransactionState abortState(String id, @Nullable WriteSet writeSet)
       throws UnknownTransactionStatusException {
     try {
-      Coordinator.State state =
-          new Coordinator.State(id, writeSet, TransactionState.ABORTED, System.currentTimeMillis());
+      CoordinatorStateAccessor.State state =
+          new CoordinatorStateAccessor.State(
+              id, writeSet, TransactionState.ABORTED, System.currentTimeMillis());
       coordinator.putState(state);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
@@ -182,8 +183,8 @@ class CoordinatorCommitHandler {
 
   /**
    * Writes the ABORTED state for a manager-level rollback/abort by transaction ID. Uses {@link
-   * Coordinator#forceAbort} so the 2-step protocol wins against an in-flight normal group commit
-   * when the id is a group-commit full key.
+   * CoordinatorStateAccessor#forceAbort} so the 2-step protocol wins against an in-flight normal
+   * group commit when the id is a group-commit full key.
    */
   TransactionState forceAbortState(String id) throws UnknownTransactionStatusException {
     try {
@@ -231,7 +232,7 @@ class CoordinatorCommitHandler {
   private Optional<TransactionState> readCoordinatorStateAfterAbortConflict(
       String id, CoordinatorConflictException e) throws UnknownTransactionStatusException {
     try {
-      return coordinator.getState(id).map(Coordinator.State::getState);
+      return coordinator.getState(id).map(CoordinatorStateAccessor.State::getState);
     } catch (CoordinatorException e1) {
       e1.addSuppressed(e);
       throw new UnknownTransactionStatusException(

@@ -5,7 +5,7 @@ import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.cosmos.CosmosConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -108,7 +108,7 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
     if (coordinatorNamespacePrefix != null) {
       props.setProperty(
           ConsensusCommitConfig.COORDINATOR_NAMESPACE,
-          coordinatorNamespacePrefix + Coordinator.NAMESPACE);
+          coordinatorNamespacePrefix + CoordinatorStateAccessor.NAMESPACE);
     }
 
     Map<String, String> options = new HashMap<>();

@@ -128,7 +128,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private ParallelExecutor parallelExecutor;
 
   private DistributedStorage storage;
-  private Coordinator coordinator;
+  private CoordinatorStateAccessor coordinator;
   private RecoveryHandler recovery;
   private RecoveryExecutor recoveryExecutor;
   private CommitHandler commit;
@@ -287,7 +287,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.COMMITTED);
 
     // commit-state should not occur for read-only transactions
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -333,7 +333,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.COMMITTED);
 
     // commit-state should not occur for read-only transactions
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -388,7 +388,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // commit-state should not occur for read-only transactions
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -1622,7 +1622,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // In all cases, recovery should not occur
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -1755,7 +1755,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
       verify(recovery, never())
           .tryRecover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator, never()).putState(any(Coordinator.State.class));
+      verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else if (isolation == Isolation.READ_COMMITTED) {
       // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
@@ -2223,7 +2223,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // In all cases, recovery should not occur
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2598,7 +2598,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should not occur
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2751,7 +2751,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         ANY_ID_2,
         current);
     coordinator.putState(
-        new Coordinator.State(ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis()));
+        new CoordinatorStateAccessor.State(
+            ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis()));
 
     DistributedTransaction transaction = manager.begin();
 
@@ -2825,7 +2826,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         ANY_ID_2,
         current);
     coordinator.putState(
-        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
+        new CoordinatorStateAccessor.State(
+            ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
 
     DistributedTransaction transaction = manager.begin();
 
@@ -2878,7 +2880,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         ANY_ID_2,
         current);
     coordinator.putState(
-        new Coordinator.State(ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
+        new CoordinatorStateAccessor.State(
+            ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
 
     DistributedTransaction transaction = manager.begin();
 
@@ -3095,7 +3098,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     storage.put(put);
 
     coordinator.putState(
-        new Coordinator.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
+        new CoordinatorStateAccessor.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
   }
 
   private void
@@ -3407,7 +3410,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Recovery should not occur
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -3681,7 +3684,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     coordinator.putState(
-        new Coordinator.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
+        new CoordinatorStateAccessor.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
     return ANY_ID_2;
   }
 
@@ -3720,7 +3723,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     doAnswer(
             invocation -> {
               coordinator.putState(
-                  new Coordinator.State(
+                  new CoordinatorStateAccessor.State(
                       ongoingTxId, TransactionState.COMMITTED, System.currentTimeMillis()));
               return Optional.empty();
             })
@@ -4226,7 +4229,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                   "simulated conflict: group-commit parent row was committed");
             })
         .when(coordinator)
-        .putState(any(Coordinator.State.class));
+        .putState(any(CoordinatorStateAccessor.State.class));
 
     // The coordinator cleanup process removed the parent row in the window between the conflict
     // and the re-read -- return empty to model the cleaned-up state. The fall-through then writes
@@ -4378,7 +4381,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // The re-preparing transaction is aborted, so resolving it rolls the record back to its
     // before-image, restoring the intervening committed value as the record's committed image.
     coordinator.putState(
-        new Coordinator.State(
+        new CoordinatorStateAccessor.State(
             REPREPARING_TX_ID, TransactionState.ABORTED, System.currentTimeMillis()));
     doAnswer(
             invocation -> {
@@ -4899,7 +4902,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // In all isolations, recovery should not occur
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -5153,7 +5156,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // In all isolations, recovery should not occur
     verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -9618,10 +9621,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           return;
         }
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         break;
       case PARTITION:
       case TABLE:
@@ -9632,16 +9635,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -9720,9 +9723,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         } else {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         }
         break;
       case TABLE:
@@ -9733,16 +9736,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -9822,9 +9825,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // commit-state should occur
       if (isGroupCommitEnabled()) {
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       } else {
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       }
     } else {
       // same storage
@@ -9838,9 +9841,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
           break;
         case STORAGE:
@@ -9849,16 +9852,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             verify(storage).mutate(anyList());
 
             // no commit-state should occur
-            verify(coordinator, never()).putState(any(Coordinator.State.class));
+            verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
           } else {
             // one for prepare, one for commit
             verify(storage, times(2)).mutate(anyList());
 
             // commit-state should occur
             if (isGroupCommitEnabled()) {
-              verify(coordinator).putState(any(Coordinator.State.class));
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             } else {
-              verify(coordinator).putState(any(Coordinator.State.class));
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             }
           }
           break;
@@ -9959,10 +9962,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           return;
         }
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         break;
       case PARTITION:
       case TABLE:
@@ -9973,16 +9976,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -10083,9 +10086,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         } else {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         }
         break;
       case TABLE:
@@ -10096,16 +10099,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -10207,9 +10210,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // commit-state should occur
       if (isGroupCommitEnabled()) {
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       } else {
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       }
     } else {
       // same storage
@@ -10223,9 +10226,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
           break;
         case STORAGE:
@@ -10234,16 +10237,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             verify(storage).mutate(anyList());
 
             // no commit-state should occur
-            verify(coordinator, never()).putState(any(Coordinator.State.class));
+            verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
           } else {
             // one for prepare, one for commit
             verify(storage, times(2)).mutate(anyList());
 
             // commit-state should occur
             if (isGroupCommitEnabled()) {
-              verify(coordinator).putState(any(Coordinator.State.class));
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             } else {
-              verify(coordinator).putState(any(Coordinator.State.class));
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             }
           }
           break;
@@ -10339,10 +10342,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // commit-state should occur
       if (isGroupCommitEnabled()) {
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         return;
       }
-      verify(coordinator).putState(any(Coordinator.State.class));
+      verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
     } else if (onePhaseCommitEnabled) {
       // only one transaction read, no validation read
       verify(storage).get(any(Get.class));
@@ -10351,7 +10354,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       verify(storage).mutate(anyList());
 
       // no commit-state should occur
-      verify(coordinator, never()).putState(any(Coordinator.State.class));
+      verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     } else {
       // only one transaction read, no validation read
       verify(storage).get(any(Get.class));
@@ -10360,7 +10363,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       verify(storage, times(2)).mutate(anyList());
 
       // commit-state should occur
-      verify(coordinator).putState(any(Coordinator.State.class));
+      verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
     }
 
     Optional<Result> result1 =
@@ -10761,7 +10764,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert — the persisted tx_write_set BLOB can be read back and parsed as a valid WriteSet
     // carrying both writes (the exact EntryGroup partitioning depends on group commit; we only
     // assert the total entry count).
-    Optional<Coordinator.State> state = coordinator.getState(txId);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(txId);
     assertThat(state).isPresent();
     assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(state.get().getWriteSet()).isPresent();
@@ -10939,7 +10942,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     pushRecordBackToPrepared(0, 1, txId);
 
     // Sanity check
-    Optional<Coordinator.State> stateBefore = coordinator.getState(txId);
+    Optional<CoordinatorStateAccessor.State> stateBefore = coordinator.getState(txId);
     assertThat(stateBefore).isPresent();
     assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.COMMITTED);
     Optional<Result> raw00Before = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -11007,7 +11010,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                     .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 1)))
             .build();
     coordinator.putState(
-        new Coordinator.State(
+        new CoordinatorStateAccessor.State(
             txId, writeSet, TransactionState.ABORTED, System.currentTimeMillis()));
 
     // Sanity check
@@ -11020,8 +11023,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     boolean finished = manager.finishTransaction(txId);
 
     // Assert — record (0, 0) is restored to the before-image (tx_id=ANY_ID_1, tx_state=COMMITTED,
-    // balance=INITIAL_BALANCE), record (0, 1) remains absent at storage, and the Coordinator
-    // state row is gone.
+    // balance=INITIAL_BALANCE), record (0, 1) remains absent at storage, and the
+    // Coordinator state row is gone.
     assertThat(finished).isTrue();
     assertThat(coordinator.getState(txId)).isEmpty();
     Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -11104,10 +11107,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         Arrays.asList(
             km.keysFromFullKey(fullTxId1).childKey, km.keysFromFullKey(fullTxId2).childKey);
     coordinator.putState(
-        new Coordinator.State(parentId, childIds, writeSet, TransactionState.COMMITTED, now));
+        new CoordinatorStateAccessor.State(
+            parentId, childIds, writeSet, TransactionState.COMMITTED, now));
 
     // Sanity check
-    Optional<Coordinator.State> stateBefore = coordinator.getState(fullTxId1);
+    Optional<CoordinatorStateAccessor.State> stateBefore = coordinator.getState(fullTxId1);
     assertThat(stateBefore).isPresent();
     assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.COMMITTED);
     Optional<Result> raw00Before = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -11145,10 +11149,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void finishTransaction_TransactionTerminatedWithoutWriteSet_ShouldReturnFalseAndLeaveState()
       throws Exception {
     // Scenario 4: a transaction that did not go through DistributedTransaction#commit() — here it
-    // was terminated via DistributedTransactionManager#rollback() — leaves a Coordinator ABORTED
-    // state row that carries no write set. finishTransaction is not applicable to such a
-    // transaction: it must report that by returning false without doing any work and leave the
-    // state row in place for lazy recovery to handle.
+    // was terminated via DistributedTransactionManager#rollback() — leaves a
+    // Coordinator ABORTED state row that carries no write set. finishTransaction is not
+    // applicable to such a transaction: it must report that by returning false without doing any
+    // work and leave the state row in place for lazy recovery to handle.
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
 
     String txId = UUID.randomUUID().toString();
@@ -11156,7 +11160,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     manager.rollback(txId);
 
     // Sanity check — the state row is present, ABORTED, and carries no write set.
-    Optional<Coordinator.State> stateBefore = coordinator.getState(txId);
+    Optional<CoordinatorStateAccessor.State> stateBefore = coordinator.getState(txId);
     assertThat(stateBefore).isPresent();
     assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.ABORTED);
     assertThat(stateBefore.get().getWriteSet()).isNotPresent();
@@ -11166,7 +11170,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert — not applicable (no write set), so it returns false and leaves the state row intact.
     assertThat(finished).isFalse();
-    Optional<Coordinator.State> stateAfter = coordinator.getState(txId);
+    Optional<CoordinatorStateAccessor.State> stateAfter = coordinator.getState(txId);
     assertThat(stateAfter).isPresent();
     assertThat(stateAfter.get().getState()).isEqualTo(TransactionState.ABORTED);
     assertThat(stateAfter.get().getWriteSet()).isNotPresent();
@@ -11319,7 +11323,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert — the writer is aborted and the record rolled back to the before-image.
     assertThat(recovered).isTrue();
-    Optional<Coordinator.State> state = coordinator.getState(txId);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(txId);
     assertThat(state).isPresent();
     assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
     Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -11404,10 +11408,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Arrange — record (0,0) is PREPARED by a group-commit transaction (its tx_id is a full
     // group-commit key) with no Coordinator state and an expired prepared-at. This is an abandoned
     // group-commit writer (the group never reached commit). recoverRecord must abort it through the
-    // group-commit-aware path (Coordinator.forceAbortForGroupCommit), which writes both the
-    // lazy-recovery-abort-with-parent-id row and the full-id ABORTED row — the same rows that
-    // conflict-protect against a racing real group commit. This is the expired counterpart of the
-    // not-expired test above and confirms recoverRecord drives the no-state group-commit branch
+    // group-commit-aware path (CoordinatorStateAccessor.forceAbortForGroupCommit), which writes
+    // both the lazy-recovery-abort-with-parent-id row and the full-id ABORTED row — the same rows
+    // that conflict-protect against a racing real group commit. This is the expired counterpart of
+    // the not-expired test above and confirms recoverRecord drives the no-state group-commit branch
     // identically to lazy recovery.
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
     String txId =
@@ -11429,7 +11433,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // before-image. getState on the full key resolves to ABORTED (it falls through to the full-id
     // ABORTED row written by the group-commit abort path).
     assertThat(recovered).isTrue();
-    Optional<Coordinator.State> state = coordinator.getState(txId);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(txId);
     assertThat(state).isPresent();
     assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
     Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -11631,14 +11635,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     switch (commitType) {
       case NORMAL_COMMIT:
-        Coordinator.State state =
-            new Coordinator.State(ANY_ID_2, coordinatorState, System.currentTimeMillis());
+        CoordinatorStateAccessor.State state =
+            new CoordinatorStateAccessor.State(
+                ANY_ID_2, coordinatorState, System.currentTimeMillis());
         coordinator.putState(state);
         break;
       case GROUP_COMMIT:
         Keys<String, String, String> keys = keyManipulator.keysFromFullKey(ongoingTxId);
         coordinator.putState(
-            new Coordinator.State(
+            new CoordinatorStateAccessor.State(
                 keys.parentKey,
                 Collections.singletonList(keys.childKey),
                 null,
@@ -11647,7 +11652,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         break;
       case DELAYED_GROUP_COMMIT:
         coordinator.putState(
-            new Coordinator.State(ongoingTxId, coordinatorState, System.currentTimeMillis()));
+            new CoordinatorStateAccessor.State(
+                ongoingTxId, coordinatorState, System.currentTimeMillis()));
         break;
     }
 
@@ -11803,7 +11809,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private ConsensusCommitManager createConsensusCommitManager(
       Isolation isolation, boolean onePhaseCommitEnabled) {
     storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));

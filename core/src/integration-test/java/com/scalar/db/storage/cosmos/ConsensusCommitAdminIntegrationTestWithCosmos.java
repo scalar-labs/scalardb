@@ -3,7 +3,7 @@ package com.scalar.db.storage.cosmos;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -32,7 +32,7 @@ public class ConsensusCommitAdminIntegrationTestWithCosmos
   protected String getCoordinatorNamespaceName(String testName) {
     return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
         .getCoordinatorNamespace()
-        .orElse(Coordinator.NAMESPACE);
+        .orElse(CoordinatorStateAccessor.NAMESPACE);
   }
 
   @Override

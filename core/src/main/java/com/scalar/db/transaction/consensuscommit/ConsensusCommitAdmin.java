@@ -48,7 +48,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.admin = admin;
     config = new ConsensusCommitConfig(databaseConfig);
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespace =
+        config.getCoordinatorNamespace().orElse(CoordinatorStateAccessor.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
@@ -58,7 +59,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     admin = storageFactory.getStorageAdmin();
 
     config = new ConsensusCommitConfig(databaseConfig);
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespace =
+        config.getCoordinatorNamespace().orElse(CoordinatorStateAccessor.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
     isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
@@ -70,7 +72,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       boolean isIncludeMetadataEnabled) {
     this.config = config;
     this.admin = admin;
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespace =
+        config.getCoordinatorNamespace().orElse(CoordinatorStateAccessor.NAMESPACE);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
@@ -84,7 +87,10 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
     admin.createNamespace(coordinatorNamespace, options);
     admin.createTable(
-        coordinatorNamespace, Coordinator.TABLE, getCoordinatorTableMetadata(), options);
+        coordinatorNamespace,
+        CoordinatorStateAccessor.TABLE,
+        getCoordinatorTableMetadata(),
+        options);
   }
 
   @Override
@@ -94,7 +100,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
           CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND.buildMessage());
     }
 
-    admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
+    admin.dropTable(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
     admin.dropNamespace(coordinatorNamespace);
   }
 
@@ -105,12 +111,12 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
           CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND.buildMessage());
     }
 
-    admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
+    admin.truncateTable(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
   }
 
   @Override
   public boolean coordinatorTablesExist() throws ExecutionException {
-    return admin.tableExists(coordinatorNamespace, Coordinator.TABLE);
+    return admin.tableExists(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
   }
 
   @Override
@@ -330,7 +336,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     admin.createNamespace(coordinatorNamespace, true, options);
 
     // Snapshot the current Coordinator table metadata before repairTable upserts the desired one.
-    TableMetadata currentMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+    TableMetadata currentMetadata =
+        admin.getTableMetadata(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
 
     // Pick the desired schema:
     // - For each optional column (CHILD_IDS, WRITE_SET): include it in the desired schema if the
@@ -350,7 +357,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
         (currentMetadata != null && currentMetadata.getColumnNames().contains(Attribute.WRITE_SET))
             || config.isCoordinatorWriteSetLoggingEnabled();
     TableMetadata coordinatorTableMetadata =
-        Coordinator.buildTableMetadata(hasGroupCommitColumnInSchema, hasWriteSetColumnInSchema);
+        CoordinatorStateAccessor.buildTableMetadata(
+            hasGroupCommitColumnInSchema, hasWriteSetColumnInSchema);
 
     // Upgrade the schema (ALTER TABLE ADD COLUMN for any non-key columns the desired schema
     // requires that the existing Coordinator is missing) BEFORE repairTable. addNewColumnToTable
@@ -361,7 +369,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     // ScalarDB-side metadata even though the physical column does not yet exist.
     upgradeCoordinatorTableSchema(currentMetadata, coordinatorTableMetadata);
 
-    admin.repairTable(coordinatorNamespace, Coordinator.TABLE, coordinatorTableMetadata, options);
+    admin.repairTable(
+        coordinatorNamespace, CoordinatorStateAccessor.TABLE, coordinatorTableMetadata, options);
   }
 
   // Adds any non-key columns the desired Coordinator table schema requires that the existing
@@ -397,7 +406,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       }
       DataType columnDataType = coordinatorTableMetadata.getColumnDataType(columnName);
       admin.addNewColumnToTable(
-          coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
+          coordinatorNamespace, CoordinatorStateAccessor.TABLE, columnName, columnDataType);
     }
   }
 
@@ -588,7 +597,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   private TableMetadata getCoordinatorTableMetadata() {
-    return Coordinator.buildTableMetadata(
+    return CoordinatorStateAccessor.buildTableMetadata(
         config.isCoordinatorGroupCommitEnabled(), config.isCoordinatorWriteSetLoggingEnabled());
   }
 

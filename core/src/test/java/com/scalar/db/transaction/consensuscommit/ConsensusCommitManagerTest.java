@@ -44,8 +44,8 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,7 +66,7 @@ public class ConsensusCommitManagerTest {
   @Mock private DistributedStorageAdmin admin;
   @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private Coordinator coordinator;
+  @Mock private CoordinatorStateAccessor coordinator;
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CrudHandler crud;
