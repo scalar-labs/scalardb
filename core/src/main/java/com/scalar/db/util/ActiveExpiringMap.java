@@ -62,10 +62,9 @@ public class ActiveExpiringMap<K, V> {
   // network/storage I/O (e.g. rolling a transaction back or releasing its context), so it must not
   // run on ForkJoinPool.commonPool() — Caffeine's default removal executor — where a burst of
   // blocking disposals could starve unrelated common-pool work. Threads are daemon. The fixed
-  // thread
-  // count bounds how many disposals run concurrently, throttling a mass reclamation to at most that
-  // many concurrent backend calls rather than flooding the backend; any excess queues (the queue is
-  // unbounded, so no disposal is dropped) and drains as threads free up.
+  // thread count bounds how many disposals run concurrently, throttling a mass reclamation to at
+  // most that many concurrent backend calls rather than flooding the backend; any excess queues
+  // (the queue is unbounded, so no disposal is dropped) and drains as threads free up.
   private static final Executor DISPOSAL_EXECUTOR = newDaemonDisposalExecutor();
 
   private final Cache<K, V> cache;
@@ -191,6 +190,17 @@ public class ActiveExpiringMap<K, V> {
    */
   public void updateExpirationTime(K key) {
     cache.getIfPresent(key);
+  }
+
+  /**
+   * Performs the given action for each live entry. The traversal is weakly consistent (concurrent
+   * writes may or may not be observed) and does not count as access: it refreshes neither the idle
+   * timer nor the recency of the visited entries.
+   *
+   * @param action the action to perform for each entry
+   */
+  public void forEach(BiConsumer<K, V> action) {
+    cache.asMap().forEach(action);
   }
 
   /** Performs any pending maintenance (expiration/eviction) synchronously. For tests only. */

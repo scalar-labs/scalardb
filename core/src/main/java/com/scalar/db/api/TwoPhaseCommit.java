@@ -259,9 +259,10 @@ public interface TwoPhaseCommit {
    *   <li>Lifecycle and record-level two-phase commit methods ({@link #join}, {@link
    *       #prepareRecords}, {@link #validateRecords}, {@link #commitRecords}, {@link
    *       #rollbackRecords}) are invoked by {@link Coordinator}.
-   *   <li>{@link #releaseContext} is invoked by neither — it is a reap-only terminal driven by a
-   *       context-reaper/decorator to reclaim an abandoned or idle-reaped context without touching
-   *       storage.
+   *   <li>{@link #releaseContext} and {@link #hasTransactionContext} are invoked by neither — they
+   *       are driven by a context-reaper/decorator: the former a reap-only terminal that reclaims
+   *       an abandoned or idle-reaped context without touching storage, the latter a liveness probe
+   *       consulted before such a reap.
    * </ul>
    *
    * <p>Operations must follow the transaction's lifecycle: CRUD while the transaction is open, then
@@ -582,6 +583,45 @@ public interface TwoPhaseCommit {
      *     no-op
      */
     void rollbackRecords(String transactionId) throws RollbackException;
+
+    /**
+     * Returns whether this participant still holds a local context for the transaction.
+     *
+     * <p>This is a liveness probe, not an operation on the transaction, and it carries two
+     * contracts that differ from every other method on this interface:
+     *
+     * <ul>
+     *   <li><b>Quiet.</b> The probe must not count as transaction activity: it must not refresh any
+     *       idle-expiration timer or usage recency that the implementation (or a decorator around
+     *       it) maintains for the transaction. Probing sides extend lifetimes based on the answer,
+     *       so a probe that itself counted as activity would form a feedback loop that keeps
+     *       abandoned transactions alive forever.
+     *   <li><b>Time-bounded.</b> Callers invoke this from housekeeping paths (e.g. an expiry
+     *       reaper); an implementation that crosses a network must bound the probe with its own
+     *       deadline rather than block indefinitely.
+     * </ul>
+     *
+     * @param transactionId the canonical transaction ID returned by {@link Coordinator#begin}
+     * @return true if a live context for the transaction is held; false if it is definitely not
+     *     (never joined, already finished, or already reaped)
+     * @throws TransactionNotFoundException if this participant definitely holds no context for the
+     *     transaction. This is an alternative carrier of the {@code false} answer: a remote
+     *     implementation may surface its conventional not-found error mapping - for example, a
+     *     probe rerouted to a successor node after a crash, where the context is genuinely gone -
+     *     instead of converting it to a return value. Callers must treat it exactly like a {@code
+     *     false} return. Note the inversion from every other method on this interface, where this
+     *     exception marks a transient, retriable condition: here it is an authoritative answer that
+     *     callers act on terminally (by reaping). An implementation must therefore throw it only
+     *     when the absence is authoritative for the participant as a whole - never for a transient
+     *     miss, such as a probe answered by a node that does not hold the context while another
+     *     node still might. A condition like that must surface as {@link TransactionException}
+     *     (fail-open) instead
+     * @throws TransactionException if the probe fails due to transient or nontransient faults (for
+     *     example, a remote participant that cannot be reached, or one that does not implement the
+     *     probe). Callers must treat a failed probe conservatively, as possibly present
+     */
+    boolean hasTransactionContext(String transactionId)
+        throws TransactionNotFoundException, TransactionException;
 
     /**
      * Releases the participant's in-memory context for the transaction without touching storage.

@@ -40,9 +40,13 @@ public class TwoPhaseCommitBackedConsensusCommitProvider
   @Override
   public DistributedTransactionManager createRawDistributedTransactionManager(
       DatabaseConfig config) {
+    // Build the roles through the inherited final factory methods so the role-level decorators
+    // (active transaction management, attribute propagation) wrap them exactly as in a production
+    // deployment; building the raw roles directly here would bypass those decorators and leave
+    // their code paths untested on this facade route.
     DatabaseConfig ccConfig = toConsensusCommitConfig(config);
-    TwoPhaseCommit.Coordinator coordinator = new ConsensusCommitCoordinator(ccConfig);
-    TwoPhaseCommit.Participant participant = new ConsensusCommitParticipant(ccConfig);
+    TwoPhaseCommit.Coordinator coordinator = createTwoPhaseCommitCoordinator(ccConfig);
+    TwoPhaseCommit.Participant participant = createTwoPhaseCommitParticipant(ccConfig);
     return new TwoPhaseCommitBackedDistributedTransactionManager(
         ccConfig, coordinator, participant);
   }
@@ -63,16 +67,12 @@ public class TwoPhaseCommitBackedConsensusCommitProvider
 
   @Override
   public TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
-    // Not exercised by these integration tests; the facade is reached via the distributed-manager
-    // factory method above.
-    throw new UnsupportedOperationException();
+    return new ConsensusCommitCoordinator(toConsensusCommitConfig(config));
   }
 
   @Override
   public TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
-    // Not exercised by these integration tests; the facade is reached via the distributed-manager
-    // factory method above.
-    throw new UnsupportedOperationException();
+    return new ConsensusCommitParticipant(toConsensusCommitConfig(config));
   }
 
   // Returns a config whose transaction-manager name is forced to consensus-commit so the
