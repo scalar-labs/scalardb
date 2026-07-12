@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import com.scalar.db.util.ActiveExpiringMap;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,6 +100,18 @@ public class ActiveTransactionRegistry<T> {
    */
   public void touch(String id) {
     activeTransactions.updateExpirationTime(id);
+  }
+
+  /**
+   * Performs the given action for each registered transaction. The traversal is weakly consistent
+   * (concurrent registrations and removals may or may not be observed) and does not count as
+   * access: it refreshes neither the idle timer nor the eviction recency of the visited
+   * transactions.
+   *
+   * @param action the action to perform for each transaction ID / transaction pair
+   */
+  public void forEach(BiConsumer<String, T> action) {
+    activeTransactions.forEach(action);
   }
 
   /**
