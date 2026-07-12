@@ -27,7 +27,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandlerWithGroupCommit(
       DistributedStorage storage,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
@@ -56,7 +56,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean coordinatorWriteSetLoggingEnabled,
       ParticipantCommitHandler participantCommitHandler,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       CoordinatorGroupCommitter groupCommitter) {
     this(
         coordinatorWriteOmissionOnReadOnlyEnabled,

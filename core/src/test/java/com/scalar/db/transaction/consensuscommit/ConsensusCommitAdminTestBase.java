@@ -53,7 +53,8 @@ public abstract class ConsensusCommitAdminTestBase {
     when(config.getCoordinatorNamespace()).thenReturn(getCoordinatorNamespaceConfig());
     when(config.isCoordinatorGroupCommitEnabled()).thenReturn(false);
     admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
-    coordinatorNamespaceName = getCoordinatorNamespaceConfig().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespaceName =
+        getCoordinatorNamespaceConfig().orElse(CoordinatorStateAccessor.NAMESPACE);
   }
 
   protected abstract Optional<String> getCoordinatorNamespaceConfig();
@@ -72,8 +73,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .createTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(false, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(false, false),
             Collections.emptyMap());
   }
 
@@ -94,8 +95,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .createTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(true, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(true, false),
             Collections.emptyMap());
   }
 
@@ -104,7 +105,8 @@ public abstract class ConsensusCommitAdminTestBase {
       createCoordinatorTables_CoordinatorTablesAlreadyExist_shouldThrowIllegalArgumentException()
           throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(true);
 
     // Act Assert
@@ -126,8 +128,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .createTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(false, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(false, false),
             options);
   }
 
@@ -150,8 +152,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .createTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(true, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(true, false),
             options);
   }
 
@@ -173,8 +175,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .createTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(false, true),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(false, true),
             Collections.emptyMap());
   }
 
@@ -197,8 +199,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .createTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(true, true),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(true, true),
             Collections.emptyMap());
   }
 
@@ -206,14 +208,16 @@ public abstract class ConsensusCommitAdminTestBase {
   public void truncateCoordinatorTables_shouldTruncateCoordinatorTableProperly()
       throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(true);
 
     // Act
     admin.truncateCoordinatorTables();
 
     // Assert
-    verify(distributedStorageAdmin).truncateTable(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .truncateTable(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
   }
 
   @Test
@@ -221,7 +225,8 @@ public abstract class ConsensusCommitAdminTestBase {
       truncateCoordinatorTables_CoordinatorTablesNotExist_shouldThrowIllegalArgumentException()
           throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(false);
 
     // Act Assert
@@ -232,14 +237,16 @@ public abstract class ConsensusCommitAdminTestBase {
   @Test
   public void dropCoordinatorTables_shouldDropCoordinatorTableProperly() throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(true);
 
     // Act
     admin.dropCoordinatorTables();
 
     // Assert
-    verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .dropTable(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
     verify(distributedStorageAdmin).dropNamespace(coordinatorNamespaceName);
   }
 
@@ -247,7 +254,8 @@ public abstract class ConsensusCommitAdminTestBase {
   public void dropCoordinatorTables_CoordinatorTablesNotExist_shouldThrowIllegalArgumentException()
       throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(false);
 
     // Act Assert
@@ -265,7 +273,8 @@ public abstract class ConsensusCommitAdminTestBase {
     boolean actual = admin.coordinatorTablesExist();
 
     // Assert
-    verify(distributedStorageAdmin).tableExists(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .tableExists(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
     assertThat(actual).isFalse();
   }
 
@@ -279,7 +288,8 @@ public abstract class ConsensusCommitAdminTestBase {
     boolean actual = admin.coordinatorTablesExist();
 
     // Assert
-    verify(distributedStorageAdmin).tableExists(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .tableExists(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
     assertThat(actual).isTrue();
   }
 
@@ -860,8 +870,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(false, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(false, false),
             options);
   }
 
@@ -883,8 +893,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(true, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(true, false),
             options);
   }
 
@@ -905,8 +915,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(false, true),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(false, true),
             options);
   }
 
@@ -929,8 +939,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(true, true),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(true, true),
             options);
   }
 
@@ -945,8 +955,9 @@ public abstract class ConsensusCommitAdminTestBase {
 
     // The existing Coordinator table was created with group commit disabled, so it does not have
     // the CHILD_IDS column.
-    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
-        .thenReturn(Coordinator.buildTableMetadata(false, false));
+    when(distributedStorageAdmin.getTableMetadata(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
+        .thenReturn(CoordinatorStateAccessor.buildTableMetadata(false, false));
 
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -958,12 +969,15 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(true, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(true, false),
             options);
     verify(distributedStorageAdmin)
         .addNewColumnToTable(
-            coordinatorNamespaceName, Coordinator.TABLE, Attribute.CHILD_IDS, DataType.TEXT);
+            coordinatorNamespaceName,
+            CoordinatorStateAccessor.TABLE,
+            Attribute.CHILD_IDS,
+            DataType.TEXT);
   }
 
   @Test
@@ -977,8 +991,9 @@ public abstract class ConsensusCommitAdminTestBase {
     // group commit config independently decides whether to use that column. So repair should
     // upsert the WITH_GROUP_COMMIT_ENABLED metadata, NOT the disabled variant, and should not
     // attempt any column ALTER.
-    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
-        .thenReturn(Coordinator.buildTableMetadata(true, false));
+    when(distributedStorageAdmin.getTableMetadata(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
+        .thenReturn(CoordinatorStateAccessor.buildTableMetadata(true, false));
 
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -990,8 +1005,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(true, false),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(true, false),
             options);
     verify(distributedStorageAdmin, never()).addNewColumnToTable(any(), any(), any(), any());
   }
@@ -1007,8 +1022,9 @@ public abstract class ConsensusCommitAdminTestBase {
 
     // The existing Coordinator table was created without write-set logging, so it does not have
     // the WRITE_SET column.
-    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
-        .thenReturn(Coordinator.buildTableMetadata(false, false));
+    when(distributedStorageAdmin.getTableMetadata(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
+        .thenReturn(CoordinatorStateAccessor.buildTableMetadata(false, false));
 
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -1020,12 +1036,15 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(false, true),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(false, true),
             options);
     verify(distributedStorageAdmin)
         .addNewColumnToTable(
-            coordinatorNamespaceName, Coordinator.TABLE, Attribute.WRITE_SET, DataType.BLOB);
+            coordinatorNamespaceName,
+            CoordinatorStateAccessor.TABLE,
+            Attribute.WRITE_SET,
+            DataType.BLOB);
   }
 
   @Test
@@ -1039,8 +1058,9 @@ public abstract class ConsensusCommitAdminTestBase {
     // write_set); the runtime write-set logging config independently decides whether to use that
     // column. So repair should upsert the WITH-WRITE_SET metadata, NOT the disabled variant, and
     // should not attempt any column ALTER.
-    when(distributedStorageAdmin.getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE))
-        .thenReturn(Coordinator.buildTableMetadata(false, true));
+    when(distributedStorageAdmin.getTableMetadata(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
+        .thenReturn(CoordinatorStateAccessor.buildTableMetadata(false, true));
 
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -1052,8 +1072,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .repairTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.buildTableMetadata(false, true),
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.buildTableMetadata(false, true),
             options);
     verify(distributedStorageAdmin, never()).addNewColumnToTable(any(), any(), any(), any());
   }

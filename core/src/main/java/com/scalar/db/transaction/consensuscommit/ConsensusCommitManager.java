@@ -40,8 +40,8 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
@@ -67,7 +67,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
   private final TransactionTableMetadataManager tableMetadataManager;
-  private final Coordinator coordinator;
+  private final CoordinatorStateAccessor coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
@@ -85,7 +85,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.storage = storage;
     this.admin = admin;
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
@@ -125,7 +125,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     admin = storageFactory.getStorageAdmin();
 
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
@@ -165,7 +165,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
       DatabaseConfig databaseConfig,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
@@ -676,10 +676,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
     // Perform the Coordinator state cleanup (delete the state row). state.getId() is the key the
     // row actually lives under: the parent ID for a normal group commit, or the full ID for a
-    // single or delayed commit (Coordinator#getState routes a full child ID through
-    // getStateForGroupCommit and returns the resolved row). Coordinator#deleteState handles full
-    // keys internally, so the delete targets the right row in both cases.
-    // Coordinator#deleteState is unconditional and benign on a concurrent delete.
+    // single or delayed commit (CoordinatorStateAccessor#getState routes a full child ID through
+    // getStateForGroupCommit and returns the resolved row). CoordinatorStateAccessor#deleteState
+    // handles full keys internally, so the delete targets the right row in both cases.
+    // CoordinatorStateAccessor#deleteState is unconditional and benign on a concurrent delete.
     try {
       coordinator.deleteState(state.getId());
     } catch (CoordinatorException e) {

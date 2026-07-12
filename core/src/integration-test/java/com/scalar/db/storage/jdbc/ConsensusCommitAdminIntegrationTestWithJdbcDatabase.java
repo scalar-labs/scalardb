@@ -17,7 +17,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -57,7 +57,7 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
   protected String getCoordinatorNamespaceName(String testName) {
     return new ConsensusCommitConfig(new DatabaseConfig(getProperties(testName)))
         .getCoordinatorNamespace()
-        .orElse(Coordinator.NAMESPACE);
+        .orElse(CoordinatorStateAccessor.NAMESPACE);
   }
 
   @Override

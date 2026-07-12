@@ -50,7 +50,7 @@ public class RecoveryExecutor implements AutoCloseable {
   @VisibleForTesting static final int MAX_RESOLUTION_ATTEMPTS = 5;
 
   private final DistributedStorage storage;
-  private final Coordinator coordinator;
+  private final CoordinatorStateAccessor coordinator;
   private final RecoveryHandler recovery;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ExecutorService executorService;
@@ -58,7 +58,7 @@ public class RecoveryExecutor implements AutoCloseable {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public RecoveryExecutor(
       DistributedStorage storage,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       RecoveryHandler recovery,
       TransactionTableMetadataManager tableMetadataManager) {
     this.storage = Objects.requireNonNull(storage);
@@ -134,7 +134,7 @@ public class RecoveryExecutor implements AutoCloseable {
         Future<Void> future =
             executorService.submit(
                 () -> {
-                  Optional<Coordinator.State> s = getCoordinatorState(result.getId());
+                  Optional<CoordinatorStateAccessor.State> s = getCoordinatorState(result.getId());
 
                   throwUncommittedRecordExceptionIfTransactionNotExpired(
                       s, selection, result, transactionId);
@@ -192,7 +192,7 @@ public class RecoveryExecutor implements AutoCloseable {
       String txId = current.getId();
       assert txId != null;
 
-      Optional<Coordinator.State> state = getCoordinatorState(txId);
+      Optional<CoordinatorStateAccessor.State> state = getCoordinatorState(txId);
 
       if (state.isPresent()) {
         boolean rolledBack = state.get().getState() == TransactionState.ABORTED;
@@ -328,7 +328,7 @@ public class RecoveryExecutor implements AutoCloseable {
     }
   }
 
-  private Optional<Coordinator.State> getCoordinatorState(String transactionId)
+  private Optional<CoordinatorStateAccessor.State> getCoordinatorState(String transactionId)
       throws CrudException {
     try {
       return coordinator.getState(transactionId);
@@ -341,7 +341,10 @@ public class RecoveryExecutor implements AutoCloseable {
   }
 
   private Optional<TransactionResult> createRecoveredResult(
-      Coordinator.State state, Selection selection, TransactionResult result, String transactionId)
+      CoordinatorStateAccessor.State state,
+      Selection selection,
+      TransactionResult result,
+      String transactionId)
       throws CrudException {
     if (state.getState() == TransactionState.ABORTED) {
       return createRecordFromBeforeImage(selection, result, transactionId);
@@ -351,7 +354,7 @@ public class RecoveryExecutor implements AutoCloseable {
   }
 
   private void throwUncommittedRecordExceptionIfTransactionNotExpired(
-      Optional<Coordinator.State> state,
+      Optional<CoordinatorStateAccessor.State> state,
       Selection selection,
       TransactionResult result,
       String transactionId)
@@ -508,16 +511,17 @@ public class RecoveryExecutor implements AutoCloseable {
    * present. This is the entry point for callers that always hold a terminal coordinator state.
    *
    * <p>It delegates to {@link RecoveryHandler#recover(Selection, TransactionResult,
-   * Coordinator.State)}, the present-state overload that always rolls the record and never touches
-   * the coordinator — so the record is guaranteed to be recovered and {@link CoordinatorException}
-   * cannot be thrown. That overload returns nothing, so this method does too.
+   * CoordinatorStateAccessor.State)}, the present-state overload that always rolls the record and
+   * never touches the coordinator — so the record is guaranteed to be recovered and {@link
+   * CoordinatorException} cannot be thrown. That overload returns nothing, so this method does too.
    *
    * @param selection the selection that identifies the user record
    * @param result the latest known TransactionResult for the record
    * @param state the coordinator state for the transaction that wrote the record
    * @throws ExecutionException if the underlying storage read or mutation fails
    */
-  void executeSynchronously(Selection selection, TransactionResult result, Coordinator.State state)
+  void executeSynchronously(
+      Selection selection, TransactionResult result, CoordinatorStateAccessor.State state)
       throws ExecutionException {
     recovery.recover(selection, result, state);
   }
@@ -540,7 +544,7 @@ public class RecoveryExecutor implements AutoCloseable {
    * @throws CoordinatorException if reading or updating the coordinator state fails
    */
   boolean executeSynchronously(
-      Selection selection, TransactionResult result, Optional<Coordinator.State> state)
+      Selection selection, TransactionResult result, Optional<CoordinatorStateAccessor.State> state)
       throws ExecutionException, CoordinatorException {
     return recovery.recover(selection, result, state);
   }

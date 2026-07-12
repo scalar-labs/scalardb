@@ -24,13 +24,13 @@ public class RecoveryHandler {
   @VisibleForTesting static final long TRANSACTION_LIFETIME_MILLIS = 15000;
   private static final Logger logger = LoggerFactory.getLogger(RecoveryHandler.class);
   private final DistributedStorage storage;
-  private final Coordinator coordinator;
+  private final CoordinatorStateAccessor coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public RecoveryHandler(
       DistributedStorage storage,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       TransactionTableMetadataManager tableMetadataManager) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
@@ -64,7 +64,7 @@ public class RecoveryHandler {
    * @throws CoordinatorException if reading or updating the coordinator state fails
    */
   public void tryRecover(
-      Selection selection, TransactionResult result, Optional<Coordinator.State> state)
+      Selection selection, TransactionResult result, Optional<CoordinatorStateAccessor.State> state)
       throws ExecutionException, CoordinatorException {
     if (state.isPresent()) {
       rollRecordToState(selection, result, state.get());
@@ -103,7 +103,7 @@ public class RecoveryHandler {
    * @throws CoordinatorException if reading or updating the coordinator state fails
    */
   public boolean recover(
-      Selection selection, TransactionResult result, Optional<Coordinator.State> state)
+      Selection selection, TransactionResult result, Optional<CoordinatorStateAccessor.State> state)
       throws ExecutionException, CoordinatorException {
     if (state.isPresent()) {
       recover(selection, result, state.get());
@@ -126,7 +126,8 @@ public class RecoveryHandler {
    * @param state the present terminal coordinator state of the writer transaction
    * @throws ExecutionException if the underlying storage read or mutation fails
    */
-  public void recover(Selection selection, TransactionResult result, Coordinator.State state)
+  public void recover(
+      Selection selection, TransactionResult result, CoordinatorStateAccessor.State state)
       throws ExecutionException {
     rollRecordToState(selection, result, state);
   }
@@ -141,7 +142,7 @@ public class RecoveryHandler {
    * non-terminal state is treated as a rollback.
    */
   private void rollRecordToState(
-      Selection selection, TransactionResult result, Coordinator.State state)
+      Selection selection, TransactionResult result, CoordinatorStateAccessor.State state)
       throws ExecutionException {
     if (state.getState().equals(TransactionState.COMMITTED)) {
       rollforwardRecord(selection, result, state.getCreatedAt());
@@ -344,7 +345,7 @@ public class RecoveryHandler {
       // Guaranteed path (recover): a concurrent actor already resolved the writer. Re-read the
       // coordinator state and roll the record to the winner's outcome so it is physically resolved
       // on return.
-      Optional<Coordinator.State> rereadState = coordinator.getState(txId);
+      Optional<CoordinatorStateAccessor.State> rereadState = coordinator.getState(txId);
 
       if (rereadState.isPresent()) {
         // Roll the targeted record to the winner's outcome. This is idempotent: the underlying

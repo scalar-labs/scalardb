@@ -5,7 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
 
@@ -60,8 +60,9 @@ public abstract class AdminTestUtils {
   public boolean areTableMetadataForCoordinatorTablesPresent() throws Exception {
     ConsensusCommitConfig config =
         new ConsensusCommitConfig(new DatabaseConfig(coordinatorStorageProperties));
-    String coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
-    String coordinatorTable = Coordinator.TABLE;
+    String coordinatorNamespace =
+        config.getCoordinatorNamespace().orElse(CoordinatorStateAccessor.NAMESPACE);
+    String coordinatorTable = CoordinatorStateAccessor.TABLE;
     // Use the DistributedStorageAdmin instead of the DistributedTransactionAdmin because the latter
     // expects the table to hold transaction table metadata columns which is not the case for the
     // coordinator table
@@ -75,7 +76,7 @@ public abstract class AdminTestUtils {
       return false;
     }
     TableMetadata expectedMetadata =
-        Coordinator.buildTableMetadata(
+        CoordinatorStateAccessor.buildTableMetadata(
             config.isCoordinatorGroupCommitEnabled(), config.isCoordinatorWriteSetLoggingEnabled());
     return tableMetadata.equals(expectedMetadata);
   }
