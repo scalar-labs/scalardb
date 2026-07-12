@@ -217,24 +217,33 @@ message Entry {
     ENTRY_TYPE_DELETE = 2;
   }
 
+  // The stable logical identifier of the participant that produced this entry.
+  //
+  // Unset for entries produced by the existing single-participant `ConsensusCommit` path (the
+  // existing writer never stamps a `participant_id`).
+  //
+  // For entries produced by the multi-participant TwoPhaseCommit path, this field is always set
+  // and is unique within the Coordinator deployment.
+  optional string participant_id = 1;
+
   // The entry type (write or delete) of this record.
-  EntryType entry_type = 1;
+  EntryType entry_type = 2;
 
   // The namespace name of the user table the record belongs to.
-  string namespace_name = 2;
+  string namespace_name = 3;
 
   // The table name of the user table the record belongs to.
-  string table_name = 3;
+  string table_name = 4;
 
   // The partition key of the record. Always present.
-  Key partition_key = 4;
+  Key partition_key = 5;
 
   // The clustering key of the record. Absent when the user table has no clustering key.
-  optional Key clustering_key = 5;
+  optional Key clustering_key = 6;
 
   // The non-key columns of the record. Only populated when `entry_type` is
   // `ENTRY_TYPE_WRITE`, and even then it is not always populated — the writer may persist just
   // the primary keys (e.g., the active-recovery use case) and leave this field empty.
   // `ENTRY_TYPE_DELETE` entries always leave this field empty.
-  repeated Column columns = 6;
+  repeated Column columns = 7;
 }

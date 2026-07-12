@@ -7,6 +7,7 @@ import com.scalar.db.api.DistributedStorageProvider;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
+import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -122,6 +123,32 @@ final class ProviderManager {
       DatabaseConfig config) {
     return getDistributedTransactionProvider(config.getTransactionManager())
         .createTwoPhaseCommitTransactionManager(config);
+  }
+
+  /**
+   * Returns an instance of {@link TwoPhaseCommit.Coordinator}.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommit.Coordinator}
+   * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
+   *     commit interface
+   */
+  public static TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+    return getDistributedTransactionProvider(config.getTransactionManager())
+        .createTwoPhaseCommitCoordinator(config);
+  }
+
+  /**
+   * Returns an instance of {@link TwoPhaseCommit.Participant}.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommit.Participant}
+   * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
+   *     commit interface
+   */
+  public static TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+    return getDistributedTransactionProvider(config.getTransactionManager())
+        .createTwoPhaseCommitParticipant(config);
   }
 
   private static DistributedTransactionProvider getDistributedTransactionProvider(String name) {

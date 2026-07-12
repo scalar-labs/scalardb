@@ -237,13 +237,6 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   TRANSACTION_ALREADY_EXISTS(Category.USER_ERROR, "0047", "The transaction already exists", "", ""),
-  TRANSACTION_NOT_FOUND(
-      Category.USER_ERROR,
-      "0048",
-      "A transaction associated with the specified transaction ID is not found. "
-          + "The transaction might have expired",
-      "",
-      ""),
   SYSTEM_NAMESPACE_SPECIFIED(
       Category.USER_ERROR, "0049", "%s is the system namespace name", "", ""),
   NAMESPACE_ALREADY_EXISTS(
@@ -1101,6 +1094,25 @@ public enum CoreError implements ScalarDbError {
       "Recovering a record is not supported in single CRUD operation transactions",
       "",
       ""),
+  CONSENSUS_COMMIT_PARTICIPANT_ID_IS_REQUIRED(
+      Category.USER_ERROR,
+      "0293",
+      "A participant ID is required for the new TwoPhaseCommit.Participant. "
+          + "Set the property: scalar.db.consensus_commit.participant_id",
+      "",
+      ""),
+  JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0294",
+      "Two-phase commit is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0295",
+      "Two-phase commit is not supported in single CRUD operation transactions",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1250,6 +1262,13 @@ public enum CoreError implements ScalarDbError {
       Category.CONCURRENCY_ERROR,
       "0030",
       "Resolving an uncommitted record exceeded the retry limit during recovery. Transaction ID: %s",
+      "",
+      ""),
+  TRANSACTION_NOT_FOUND(
+      Category.CONCURRENCY_ERROR,
+      "0031",
+      "A transaction associated with the specified transaction ID is not found. "
+          + "The transaction might have expired",
       "",
       ""),
 
