@@ -25,7 +25,7 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +61,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private DistributedStorage storage2;
   private ConsensusCommitAdmin consensusCommitAdmin1;
   private ConsensusCommitAdmin consensusCommitAdmin2;
-  private Coordinator coordinatorForStorage1;
+  private CoordinatorStateAccessor coordinatorForStorage1;
   private String namespace1;
   private String namespace2;
 
@@ -88,7 +88,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     storage2 = factory2.getStorage();
     manager1 = new TwoPhaseConsensusCommitManager(storage1, admin1, databaseConfig1);
     manager2 = new TwoPhaseConsensusCommitManager(storage2, admin2, databaseConfig2);
-    coordinatorForStorage1 = new Coordinator(storage1, consensusCommitConfig1);
+    coordinatorForStorage1 = new CoordinatorStateAccessor(storage1, consensusCommitConfig1);
   }
 
   protected void initialize() throws Exception {}
