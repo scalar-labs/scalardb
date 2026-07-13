@@ -250,7 +250,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         }
 
         long committedAt;
-        if (shouldWriteCoordinatorState(hasWrites)) {
+        if (isCoordinatorStateWriteRequired(hasWrites)) {
           try {
             committedAt = commitState(transactionId, writeSetsByParticipant);
           } catch (CommitConflictException e) {
@@ -352,7 +352,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   private void abortAndRollbackRecords(
       String transactionId, boolean knownWriteLess, List<Participant> participants)
       throws UnknownTransactionStatusException {
-    if (shouldWriteCoordinatorState(!knownWriteLess)) {
+    if (isCoordinatorStateWriteRequired(!knownWriteLess)) {
       abortState(transactionId);
     }
     for (Participant participant : participants) {
@@ -364,7 +364,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   // commit-success path, ABORTED on the abort path) is written unless the transaction is provably
   // write-less and coordinator-write omission on read-only is enabled. Mirrors CommitHandler's
   // gate of the same name.
-  private boolean shouldWriteCoordinatorState(boolean mayHaveWrites) {
+  private boolean isCoordinatorStateWriteRequired(boolean mayHaveWrites) {
     return mayHaveWrites || !coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
