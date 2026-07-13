@@ -273,7 +273,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.begin(ANY_TX_ID);
@@ -458,7 +458,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.start(ANY_TX_ID);
@@ -500,7 +500,7 @@ public class ConsensusCommitManagerTest {
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
@@ -515,7 +515,7 @@ public class ConsensusCommitManagerTest {
   public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
@@ -527,7 +527,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
@@ -542,7 +542,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
@@ -565,7 +565,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
@@ -579,7 +579,7 @@ public class ConsensusCommitManagerTest {
   public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
@@ -594,7 +594,7 @@ public class ConsensusCommitManagerTest {
   public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.join(ANY_TX_ID))
@@ -606,7 +606,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
@@ -621,7 +621,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
@@ -644,7 +644,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();

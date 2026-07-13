@@ -212,7 +212,7 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
-  public DistributedTransaction join(String txId) throws TransactionNotFoundException {
+  public DistributedTransaction join(String txId) throws TransactionException {
     return transactionManager.join(txId);
   }
 
