@@ -26,6 +26,7 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
@@ -112,7 +113,9 @@ class ConsensusCommitCoordinatorTest {
     consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
     Participant participant = mock(Participant.class);
     when(participant.getId()).thenReturn("participant-1");
-    when(participant.prepareRecords(anyString(), anyLong())).thenReturn(emptyPreparation());
+    // A writer that also requires validation, so all of its record-level steps are driven.
+    when(participant.prepareRecords(anyString(), anyLong()))
+        .thenReturn(preparation(writeSet(), true));
 
     // Act
     consensusCommitCoordinator.registerParticipant("tx-1", participant);
@@ -214,8 +217,8 @@ class ConsensusCommitCoordinatorTest {
     // a
     // putState race that resolves to ABORTED (CommitConflictException).
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    Participant p1 = registeredParticipant("tx-1", "participant-1");
-    Participant p2 = registeredParticipant("tx-1", "participant-2");
+    Participant p1 = registeredWritingParticipant("tx-1", "participant-1");
+    Participant p2 = registeredWritingParticipant("tx-1", "participant-2");
     doThrow(new CommitConflictException("conflict", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -224,7 +227,8 @@ class ConsensusCommitCoordinatorTest {
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitConflictException.class);
 
-    // ... and the PREPARED records are rolled back on every participant before it surfaces ...
+    // ... and the PREPARED records are rolled back on every writing participant before it surfaces
+    // ...
     verify(p1).rollbackRecords("tx-1");
     verify(p2).rollbackRecords("tx-1");
     // ... while commitRecords is never reached.
@@ -233,11 +237,34 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void commit_NoWrites_WithWriteOmission_ShouldSkipCommitStateButStillDriveRecords()
+  void commit_WhenCommitStateConflicts_ShouldRollBackOnlyWritingParticipants() throws Exception {
+    // Arrange — commitState loses a putState race (CommitConflictException). The writer holds
+    // PREPARED records and a live context; the write-less participant already self-released at
+    // prepareRecords, so the Coordinator rolls back only toCommit (the writer), not every
+    // participant.
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant writer = registeredWritingParticipant("tx-1", "participant-1");
+    Participant writeLess = registeredParticipant("tx-1", "participant-2");
+    doThrow(new CommitConflictException("conflict", "tx-1"))
+        .when(coordinatorCommitHandler)
+        .commitState(anyString(), any());
+
+    // Act Assert — the conflict propagates ...
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class);
+
+    // ... only the writing participant is rolled back; the self-released one is left untouched.
+    verify(writer).rollbackRecords("tx-1");
+    verify(writeLess, never()).rollbackRecords(anyString());
+  }
+
+  @Test
+  void commit_NoWrites_WithWriteOmission_ShouldSkipCommitStateValidateAndCommitRecords()
       throws Exception {
     // Arrange — coordinator-write omission on read-only is enabled (the production default), and
     // the
-    // participant has no writes (prepareRecords returns an empty write set).
+    // participant has no writes and requires no validation (prepareRecords returns an empty write
+    // set with isValidationRequired() == false).
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
@@ -246,22 +273,25 @@ class ConsensusCommitCoordinatorTest {
     // Act
     consensusCommitCoordinator.commit("tx-1");
 
-    // Assert — with no writes, the COMMITTED Coordinator state row is not written ...
-    verify(coordinatorCommitHandler, never()).commitState(anyString(), any());
-    // ... but the record-level steps are still driven so the participant context is released.
+    // Assert — only prepareRecords is driven. The COMMITTED Coordinator state row is not written,
+    // and validateRecords / commitRecords are skipped (the participant released its own context at
+    // prepareRecords, its last driven step).
     verify(participant).prepareRecords(eq("tx-1"), anyLong());
-    verify(participant).validateRecords("tx-1");
-    verify(participant).commitRecords(eq("tx-1"), anyLong());
+    verify(coordinatorCommitHandler, never()).commitState(anyString(), any());
+    verify(participant, never()).validateRecords(anyString());
+    verify(participant, never()).commitRecords(anyString(), anyLong());
   }
 
   @Test
   void commit_NoWrites_WithWriteOmission_WhenValidateFails_ShouldStillWriteAbortedAndRollback()
       throws Exception {
-    // Arrange — omission enabled, no writes observed, but validation fails.
+    // Arrange — omission enabled, no writes, but the participant requires validation and validation
+    // fails.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    Participant participant = registeredParticipant("tx-1");
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
     doThrow(new ValidationConflictException("validation conflict", "tx-1"))
         .when(participant)
         .validateRecords("tx-1");
@@ -343,10 +373,15 @@ class ConsensusCommitCoordinatorTest {
 
   @Test
   void commit_TwoParticipants_ShouldDriveFullTwoPhaseCommitInRegistrationOrder() throws Exception {
-    // Arrange
+    // Arrange — both participants write and require validation, so every record-level step is
+    // driven.
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    Participant p1 = registeredParticipant("tx-1", "participant-1");
-    Participant p2 = registeredParticipant("tx-1", "participant-2");
+    Participant p1 =
+        registeredParticipant(
+            "tx-1", "participant-1", preparation(writeSet(), /* validationRequired= */ true));
+    Participant p2 =
+        registeredParticipant(
+            "tx-1", "participant-2", preparation(writeSet(), /* validationRequired= */ true));
 
     // Act
     consensusCommitCoordinator.commit("tx-1");
@@ -361,6 +396,75 @@ class ConsensusCommitCoordinatorTest {
     verify(coordinatorCommitHandler).commitState(eq("tx-1"), any());
     verify(p1).commitRecords("tx-1", ANY_COMMITTED_AT);
     verify(p2).commitRecords("tx-1", ANY_COMMITTED_AT);
+  }
+
+  @Test
+  void commit_WriteOnlyParticipant_ShouldSkipValidateRecords() throws Exception {
+    // Arrange — the participant writes but does not require validation.
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), false));
+
+    // Act
+    consensusCommitCoordinator.commit("tx-1");
+
+    // Assert — validateRecords is skipped; the COMMITTED state row is written and commitRecords
+    // runs.
+    verify(participant).prepareRecords(eq("tx-1"), anyLong());
+    verify(participant, never()).validateRecords(anyString());
+    verify(coordinatorCommitHandler).commitState(eq("tx-1"), any());
+    verify(participant).commitRecords(eq("tx-1"), anyLong());
+  }
+
+  @Test
+  void commit_WriteLessValidatingParticipant_ShouldSkipCommitRecords() throws Exception {
+    // Arrange — the participant has no writes but requires validation.
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
+
+    // Act
+    consensusCommitCoordinator.commit("tx-1");
+
+    // Assert — validateRecords runs, but commitRecords is skipped (no writes to commit).
+    verify(participant).prepareRecords(eq("tx-1"), anyLong());
+    verify(participant).validateRecords("tx-1");
+    verify(participant, never()).commitRecords(anyString(), anyLong());
+  }
+
+  @Test
+  void commit_MixedParticipants_ShouldDriveOnlyEachParticipantsRequiredSteps() throws Exception {
+    // Arrange — all three participant categories in one transaction, exercising both the
+    // toValidate and toCommit list construction at once:
+    //   writer:         writes, no validation        -> prepare + commitRecords, no validate
+    //   writeLessVal:   no writes, requires validation -> prepare + validate, no commitRecords
+    //   writeLessNoVal: no writes, no validation      -> prepare only
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant writer =
+        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), false));
+    Participant writeLessVal =
+        registeredParticipant("tx-1", "participant-2", preparation(Collections.emptyList(), true));
+    Participant writeLessNoVal =
+        registeredParticipant("tx-1", "participant-3", preparation(Collections.emptyList(), false));
+
+    // Act
+    consensusCommitCoordinator.commit("tx-1");
+
+    // Assert — each participant gets exactly the steps it still needs.
+    verify(writer).prepareRecords(eq("tx-1"), anyLong());
+    verify(writer, never()).validateRecords(anyString());
+    verify(writer).commitRecords(eq("tx-1"), anyLong());
+
+    verify(writeLessVal).prepareRecords(eq("tx-1"), anyLong());
+    verify(writeLessVal).validateRecords("tx-1");
+    verify(writeLessVal, never()).commitRecords(anyString(), anyLong());
+
+    verify(writeLessNoVal).prepareRecords(eq("tx-1"), anyLong());
+    verify(writeLessNoVal, never()).validateRecords(anyString());
+    verify(writeLessNoVal, never()).commitRecords(anyString(), anyLong());
+
+    // A writer exists, so the COMMITTED Coordinator state row is written.
+    verify(coordinatorCommitHandler).commitState(eq("tx-1"), any());
   }
 
   @Test
@@ -418,9 +522,10 @@ class ConsensusCommitCoordinatorTest {
 
   @Test
   void commit_WhenValidateFails_ShouldWriteAbortedAndDriveRollback() throws Exception {
-    // Arrange
+    // Arrange — the participant requires validation, and validation fails.
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    Participant p1 = registeredParticipant("tx-1");
+    Participant p1 =
+        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
     doThrow(new ValidationConflictException("validation conflict", "tx-1"))
         .when(p1)
         .validateRecords("tx-1");
@@ -457,9 +562,14 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_WhenValidateFailsWithNonConflict_ShouldWrapAsCommitExceptionAndDriveRollback()
       throws Exception {
-    // Arrange — a plain (non-conflict) ValidationException.
+    // Arrange — a plain (non-conflict) ValidationException. The participant must require validation
+    // (no writes, validation required) so the Coordinator actually drives validateRecords on it.
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    Participant p1 = registeredParticipant("tx-1");
+    Participant p1 =
+        registeredParticipant(
+            "tx-1",
+            "participant-1",
+            preparation(Collections.emptyList(), /* validationRequired= */ true));
     doThrow(new ValidationException("validation failed", "tx-1")).when(p1).validateRecords("tx-1");
 
     // Act Assert — a non-conflict validate failure surfaces as a non-retriable CommitException, and
@@ -474,9 +584,10 @@ class ConsensusCommitCoordinatorTest {
 
   @Test
   void commit_WhenCommitRecordsThrows_ShouldSwallowAndComplete() throws Exception {
-    // Arrange
+    // Arrange — a writing participant, so the Coordinator drives commitRecords on it (a write-less
+    // participant would be skipped and the doThrow stub below would never fire).
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    Participant p1 = registeredParticipant("tx-1");
+    Participant p1 = registeredWritingParticipant("tx-1", "participant-1");
     doThrow(new RuntimeException("network blip")).when(p1).commitRecords(eq("tx-1"), anyLong());
 
     // Act Assert — commitRecords is best-effort: the failure is swallowed and commit completes.
@@ -504,11 +615,12 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_TwoParticipants_WhenCommitRecordsThrowsOnFirst_ShouldStillCommitSecond()
       throws Exception {
-    // Arrange — both participants commit successfully through prepare/validate/commitState; the
-    // first participant's best-effort commitRecords then fails.
+    // Arrange — both participants write (so commitRecords is driven on each) and commit
+    // successfully
+    // through prepare/commitState; the first participant's best-effort commitRecords then fails.
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    Participant p1 = registeredParticipant("tx-1", "participant-1");
-    Participant p2 = registeredParticipant("tx-1", "participant-2");
+    Participant p1 = registeredWritingParticipant("tx-1", "participant-1");
+    Participant p2 = registeredWritingParticipant("tx-1", "participant-2");
     doThrow(new RuntimeException("network blip")).when(p1).commitRecords(eq("tx-1"), anyLong());
 
     // Act — commitRecords is best-effort, so the first participant's failure is swallowed.
@@ -522,11 +634,13 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_TwoParticipants_WhenRollbackRecordsThrowsOnFirst_ShouldStillRollBackSecond()
       throws Exception {
-    // Arrange — drive the abort path via a validate conflict on the second participant, then make
-    // the first participant's best-effort rollbackRecords fail.
+    // Arrange — drive the abort path via a validate conflict on the second participant (which
+    // therefore must require validation), then make the first participant's best-effort
+    // rollbackRecords fail.
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
     Participant p1 = registeredParticipant("tx-1", "participant-1");
-    Participant p2 = registeredParticipant("tx-1", "participant-2");
+    Participant p2 =
+        registeredParticipant("tx-1", "participant-2", preparation(Collections.emptyList(), true));
     doThrow(new ValidationConflictException("conflict", "tx-1")).when(p2).validateRecords("tx-1");
     doThrow(new RuntimeException("network blip")).when(p1).rollbackRecords("tx-1");
 
@@ -663,17 +777,92 @@ class ConsensusCommitCoordinatorTest {
 
   private Participant registeredParticipant(String transactionId, String participantId)
       throws Exception {
+    return registeredParticipant(transactionId, participantId, emptyPreparation());
+  }
+
+  private Participant registeredParticipant(
+      String transactionId, String participantId, PreparationResult preparationResult)
+      throws Exception {
     Participant participant = mock(Participant.class);
     when(participant.getId()).thenReturn(participantId);
-    when(participant.prepareRecords(anyString(), anyLong())).thenReturn(emptyPreparation());
+    when(participant.prepareRecords(anyString(), anyLong())).thenReturn(preparationResult);
     consensusCommitCoordinator.registerParticipant(transactionId, participant);
     return participant;
   }
 
-  // A PreparationResult carrying no writes. PreparationResult has a single method (getWriteSet), so
-  // a method reference to an empty list satisfies it.
+  // A registered participant that produces a write (so the Coordinator drives commitRecords on it).
+  private Participant registeredWritingParticipant(String transactionId, String participantId)
+      throws Exception {
+    return registeredParticipant(transactionId, participantId, writePreparation());
+  }
+
+  private static PreparationResult preparation(
+      List<WriteSetEntry> writeSet, boolean validationRequired) {
+    return new PreparationResult() {
+      @Override
+      public List<WriteSetEntry> getWriteSet() {
+        return writeSet;
+      }
+
+      @Override
+      public boolean isValidationRequired() {
+        return validationRequired;
+      }
+
+      @Override
+      public boolean isCommitRequired() {
+        // Mirrors ConsensusCommitParticipant: committing is required iff there are PREPARED
+        // records.
+        return !writeSet.isEmpty();
+      }
+    };
+  }
+
+  // A PreparationResult carrying no writes and not requiring validation.
   private static PreparationResult emptyPreparation() {
-    return Collections::emptyList;
+    return preparation(Collections.emptyList(), false);
+  }
+
+  // A PreparationResult carrying a single write and not requiring validation.
+  private static PreparationResult writePreparation() {
+    return preparation(writeSet(), false);
+  }
+
+  // A non-empty write set (one entry) with valid fields so the Coordinator can encode it for the
+  // COMMITTED state row. Enough to make the participant count as a writer.
+  private static List<WriteSetEntry> writeSet() {
+    return Collections.singletonList(
+        new WriteSetEntry() {
+          @Override
+          public Type getType() {
+            return Type.WRITE;
+          }
+
+          @Override
+          public String getNamespaceName() {
+            return "ns";
+          }
+
+          @Override
+          public String getTableName() {
+            return "tbl";
+          }
+
+          @Override
+          public Key getPartitionKey() {
+            return Key.ofInt("pk", 1);
+          }
+
+          @Override
+          public Optional<Key> getClusteringKey() {
+            return Optional.empty();
+          }
+
+          @Override
+          public List<Column<?>> getColumns() {
+            return Collections.emptyList();
+          }
+        });
   }
 
   // Registers a participant whose prepareRecords returns the given (non-empty) write set, so
@@ -684,7 +873,10 @@ class ConsensusCommitCoordinatorTest {
     Participant participant = mock(Participant.class);
     when(participant.getId()).thenReturn(participantId);
     List<WriteSetEntry> writeSet = Arrays.asList(entries);
-    when(participant.prepareRecords(anyString(), anyLong())).thenReturn(() -> writeSet);
+    // Non-empty write set, so isCommitRequired() is true (the Coordinator drives commitRecords and
+    // aggregates the write set); validation is not required for these encoding-focused tests.
+    when(participant.prepareRecords(anyString(), anyLong()))
+        .thenReturn(preparation(writeSet, /* validationRequired= */ false));
     consensusCommitCoordinator.registerParticipant(transactionId, participant);
     return participant;
   }
