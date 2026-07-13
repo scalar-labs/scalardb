@@ -261,6 +261,18 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
               bestEffortRollbackRecords(participant, transactionId);
             }
             throw e;
+          } catch (UnknownTransactionStatusException e) {
+            // The COMMITTED-state write's outcome is unknown: the records must stay PREPARED for
+            // lazy recovery to resolve against the Coordinator state row, so neither commitRecords
+            // nor rollbackRecords may run. The participants' in-memory contexts are useless either
+            // way — commit is terminal on every outcome (the finally below releases this
+            // Coordinator's context), so nothing can ever drive them again. Release them promptly
+            // instead of leaving them to each participant's own idle reaping
+            // (releaseContext touches no storage).
+            for (Participant participant : toCommit) {
+              bestEffortReleaseContext(participant, transactionId);
+            }
+            throw e;
           }
         } else {
           // Write-less transaction with the Coordinator write omitted: no participant has writes,
@@ -353,7 +365,18 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       String transactionId, boolean knownWriteLess, List<Participant> participants)
       throws UnknownTransactionStatusException {
     if (isCoordinatorStateWriteRequired(!knownWriteLess)) {
-      abortState(transactionId);
+      try {
+        abortState(transactionId);
+      } catch (UnknownTransactionStatusException e) {
+        // The ABORTED-state write's outcome is unknown: the records stay PREPARED for lazy
+        // recovery (mirroring CommitHandler, records are not rolled back on an unknown abort). The
+        // participants' in-memory contexts are just as unreachable as on the commit-state path —
+        // commit is terminal on every outcome — so release them promptly without touching storage.
+        for (Participant participant : participants) {
+          bestEffortReleaseContext(participant, transactionId);
+        }
+        throw e;
+      }
     }
     for (Participant participant : participants) {
       bestEffortRollbackRecords(participant, transactionId);
@@ -386,6 +409,11 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   private void bestEffortRollbackRecords(Participant participant, String txId) {
     try {
       participant.rollbackRecords(txId);
+    } catch (TransactionNotFoundException e) {
+      // The participant no longer knows the transaction (it self-released early, or already
+      // rolled back) — the documented no-op outcome arriving on its conventional not-found
+      // carrier. Any records it might still leave PREPARED are lazy recovery's to reconcile,
+      // exactly as on a silent no-op return; nothing to report.
     } catch (Exception e) {
       // Best-effort step: the records are left PREPARED and lazy recovery rolls them back on a
       // subsequent read of the record (no background sweep). Logged at WARN since the records hold
@@ -393,6 +421,24 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       logger.warn(
           "rollbackRecords failed; the records are left PREPARED and will be rolled back by lazy "
               + "recovery on a subsequent read. Transaction ID: {}",
+          txId,
+          e);
+    }
+  }
+
+  private void bestEffortReleaseContext(Participant participant, String txId) {
+    try {
+      participant.releaseContext(txId);
+    } catch (TransactionNotFoundException e) {
+      // The context is already gone (self-released, or reaped by the participant's own idle
+      // reaping) — the outcome this release wanted; not-found is its alternative carrier.
+    } catch (Exception e) {
+      // Best-effort step. Unlike the record-level best-effort steps, this failure leaves nothing
+      // locked — only an in-memory context that the participant reclaims by other means (e.g. a
+      // later reap or close) — so it logs at DEBUG.
+      logger.debug(
+          "releaseContext failed; the participant's context is left to be reclaimed "
+              + "by other means (e.g. a later reap or close). Transaction ID: {}",
           txId,
           e);
     }

@@ -294,6 +294,44 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
+  void sweep_WhenReleaseThrowsNotFound_ShouldTreatAsAlreadyGoneAndFinishThePass() throws Exception {
+    // TransactionNotFoundException from the wrapped release is the contract's alternative carrier
+    // of "there was no context to release" - the outcome the reap wanted. The entry must still be
+    // removed, and the pass must go on to reap the other expired transaction.
+    doThrow(new TransactionNotFoundException("already gone", TX)).when(delegate).releaseContext(TX);
+    coordinator.begin(null, false, Collections.emptyMap(), null);
+    when(delegate.begin(eq("tx-2"), eq(false), any(), any())).thenReturn("tx-2");
+    coordinator.begin("tx-2", false, Collections.emptyMap(), null);
+    forceExpire(TX);
+    forceExpire("tx-2");
+
+    coordinator.sweep();
+
+    assertThat(registry.get(TX)).isEmpty();
+    verify(delegate).releaseContext("tx-2");
+    assertThat(registry.get("tx-2")).isEmpty();
+  }
+
+  @Test
+  void sweep_WhenReleaseThrowsException_ShouldFinishThePass() throws Exception {
+    // A failed release must not abort the rest of the pass: the guard logs and moves on, the
+    // entry is still removed (the release is best-effort), and the other expired transaction is
+    // still reaped.
+    doThrow(new TransactionException("boom", TX)).when(delegate).releaseContext(TX);
+    coordinator.begin(null, false, Collections.emptyMap(), null);
+    when(delegate.begin(eq("tx-2"), eq(false), any(), any())).thenReturn("tx-2");
+    coordinator.begin("tx-2", false, Collections.emptyMap(), null);
+    forceExpire(TX);
+    forceExpire("tx-2");
+
+    coordinator.sweep();
+
+    assertThat(registry.get(TX)).isEmpty();
+    verify(delegate).releaseContext("tx-2");
+    assertThat(registry.get("tx-2")).isEmpty();
+  }
+
+  @Test
   void sweep_WhenRegistrationLandsDuringProbe_ShouldNotReap() throws Exception {
     // The reap-vs-registration race: a registration lands while the probe is in flight. It pushes
     // the expiration time out under the entry monitor before delegating, so the reap re-check

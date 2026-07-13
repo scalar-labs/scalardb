@@ -25,6 +25,7 @@ import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -78,6 +79,20 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     verify(delegate).join(TX, false, Collections.emptyMap());
     // After the idle expiration, the reaper releases the context on the wrapped participant.
     verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseContext(TX);
+  }
+
+  @Test
+  void join_WhenReleaseThrowsNotFound_ShouldTreatItAsAlreadyGoneAndKeepReaping() throws Exception {
+    // A remote wrapped participant may report the reap's no-op outcome on its conventional
+    // not-found channel (the contract's alternative carrier of "there was no context to
+    // release"); the disposal path tolerates it, and the reaper keeps collecting other
+    // transactions.
+    doThrow(new TransactionNotFoundException("already gone", TX)).when(delegate).releaseContext(TX);
+    participant.join(TX, false, Collections.emptyMap());
+    participant.join("tx-2", false, Collections.emptyMap());
+
+    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseContext(TX);
+    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseContext("tx-2");
   }
 
   @Test

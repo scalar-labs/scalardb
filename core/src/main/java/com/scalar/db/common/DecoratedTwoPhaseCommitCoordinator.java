@@ -54,7 +54,7 @@ public abstract class DecoratedTwoPhaseCommitCoordinator implements TwoPhaseComm
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseContext(String transactionId) throws TransactionException {
     coordinator.releaseContext(transactionId);
   }
 
