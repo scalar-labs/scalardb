@@ -27,8 +27,8 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.IntColumn;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
@@ -50,20 +50,20 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class CoordinatorTest {
+public class CoordinatorStateAccessorTest {
   private static final String ANY_ID_1 = "anyid1";
   private static final String EMPTY_CHILD_IDS = "";
   private static final long ANY_TIME_1 = 1;
 
   @Mock private DistributedStorage storage;
   @Mock private ConsensusCommitConfig config;
-  private Coordinator coordinator;
+  private CoordinatorStateAccessor coordinator;
   @Captor private ArgumentCaptor<Get> getArgumentCaptor;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
   }
 
   @Test
@@ -78,7 +78,7 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getState(ANY_ID_1);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(ANY_ID_1);
 
     // Assert
     assertThat(state).isPresent();
@@ -124,7 +124,7 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getState(parentId);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(parentId);
 
     // Assert
     assertThat(state).isPresent();
@@ -139,9 +139,10 @@ public class CoordinatorTest {
   public void putState_StateGiven_ShouldPutWithCorrectValues()
       throws ExecutionException, CoordinatorException {
     // Arrange
-    coordinator = spy(new Coordinator(storage, config));
+    coordinator = spy(new CoordinatorStateAccessor(storage, config));
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     doNothing().when(storage).put(any(Put.class));
 
     // Act
@@ -155,7 +156,8 @@ public class CoordinatorTest {
   public void createPutWith_StateGiven_ShouldCreateWithCorrectValues() throws ExecutionException {
     // Arrange
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     doNothing().when(storage).put(any(Put.class));
 
     // Act
@@ -171,17 +173,18 @@ public class CoordinatorTest {
     assertThat(put.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
     assertThat(put.getCondition()).isPresent();
     assertThat(put.getCondition().get()).isExactlyInstanceOf(PutIfNotExists.class);
-    assertThat(put.forNamespace()).hasValue(Coordinator.NAMESPACE);
-    assertThat(put.forTable()).hasValue(Coordinator.TABLE);
+    assertThat(put.forNamespace()).hasValue(CoordinatorStateAccessor.NAMESPACE);
+    assertThat(put.forTable()).hasValue(CoordinatorStateAccessor.TABLE);
   }
 
   @Test
   public void putState_StateGivenAndExceptionThrownInPut_ShouldThrowCoordinatorException()
       throws ExecutionException {
     // Arrange
-    coordinator = spy(new Coordinator(storage, config));
+    coordinator = spy(new CoordinatorStateAccessor(storage, config));
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     ExecutionException toThrow = mock(ExecutionException.class);
     doThrow(toThrow).when(storage).put(any(Put.class));
 
@@ -197,7 +200,7 @@ public class CoordinatorTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
 
     Result result = mock(Result.class);
     when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
@@ -208,13 +211,13 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getState(ANY_ID_1);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(ANY_ID_1);
 
     // Assert
     ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
     verify(storage).get(captor.capture());
     assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
-    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
+    assertThat(captor.getValue().forTable()).hasValue(CoordinatorStateAccessor.TABLE);
 
     assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
@@ -229,10 +232,11 @@ public class CoordinatorTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
-    coordinator = spy(new Coordinator(storage, config));
+    coordinator = spy(new CoordinatorStateAccessor(storage, config));
 
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     doNothing().when(storage).put(any(Put.class));
 
     // Act
@@ -244,7 +248,7 @@ public class CoordinatorTest {
     ArgumentCaptor<Put> captor = ArgumentCaptor.forClass(Put.class);
     verify(storage).put(captor.capture());
     assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
-    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
+    assertThat(captor.getValue().forTable()).hasValue(CoordinatorStateAccessor.TABLE);
   }
 
   // For group commit
@@ -268,7 +272,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdForGroupCommitGivenAndParentIdAndChildIdMatch_ShouldReturnState(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -300,8 +304,8 @@ public class CoordinatorTest {
         .get(coordinator.createGetWith(parentId));
 
     // Act
-    Optional<Coordinator.State> state1 = spiedCoordinator.getState(fullId1);
-    Optional<Coordinator.State> state2 = spiedCoordinator.getState(fullId2);
+    Optional<CoordinatorStateAccessor.State> state1 = spiedCoordinator.getState(fullId1);
+    Optional<CoordinatorStateAccessor.State> state2 = spiedCoordinator.getState(fullId2);
 
     // Assert
     assertThat(state1).isEqualTo(state2);
@@ -325,7 +329,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdForSingleCommitGivenAndFullIdMatches_ShouldReturnState(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -367,7 +371,7 @@ public class CoordinatorTest {
         .get(coordinator.createGetWith(fullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(fullId);
 
     // Assert
     assertThat(state).isPresent();
@@ -389,7 +393,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdForGroupCommitGivenAndOnlyParentIdMatches_ShouldReturnEmpty(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -422,7 +426,7 @@ public class CoordinatorTest {
     doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(targetFullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(targetFullId);
 
     // Assert
     assertThat(state).isEmpty();
@@ -440,7 +444,7 @@ public class CoordinatorTest {
       getState_TransactionIdForSingleCommitGivenAndOnlyParentIdMatchesButFullIdMatches_ShouldReturnState(
           TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -483,7 +487,7 @@ public class CoordinatorTest {
         .get(coordinator.createGetWith(targetFullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(targetFullId);
 
     // Assert
     assertThat(state).isPresent();
@@ -505,7 +509,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdGivenButNoIdMatches_ShouldReturnEmpty(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -539,7 +543,7 @@ public class CoordinatorTest {
     doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(targetFullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(targetFullId);
 
     // Assert
     assertThat(state).isEmpty();
@@ -554,7 +558,7 @@ public class CoordinatorTest {
       getState_TransactionIdForGroupCommitGivenAndFullIdMatchesAndExceptionThrownInGet_ShouldThrowCoordinatorException()
           throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -575,7 +579,7 @@ public class CoordinatorTest {
       getState_TransactionIdForGroupCommitGivenAndParentIdMatchesAndExceptionThrownInGet_ShouldThrowCoordinatorException()
           throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -598,7 +602,7 @@ public class CoordinatorTest {
   @Test
   void forceAbort_NormalIdGiven_ShouldCallPutState() throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
 
     // Act
     spiedCoordinator.forceAbort(ANY_ID_1);
@@ -612,7 +616,7 @@ public class CoordinatorTest {
       forceAbort_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsNotCommitted_ShouldInsertTwoRecordsWithParentIdAndFullId()
           throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -637,7 +641,7 @@ public class CoordinatorTest {
       forceAbort_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsCommitted_ShouldThrowCoordinatorConflictException()
           throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -677,7 +681,7 @@ public class CoordinatorTest {
   void forceAbort_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsAbort_ShouldDoNothing()
       throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -720,7 +724,7 @@ public class CoordinatorTest {
       forceAbort_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitFinished_ShouldInsertRecordWithFullId(
           TransactionState transactionState) throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -767,7 +771,7 @@ public class CoordinatorTest {
       forceAbort_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitAndDelayedGroupCommitFinished_ShouldCoordinatorConflictException(
           TransactionState transactionState) throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -820,7 +824,7 @@ public class CoordinatorTest {
     // we fall through to insert the full-ID ABORTED record instead of crashing with AssertionError.
 
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -855,7 +859,7 @@ public class CoordinatorTest {
     // the caller re-reads the committed outcome instead of treating the transaction as aborted.
 
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -987,9 +991,8 @@ public class CoordinatorTest {
   @Test
   public void state_EmptyWriteSet_ShouldPersistColumnWithNonEmptyBytes()
       throws CoordinatorException {
-    // Arrange — State with an empty (but non-null) WriteSet that explicitly carries
-    // schema_version, mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for
-    // read-only commits.
+    // Arrange — State with an empty (but non-null) WriteSet that explicitly carries schema_version,
+    // mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for read-only commits.
     WriteSet emptyWriteSet = WriteSet.newBuilder().setSchemaVersion(1).build();
     State state =
         new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
@@ -1086,7 +1089,7 @@ public class CoordinatorTest {
     // Act + Assert
     assertThatThrownBy(
             () ->
-                new Coordinator.State(
+                new CoordinatorStateAccessor.State(
                     ANY_ID_1,
                     Collections.singletonList("child" + "," + "id"),
                     null,
@@ -1108,8 +1111,8 @@ public class CoordinatorTest {
     ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
     verify(storage).delete(captor.capture());
     Delete delete = captor.getValue();
-    assertThat(delete.forNamespace()).hasValue(Coordinator.NAMESPACE);
-    assertThat(delete.forTable()).hasValue(Coordinator.TABLE);
+    assertThat(delete.forNamespace()).hasValue(CoordinatorStateAccessor.NAMESPACE);
+    assertThat(delete.forTable()).hasValue(CoordinatorStateAccessor.TABLE);
     assertThat(delete.getPartitionKey().getColumnName(0)).isEqualTo(Attribute.ID);
     assertThat(delete.getPartitionKey().getTextValue(0)).isEqualTo(ANY_ID_1);
     assertThat(delete.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
@@ -1121,7 +1124,7 @@ public class CoordinatorTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     doNothing().when(storage).delete(any(Delete.class));
 
     // Act
@@ -1131,7 +1134,7 @@ public class CoordinatorTest {
     ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
     verify(storage).delete(captor.capture());
     assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
-    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
+    assertThat(captor.getValue().forTable()).hasValue(CoordinatorStateAccessor.TABLE);
   }
 
   @Test
@@ -1261,7 +1264,8 @@ public class CoordinatorTest {
 
     // Act + Assert — getState skips the parent marker (childId not listed) and resolves to the full
     // key, so the delete must target the full key, not the parent marker.
-    assertThat(coordinator.getState(fullId).map(Coordinator.State::getId)).hasValue(fullId);
+    assertThat(coordinator.getState(fullId).map(CoordinatorStateAccessor.State::getId))
+        .hasValue(fullId);
     coordinator.deleteState(fullId);
 
     ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
@@ -1295,9 +1299,9 @@ public class CoordinatorTest {
   }
 
   /**
-   * Mockito matcher that compares Coordinator.State by id and TransactionState only — ignoring
-   * createdAt. Used to verify putState calls without relying on the production code's wall-clock
-   * timestamp.
+   * Mockito matcher that compares CoordinatorStateAccessor.State by id and TransactionState only —
+   * ignoring createdAt. Used to verify putState calls without relying on the production code's
+   * wall-clock timestamp.
    */
   private static org.mockito.ArgumentMatcher<State> stateMatcher(
       String id, TransactionState state) {

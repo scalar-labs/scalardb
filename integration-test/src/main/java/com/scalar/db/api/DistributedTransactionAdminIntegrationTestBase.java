@@ -11,7 +11,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -921,13 +921,13 @@ public abstract class DistributedTransactionAdminIntegrationTestBase {
 
   protected void extraCheckOnCoordinatorTable() throws ExecutionException {
     TableMetadata expectedMetadata =
-        Coordinator.buildTableMetadata(isGroupCommitEnabled(getTestName()), false);
+        CoordinatorStateAccessor.buildTableMetadata(isGroupCommitEnabled(getTestName()), false);
 
     try (DistributedStorageAdmin storageAdmin =
         StorageFactory.create(getProperties(getTestName())).getStorageAdmin()) {
       assertThat(
               storageAdmin.getTableMetadata(
-                  getCoordinatorNamespaceName(getTestName()), Coordinator.TABLE))
+                  getCoordinatorNamespaceName(getTestName()), CoordinatorStateAccessor.TABLE))
           .isEqualTo(expectedMetadata);
     }
   }

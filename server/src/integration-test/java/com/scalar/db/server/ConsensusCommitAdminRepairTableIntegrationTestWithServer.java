@@ -2,7 +2,7 @@ package com.scalar.db.server;
 
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminRepairTableIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.util.Properties;
@@ -23,7 +23,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithServer
       // Add testName as a coordinator namespace suffix
       String coordinatorNamespace =
           properties.getProperty(
-              ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+              ConsensusCommitConfig.COORDINATOR_NAMESPACE, CoordinatorStateAccessor.NAMESPACE);
       properties.setProperty(
           ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
 
@@ -43,7 +43,7 @@ public class ConsensusCommitAdminRepairTableIntegrationTestWithServer
 
     // Add testName as a coordinator namespace suffix
     String coordinatorNamespace =
-        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, CoordinatorStateAccessor.NAMESPACE);
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
 

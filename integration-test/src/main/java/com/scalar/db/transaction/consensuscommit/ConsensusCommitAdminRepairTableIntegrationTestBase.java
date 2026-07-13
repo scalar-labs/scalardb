@@ -61,11 +61,11 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
       String coordinatorNamespace =
           new ConsensusCommitConfig(new DatabaseConfig(propertiesWithGroupCommitEnabled))
               .getCoordinatorNamespace()
-              .orElse(Coordinator.NAMESPACE);
+              .orElse(CoordinatorStateAccessor.NAMESPACE);
       try (DistributedStorageAdmin storageAdmin =
           StorageFactory.create(propertiesWithGroupCommitEnabled).getStorageAdmin()) {
         TableMetadata metadata =
-            storageAdmin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+            storageAdmin.getTableMetadata(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
         assertThat(metadata).isNotNull();
         assertThat(metadata.getColumnNames()).contains(Attribute.CHILD_IDS);
       }
@@ -110,11 +110,11 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
       String coordinatorNamespace =
           new ConsensusCommitConfig(new DatabaseConfig(propertiesWithGroupCommitDisabled))
               .getCoordinatorNamespace()
-              .orElse(Coordinator.NAMESPACE);
+              .orElse(CoordinatorStateAccessor.NAMESPACE);
       try (DistributedStorageAdmin storageAdmin =
           StorageFactory.create(propertiesWithGroupCommitDisabled).getStorageAdmin()) {
         TableMetadata metadata =
-            storageAdmin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+            storageAdmin.getTableMetadata(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
         assertThat(metadata).isNotNull();
         assertThat(metadata.getColumnNames()).contains(Attribute.CHILD_IDS);
       }
@@ -158,11 +158,11 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
       String coordinatorNamespace =
           new ConsensusCommitConfig(new DatabaseConfig(propertiesWithWriteSetLoggingEnabled))
               .getCoordinatorNamespace()
-              .orElse(Coordinator.NAMESPACE);
+              .orElse(CoordinatorStateAccessor.NAMESPACE);
       try (DistributedStorageAdmin storageAdmin =
           StorageFactory.create(propertiesWithWriteSetLoggingEnabled).getStorageAdmin()) {
         TableMetadata metadata =
-            storageAdmin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+            storageAdmin.getTableMetadata(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
         assertThat(metadata).isNotNull();
         assertThat(metadata.getColumnNames()).contains(Attribute.WRITE_SET);
       }
@@ -207,11 +207,11 @@ public abstract class ConsensusCommitAdminRepairTableIntegrationTestBase
       String coordinatorNamespace =
           new ConsensusCommitConfig(new DatabaseConfig(propertiesWithWriteSetLoggingDisabled))
               .getCoordinatorNamespace()
-              .orElse(Coordinator.NAMESPACE);
+              .orElse(CoordinatorStateAccessor.NAMESPACE);
       try (DistributedStorageAdmin storageAdmin =
           StorageFactory.create(propertiesWithWriteSetLoggingDisabled).getStorageAdmin()) {
         TableMetadata metadata =
-            storageAdmin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+            storageAdmin.getTableMetadata(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
         assertThat(metadata).isNotNull();
         assertThat(metadata.getColumnNames()).contains(Attribute.WRITE_SET);
       }

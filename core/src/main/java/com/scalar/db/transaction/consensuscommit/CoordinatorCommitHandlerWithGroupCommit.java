@@ -7,8 +7,8 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.Emittable;
 import com.scalar.db.util.groupcommit.GroupCommitConflictException;
@@ -41,7 +41,7 @@ class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   CoordinatorCommitHandlerWithGroupCommit(
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       CoordinatorGroupCommitter groupCommitter,
       boolean coordinatorWriteSetLoggingEnabled) {
     super(coordinator);
@@ -111,10 +111,10 @@ class CoordinatorCommitHandlerWithGroupCommit extends CoordinatorCommitHandler {
 
   @VisibleForTesting
   static class Emitter implements Emittable<String, String, CoordinatorGroupCommitValue, Long> {
-    private final Coordinator coordinator;
+    private final CoordinatorStateAccessor coordinator;
     private final boolean coordinatorWriteSetLoggingEnabled;
 
-    Emitter(Coordinator coordinator, boolean coordinatorWriteSetLoggingEnabled) {
+    Emitter(CoordinatorStateAccessor coordinator, boolean coordinatorWriteSetLoggingEnabled) {
       this.coordinator = coordinator;
       this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
     }

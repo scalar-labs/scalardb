@@ -3,7 +3,7 @@ package com.scalar.db.storage.multistorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import java.util.Properties;
 
 public class ConsensusCommitSpecificIntegrationTestWithMultiStorage
@@ -37,7 +37,7 @@ public class ConsensusCommitSpecificIntegrationTestWithMultiStorage
 
     // Define namespace mapping from namespace1 to cassandra, from namespace2 to jdbc, and from
     // the coordinator namespace (with the test-name suffix) to cassandra
-    String coordinatorNamespace = Coordinator.NAMESPACE + "_" + testName;
+    String coordinatorNamespace = CoordinatorStateAccessor.NAMESPACE + "_" + testName;
     props.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
         namespace1 + ":cassandra," + namespace2 + ":jdbc," + coordinatorNamespace + ":cassandra");
