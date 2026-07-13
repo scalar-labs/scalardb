@@ -36,13 +36,13 @@ public class JdbcTransactionProvider extends AbstractDistributedTransactionProvi
   }
 
   @Override
-  public TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+  public TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
     throw new UnsupportedOperationException(
         CoreError.JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
-  public TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+  public TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
     throw new UnsupportedOperationException(
         CoreError.JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
   }
