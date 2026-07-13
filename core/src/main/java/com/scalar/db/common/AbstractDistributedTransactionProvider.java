@@ -78,7 +78,7 @@ public abstract class AbstractDistributedTransactionProvider
 
     if (config.isActiveTransactionManagementEnabled()) {
       // Wrap the coordinator for active transaction management. This must be the outermost wrapping
-      // so that the idle-expiry reap traverses every inner decorator via releaseContext.
+      // so that the idle-expiry reap traverses every inner decorator via releaseTransactionContext.
       coordinator =
           new ActiveTransactionManagedTwoPhaseCommitCoordinator(
               coordinator,
@@ -103,7 +103,7 @@ public abstract class AbstractDistributedTransactionProvider
 
     if (config.isActiveTransactionManagementEnabled()) {
       // Wrap the participant for active transaction management. This must be the outermost wrapping
-      // so that the idle-expiry reap traverses every inner decorator via releaseContext.
+      // so that the idle-expiry reap traverses every inner decorator via releaseTransactionContext.
       participant =
           new ActiveTransactionManagedTwoPhaseCommitParticipant(
               participant,

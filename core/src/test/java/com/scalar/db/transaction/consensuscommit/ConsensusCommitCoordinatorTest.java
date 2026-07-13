@@ -505,14 +505,14 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void releaseContext_ShouldReleaseContextWithoutDrivingParticipantsOrWritingState()
+  void releaseTransactionContext_ShouldReleaseContextWithoutDrivingParticipantsOrWritingState()
       throws Exception {
     // Arrange
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
     Participant participant = registeredWritingParticipant("tx-1", "participant-1");
 
     // Act
-    consensusCommitCoordinator.releaseContext("tx-1");
+    consensusCommitCoordinator.releaseTransactionContext("tx-1");
 
     // Assert — reap-only terminal: the participant is NOT contacted (role-local), no Coordinator
     // state row is written, and the context is released so a subsequent commit no longer knows the
@@ -526,9 +526,9 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void releaseContext_UnknownTransaction_ShouldBeNoOp() throws Exception {
+  void releaseTransactionContext_UnknownTransaction_ShouldBeNoOp() throws Exception {
     // Releasing a transaction never begun (or already finished) is a lenient no-op.
-    consensusCommitCoordinator.releaseContext("unknown");
+    consensusCommitCoordinator.releaseTransactionContext("unknown");
     verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
     verify(coordinatorCommitHandler, never()).commitState(anyString(), any());
   }
@@ -565,14 +565,14 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void releaseContext_AfterCommit_ShouldBeNoOp() throws Exception {
+  void releaseTransactionContext_AfterCommit_ShouldBeNoOp() throws Exception {
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
     consensusCommitCoordinator.commit("tx-1");
 
     // Releasing the context of an already-committed (released) transaction is a lenient no-op: the
     // context was already discarded by commit, so there is nothing to release and no abort is
     // written.
-    consensusCommitCoordinator.releaseContext("tx-1");
+    consensusCommitCoordinator.releaseTransactionContext("tx-1");
     verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
   }
 
@@ -900,7 +900,7 @@ class ConsensusCommitCoordinatorTest {
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(UnknownTransactionStatusException.class);
     verify(p1, never()).rollbackRecords(anyString());
-    verify(p1).releaseContext("tx-1");
+    verify(p1).releaseTransactionContext("tx-1");
   }
 
   @Test
@@ -927,8 +927,8 @@ class ConsensusCommitCoordinatorTest {
         .isInstanceOf(UnknownTransactionStatusException.class);
     verify(p1, never()).rollbackRecords(anyString());
     verify(p2, never()).rollbackRecords(anyString());
-    verify(p1).releaseContext("tx-1");
-    verify(p2).releaseContext("tx-1");
+    verify(p1).releaseTransactionContext("tx-1");
+    verify(p2).releaseTransactionContext("tx-1");
   }
 
   @Test
@@ -946,14 +946,16 @@ class ConsensusCommitCoordinatorTest {
     doThrow(new UnknownTransactionStatusException("unknown", "tx-1"))
         .when(coordinatorCommitHandler)
         .abortState(anyString(), any());
-    doThrow(new TransactionException("unreachable", "tx-1")).when(p1).releaseContext("tx-1");
+    doThrow(new TransactionException("unreachable", "tx-1"))
+        .when(p1)
+        .releaseTransactionContext("tx-1");
 
     // Act Assert — the release is best-effort per participant on this path too: the first failure
     // neither masks the unknown status nor stops the second participant's release, and the records
     // are still not rolled back on either participant.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(UnknownTransactionStatusException.class);
-    verify(p2).releaseContext("tx-1");
+    verify(p2).releaseTransactionContext("tx-1");
     verify(p1, never()).rollbackRecords(anyString());
     verify(p2, never()).rollbackRecords(anyString());
   }
@@ -972,12 +974,13 @@ class ConsensusCommitCoordinatorTest {
     // back: they stay PREPARED for lazy recovery to resolve against the Coordinator state row
     // (COMMITTED row -> roll-forward; no row -> abort after the transaction lifetime). The
     // participant's in-memory context is released promptly: commit is terminal on every outcome,
-    // so nothing can ever drive the participant again, and releaseContext touches no storage.
+    // so nothing can ever drive the participant again, and releaseTransactionContext touches no
+    // storage.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(UnknownTransactionStatusException.class);
     verify(p1, never()).commitRecords(anyString(), anyLong());
     verify(p1, never()).rollbackRecords(anyString());
-    verify(p1).releaseContext("tx-1");
+    verify(p1).releaseTransactionContext("tx-1");
 
     // The Coordinator context is released too (commit is terminal): a retried commit is rejected
     // as unknown.
@@ -986,17 +989,20 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void commit_WhenCommitStateWriteFailsUnknownAndReleaseContextFails_ShouldStillPropagateUnknown()
-      throws Exception {
-    // Arrange — the participant's releaseContext itself fails (e.g. an unreachable remote
-    // participant, which is likely correlated with the coordinator-table trouble that caused the
-    // unknown status in the first place).
+  void
+      commit_WhenCommitStateWriteFailsUnknownAndReleaseTransactionContextFails_ShouldStillPropagateUnknown()
+          throws Exception {
+    // Arrange — the participant's releaseTransactionContext itself fails (e.g. an unreachable
+    // remote participant, which is likely correlated with the coordinator-table trouble that
+    // caused the unknown status in the first place).
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
     Participant p1 = registeredWritingParticipant("tx-1", "participant-1");
     doThrow(new UnknownTransactionStatusException("unknown", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
-    doThrow(new TransactionException("unreachable", "tx-1")).when(p1).releaseContext("tx-1");
+    doThrow(new TransactionException("unreachable", "tx-1"))
+        .when(p1)
+        .releaseTransactionContext("tx-1");
 
     // Act Assert — the release is best-effort: its failure must not mask the unknown status (the
     // participant's context is then reclaimed by its own idle reaping).
@@ -1022,8 +1028,8 @@ class ConsensusCommitCoordinatorTest {
     // scoping).
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(UnknownTransactionStatusException.class);
-    verify(writer).releaseContext("tx-1");
-    verify(writeLess, never()).releaseContext(anyString());
+    verify(writer).releaseTransactionContext("tx-1");
+    verify(writeLess, never()).releaseTransactionContext(anyString());
   }
 
   @Test
@@ -1038,13 +1044,15 @@ class ConsensusCommitCoordinatorTest {
     doThrow(new UnknownTransactionStatusException("unknown", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
-    doThrow(new TransactionException("unreachable", "tx-1")).when(p1).releaseContext("tx-1");
+    doThrow(new TransactionException("unreachable", "tx-1"))
+        .when(p1)
+        .releaseTransactionContext("tx-1");
 
     // Act Assert — the release is best-effort per participant: the first failure neither masks the
     // unknown status nor stops the second participant's release.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(UnknownTransactionStatusException.class);
-    verify(p2).releaseContext("tx-1");
+    verify(p2).releaseTransactionContext("tx-1");
     verify(p1, never()).commitRecords(anyString(), anyLong());
     verify(p2, never()).commitRecords(anyString(), anyLong());
   }

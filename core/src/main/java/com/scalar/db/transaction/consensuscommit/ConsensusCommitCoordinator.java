@@ -268,9 +268,9 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
             // way — commit is terminal on every outcome (the finally below releases this
             // Coordinator's context), so nothing can ever drive them again. Release them promptly
             // instead of leaving them to each participant's own idle reaping
-            // (releaseContext touches no storage).
+            // (releaseTransactionContext touches no storage).
             for (Participant participant : toCommit) {
-              bestEffortReleaseContext(participant, transactionId);
+              bestEffortReleaseTransactionContext(participant, transactionId);
             }
             throw e;
           }
@@ -319,7 +319,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseTransactionContext(String transactionId) {
     CoordinatorContext context = contexts.get(transactionId);
     if (context == null) {
       // Unknown or already-released transaction: nothing to release.
@@ -373,7 +373,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         // participants' in-memory contexts are just as unreachable as on the commit-state path —
         // commit is terminal on every outcome — so release them promptly without touching storage.
         for (Participant participant : participants) {
-          bestEffortReleaseContext(participant, transactionId);
+          bestEffortReleaseTransactionContext(participant, transactionId);
         }
         throw e;
       }
@@ -426,9 +426,9 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     }
   }
 
-  private void bestEffortReleaseContext(Participant participant, String txId) {
+  private void bestEffortReleaseTransactionContext(Participant participant, String txId) {
     try {
-      participant.releaseContext(txId);
+      participant.releaseTransactionContext(txId);
     } catch (TransactionNotFoundException e) {
       // The context is already gone (self-released, or reaped by the participant's own idle
       // reaping) — the outcome this release wanted; not-found is its alternative carrier.
@@ -437,7 +437,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       // locked — only an in-memory context that the participant reclaims by other means (e.g. a
       // later reap or close) — so it logs at DEBUG.
       logger.debug(
-          "releaseContext failed; the participant's context is left to be reclaimed "
+          "releaseTransactionContext failed; the participant's context is left to be reclaimed "
               + "by other means (e.g. a later reap or close). Transaction ID: {}",
           txId,
           e);

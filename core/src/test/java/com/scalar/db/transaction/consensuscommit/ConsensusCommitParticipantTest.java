@@ -100,7 +100,7 @@ class ConsensusCommitParticipantTest {
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
     assertThat(participant.hasTransactionContext(ANY_TX_ID)).isTrue();
 
-    participant.releaseContext(ANY_TX_ID);
+    participant.releaseTransactionContext(ANY_TX_ID);
     assertThat(participant.hasTransactionContext(ANY_TX_ID)).isFalse();
   }
 
@@ -890,11 +890,12 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
-  void releaseContext_WhenPrepared_ShouldReleaseContextWithoutStorageRollback() throws Exception {
+  void releaseTransactionContext_WhenPrepared_ShouldReleaseContextWithoutStorageRollback()
+      throws Exception {
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
     prepare(ANY_TX_ID);
 
-    participant.releaseContext(ANY_TX_ID);
+    participant.releaseTransactionContext(ANY_TX_ID);
 
     // Reap-only terminal: even though the transaction is PREPARED, the records are NOT rolled back
     // in storage (lazy recovery reconciles them); only the in-memory context is released.
@@ -905,13 +906,14 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
-  void releaseContext_WhenValidated_ShouldReleaseContextWithoutStorageRollback() throws Exception {
+  void releaseTransactionContext_WhenValidated_ShouldReleaseContextWithoutStorageRollback()
+      throws Exception {
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
     prepare(ANY_TX_ID);
     doNothing().when(commit).validateRecords(any(TransactionContext.class));
     participant.validateRecords(ANY_TX_ID);
 
-    participant.releaseContext(ANY_TX_ID);
+    participant.releaseTransactionContext(ANY_TX_ID);
 
     // Reap-only terminal: even a VALIDATED (write-bearing, commitRecords not yet driven) context is
     // NOT rolled back in storage — lazy recovery reconciles its PREPARED records; only the
@@ -923,10 +925,11 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
-  void releaseContext_WhenActive_ShouldReleaseContextWithoutStorageRollback() throws Exception {
+  void releaseTransactionContext_WhenActive_ShouldReleaseContextWithoutStorageRollback()
+      throws Exception {
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
 
-    participant.releaseContext(ANY_TX_ID);
+    participant.releaseTransactionContext(ANY_TX_ID);
 
     // Reap-only terminal on an ACTIVE (never prepared) context: only an in-memory snapshot exists,
     // so there is nothing to roll back in storage — the context is simply released.
@@ -937,9 +940,9 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
-  void releaseContext_UnknownTransactionId_ShouldBeNoOp() {
+  void releaseTransactionContext_UnknownTransactionId_ShouldBeNoOp() {
     // An absent context (never joined, or already released) leaves nothing to release: a no-op.
-    participant.releaseContext("unknown-tx");
+    participant.releaseTransactionContext("unknown-tx");
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
   }
 
