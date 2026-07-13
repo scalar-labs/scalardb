@@ -700,8 +700,7 @@ class ConsensusCommitParticipantTest {
   @Test
   void rollbackRecords_AfterPrepareThrewPartway_ShouldRollBackPreparedRecords() throws Exception {
     // A partial prepare (prepareRecords throws after writing some PREPARED records) must still
-    // leave
-    // the transaction marked PREPARED so rollbackRecords undoes those records in storage.
+    // leave the transaction marked PREPARED so rollbackRecords undoes those records in storage.
     participant.join(ANY_TX_ID, false, Collections.emptyMap());
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
@@ -798,18 +797,69 @@ class ConsensusCommitParticipantTest {
   void rollbackRecords_UnknownTransactionId_ShouldBeNoOp() {
     // Unlike the other record-level steps, rollbackRecords is lenient: an absent context (never
     // joined, already released when later steps were skipped, or a prior rollback) leaves nothing
-    // to
-    // undo, so it is a no-op rather than an error.
+    // to undo, so it is a no-op rather than an error.
     participant.rollbackRecords("unknown-tx");
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
   }
 
+  @Test
+  void releaseContext_WhenPrepared_ShouldReleaseContextWithoutStorageRollback() throws Exception {
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    prepare(ANY_TX_ID);
+
+    participant.releaseContext(ANY_TX_ID);
+
+    // Reap-only terminal: even though the transaction is PREPARED, the records are NOT rolled back
+    // in storage (lazy recovery reconciles them); only the in-memory context is released.
+    verify(commit, never()).rollbackRecords(any(TransactionContext.class));
+    assertThat(getContext(ANY_TX_ID)).isNull();
+    assertThatThrownBy(() -> participant.validateRecords(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  void releaseContext_WhenValidated_ShouldReleaseContextWithoutStorageRollback() throws Exception {
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    prepare(ANY_TX_ID);
+    doNothing().when(commit).validateRecords(any(TransactionContext.class));
+    participant.validateRecords(ANY_TX_ID);
+
+    participant.releaseContext(ANY_TX_ID);
+
+    // Reap-only terminal: even a VALIDATED (write-bearing, commitRecords not yet driven) context is
+    // NOT rolled back in storage — lazy recovery reconciles its PREPARED records; only the
+    // in-memory context is released. VALIDATED is the primary reaper target state.
+    verify(commit, never()).rollbackRecords(any(TransactionContext.class));
+    assertThat(getContext(ANY_TX_ID)).isNull();
+    assertThatThrownBy(() -> participant.validateRecords(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  void releaseContext_WhenActive_ShouldReleaseContextWithoutStorageRollback() throws Exception {
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+
+    participant.releaseContext(ANY_TX_ID);
+
+    // Reap-only terminal on an ACTIVE (never prepared) context: only an in-memory snapshot exists,
+    // so there is nothing to roll back in storage — the context is simply released.
+    verify(commit, never()).rollbackRecords(any(TransactionContext.class));
+    assertThat(getContext(ANY_TX_ID)).isNull();
+    assertThatThrownBy(() -> participant.validateRecords(ANY_TX_ID))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  void releaseContext_UnknownTransactionId_ShouldBeNoOp() {
+    // An absent context (never joined, or already released) leaves nothing to release: a no-op.
+    participant.releaseContext("unknown-tx");
+    verify(commit, never()).rollbackRecords(any(TransactionContext.class));
+  }
+
   // Drives the transaction to the PREPARED state with the handlers stubbed to no-op. Injects a
-  // write
-  // into the snapshot so the participant has writes: a write-bearing participant stays alive
-  // through
-  // prepare and validate (a write-less one self-releases early under the skip-optimization), which
-  // is the state the lifecycle tests below exercise.
+  // write into the snapshot so the participant has writes: a write-bearing participant stays alive
+  // through prepare and validate (a write-less one self-releases early under the
+  // skip-optimization), which is the state the lifecycle tests below exercise.
   private void prepare(String txId) throws Exception {
     Put put =
         Put.newBuilder()
