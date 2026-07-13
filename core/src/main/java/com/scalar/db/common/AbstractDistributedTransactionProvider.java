@@ -1,10 +1,8 @@
-package com.scalar.db.api;
+package com.scalar.db.common;
 
-import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
-import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
-import com.scalar.db.common.AttributePropagatingDistributedTransactionManager;
-import com.scalar.db.common.StateManagedDistributedTransactionManager;
-import com.scalar.db.common.StateManagedTwoPhaseCommitTransactionManager;
+import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.DistributedTransactionProvider;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import javax.annotation.Nullable;
 
