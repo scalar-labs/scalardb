@@ -210,7 +210,7 @@ public class CommitHandler {
     waitBeforePreparationHookFuture(
         context, beforePreparationHookFuture.orElse(null), hasWritesOrDeletesInSnapshot);
 
-    if (shouldWriteCoordinatorState(hasWritesOrDeletesInSnapshot)) {
+    if (isCoordinatorStateWriteRequired(hasWritesOrDeletesInSnapshot)) {
       long committedAt;
       try {
         // commitState writes the COMMITTED Coordinator state row and returns the committedAt it
@@ -244,7 +244,7 @@ public class CommitHandler {
   private void abortStateAndRollbackRecordsIfNeeded(
       TransactionContext context, boolean hasWritesOrDeletesInSnapshot)
       throws UnknownTransactionStatusException {
-    if (shouldWriteCoordinatorState(hasWritesOrDeletesInSnapshot)) {
+    if (isCoordinatorStateWriteRequired(hasWritesOrDeletesInSnapshot)) {
       abortState(context);
     }
     if (hasWritesOrDeletesInSnapshot) {
@@ -256,7 +256,7 @@ public class CommitHandler {
   // ABORTED on the abort path) is written unless the transaction has no writes or deletes and
   // coordinator write omission on read-only is enabled. Mirrored by ConsensusCommitCoordinator's
   // gate of the same name.
-  private boolean shouldWriteCoordinatorState(boolean hasWritesOrDeletes) {
+  private boolean isCoordinatorStateWriteRequired(boolean hasWritesOrDeletes) {
     return hasWritesOrDeletes || !coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
