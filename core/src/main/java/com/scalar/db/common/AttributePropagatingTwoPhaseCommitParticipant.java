@@ -167,7 +167,8 @@ public class AttributePropagatingTwoPhaseCommitParticipant
   }
 
   @Override
-  public void rollbackRecords(String transactionId) throws RollbackException {
+  public void rollbackRecords(String transactionId)
+      throws RollbackException, TransactionNotFoundException {
     try {
       super.rollbackRecords(transactionId);
     } finally {
@@ -176,7 +177,7 @@ public class AttributePropagatingTwoPhaseCommitParticipant
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseContext(String transactionId) throws TransactionException {
     try {
       super.releaseContext(transactionId);
     } finally {

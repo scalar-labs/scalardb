@@ -88,7 +88,14 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
         new ActiveTransactionRegistry<>(
             expirationTimeMillis,
             maxActiveTransactions,
-            tracked -> participant.releaseContext(tracked.transactionId));
+            tracked -> {
+              try {
+                participant.releaseContext(tracked.transactionId);
+              } catch (TransactionNotFoundException e) {
+                // The context is already gone — the outcome this release wanted; not-found is its
+                // alternative carrier (see the interface Javadoc).
+              }
+            });
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -232,7 +239,8 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   }
 
   @Override
-  public void rollbackRecords(String transactionId) throws RollbackException {
+  public void rollbackRecords(String transactionId)
+      throws RollbackException, TransactionNotFoundException {
     try {
       super.rollbackRecords(transactionId);
     } finally {
@@ -241,7 +249,7 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseContext(String transactionId) throws TransactionException {
     try {
       super.releaseContext(transactionId);
     } finally {

@@ -226,8 +226,16 @@ public interface TwoPhaseCommit {
      * treat this as a terminal step, releasing any per-transaction resources it holds.
      *
      * @param transactionId the canonical transaction ID returned by {@link #begin}
+     * @throws TransactionNotFoundException if the implementation reports the unknown-transaction
+     *     no-op on its conventional not-found channel instead of returning silently (typical across
+     *     a transport boundary). An alternative carrier of the no-op outcome — there was no context
+     *     to release — so callers must treat it like a normal return
+     * @throws TransactionException if releasing the context fails due to transient or nontransient
+     *     faults. The context may still be held; reap-style callers treat the failure as
+     *     best-effort, since the context is reclaimed by other means (e.g. a later reap or close)
      */
-    void releaseContext(String transactionId);
+    void releaseContext(String transactionId)
+        throws TransactionNotFoundException, TransactionException;
 
     /**
      * Closes the Coordinator and releases any resources it holds.
@@ -589,15 +597,22 @@ public interface TwoPhaseCommit {
      *
      * <p>Unlike the other record-level steps, an unknown transaction — one this participant never
      * joined, or whose context it has already released (for example, a write-less participant that
-     * released early when its later steps were skipped, or a prior rollback) — is a no-op rather
-     * than an error: there is nothing left to undo.
+     * released early when its later steps were skipped, or a prior rollback) — is not an error:
+     * there is nothing left for this participant to undo. Implementations report it as a silent
+     * no-op or as a {@link TransactionNotFoundException}, never as a {@link RollbackException}.
      *
      * @param transactionId the canonical transaction ID
+     * @throws TransactionNotFoundException if the implementation reports the unknown-transaction
+     *     no-op on its conventional not-found channel instead of returning silently (typical across
+     *     a transport boundary). An alternative carrier of the no-op outcome — there was nothing
+     *     left for this participant to undo — so callers must treat it like a normal return.
+     *     Routine on abort paths: the Coordinator rolls back every participant uniformly, including
+     *     ones that already self-released
      * @throws RollbackException if rolling back the records of a known transaction fails due to
-     *     transient or nontransient faults; never thrown for an unknown transaction, which is a
-     *     no-op
+     *     transient or nontransient faults; never thrown for an unknown transaction
      */
-    void rollbackRecords(String transactionId) throws RollbackException;
+    void rollbackRecords(String transactionId)
+        throws RollbackException, TransactionNotFoundException;
 
     /**
      * Returns whether this participant still holds a local context for the transaction.
@@ -651,9 +666,21 @@ public interface TwoPhaseCommit {
      * A decorator may treat this as a terminal step, releasing any per-transaction resources it
      * holds.
      *
+     * <p>Callers invoke this from housekeeping paths (e.g. an idle reaper), or best-effort while a
+     * client awaits a terminal outcome; an implementation that crosses a network must bound the
+     * call with its own deadline rather than block indefinitely.
+     *
      * @param transactionId the canonical transaction ID
+     * @throws TransactionNotFoundException if the implementation reports the unknown-transaction
+     *     no-op on its conventional not-found channel instead of returning silently (typical across
+     *     a transport boundary). An alternative carrier of the no-op outcome — there was no context
+     *     to release — so callers must treat it like a normal return
+     * @throws TransactionException if releasing the context fails due to transient or nontransient
+     *     faults. The context may still be held; reap-style callers treat the failure as
+     *     best-effort, since the context is reclaimed by other means (e.g. a later reap or close)
      */
-    void releaseContext(String transactionId);
+    void releaseContext(String transactionId)
+        throws TransactionNotFoundException, TransactionException;
 
     /**
      * Closes the Participant and releases any resources it holds.

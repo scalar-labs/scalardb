@@ -198,7 +198,14 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     return new ActiveTransactionRegistry<>(
         /* expirationTimeMillis= */ -1,
         maxActiveTransactions,
-        tracked -> coordinator.releaseContext(tracked.transactionId));
+        tracked -> {
+          try {
+            coordinator.releaseContext(tracked.transactionId);
+          } catch (TransactionNotFoundException e) {
+            // The context is already gone — the outcome this release wanted; not-found is its
+            // alternative carrier (see the interface Javadoc).
+          }
+        });
   }
 
   private static ScheduledExecutorService newSweeperExecutor() {
@@ -293,7 +300,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseContext(String transactionId) throws TransactionException {
     try {
       super.releaseContext(transactionId);
     } finally {
@@ -444,9 +451,14 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   private void releaseOnWrapped(String transactionId) {
     try {
       super.releaseContext(transactionId);
+    } catch (TransactionNotFoundException e) {
+      // The context is already gone — the outcome this release wanted; not-found is its
+      // alternative carrier (see the interface Javadoc).
     } catch (Exception e) {
-      // A failed release must not abort the rest of the sweep pass. (The wrapped releaseContext
-      // is not expected to throw at all — this is a guard, not a path.)
+      // A failed release must not abort the rest of the sweep pass. For the in-process wrapped
+      // coordinator this is a guard, not a path (it never throws); a remote implementation may
+      // legitimately fail here per the interface contract — still best-effort, the context is
+      // reclaimed by other means (see the interface Javadoc).
       logger.warn(
           "Failed to release the context of the expired transaction. Transaction ID: {}",
           transactionId,

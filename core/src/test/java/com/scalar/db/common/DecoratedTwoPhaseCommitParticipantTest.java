@@ -107,7 +107,7 @@ class DecoratedTwoPhaseCommitParticipantTest {
   }
 
   @Test
-  void releaseContext_ShouldDelegate() {
+  void releaseContext_ShouldDelegate() throws Exception {
     participant.releaseContext(TX);
     verify(delegate).releaseContext(TX);
   }
