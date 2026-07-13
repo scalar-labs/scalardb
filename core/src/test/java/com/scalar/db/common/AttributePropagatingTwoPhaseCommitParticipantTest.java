@@ -339,10 +339,10 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
   }
 
   @Test
-  void releaseContext_ShouldDropTheCapturedAttributes() throws Exception {
+  void releaseTransactionContext_ShouldDropTheCapturedAttributes() throws Exception {
     participant.join(TX, false, attrs("k", "v"));
 
-    participant.releaseContext(TX);
+    participant.releaseTransactionContext(TX);
 
     participant.get(TX, get());
     ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);

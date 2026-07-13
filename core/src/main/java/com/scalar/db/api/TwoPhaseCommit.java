@@ -227,7 +227,7 @@ public interface TwoPhaseCommit {
      *     faults. The context may still be held; reap-style callers treat the failure as
      *     best-effort, since the context is reclaimed by other means (e.g. a later reap or close)
      */
-    void releaseContext(String transactionId)
+    void releaseTransactionContext(String transactionId)
         throws TransactionNotFoundException, TransactionException;
 
     /**
@@ -267,10 +267,10 @@ public interface TwoPhaseCommit {
    *   <li>Lifecycle and record-level two-phase commit methods ({@link #join}, {@link
    *       #prepareRecords}, {@link #validateRecords}, {@link #commitRecords}, {@link
    *       #rollbackRecords}) are invoked by {@link Coordinator}.
-   *   <li>{@link #releaseContext} and {@link #hasTransactionContext} are invoked by neither — they
-   *       are driven by a context-reaper/decorator: the former a reap-only terminal that reclaims
-   *       an abandoned or idle-reaped context without touching storage, the latter a liveness probe
-   *       consulted before such a reap.
+   *   <li>{@link #releaseTransactionContext} and {@link #hasTransactionContext} are invoked by
+   *       neither — they are driven by a context-reaper/decorator: the former a reap-only terminal
+   *       that reclaims an abandoned or idle-reaped context without touching storage, the latter a
+   *       liveness probe consulted before such a reap.
    * </ul>
    *
    * <p>Operations must follow the transaction's lifecycle: CRUD while the transaction is open, then
@@ -664,7 +664,7 @@ public interface TwoPhaseCommit {
      *     faults. The context may still be held; reap-style callers treat the failure as
      *     best-effort, since the context is reclaimed by other means (e.g. a later reap or close)
      */
-    void releaseContext(String transactionId)
+    void releaseTransactionContext(String transactionId)
         throws TransactionNotFoundException, TransactionException;
 
     /**
