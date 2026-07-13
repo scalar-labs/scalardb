@@ -141,7 +141,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.begin(ANY_TX_ID);
@@ -220,7 +220,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.start(ANY_TX_ID);
@@ -250,7 +250,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     // Act
     TwoPhaseConsensusCommit transaction =
@@ -270,7 +270,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     TwoPhaseCommitTransaction transaction1 = manager.join(ANY_TX_ID);
 
@@ -285,7 +285,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void join_TxIdGiven_WithGroupCommitEnabled_ShouldThrowException() {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     when(config.isCoordinatorGroupCommitEnabled()).thenReturn(true);
 
@@ -297,7 +297,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     TwoPhaseCommitTransaction transaction1 = manager.begin(ANY_TX_ID);
 
@@ -312,7 +312,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void resume_CalledWithJoin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     TwoPhaseCommitTransaction transaction1 = manager.join(ANY_TX_ID);
 
@@ -327,7 +327,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   public void resume_CalledWithoutBeginOrJoin_ThrowTransactionNotFoundException() {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
@@ -339,7 +339,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.prepare();
@@ -355,7 +355,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     doThrow(CommitConflictException.class).when(commit).commitStateWithoutWriteSet(any());
 
@@ -379,7 +379,7 @@ public class TwoPhaseConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     TwoPhaseCommitTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.prepare();
@@ -396,7 +396,7 @@ public class TwoPhaseConsensusCommitManagerTest {
           throws TransactionException {
     // Arrange
     TwoPhaseCommitTransactionManager manager =
-        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedTwoPhaseCommitTransactionManager(this.manager, -1, -1);
 
     doThrow(UnknownTransactionStatusException.class)
         .when(commit)
