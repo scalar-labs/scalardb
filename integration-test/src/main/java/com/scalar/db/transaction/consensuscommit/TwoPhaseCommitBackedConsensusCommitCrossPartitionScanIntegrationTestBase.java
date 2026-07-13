@@ -30,6 +30,9 @@ public abstract class TwoPhaseCommitBackedConsensusCommitCrossPartitionScanInteg
     if (properties.getProperty(ConsensusCommitConfig.PARTICIPANT_ID) == null) {
       properties.setProperty(ConsensusCommitConfig.PARTICIPANT_ID, "participant-1");
     }
+    // The facade's Coordinator always persists the write set, which requires the opt-in
+    // tx_write_set Coordinator column (disabled by default on this branch).
+    properties.setProperty(ConsensusCommitConfig.COORDINATOR_WRITE_SET_LOGGING_ENABLED, "true");
     return properties;
   }
 
