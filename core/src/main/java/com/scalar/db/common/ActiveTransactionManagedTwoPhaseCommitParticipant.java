@@ -70,14 +70,18 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ActiveTransactionManagedTwoPhaseCommitParticipant(
-      TwoPhaseCommit.Participant participant, long expirationTimeMillis) {
+      TwoPhaseCommit.Participant participant,
+      long expirationTimeMillis,
+      int maxActiveTransactions) {
     super(participant);
     // The registry stores a small per-transaction entry carrying the transaction ID and the
-    // terminal-at-validate flag; on expiry it is handed back so we can release the corresponding
-    // context on the wrapped participant.
+    // terminal-at-validate flag; on expiry or eviction it is handed back so we can release the
+    // corresponding context on the wrapped participant.
     this.registry =
         new ActiveTransactionRegistry<>(
-            expirationTimeMillis, tracked -> participant.releaseContext(tracked.transactionId));
+            expirationTimeMillis,
+            maxActiveTransactions,
+            tracked -> participant.releaseContext(tracked.transactionId));
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -117,7 +121,10 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   public TransactionCrudOperable.Scanner getScanner(String transactionId, Scan scan)
       throws CrudException, TransactionNotFoundException {
     registry.touch(transactionId);
-    return super.getScanner(transactionId, scan);
+    // The scanner outlives this call: wrap it so each one()/all()/iteration also refreshes the idle
+    // timer, otherwise a transaction streaming a large result slowly could be reaped mid-scan.
+    return new ActiveTransactionRefreshingScanner(
+        registry, transactionId, super.getScanner(transactionId, scan));
   }
 
   /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
