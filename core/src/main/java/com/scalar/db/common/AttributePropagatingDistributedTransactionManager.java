@@ -3,28 +3,20 @@ package com.scalar.db.common;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Insert;
-import com.scalar.db.api.InsertBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.ScanBuilder;
 import com.scalar.db.api.Update;
-import com.scalar.db.api.UpdateBuilder;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.api.UpsertBuilder;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -189,144 +181,12 @@ public class AttributePropagatingDistributedTransactionManager
       return super.batch(this.<Operation>mergeAttributesForEach(operations));
     }
 
-    @SuppressWarnings({"unchecked", "ReferenceEquality"})
     private <T extends Operation> List<T> mergeAttributesForEach(List<? extends T> operations) {
-      // Allocates a new list only when some element actually needs merging. Returns the original
-      // list (same reference) when every element is forwarded unchanged so a common case of "no tx
-      // attribute needs to be added on any operation" avoids allocating a list copy.
-      for (int i = 0; i < operations.size(); i++) {
-        T operation = operations.get(i);
-        T mergedOperation = mergeAttributes(operation);
-        if (mergedOperation == operation) {
-          continue;
-        }
-        // Found an operation that needed merging: allocate the new list, backfill the prior
-        // unchanged elements, and merge the remaining elements.
-        List<T> merged = new ArrayList<>(operations.size());
-        merged.addAll(operations.subList(0, i));
-        merged.add(mergedOperation);
-        for (int j = i + 1; j < operations.size(); j++) {
-          merged.add(mergeAttributes(operations.get(j)));
-        }
-        return merged;
-      }
-      return (List<T>) operations;
+      return OperationAttributeMerger.mergeEach(operations, transactionAttributes);
     }
 
-    @SuppressWarnings("unchecked")
     private <T extends Operation> T mergeAttributes(T operation) {
-      if (containsAllTransactionAttributeKeys(operation)) {
-        return operation;
-      }
-      if (operation instanceof Put) {
-        return (T) mergeAttributesIntoPut((Put) operation);
-      }
-      if (operation instanceof Insert) {
-        return (T) mergeAttributesIntoInsert((Insert) operation);
-      }
-      if (operation instanceof Upsert) {
-        return (T) mergeAttributesIntoUpsert((Upsert) operation);
-      }
-      if (operation instanceof Update) {
-        return (T) mergeAttributesIntoUpdate((Update) operation);
-      }
-      if (operation instanceof Delete) {
-        return (T) mergeAttributesIntoDelete((Delete) operation);
-      }
-      if (operation instanceof Get) {
-        return (T) mergeAttributesIntoGet((Get) operation);
-      }
-      if (operation instanceof Scan) {
-        return (T) mergeAttributesIntoScan((Scan) operation);
-      }
-      return operation;
-    }
-
-    private boolean containsAllTransactionAttributeKeys(Operation operation) {
-      Map<String, String> operationAttributes = operation.getAttributes();
-      for (String key : transactionAttributes.keySet()) {
-        if (!operationAttributes.containsKey(key)) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    private Put mergeAttributesIntoPut(Put put) {
-      Map<String, String> existing = put.getAttributes();
-      PutBuilder.BuildableFromExisting builder = Put.newBuilder(put);
-      for (Map.Entry<String, String> entry : transactionAttributes.entrySet()) {
-        if (!existing.containsKey(entry.getKey())) {
-          builder.attribute(entry.getKey(), entry.getValue());
-        }
-      }
-      return builder.build();
-    }
-
-    private Insert mergeAttributesIntoInsert(Insert insert) {
-      Map<String, String> existing = insert.getAttributes();
-      InsertBuilder.BuildableFromExisting builder = Insert.newBuilder(insert);
-      for (Map.Entry<String, String> entry : transactionAttributes.entrySet()) {
-        if (!existing.containsKey(entry.getKey())) {
-          builder.attribute(entry.getKey(), entry.getValue());
-        }
-      }
-      return builder.build();
-    }
-
-    private Upsert mergeAttributesIntoUpsert(Upsert upsert) {
-      Map<String, String> existing = upsert.getAttributes();
-      UpsertBuilder.BuildableFromExisting builder = Upsert.newBuilder(upsert);
-      for (Map.Entry<String, String> entry : transactionAttributes.entrySet()) {
-        if (!existing.containsKey(entry.getKey())) {
-          builder.attribute(entry.getKey(), entry.getValue());
-        }
-      }
-      return builder.build();
-    }
-
-    private Update mergeAttributesIntoUpdate(Update update) {
-      Map<String, String> existing = update.getAttributes();
-      UpdateBuilder.BuildableFromExisting builder = Update.newBuilder(update);
-      for (Map.Entry<String, String> entry : transactionAttributes.entrySet()) {
-        if (!existing.containsKey(entry.getKey())) {
-          builder.attribute(entry.getKey(), entry.getValue());
-        }
-      }
-      return builder.build();
-    }
-
-    private Delete mergeAttributesIntoDelete(Delete delete) {
-      Map<String, String> existing = delete.getAttributes();
-      DeleteBuilder.BuildableFromExisting builder = Delete.newBuilder(delete);
-      for (Map.Entry<String, String> entry : transactionAttributes.entrySet()) {
-        if (!existing.containsKey(entry.getKey())) {
-          builder.attribute(entry.getKey(), entry.getValue());
-        }
-      }
-      return builder.build();
-    }
-
-    private Get mergeAttributesIntoGet(Get get) {
-      Map<String, String> existing = get.getAttributes();
-      GetBuilder.BuildableGetOrGetWithIndexFromExisting builder = Get.newBuilder(get);
-      for (Map.Entry<String, String> entry : transactionAttributes.entrySet()) {
-        if (!existing.containsKey(entry.getKey())) {
-          builder.attribute(entry.getKey(), entry.getValue());
-        }
-      }
-      return builder.build();
-    }
-
-    private Scan mergeAttributesIntoScan(Scan scan) {
-      Map<String, String> existing = scan.getAttributes();
-      ScanBuilder.BuildableScanOrScanAllFromExisting builder = Scan.newBuilder(scan);
-      for (Map.Entry<String, String> entry : transactionAttributes.entrySet()) {
-        if (!existing.containsKey(entry.getKey())) {
-          builder.attribute(entry.getKey(), entry.getValue());
-        }
-      }
-      return builder.build();
+      return OperationAttributeMerger.merge(operation, transactionAttributes);
     }
   }
 }

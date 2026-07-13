@@ -46,9 +46,9 @@ public class ActiveTransactionManagedDistributedTransactionManager
   public ActiveTransactionManagedDistributedTransactionManager(
       DistributedTransactionManager transactionManager,
       long expirationTimeMillis,
-      ActiveTransactionRegistry.TransactionRollback<DistributedTransaction> rollbackFunction) {
+      ActiveTransactionRegistry.ExpirationHandler<DistributedTransaction> expirationHandler) {
     super(transactionManager);
-    registry = new ActiveTransactionRegistry<>(expirationTimeMillis, rollbackFunction);
+    registry = new ActiveTransactionRegistry<>(expirationTimeMillis, expirationHandler);
   }
 
   @Override
