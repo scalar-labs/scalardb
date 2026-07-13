@@ -48,9 +48,9 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
   public ActiveTransactionManagedTwoPhaseCommitTransactionManager(
       TwoPhaseCommitTransactionManager transactionManager,
       long expirationTimeMillis,
-      ActiveTransactionRegistry.TransactionRollback<TwoPhaseCommitTransaction> rollbackFunction) {
+      ActiveTransactionRegistry.ExpirationHandler<TwoPhaseCommitTransaction> expirationHandler) {
     super(transactionManager);
-    registry = new ActiveTransactionRegistry<>(expirationTimeMillis, rollbackFunction);
+    registry = new ActiveTransactionRegistry<>(expirationTimeMillis, expirationHandler);
   }
 
   @Override
