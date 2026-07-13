@@ -205,6 +205,24 @@ public interface TwoPhaseCommit {
     void rollback(String transactionId) throws RollbackException;
 
     /**
+     * Releases the Coordinator's in-memory state for the transaction without touching storage.
+     *
+     * <p>This is a reap-only terminal used to reclaim an in-memory context that did not reach a
+     * normal {@link #commit} / {@link #rollback} — for example, an abandoned transaction, or one
+     * reaped on idle by a decorator. It discards only this Coordinator's per-transaction state; it
+     * does <strong>not</strong> drive the participants and does <strong>not</strong> write any
+     * Coordinator state row or mutate records. The transaction's durable outcome is left to lazy
+     * recovery, which relies on the Coordinator state row if one was already written (its absence
+     * is resolved as an abort).
+     *
+     * <p>An unknown transaction ID (never begun, or already finished) is a no-op. A decorator may
+     * treat this as a terminal step, releasing any per-transaction resources it holds.
+     *
+     * @param transactionId the canonical transaction ID returned by {@link #begin}
+     */
+    void releaseContext(String transactionId);
+
+    /**
      * Closes the Coordinator and releases any resources it holds.
      *
      * <p>Does not commit or roll back transactions that are still in flight; their in-memory state
@@ -223,11 +241,15 @@ public interface TwoPhaseCommit {
    * record-level two-phase commit steps.
    *
    * <p>Each participant maintains a local context (snapshot, read set, write set) keyed by
-   * transaction ID. The context is created by {@link #join} and discarded after the transaction
-   * terminates—via {@link #commitRecords}, {@link #rollbackRecords}, or a timeout if {@link
-   * Coordinator#commit} or {@link Coordinator#rollback} is never reached.
+   * transaction ID. The context is created by {@link #join} and discarded once the participant has
+   * run the last step the Coordinator drives for it. For a participant with writes that is the
+   * commit (via {@link #commitRecords}) or the abort (via {@link #rollbackRecords}); for a
+   * write-less participant the Coordinator may skip those steps, so the context is discarded
+   * earlier — at {@link #validateRecords}, or at {@link #prepareRecords} when validation is not
+   * required either. It is also discarded on a timeout if {@link Coordinator#commit} or {@link
+   * Coordinator#rollback} is never reached.
    *
-   * <p>The methods on this interface have two different intended callers:
+   * <p>The methods on this interface have three different intended callers:
    *
    * <ul>
    *   <li>CRUD methods ({@link #get}, {@link #scan}, {@link #getScanner}, {@link #put(String,
@@ -237,6 +259,9 @@ public interface TwoPhaseCommit {
    *   <li>Lifecycle and record-level two-phase commit methods ({@link #join}, {@link
    *       #prepareRecords}, {@link #validateRecords}, {@link #commitRecords}, {@link
    *       #rollbackRecords}) are invoked by {@link Coordinator}.
+   *   <li>{@link #releaseContext} is invoked by neither — it is a reap-only terminal driven by a
+   *       context-reaper/decorator to reclaim an abandoned or idle-reaped context without touching
+   *       storage.
    * </ul>
    *
    * <p>Operations must follow the transaction's lifecycle: CRUD while the transaction is open, then
@@ -484,8 +509,8 @@ public interface TwoPhaseCommit {
      * Performs the validation phase of the transaction.
      *
      * <p>Invoked by {@link Coordinator#commit} between {@link #prepareRecords} and the COMMITTED
-     * state write. Required for SERIALIZABLE isolation; a no-op or cheap check for snapshot
-     * isolation.
+     * state write. The Coordinator may skip this call when the prepare result reports that this
+     * participant does not require validation (see {@link PreparationResult#isValidationRequired}).
      *
      * @param transactionId the canonical transaction ID
      * @throws ValidationConflictException if the transaction fails to validate due to transient
@@ -503,7 +528,8 @@ public interface TwoPhaseCommit {
      *
      * <p>Invoked by {@link Coordinator#commit} during the commit phase, once the transaction's
      * outcome has been durably decided. Marks the participant's PREPARED records COMMITTED,
-     * stamping {@code committed_at}.
+     * stamping {@code committed_at}. The Coordinator may skip this call for a participant that
+     * produced no writes (an empty {@link PreparationResult#getWriteSet}).
      *
      * <p>The participant reports failures by throwing, but the Coordinator drives this step
      * best-effort: it does not retry inline and relies on lazy recovery to commit the affected
@@ -535,16 +561,34 @@ public interface TwoPhaseCommit {
      * records on a subsequent read. On successful return, the participant discards its local
      * context for the transaction.
      *
+     * <p>Unlike the other record-level steps, an unknown transaction — one this participant never
+     * joined, or whose context it has already released (for example, a write-less participant that
+     * released early when its later steps were skipped, or a prior rollback) — is a no-op rather
+     * than an error: there is nothing left to undo.
+     *
      * @param transactionId the canonical transaction ID
-     * @throws RollbackException if rolling back the records fails due to transient or nontransient
-     *     faults
-     * @throws TransactionNotFoundException if the transaction is not found on this participant
-     *     (e.g., its context expired). The outcome was already decided; the Coordinator absorbs
-     *     this best-effort and lazy recovery reconciles the records, so there is nothing for the
-     *     caller to retry
+     * @throws RollbackException if rolling back the records of a known transaction fails due to
+     *     transient or nontransient faults; never thrown for an unknown transaction, which is a
+     *     no-op
      */
-    void rollbackRecords(String transactionId)
-        throws RollbackException, TransactionNotFoundException;
+    void rollbackRecords(String transactionId) throws RollbackException;
+
+    /**
+     * Releases the participant's in-memory context for the transaction without touching storage.
+     *
+     * <p>This is a reap-only terminal used to reclaim a local context that did not reach {@link
+     * #commitRecords} / {@link #rollbackRecords} — for example, an abandoned transaction, or one
+     * reaped on idle by a decorator. It closes any scanners and discards the in-memory snapshot for
+     * the transaction; it does <strong>not</strong> roll back or commit any PREPARED records —
+     * those are reconciled by lazy recovery on a subsequent read.
+     *
+     * <p>An unknown transaction — never joined, or whose context was already released — is a no-op.
+     * A decorator may treat this as a terminal step, releasing any per-transaction resources it
+     * holds.
+     *
+     * @param transactionId the canonical transaction ID
+     */
+    void releaseContext(String transactionId);
 
     /**
      * Closes the Participant and releases any resources it holds.
@@ -559,9 +603,11 @@ public interface TwoPhaseCommit {
   /**
    * The result of a participant's prepare phase, returned by {@link Participant#prepareRecords}.
    *
-   * <p>Currently carries only the write set the participant produced while preparing. It exists as
-   * a dedicated envelope so the prepare phase can return additional information in the future
-   * without changing the method signature.
+   * <p>It lets the participant report what the Coordinator needs to drive the rest of the protocol
+   * — the write set to record, whether this participant still requires validation, and whether its
+   * records still require committing — so the Coordinator can skip steps that would have nothing to
+   * do (see {@link Participant}). It is a dedicated envelope so the prepare phase can report
+   * additional information in the future without changing the method signature.
    */
   interface PreparationResult {
 
@@ -571,6 +617,33 @@ public interface TwoPhaseCommit {
      * @return the write set; empty if the participant has no writes
      */
     List<WriteSetEntry> getWriteSet();
+
+    /**
+     * Returns whether this participant still requires {@link Participant#validateRecords} for this
+     * transaction. When {@code false}, the Coordinator may skip validating this participant.
+     *
+     * <p>Validation is only meaningful under SERIALIZABLE isolation; under SNAPSHOT isolation it is
+     * a no-op, so an implementation returns {@code false}. Even under SERIALIZABLE it can be
+     * skipped when the participant read nothing that needs re-checking at commit time (for example,
+     * a participant whose reads are all covered by its own writes).
+     *
+     * @return {@code true} if validation is required for this participant
+     */
+    boolean isValidationRequired();
+
+    /**
+     * Returns whether this participant still requires {@link Participant#commitRecords} for this
+     * transaction. When {@code false}, the Coordinator may skip committing this participant.
+     *
+     * <p>A participant that produced no records to commit (an empty {@link #getWriteSet}) does not
+     * require committing. This is the single source of truth for the commit-step skip decision: the
+     * Coordinator drives {@code commitRecords} only when this returns {@code true}, and a
+     * participant whose last driven step is therefore not {@code commitRecords} releases its own
+     * context at that earlier step.
+     *
+     * @return {@code true} if committing is required for this participant
+     */
+    boolean isCommitRequired();
   }
 
   /** A single record-level write or delete in a transaction's write set. */

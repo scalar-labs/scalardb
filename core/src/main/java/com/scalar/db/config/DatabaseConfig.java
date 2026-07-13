@@ -34,6 +34,7 @@ public class DatabaseConfig {
   private long metadataCacheExpirationTimeSecs;
   private boolean activeTransactionManagementEnabled;
   private long activeTransactionManagementExpirationTimeMillis;
+  private int activeTransactionManagementMaxActiveTransactions;
   private boolean attributePropagationEnabled;
   @Nullable private String defaultNamespaceName;
   private boolean crossPartitionScanEnabled;
@@ -55,6 +56,8 @@ public class DatabaseConfig {
       PREFIX + "active_transaction_management.enabled";
   public static final String ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS =
       PREFIX + "active_transaction_management.expiration_time_millis";
+  public static final String ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS =
+      PREFIX + "active_transaction_management.max_active_transactions";
   public static final String ATTRIBUTE_PROPAGATION_ENABLED =
       PREFIX + "attribute_propagation.enabled";
   public static final String DEFAULT_NAMESPACE_NAME = PREFIX + "default_namespace_name";
@@ -66,6 +69,7 @@ public class DatabaseConfig {
   public static final String SCAN_FETCH_SIZE = PREFIX + "scan_fetch_size";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
+  public static final int DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS = 10000;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
   public static final int DEFAULT_SCAN_FETCH_SIZE = 10;
 
@@ -113,6 +117,8 @@ public class DatabaseConfig {
         getBoolean(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, true);
     activeTransactionManagementExpirationTimeMillis =
         getActiveTransactionManagementExpirationTimeMillis(getProperties());
+    activeTransactionManagementMaxActiveTransactions =
+        getActiveTransactionManagementMaxActiveTransactions(getProperties());
     attributePropagationEnabled = getBoolean(getProperties(), ATTRIBUTE_PROPAGATION_ENABLED, true);
     defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
     crossPartitionScanEnabled = getBoolean(getProperties(), CROSS_PARTITION_SCAN, false);
@@ -170,6 +176,10 @@ public class DatabaseConfig {
     return activeTransactionManagementExpirationTimeMillis;
   }
 
+  public int getActiveTransactionManagementMaxActiveTransactions() {
+    return activeTransactionManagementMaxActiveTransactions;
+  }
+
   public boolean isAttributePropagationEnabled() {
     return attributePropagationEnabled;
   }
@@ -211,6 +221,13 @@ public class DatabaseConfig {
 
   public static long getActiveTransactionManagementExpirationTimeMillis(Properties properties) {
     return getLong(properties, ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, -1);
+  }
+
+  public static int getActiveTransactionManagementMaxActiveTransactions(Properties properties) {
+    return getInt(
+        properties,
+        ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS,
+        DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
   }
 
   public static String getSystemNamespaceName(Properties properties) {
