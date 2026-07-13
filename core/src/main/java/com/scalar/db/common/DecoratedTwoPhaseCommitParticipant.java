@@ -146,8 +146,8 @@ public abstract class DecoratedTwoPhaseCommitParticipant implements TwoPhaseComm
   }
 
   @Override
-  public void releaseContext(String transactionId) throws TransactionException {
-    participant.releaseContext(transactionId);
+  public void releaseTransactionContext(String transactionId) throws TransactionException {
+    participant.releaseTransactionContext(transactionId);
   }
 
   @Override
