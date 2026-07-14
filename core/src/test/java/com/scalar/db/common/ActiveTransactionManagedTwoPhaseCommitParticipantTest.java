@@ -30,6 +30,9 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -95,6 +98,33 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
 
     verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext(TX);
     verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext("tx-2");
+  }
+
+  @Test
+  void disposalHandler_OnIdleExpiry_ShouldInvokeHandlerWithTransactionId_NotDefaultRelease()
+      throws Exception {
+    // The privileged-reap seam: when a disposal handler is supplied, the reaper invokes it with the
+    // transaction ID instead of releasing the context on the wrapped participant itself, so an
+    // embedder can run the release in its own execution context (e.g. a privileged mode).
+    CountDownLatch disposed = new CountDownLatch(1);
+    AtomicReference<String> disposedId = new AtomicReference<>();
+    ActiveTransactionManagedTwoPhaseCommitParticipant p =
+        new ActiveTransactionManagedTwoPhaseCommitParticipant(
+            delegate,
+            EXPIRATION_MILLIS,
+            /* maxActiveTransactions= */ -1,
+            transactionId -> {
+              disposedId.set(transactionId);
+              disposed.countDown();
+            });
+
+    p.join(TX, false, Collections.emptyMap());
+
+    assertThat(disposed.await(PAST_SWEEP_MILLIS * 4, TimeUnit.MILLISECONDS)).isTrue();
+    assertThat(disposedId.get()).isEqualTo(TX);
+    // The handler replaced the default action: the reaper does not release the context on the
+    // wrapped participant itself.
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
