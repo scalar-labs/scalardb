@@ -43,6 +43,18 @@ import javax.annotation.concurrent.ThreadSafe;
  * traverses the inner decorators via {@code releaseTransactionContext}. It is the participant-side
  * counterpart of {@link ActiveTransactionManagedTwoPhaseCommitCoordinator}.
  *
+ * <p>By default the reaper releases the context by calling {@link
+ * TwoPhaseCommit.Participant#releaseTransactionContext} directly on the wrapped participant. An
+ * embedder that interposes a cross-cutting decorator between this decorator and the wrapped
+ * participant — for example, an authorization decorator that credential-checks every call — may
+ * need that reap-driven release to run in a different execution context than a normal caller-driven
+ * one, because the reaper runs on an internal timer thread that carries no caller credentials. The
+ * {@linkplain #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommit.Participant, long,
+ * int, ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} lets such an
+ * embedder substitute the reap-driven release action (e.g. wrap it in a privileged mode) while
+ * leaving every other path untouched. This mirrors the seam {@link
+ * ActiveTransactionManagedDistributedTransactionManager} already exposes for its 1PC reaper.
+ *
  * <p>A write-less participant does not always reach {@link #commitRecords}: the Coordinator skips
  * the steps a participant no longer needs, so for such a participant the last driven step is {@link
  * #prepareRecords} (when no validation is required) or {@link #validateRecords} (when it is). To
@@ -74,27 +86,65 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
 
   private final ActiveTransactionRegistry<TrackedTransaction> registry;
 
+  /**
+   * Creates a decorator whose reaper releases each inactive transaction's context directly on the
+   * wrapped participant, treating a {@link TransactionNotFoundException} from the release as the
+   * already-released no-op it denotes.
+   *
+   * @param participant the wrapped participant
+   * @param expirationTimeMillis the idle expiration time in milliseconds
+   * @param maxActiveTransactions the maximum number of active transactions to track; non-positive
+   *     means unbounded
+   */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ActiveTransactionManagedTwoPhaseCommitParticipant(
       TwoPhaseCommit.Participant participant,
       long expirationTimeMillis,
       int maxActiveTransactions) {
+    // The default disposal action releases the wrapped participant's context directly.
+    this(
+        participant,
+        expirationTimeMillis,
+        maxActiveTransactions,
+        transactionId -> releaseTransactionContextQuietly(participant, transactionId));
+  }
+
+  /**
+   * Creates a decorator whose reaper disposes of an inactive transaction by invoking {@code
+   * disposalHandler} with the transaction ID, instead of releasing the context directly on the
+   * wrapped participant.
+   *
+   * <p>Use this when the reap-driven release must run in a special execution context — for example,
+   * when a cross-cutting decorator between this decorator and the wrapped participant would reject
+   * a call made from the credential-less reaper thread, so the embedder needs to wrap the release
+   * in a privileged mode (see the class documentation). The handler is invoked for both idle expiry
+   * and cap eviction, and it fully replaces the default action: the embedder performs the actual
+   * release itself (typically {@code participant.releaseTransactionContext(transactionId)}) and, if
+   * its wrapped participant can report an already-released context as a {@link
+   * TransactionNotFoundException}, is responsible for treating that as the benign no-op it denotes.
+   *
+   * @param participant the wrapped participant
+   * @param expirationTimeMillis the idle expiration time in milliseconds
+   * @param maxActiveTransactions the maximum number of active transactions to track; non-positive
+   *     means unbounded
+   * @param disposalHandler invoked with the transaction ID when a tracked transaction is reaped
+   *     (idle expiry or cap eviction), replacing the default release on the wrapped participant
+   */
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public ActiveTransactionManagedTwoPhaseCommitParticipant(
+      TwoPhaseCommit.Participant participant,
+      long expirationTimeMillis,
+      int maxActiveTransactions,
+      ActiveTransactionRegistry.DisposalHandler<String> disposalHandler) {
     super(participant);
     // The registry stores a small per-transaction entry carrying the transaction ID and the
-    // terminal-at-validate flag; on expiry or eviction it is handed back so we can release the
-    // corresponding context on the wrapped participant.
+    // terminal-at-validate flag; on expiry or eviction it is handed back so the disposal handler
+    // can release the corresponding context, keyed by transaction ID.
     this.registry =
         new ActiveTransactionRegistry<>(
             expirationTimeMillis,
             maxActiveTransactions,
-            tracked -> {
-              try {
-                participant.releaseTransactionContext(tracked.transactionId);
-              } catch (TransactionNotFoundException e) {
-                // The context is already gone — the outcome this release wanted; not-found is its
-                // alternative carrier (see the interface Javadoc).
-              }
-            });
+            tracked -> disposalHandler.onDisposed(tracked.transactionId));
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -104,6 +154,16 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
       ActiveTransactionRegistry<TrackedTransaction> registry) {
     super(participant);
     this.registry = registry;
+  }
+
+  private static void releaseTransactionContextQuietly(
+      TwoPhaseCommit.Participant participant, String transactionId) throws TransactionException {
+    try {
+      participant.releaseTransactionContext(transactionId);
+    } catch (TransactionNotFoundException e) {
+      // The context is already gone — the outcome this release wanted; not-found is its
+      // alternative carrier (see the interface Javadoc).
+    }
   }
 
   @Override
