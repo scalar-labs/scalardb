@@ -8,7 +8,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -327,7 +326,14 @@ class ConsensusCommitCoordinatorTest {
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(ValidationConflictException.class);
-    verify(coordinatorCommitHandler).abortState(eq("tx-1"), notNull());
+    ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
+    verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
+    WriteSet writeSet = captor.getValue();
+    assertThat(writeSet.getEntryGroupsList()).hasSize(1);
+    EntryGroup group = writeSet.getEntryGroups(0);
+    assertThat(group.getEntriesList()).hasSize(1);
+    assertThat(group.getEntries(0).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     verify(participant).rollbackRecords("tx-1");
   }
 
@@ -378,7 +384,14 @@ class ConsensusCommitCoordinatorTest {
     // aggregate); the records are rolled back.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(TransactionNotFoundException.class);
-    verify(coordinatorCommitHandler).abortState(eq("tx-1"), notNull());
+    ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
+    verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
+    WriteSet writeSet = captor.getValue();
+    assertThat(writeSet.getEntryGroupsList()).hasSize(1);
+    EntryGroup group = writeSet.getEntryGroups(0);
+    assertThat(group.getEntriesList()).hasSize(1);
+    assertThat(group.getEntries(0).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     verify(participant).rollbackRecords("tx-1");
   }
 
