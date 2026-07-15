@@ -11,7 +11,8 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionCrudOperable;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CrudException;
@@ -28,11 +29,11 @@ import java.util.concurrent.ConcurrentMap;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A {@link TwoPhaseCommit.Participant} decorator that propagates the transaction-scoped attributes
+ * A {@link TwoPhaseCommitParticipant} decorator that propagates the transaction-scoped attributes
  * supplied at {@link #join} into every CRUD operation issued for that transaction.
  *
  * <p>Begin-attributes reach the participant via {@link
- * TwoPhaseCommit.Coordinator#registerParticipant} → {@code join}; this decorator captures them
+ * TwoPhaseCommitCoordinator#registerParticipant} → {@code join}; this decorator captures them
  * (keyed by transaction ID) and merges them into each operation before delegating, with an
  * attribute set directly on the operation winning over the transaction-scoped one (see {@link
  * OperationAttributeMerger}). It therefore sits <em>outside</em> any decorator that reads operation
@@ -70,7 +71,7 @@ public class AttributePropagatingTwoPhaseCommitParticipant
   private final ConcurrentMap<String, Map<String, String>> transactionAttributes =
       new ConcurrentHashMap<>();
 
-  public AttributePropagatingTwoPhaseCommitParticipant(TwoPhaseCommit.Participant participant) {
+  public AttributePropagatingTwoPhaseCommitParticipant(TwoPhaseCommitParticipant participant) {
     super(participant);
   }
 
@@ -152,8 +153,10 @@ public class AttributePropagatingTwoPhaseCommitParticipant
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(
-      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
+  public TwoPhaseCommitParticipant.PreparationResult prepareRecords(
+      String transactionId,
+      long preparedAt,
+      TwoPhaseCommitParticipant.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
     try {
       return super.prepareRecords(transactionId, preparedAt, detailLevel);

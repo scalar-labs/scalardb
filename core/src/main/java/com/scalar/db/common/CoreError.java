@@ -1097,7 +1097,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_PARTICIPANT_ID_IS_REQUIRED(
       Category.USER_ERROR,
       "0293",
-      "A participant ID is required for the new TwoPhaseCommit.Participant. "
+      "A participant ID is required for the new TwoPhaseCommitParticipant. "
           + "Set the property: scalar.db.consensus_commit.participant_id",
       "",
       ""),

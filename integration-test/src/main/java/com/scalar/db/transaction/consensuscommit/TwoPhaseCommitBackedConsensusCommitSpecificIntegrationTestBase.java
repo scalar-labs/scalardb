@@ -27,10 +27,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 /**
- * A small, purpose-built suite that asserts the storage-level effects of the new {@link
- * com.scalar.db.api.TwoPhaseCommit} Coordinator / Participant roles when driven through the
- * single-phase {@link com.scalar.db.common.TwoPhaseCommitBackedDistributedTransactionManager}
- * facade.
+ * A small, purpose-built suite that asserts the storage-level effects of the {@link
+ * com.scalar.db.api.TwoPhaseCommitCoordinator} / {@link
+ * com.scalar.db.api.TwoPhaseCommitParticipant} roles when driven through the single-phase {@link
+ * com.scalar.db.common.TwoPhaseCommitBackedDistributedTransactionManager} facade.
  *
  * <p>Unlike {@link ConsensusCommitSpecificIntegrationTestBase} (a white-box suite that instantiates
  * a concrete {@code ConsensusCommitManager} and spies on its internals), this suite drives

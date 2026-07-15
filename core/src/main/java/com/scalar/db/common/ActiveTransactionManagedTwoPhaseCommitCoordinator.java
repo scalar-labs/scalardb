@@ -1,7 +1,8 @@
 package com.scalar.db.common;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -22,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A {@link TwoPhaseCommit.Coordinator} decorator that reaps the contexts of transactions whose
+ * A {@link TwoPhaseCommitCoordinator} decorator that reaps the contexts of transactions whose
  * participants no longer hold them.
  *
  * <p>Each transaction is tracked from {@link #begin} until its terminal step ({@link #commit} /
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * coordinator observes only those two calls — the CRUD a transaction issues goes directly to its
  * participants — so an elapsed expiration time alone cannot tell an abandoned transaction from a
  * healthy long-running one. A background sweep therefore probes the registered participants of
- * every expired transaction ({@link TwoPhaseCommit.Participant#hasTransactionContext}) — in place,
+ * every expired transaction ({@link TwoPhaseCommitParticipant#hasTransactionContext}) — in place,
  * while the transaction stays tracked:
  *
  * <ul>
@@ -41,8 +42,8 @@ import org.slf4j.LoggerFactory;
  *       errs on the side of retention.
  *   <li>If no participant holds it, the transaction can no longer commit (the participants' own
  *       idle reaping has already released their contexts), so the sweep calls {@link
- *       TwoPhaseCommit.Coordinator#releaseTransactionContext} on the wrapped coordinator to free
- *       its role-local resources without any storage rollback. A subsequent {@code commit}/{@code
+ *       TwoPhaseCommitCoordinator#releaseTransactionContext} on the wrapped coordinator to free its
+ *       role-local resources without any storage rollback. A subsequent {@code commit}/{@code
  *       rollback} for a reaped transaction fails with {@link TransactionNotFoundException}, which
  *       is retriable from the client's perspective; the records left behind are recovered lazily by
  *       the usual recovery path.
@@ -95,10 +96,10 @@ import org.slf4j.LoggerFactory;
  * traverses the inner decorators via {@code releaseTransactionContext}.
  *
  * <p>Thread safety: the {@link ThreadSafe} guarantee relies on two mechanisms. First, the wrapped
- * coordinator honors the {@link TwoPhaseCommit.Coordinator} concurrency contract — it serializes
- * its own per-transaction work, including {@code releaseTransactionContext} concurrently with any
- * other method for the same transaction ID (e.g. {@code ConsensusCommitCoordinator} synchronizes
- * every per-transaction method on a per-context monitor) — which makes the sweep's {@code
+ * coordinator honors the {@link TwoPhaseCommitCoordinator} concurrency contract — it serializes its
+ * own per-transaction work, including {@code releaseTransactionContext} concurrently with any other
+ * method for the same transaction ID (e.g. {@code ConsensusCommitCoordinator} synchronizes every
+ * per-transaction method on a per-context monitor) — which makes the sweep's {@code
  * releaseTransactionContext} safe against an in-flight {@code commit}/{@code rollback}. Second, the
  * sweep and {@link #registerParticipant} shake hands on the tracked entry's monitor: a registration
  * pushes the expiration time out under the monitor <em>before</em> delegating to the wrapped
@@ -137,9 +138,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   private volatile boolean closed;
 
   public ActiveTransactionManagedTwoPhaseCommitCoordinator(
-      TwoPhaseCommit.Coordinator coordinator,
-      long expirationTimeMillis,
-      int maxActiveTransactions) {
+      TwoPhaseCommitCoordinator coordinator, long expirationTimeMillis, int maxActiveTransactions) {
     this(
         coordinator,
         newCapOnlyRegistry(coordinator, maxActiveTransactions),
@@ -149,7 +148,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
 
   @VisibleForTesting
   ActiveTransactionManagedTwoPhaseCommitCoordinator(
-      TwoPhaseCommit.Coordinator coordinator,
+      TwoPhaseCommitCoordinator coordinator,
       ActiveTransactionRegistry<TrackedTransaction> registry,
       long expirationTimeMillis) {
     this(coordinator, registry, expirationTimeMillis, /* scheduleSweeps= */ false);
@@ -162,7 +161,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   @SuppressWarnings("FutureReturnValueIgnored")
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   private ActiveTransactionManagedTwoPhaseCommitCoordinator(
-      TwoPhaseCommit.Coordinator coordinator,
+      TwoPhaseCommitCoordinator coordinator,
       ActiveTransactionRegistry<TrackedTransaction> registry,
       long expirationTimeMillis,
       boolean scheduleSweeps) {
@@ -190,7 +189,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   private static ActiveTransactionRegistry<TrackedTransaction> newCapOnlyRegistry(
-      TwoPhaseCommit.Coordinator coordinator, int maxActiveTransactions) {
+      TwoPhaseCommitCoordinator coordinator, int maxActiveTransactions) {
     // Idle expiration is disabled (non-positive lifetime): liveness is owned by the sweep, which
     // probes expired entries in place, so an entry only ever leaves the registry through a
     // terminal step, a reap, or a cap eviction. The cap keeps its usual semantics — eviction is an
@@ -229,7 +228,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
       @Nullable String transactionId,
       boolean readOnly,
       Map<String, String> attributes,
-      @Nullable TwoPhaseCommit.Participant participant)
+      @Nullable TwoPhaseCommitParticipant participant)
       throws TransactionException {
     String id = super.begin(transactionId, readOnly, attributes, participant);
     TrackedTransaction tracked = new TrackedTransaction(id, nextExpirationTimeMillis());
@@ -244,7 +243,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   @Override
-  public void registerParticipant(String transactionId, TwoPhaseCommit.Participant participant)
+  public void registerParticipant(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
     // get() marks the entry as recently used, so an actively-registering transaction is
     // preferentially retained under cap pressure.
@@ -414,7 +413,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   @Nullable
   private String probe(String transactionId, TrackedTransaction tracked) {
     String aliveReason = null;
-    for (TwoPhaseCommit.Participant participant : tracked.participants.values()) {
+    for (TwoPhaseCommitParticipant participant : tracked.participants.values()) {
       boolean held;
       try {
         held = participant.hasTransactionContext(transactionId);
@@ -475,10 +474,11 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   static final class TrackedTransaction {
     private final String transactionId;
 
-    // Keyed by Participant#getId (first-wins, mirroring the wrapped coordinator's idempotent
+    // Keyed by TwoPhaseCommitParticipant#getId (first-wins, mirroring the wrapped coordinator's
+    // idempotent
     // registration). Written by begin/registerParticipant threads and read by the sweeper, hence
     // concurrent.
-    private final ConcurrentMap<String, TwoPhaseCommit.Participant> participants =
+    private final ConcurrentMap<String, TwoPhaseCommitParticipant> participants =
         new ConcurrentHashMap<>();
 
     // The absolute wall-clock time at which the transaction becomes a probe candidate. Pushed out
@@ -514,7 +514,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
       reap.run();
     }
 
-    void addParticipant(TwoPhaseCommit.Participant participant) {
+    void addParticipant(TwoPhaseCommitParticipant participant) {
       participants.putIfAbsent(participant.getId(), participant);
     }
 
