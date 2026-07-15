@@ -16,7 +16,8 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.BatchResultImpl;
@@ -52,7 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Consensus-commit-backed {@link TwoPhaseCommit.Participant} implementation.
+ * Consensus-commit-backed {@link TwoPhaseCommitParticipant} implementation.
  *
  * <p>Maintains a per-transaction {@link TransactionContext} keyed by the canonical transaction ID
  * supplied by the Coordinator. The context is created by {@link #join} and removed once the
@@ -62,18 +63,18 @@ import org.slf4j.LoggerFactory;
  * when validation is not required either.
  *
  * <p>This implementation requires a stable {@code participantId} (see {@link
- * ConsensusCommitConfig#PARTICIPANT_ID}) so that {@link TwoPhaseCommit.WriteSetEntry} instances
- * carry the participant attribution needed by active recovery. The constructor throws if the
- * property is unset.
+ * ConsensusCommitConfig#PARTICIPANT_ID}) so that {@link TwoPhaseCommitParticipant.WriteSetEntry}
+ * instances carry the participant attribution needed by active recovery. The constructor throws if
+ * the property is unset.
  *
  * <p>State writes on the Coordinator table are <strong>not</strong> performed by this class — those
- * are the {@link TwoPhaseCommit.Coordinator}'s responsibility under the new model. This class only
+ * are the {@link TwoPhaseCommitCoordinator}'s responsibility under the new model. This class only
  * touches participant-owned records via {@link CrudHandler} and {@link ParticipantCommitHandler}'s
  * record-level primitives ({@code prepareRecords}, {@code validateRecords}, {@code commitRecords},
  * {@code rollbackRecords}).
  */
 @ThreadSafe
-public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
+public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitParticipant.class);
 
   private final ConsensusCommitConfig config;
@@ -373,8 +374,10 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(
-      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
+  public TwoPhaseCommitParticipant.PreparationResult prepareRecords(
+      String transactionId,
+      long preparedAt,
+      TwoPhaseCommitParticipant.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
     ParticipantContext pc = getParticipantContext(transactionId);
     synchronized (pc) {
@@ -414,7 +417,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
         // status). Mirrors TwoPhaseConsensusCommit.prepare, which sets needRollback in a finally.
         pc.toPrepared();
       }
-      List<TwoPhaseCommit.WriteSetEntry> writeSet = buildWriteSetEntries(context, detailLevel);
+      List<TwoPhaseCommitParticipant.WriteSetEntry> writeSet =
+          buildWriteSetEntries(context, detailLevel);
       boolean validationRequired = context.isValidationRequired();
       boolean commitRequired = context.isCommitRequired();
       // The Coordinator skips validateRecords when validation is not required and commitRecords
@@ -475,7 +479,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     if (pc == null) {
       // Unknown or already-released transaction (e.g., a write-less participant that released early
       // when its later steps were skipped, or a prior rollback): nothing to undo. Lenient no-op,
-      // mirroring Coordinator#rollback.
+      // mirroring TwoPhaseCommitCoordinator#rollback.
       return;
     }
     synchronized (pc) {
@@ -554,7 +558,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
   }
 
   // Rejects a mutation on a read-only transaction. Read-only is carried on the context from join,
-  // so the Participant is the authoritative enforcement point (CRUD lands here).
+  // so the TwoPhaseCommitParticipant is the authoritative enforcement point (CRUD lands here).
   private void checkWritable(String transactionId, TransactionContext context) {
     if (context.readOnly) {
       throw new IllegalStateException(
@@ -570,10 +574,10 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     }
   }
 
-  private List<TwoPhaseCommit.WriteSetEntry> buildWriteSetEntries(
-      TransactionContext context, TwoPhaseCommit.WriteSetDetailLevel detailLevel) {
+  private List<TwoPhaseCommitParticipant.WriteSetEntry> buildWriteSetEntries(
+      TransactionContext context, TwoPhaseCommitParticipant.WriteSetDetailLevel detailLevel) {
     Snapshot snapshot = context.snapshot;
-    List<TwoPhaseCommit.WriteSetEntry> entries = new ArrayList<>();
+    List<TwoPhaseCommitParticipant.WriteSetEntry> entries = new ArrayList<>();
     // Returns empty iff !snapshot.hasWritesOrDeletes(), so the write set shipped to the Coordinator
     // is empty exactly for a write-less participant — regardless of detailLevel, which only
     // controls whether WRITE entries carry non-key columns, never which entries exist. The
@@ -608,7 +612,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
       }
       entries.add(
           new WriteSetEntryImpl(
-              TwoPhaseCommit.WriteSetEntry.Type.WRITE,
+              TwoPhaseCommitParticipant.WriteSetEntry.Type.WRITE,
               put.forNamespace().get(),
               put.forTable().get(),
               put.getPartitionKey(),
@@ -619,7 +623,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
       Delete delete = e.getValue();
       entries.add(
           new WriteSetEntryImpl(
-              TwoPhaseCommit.WriteSetEntry.Type.DELETE,
+              TwoPhaseCommitParticipant.WriteSetEntry.Type.DELETE,
               delete.forNamespace().get(),
               delete.forTable().get(),
               delete.getPartitionKey(),
@@ -650,13 +654,14 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     recoveryExecutor.close();
   }
 
-  private static final class PreparationResultImpl implements TwoPhaseCommit.PreparationResult {
-    private final List<TwoPhaseCommit.WriteSetEntry> writeSet;
+  private static final class PreparationResultImpl
+      implements TwoPhaseCommitParticipant.PreparationResult {
+    private final List<TwoPhaseCommitParticipant.WriteSetEntry> writeSet;
     private final boolean validationRequired;
     private final boolean commitRequired;
 
     PreparationResultImpl(
-        List<TwoPhaseCommit.WriteSetEntry> writeSet,
+        List<TwoPhaseCommitParticipant.WriteSetEntry> writeSet,
         boolean validationRequired,
         boolean commitRequired) {
       this.writeSet = writeSet;
@@ -665,7 +670,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     }
 
     @Override
-    public List<TwoPhaseCommit.WriteSetEntry> getWriteSet() {
+    public List<TwoPhaseCommitParticipant.WriteSetEntry> getWriteSet() {
       return writeSet;
     }
 
@@ -680,7 +685,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     }
   }
 
-  private static final class WriteSetEntryImpl implements TwoPhaseCommit.WriteSetEntry {
+  private static final class WriteSetEntryImpl implements TwoPhaseCommitParticipant.WriteSetEntry {
     private final Type type;
     private final String namespaceName;
     private final String tableName;

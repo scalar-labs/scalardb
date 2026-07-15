@@ -6,7 +6,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,8 +18,8 @@ class DecoratedTwoPhaseCommitCoordinatorTest {
 
   private static final String TX = "tx-1";
 
-  @Mock private TwoPhaseCommit.Coordinator delegate;
-  @Mock private TwoPhaseCommit.Participant participant;
+  @Mock private TwoPhaseCommitCoordinator delegate;
+  @Mock private TwoPhaseCommitParticipant participant;
   private DecoratedTwoPhaseCommitCoordinator coordinator;
 
   @BeforeEach

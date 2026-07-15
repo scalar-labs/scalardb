@@ -16,7 +16,8 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -36,8 +37,8 @@ class TwoPhaseCommitBackedDistributedTransactionManagerTest {
   private static final String CANONICAL_ID = "canonical-1";
 
   @Mock private DatabaseConfig config;
-  @Mock private TwoPhaseCommit.Coordinator coordinator;
-  @Mock private TwoPhaseCommit.Participant participant;
+  @Mock private TwoPhaseCommitCoordinator coordinator;
+  @Mock private TwoPhaseCommitParticipant participant;
 
   private TwoPhaseCommitBackedDistributedTransactionManager manager;
 

@@ -2,7 +2,8 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.AbstractDistributedTransactionProvider;
 import com.scalar.db.common.TwoPhaseCommitBackedDistributedTransactionManager;
@@ -12,7 +13,7 @@ import javax.annotation.Nullable;
 
 /**
  * A test-only {@link com.scalar.db.api.DistributedTransactionProvider} that exposes the
- * consensus-commit-backed {@link TwoPhaseCommit.Coordinator} / {@link TwoPhaseCommit.Participant}
+ * consensus-commit-backed {@link TwoPhaseCommitCoordinator} / {@link TwoPhaseCommitParticipant}
  * roles through the single-phase {@link TwoPhaseCommitBackedDistributedTransactionManager} facade.
  *
  * <p>It is registered via {@code META-INF/services} in the integration-test module only, so it is
@@ -45,8 +46,8 @@ public class TwoPhaseCommitBackedConsensusCommitProvider
     // deployment; building the raw roles directly here would bypass those decorators and leave
     // their code paths untested on this facade route.
     DatabaseConfig ccConfig = toConsensusCommitConfig(config);
-    TwoPhaseCommit.Coordinator coordinator = createTwoPhaseCommitCoordinator(ccConfig);
-    TwoPhaseCommit.Participant participant = createTwoPhaseCommitParticipant(ccConfig);
+    TwoPhaseCommitCoordinator coordinator = createTwoPhaseCommitCoordinator(ccConfig);
+    TwoPhaseCommitParticipant participant = createTwoPhaseCommitParticipant(ccConfig);
     return new TwoPhaseCommitBackedDistributedTransactionManager(
         ccConfig, coordinator, participant);
   }
@@ -66,12 +67,12 @@ public class TwoPhaseCommitBackedConsensusCommitProvider
   }
 
   @Override
-  public TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
+  public TwoPhaseCommitCoordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
     return new ConsensusCommitCoordinator(toConsensusCommitConfig(config));
   }
 
   @Override
-  public TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
+  public TwoPhaseCommitParticipant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
     return new ConsensusCommitParticipant(toConsensusCommitConfig(config));
   }
 

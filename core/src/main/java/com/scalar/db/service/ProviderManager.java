@@ -7,7 +7,8 @@ import com.scalar.db.api.DistributedStorageProvider;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -126,27 +127,27 @@ final class ProviderManager {
   }
 
   /**
-   * Returns an instance of {@link TwoPhaseCommit.Coordinator}.
+   * Returns an instance of {@link TwoPhaseCommitCoordinator}.
    *
    * @param config a database config
-   * @return an instance of {@link TwoPhaseCommit.Coordinator}
+   * @return an instance of {@link TwoPhaseCommitCoordinator}
    * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
    *     commit interface
    */
-  public static TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+  public static TwoPhaseCommitCoordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
     return getDistributedTransactionProvider(config.getTransactionManager())
         .createTwoPhaseCommitCoordinator(config);
   }
 
   /**
-   * Returns an instance of {@link TwoPhaseCommit.Participant}.
+   * Returns an instance of {@link TwoPhaseCommitParticipant}.
    *
    * @param config a database config
-   * @return an instance of {@link TwoPhaseCommit.Participant}
+   * @return an instance of {@link TwoPhaseCommitParticipant}
    * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
    *     commit interface
    */
-  public static TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+  public static TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config) {
     return getDistributedTransactionProvider(config.getTransactionManager())
         .createTwoPhaseCommitParticipant(config);
   }

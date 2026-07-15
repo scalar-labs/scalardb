@@ -11,7 +11,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionCrudOperable;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitException;
@@ -28,13 +28,13 @@ import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A {@link TwoPhaseCommit.Participant} decorator that reaps the contexts of inactive transactions.
+ * A {@link TwoPhaseCommitParticipant} decorator that reaps the contexts of inactive transactions.
  *
  * <p>Each transaction is tracked from {@link #join} until its terminal step ({@link #commitRecords}
  * / {@link #rollbackRecords} / {@link #releaseTransactionContext}). Every CRUD operation and
  * record-level step refreshes the transaction's idle timer, so inactivity here is measured as true
  * idle time. When a transaction stays inactive longer than the configured expiration time, this
- * decorator calls {@link TwoPhaseCommit.Participant#releaseTransactionContext} on the wrapped
+ * decorator calls {@link TwoPhaseCommitParticipant#releaseTransactionContext} on the wrapped
  * participant to free its role-local resources (e.g. open scanners, the snapshot) without
  * performing any storage rollback, even when the records are prepared. The records left behind are
  * recovered lazily by the usual recovery path.
@@ -44,12 +44,12 @@ import javax.annotation.concurrent.ThreadSafe;
  * counterpart of {@link ActiveTransactionManagedTwoPhaseCommitCoordinator}.
  *
  * <p>By default the reaper releases the context by calling {@link
- * TwoPhaseCommit.Participant#releaseTransactionContext} directly on the wrapped participant. An
+ * TwoPhaseCommitParticipant#releaseTransactionContext} directly on the wrapped participant. An
  * embedder that interposes a cross-cutting decorator between this decorator and the wrapped
  * participant — for example, an authorization decorator that credential-checks every call — may
  * need that reap-driven release to run in a different execution context than a normal caller-driven
  * one, because the reaper runs on an internal timer thread that carries no caller credentials. The
- * {@linkplain #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommit.Participant, long,
+ * {@linkplain #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommitParticipant, long,
  * int, ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} lets such an
  * embedder substitute the reap-driven release action (e.g. wrap it in a privileged mode) while
  * leaving every other path untouched. This mirrors the seam {@link
@@ -60,20 +60,21 @@ import javax.annotation.concurrent.ThreadSafe;
  * #prepareRecords} (when no validation is required) or {@link #validateRecords} (when it is). To
  * avoid leaking a registry entry until idle expiry (and the spurious expiry WARN that follows),
  * this decorator removes the entry at whichever step is terminal, using {@link
- * TwoPhaseCommit.PreparationResult#isCommitRequired} and {@link
- * TwoPhaseCommit.PreparationResult#isValidationRequired} reported at {@code prepareRecords} to
- * decide where the terminal step lands. The decision is carried across the prepare-to-validate gap
- * by a flag on the registry entry itself ({@link TrackedTransaction#terminalAtValidate}), so it
- * shares the entry's lifecycle and adds no separate state to clean up.
+ * TwoPhaseCommitParticipant.PreparationResult#isCommitRequired} and {@link
+ * TwoPhaseCommitParticipant.PreparationResult#isValidationRequired} reported at {@code
+ * prepareRecords} to decide where the terminal step lands. The decision is carried across the
+ * prepare-to-validate gap by a flag on the registry entry itself ({@link
+ * TrackedTransaction#terminalAtValidate}), so it shares the entry's lifecycle and adds no separate
+ * state to clean up.
  *
- * <p>{@link TwoPhaseCommit.Participant#hasTransactionContext} is deliberately <em>not</em>
+ * <p>{@link TwoPhaseCommitParticipant#hasTransactionContext} is deliberately <em>not</em>
  * overridden here: the probe passes through untouched to the wrapped participant's context map, so
  * it can never refresh this decorator's idle timer — the probe's quiet contract holds by
  * construction. Do not add a registry-based override without preserving that property (a probe that
  * counted as activity would form a feedback loop that keeps abandoned transactions alive forever).
  *
  * <p>Thread safety: the {@link ThreadSafe} guarantee here relies on the wrapped participant
- * honoring the {@link TwoPhaseCommit.Participant} concurrency contract — serializing its own
+ * honoring the {@link TwoPhaseCommitParticipant} concurrency contract — serializing its own
  * per-transaction work. The reaper thread's {@code releaseTransactionContext} call may run
  * concurrently with an in-flight CRUD or record-level call for the same transaction id; the wrapped
  * role is responsible for making those mutually exclusive (e.g. {@code ConsensusCommitParticipant}
@@ -99,9 +100,7 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ActiveTransactionManagedTwoPhaseCommitParticipant(
-      TwoPhaseCommit.Participant participant,
-      long expirationTimeMillis,
-      int maxActiveTransactions) {
+      TwoPhaseCommitParticipant participant, long expirationTimeMillis, int maxActiveTransactions) {
     // The default disposal action releases the wrapped participant's context directly.
     this(
         participant,
@@ -133,7 +132,7 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public ActiveTransactionManagedTwoPhaseCommitParticipant(
-      TwoPhaseCommit.Participant participant,
+      TwoPhaseCommitParticipant participant,
       long expirationTimeMillis,
       int maxActiveTransactions,
       ActiveTransactionRegistry.DisposalHandler<String> disposalHandler) {
@@ -151,14 +150,14 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @VisibleForTesting
   ActiveTransactionManagedTwoPhaseCommitParticipant(
-      TwoPhaseCommit.Participant participant,
+      TwoPhaseCommitParticipant participant,
       ActiveTransactionRegistry<TrackedTransaction> registry) {
     super(participant);
     this.registry = registry;
   }
 
   private static void releaseTransactionContextQuietly(
-      TwoPhaseCommit.Participant participant, String transactionId) throws TransactionException {
+      TwoPhaseCommitParticipant participant, String transactionId) throws TransactionException {
     try {
       participant.releaseTransactionContext(transactionId);
     } catch (TransactionNotFoundException e) {
@@ -254,11 +253,13 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(
-      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
+  public TwoPhaseCommitParticipant.PreparationResult prepareRecords(
+      String transactionId,
+      long preparedAt,
+      TwoPhaseCommitParticipant.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
     registry.touch(transactionId);
-    TwoPhaseCommit.PreparationResult result =
+    TwoPhaseCommitParticipant.PreparationResult result =
         super.prepareRecords(transactionId, preparedAt, detailLevel);
     if (result.isCommitRequired()) {
       // Intentionally nothing to do here: commitRecords will be driven and is the terminal step,

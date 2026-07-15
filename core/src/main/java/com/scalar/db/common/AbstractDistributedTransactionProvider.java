@@ -2,7 +2,8 @@ package com.scalar.db.common;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import javax.annotation.Nullable;
@@ -73,8 +74,8 @@ public abstract class AbstractDistributedTransactionProvider
       DatabaseConfig config);
 
   @Override
-  public final TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
-    TwoPhaseCommit.Coordinator coordinator = createRawTwoPhaseCommitCoordinator(config);
+  public final TwoPhaseCommitCoordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+    TwoPhaseCommitCoordinator coordinator = createRawTwoPhaseCommitCoordinator(config);
 
     if (config.isActiveTransactionManagementEnabled()) {
       // Wrap the coordinator for active transaction management. This must be the outermost wrapping
@@ -89,12 +90,12 @@ public abstract class AbstractDistributedTransactionProvider
     return coordinator;
   }
 
-  protected abstract TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(
+  protected abstract TwoPhaseCommitCoordinator createRawTwoPhaseCommitCoordinator(
       DatabaseConfig config);
 
   @Override
-  public final TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config) {
-    TwoPhaseCommit.Participant participant = createRawTwoPhaseCommitParticipant(config);
+  public final TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+    TwoPhaseCommitParticipant participant = createRawTwoPhaseCommitParticipant(config);
 
     if (config.isAttributePropagationEnabled()) {
       // Wrap the participant for transaction-scoped attribute propagation
@@ -114,6 +115,6 @@ public abstract class AbstractDistributedTransactionProvider
     return participant;
   }
 
-  protected abstract TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(
+  protected abstract TwoPhaseCommitParticipant createRawTwoPhaseCommitParticipant(
       DatabaseConfig config);
 }

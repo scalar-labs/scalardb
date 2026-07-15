@@ -1,6 +1,7 @@
 package com.scalar.db.common;
 
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -11,18 +12,18 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
- * A {@link TwoPhaseCommit.Coordinator} that forwards every method to a wrapped coordinator.
+ * A {@link TwoPhaseCommitCoordinator} that forwards every method to a wrapped coordinator.
  *
  * <p>Base class for coordinator decorators: subclasses override only the methods they need and
  * inherit plain delegation for the rest. It is the coordinator-side counterpart of {@link
  * DecoratedTwoPhaseCommitParticipant}.
  */
-public abstract class DecoratedTwoPhaseCommitCoordinator implements TwoPhaseCommit.Coordinator {
+public abstract class DecoratedTwoPhaseCommitCoordinator implements TwoPhaseCommitCoordinator {
 
-  private final TwoPhaseCommit.Coordinator coordinator;
+  private final TwoPhaseCommitCoordinator coordinator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  protected DecoratedTwoPhaseCommitCoordinator(TwoPhaseCommit.Coordinator coordinator) {
+  protected DecoratedTwoPhaseCommitCoordinator(TwoPhaseCommitCoordinator coordinator) {
     this.coordinator = coordinator;
   }
 
@@ -31,13 +32,13 @@ public abstract class DecoratedTwoPhaseCommitCoordinator implements TwoPhaseComm
       @Nullable String transactionId,
       boolean readOnly,
       Map<String, String> attributes,
-      @Nullable TwoPhaseCommit.Participant participant)
+      @Nullable TwoPhaseCommitParticipant participant)
       throws TransactionException {
     return coordinator.begin(transactionId, readOnly, attributes, participant);
   }
 
   @Override
-  public void registerParticipant(String transactionId, TwoPhaseCommit.Participant participant)
+  public void registerParticipant(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
     coordinator.registerParticipant(transactionId, participant);
   }

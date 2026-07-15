@@ -28,7 +28,7 @@ import java.util.Map;
  *
  * <p>This is the single implementation shared by the attribute-propagating decorators (the
  * manager-shaped {@link AttributePropagatingDistributedTransactionManager} and the id-based {@code
- * TwoPhaseCommit.Participant} decorator).
+ * TwoPhaseCommitParticipant} decorator).
  */
 final class OperationAttributeMerger {
 

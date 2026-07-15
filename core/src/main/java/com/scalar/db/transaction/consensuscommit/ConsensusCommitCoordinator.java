@@ -4,11 +4,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.TwoPhaseCommit;
-import com.scalar.db.api.TwoPhaseCommit.Participant;
-import com.scalar.db.api.TwoPhaseCommit.PreparationResult;
-import com.scalar.db.api.TwoPhaseCommit.WriteSetDetailLevel;
-import com.scalar.db.api.TwoPhaseCommit.WriteSetEntry;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
+import com.scalar.db.api.TwoPhaseCommitParticipant.PreparationResult;
+import com.scalar.db.api.TwoPhaseCommitParticipant.WriteSetDetailLevel;
+import com.scalar.db.api.TwoPhaseCommitParticipant.WriteSetEntry;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -38,7 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Consensus-commit-backed {@link TwoPhaseCommit.Coordinator} implementation.
+ * Consensus-commit-backed {@link TwoPhaseCommitCoordinator} implementation.
  *
  * <p>Drives the two-phase commit protocol across the participants registered for a transaction
  * (prepare -&gt; validate -&gt; write COMMITTED state -&gt; commit records, with the abort/rollback
@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * write through the group-commit variant of the Coordinator-side handler.
  */
 @ThreadSafe
-public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
+public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
   private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitCoordinator.class);
 
   private final DistributedStorage storage;
@@ -101,7 +101,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       @Nullable String transactionId,
       boolean readOnly,
       Map<String, String> attributes,
-      @Nullable Participant participant)
+      @Nullable TwoPhaseCommitParticipant participant)
       throws TransactionException {
     // Use the caller-supplied ID when present; otherwise generate one. Group commit is not yet
     // supported on this path, so no parent-prefix logic is needed.
@@ -126,7 +126,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   }
 
   @Override
-  public void registerParticipant(String transactionId, Participant participant)
+  public void registerParticipant(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
     CoordinatorContext context = getContext(transactionId);
     synchronized (context) {
@@ -135,12 +135,13 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       // already registered, this is a no-op (the participant is not joined again). commit() keys
       // each participant's write set by getId(), so registering the same ID twice would otherwise
       // merge into one EntryGroup and misattribute the persisted records.
-      for (Participant registered : context.participants) {
+      for (TwoPhaseCommitParticipant registered : context.participants) {
         if (registered.getId().equals(participant.getId())) {
           return;
         }
       }
-      // Invoke Participant.join first; only on success do we add the participant to the list so
+      // Invoke TwoPhaseCommitParticipant.join first; only on success do we add the participant to
+      // the list so
       // subsequent commit/rollback drives only successfully-joined participants.
       participant.join(transactionId, context.readOnly, context.attributes);
       context.participants.add(participant);
@@ -154,7 +155,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     synchronized (context) {
       context.checkActive();
       try {
-        List<Participant> participants = context.participants;
+        List<TwoPhaseCommitParticipant> participants = context.participants;
 
         // Key each participant's write set by its stable ID so the persisted commit-state proto is
         // stamped with the owning participant.
@@ -171,12 +172,12 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         // and commitRecords only where the prepare result reports it required. A participant whose
         // later steps are all skipped releases its own context at its last driven step, so the
         // Coordinator must not drive it again.
-        List<Participant> toValidate = new ArrayList<>(participants.size());
-        List<Participant> toCommit = new ArrayList<>(participants.size());
+        List<TwoPhaseCommitParticipant> toValidate = new ArrayList<>(participants.size());
+        List<TwoPhaseCommitParticipant> toCommit = new ArrayList<>(participants.size());
 
         long preparedAt = System.currentTimeMillis();
         try {
-          for (Participant participant : participants) {
+          for (TwoPhaseCommitParticipant participant : participants) {
             PreparationResult result =
                 participant.prepareRecords(
                     transactionId, preparedAt, WriteSetDetailLevel.KEYS_ONLY);
@@ -229,7 +230,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         }
 
         try {
-          for (Participant participant : toValidate) {
+          for (TwoPhaseCommitParticipant participant : toValidate) {
             participant.validateRecords(transactionId);
           }
         } catch (ValidationException e) {
@@ -259,7 +260,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
             // The COMMITTED-state write lost a putState race that resolved to ABORTED: the
             // transaction is aborted. Only participants with writes still hold PREPARED records
             // (and a live context); roll those back before surfacing it.
-            for (Participant participant : toCommit) {
+            for (TwoPhaseCommitParticipant participant : toCommit) {
               bestEffortRollbackRecords(participant, transactionId);
             }
             throw e;
@@ -271,7 +272,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
             // Coordinator's context), so nothing can ever drive them again. Release them promptly
             // instead of leaving them to each participant's own idle reaping
             // (releaseTransactionContext touches no storage).
-            for (Participant participant : toCommit) {
+            for (TwoPhaseCommitParticipant participant : toCommit) {
               bestEffortReleaseTransactionContext(participant, transactionId);
             }
             throw e;
@@ -281,7 +282,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
           // so toCommit is empty and committedAt is an unused placeholder.
           committedAt = preparedAt;
         }
-        for (Participant participant : toCommit) {
+        for (TwoPhaseCommitParticipant participant : toCommit) {
           bestEffortCommitRecords(participant, transactionId, committedAt);
         }
       } finally {
@@ -310,7 +311,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         // rollback and no ABORTED state write happen (an absent Coordinator state row is treated as
         // ABORTED by lazy recovery). rollbackRecords is driven on each participant only to release
         // its resources — close scanners and discard its in-memory snapshot/context.
-        for (Participant participant : context.participants) {
+        for (TwoPhaseCommitParticipant participant : context.participants) {
           bestEffortRollbackRecords(participant, transactionId);
         }
       } finally {
@@ -375,7 +376,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       String transactionId,
       boolean knownWriteLess,
       @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant,
-      List<Participant> participants)
+      List<TwoPhaseCommitParticipant> participants)
       throws UnknownTransactionStatusException {
     if (isCoordinatorStateWriteRequired(!knownWriteLess)) {
       try {
@@ -385,13 +386,13 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         // recovery (mirroring CommitHandler, records are not rolled back on an unknown abort). The
         // participants' in-memory contexts are just as unreachable as on the commit-state path —
         // commit is terminal on every outcome — so release them promptly without touching storage.
-        for (Participant participant : participants) {
+        for (TwoPhaseCommitParticipant participant : participants) {
           bestEffortReleaseTransactionContext(participant, transactionId);
         }
         throw e;
       }
     }
-    for (Participant participant : participants) {
+    for (TwoPhaseCommitParticipant participant : participants) {
       bestEffortRollbackRecords(participant, transactionId);
     }
   }
@@ -404,7 +405,8 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     return mayHaveWrites || !coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
-  private void bestEffortCommitRecords(Participant participant, String txId, long committedAt) {
+  private void bestEffortCommitRecords(
+      TwoPhaseCommitParticipant participant, String txId, long committedAt) {
     try {
       participant.commitRecords(txId, committedAt);
     } catch (Exception e) {
@@ -419,7 +421,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     }
   }
 
-  private void bestEffortRollbackRecords(Participant participant, String txId) {
+  private void bestEffortRollbackRecords(TwoPhaseCommitParticipant participant, String txId) {
     try {
       participant.rollbackRecords(txId);
     } catch (TransactionNotFoundException e) {
@@ -439,7 +441,8 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     }
   }
 
-  private void bestEffortReleaseTransactionContext(Participant participant, String txId) {
+  private void bestEffortReleaseTransactionContext(
+      TwoPhaseCommitParticipant participant, String txId) {
     try {
       participant.releaseTransactionContext(txId);
     } catch (TransactionNotFoundException e) {
@@ -520,7 +523,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     final String transactionId;
     final boolean readOnly;
     final Map<String, String> attributes;
-    final List<Participant> participants = new ArrayList<>();
+    final List<TwoPhaseCommitParticipant> participants = new ArrayList<>();
     private Status status = Status.ACTIVE;
 
     CoordinatorContext(String transactionId, boolean readOnly, Map<String, String> attributes) {
