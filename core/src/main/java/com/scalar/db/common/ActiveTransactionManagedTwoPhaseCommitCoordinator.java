@@ -474,13 +474,11 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     // pre-check can read it without the monitor.
     private volatile long expirationTimeMillis;
 
-    @VisibleForTesting
     TrackedTransaction(String transactionId, long expirationTimeMillis) {
       this.transactionId = transactionId;
       this.expirationTimeMillis = expirationTimeMillis;
     }
 
-    @VisibleForTesting
     synchronized void updateExpirationTime(long expirationTimeMillis) {
       this.expirationTimeMillis = expirationTimeMillis;
     }
@@ -502,7 +500,6 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
       reap.run();
     }
 
-    @VisibleForTesting
     void addParticipant(TwoPhaseCommit.Participant participant) {
       participants.putIfAbsent(participant.getId(), participant);
     }
