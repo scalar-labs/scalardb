@@ -332,14 +332,13 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
    */
   @VisibleForTesting
   void sweep() {
-    long now = System.currentTimeMillis();
     registry.forEach(
         (transactionId, tracked) -> {
           if (closed) {
             return;
           }
           long observedExpirationTimeMillis = tracked.expirationTimeMillis;
-          if (now < observedExpirationTimeMillis) {
+          if (System.currentTimeMillis() < observedExpirationTimeMillis) {
             return;
           }
           probeAndDecide(transactionId, tracked, observedExpirationTimeMillis);
