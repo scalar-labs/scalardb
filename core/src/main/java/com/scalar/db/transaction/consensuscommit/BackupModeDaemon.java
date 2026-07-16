@@ -36,7 +36,7 @@ final class BackupModeDaemon {
   private final Logger logger;
   private final LongSupplier clockMillis;
   private final ScheduledExecutorService scheduler;
-  private final AtomicReference<Cache> cache = new AtomicReference<>(Cache.empty());
+  private final AtomicReference<BackupFlagReading> lastReading = new AtomicReference<>();
   @Nullable private ScheduledFuture<?> scheduledTask;
 
   // Bound on how long close() waits for an in-flight read to drain before returning.
@@ -85,21 +85,21 @@ final class BackupModeDaemon {
    */
   @Nullable
   String activeBackupLabel(long stalenessBoundMillis) {
-    Cache current = cache.get();
-    if (current.lastSuccessfulReadAtMillis == 0L) {
+    BackupFlagReading current = lastReading.get();
+    if (current == null) {
       // Never confirmed the flag (the backup table may not exist / CBRL is not in use, or the
       // coordinator has been unreachable since startup). There is no window to miss, and a
       // transaction cannot commit without the coordinator anyway, so proceed with no label.
       return null;
     }
     // A non-positive staleness bound disables freshness enforcement (as the transaction timeout
-    // does
-    // for <= 0): trust the daemon's periodically refreshed cache without forcing a read or failing
-    // closed.
+    // does for <= 0): trust the daemon's periodically refreshed reading without forcing a read or
+    // failing closed.
     if (stalenessBoundMillis > 0) {
       refreshIfStale(stalenessBoundMillis);
-      current = cache.get();
-      if (clockMillis.getAsLong() - current.lastSuccessfulReadAtMillis >= stalenessBoundMillis) {
+      current = lastReading.get();
+      if (current == null
+          || clockMillis.getAsLong() - current.readAtMillis >= stalenessBoundMillis) {
         throw new IllegalStateException(
             "Cannot confirm CBRL backup mode: the last successful read of the backup table is older "
                 + "than the staleness bound ("
@@ -120,16 +120,19 @@ final class BackupModeDaemon {
   @VisibleForTesting
   @Nullable
   String activeLabel() {
-    return cache.get().label;
+    BackupFlagReading current = lastReading.get();
+    return current == null ? null : current.label;
   }
 
   @VisibleForTesting
   long lastSuccessfulReadAtMillis() {
-    return cache.get().lastSuccessfulReadAtMillis;
+    BackupFlagReading current = lastReading.get();
+    return current == null ? 0L : current.readAtMillis;
   }
 
   private synchronized void refreshIfStale(long stalenessBoundMillis) {
-    if (clockMillis.getAsLong() - cache.get().lastSuccessfulReadAtMillis >= stalenessBoundMillis) {
+    BackupFlagReading current = lastReading.get();
+    if (current == null || clockMillis.getAsLong() - current.readAtMillis >= stalenessBoundMillis) {
       readAndUpdate();
     }
   }
@@ -138,7 +141,7 @@ final class BackupModeDaemon {
   void readAndUpdate() {
     try {
       String label = coordinator.getBackupLabel().orElse(null);
-      cache.set(new Cache(label, clockMillis.getAsLong()));
+      lastReading.set(new BackupFlagReading(label, clockMillis.getAsLong()));
     } catch (CoordinatorException | RuntimeException e) {
       // Keep the last-known label AND the last SUCCESSFUL read time — do NOT advance freshness on
       // failure. That way begin()'s staleness check keeps firing and fails closed once the last
@@ -164,20 +167,20 @@ final class BackupModeDaemon {
     }
   }
 
-  private static final class Cache {
-    // The label of the open backup window, or null if no window is open.
+  /**
+   * One successful observation of the {@code backup} flag: the open window's label (null if no
+   * window is open) and the clock time the read succeeded. The {@link #lastReading} holder is null
+   * until the first successful read, so "never read" needs no sentinel value. Only a successful
+   * read replaces it, so a run of failing reads lets {@code begin()} detect staleness and fail
+   * closed.
+   */
+  private static final class BackupFlagReading {
     @Nullable private final String label;
-    // The clock time of the last SUCCESSFUL read (0 = never succeeded). Only a successful read
-    // advances it, so a run of failing reads lets begin() detect staleness and fail closed.
-    private final long lastSuccessfulReadAtMillis;
+    private final long readAtMillis;
 
-    private Cache(@Nullable String label, long lastSuccessfulReadAtMillis) {
+    private BackupFlagReading(@Nullable String label, long readAtMillis) {
       this.label = label;
-      this.lastSuccessfulReadAtMillis = lastSuccessfulReadAtMillis;
-    }
-
-    private static Cache empty() {
-      return new Cache(null, 0L);
+      this.readAtMillis = readAtMillis;
     }
   }
 }
