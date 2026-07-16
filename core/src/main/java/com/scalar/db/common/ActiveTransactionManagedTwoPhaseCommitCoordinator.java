@@ -95,17 +95,19 @@ import org.slf4j.LoggerFactory;
  * traverses the inner decorators via {@code releaseContext}.
  *
  * <p>Thread safety: the {@link ThreadSafe} guarantee relies on two mechanisms. First, the wrapped
- * coordinator serializes its own per-transaction work (e.g. {@code ConsensusCommitCoordinator}
- * synchronizes every per-transaction method on a per-context monitor), which makes the sweep's
- * {@code releaseContext} safe against an in-flight {@code commit}/{@code rollback}. Second, the
- * sweep and {@link #registerParticipant} shake hands on the tracked entry's monitor: a registration
- * pushes the expiration time out under the monitor <em>before</em> delegating to the wrapped
- * coordinator, and the sweep re-checks under the same monitor that the expiration time has not
- * moved before releasing and removing. A reap therefore never overlaps a registration that is about
- * to succeed — either the registration extends the deadline first and the sweep backs off, or the
- * reap completes first and the delegated registration is rejected by the wrapped coordinator, whose
- * context is already released. Probing itself is I/O and runs outside the monitor, so a slow probe
- * never blocks a registration.
+ * coordinator honors the {@link TwoPhaseCommit.Coordinator} concurrency contract — it serializes
+ * its own per-transaction work, including {@code releaseContext} concurrently with any other method
+ * for the same transaction ID (e.g. {@code ConsensusCommitCoordinator} synchronizes every
+ * per-transaction method on a per-context monitor) — which makes the sweep's {@code releaseContext}
+ * safe against an in-flight {@code commit}/{@code rollback}. Second, the sweep and {@link
+ * #registerParticipant} shake hands on the tracked entry's monitor: a registration pushes the
+ * expiration time out under the monitor <em>before</em> delegating to the wrapped coordinator, and
+ * the sweep re-checks under the same monitor that the expiration time has not moved before
+ * releasing and removing. A reap therefore never overlaps a registration that is about to succeed —
+ * either the registration extends the deadline first and the sweep backs off, or the reap completes
+ * first and the delegated registration is rejected by the wrapped coordinator, whose context is
+ * already released. Probing itself is I/O and runs outside the monitor, so a slow probe never
+ * blocks a registration.
  *
  * <p>The accepted cost of those two mechanisms combined: a reap whose release lands behind an
  * in-flight terminal step for the same transaction blocks on the wrapped coordinator's

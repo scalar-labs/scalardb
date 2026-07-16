@@ -75,6 +75,13 @@ public interface TwoPhaseCommit {
    * prepare/validate/commit steps across participants, or the abort counterpart). Writing the
    * durable state record on the Coordinator table is an internal implementation detail; it is not
    * exposed as a separate method on this interface.
+   *
+   * <p><b>Concurrency.</b> Implementations must serialize per-transaction work: for one transaction
+   * ID the methods here must be mutually exclusive, so concurrent calls cannot corrupt that
+   * transaction's state. This explicitly covers {@link #releaseContext}, which a context-reaper
+   * drives from its own thread and may therefore invoke concurrently with any other method for the
+   * same transaction ID. Calls for different transaction IDs may proceed concurrently. Decorators
+   * that add a background reaper rely on this contract for their own thread-safety.
    */
   interface Coordinator extends AutoCloseable {
 
@@ -272,6 +279,14 @@ public interface TwoPhaseCommit {
    * {@link #prepareRecords}, or a mutation on a transaction begun read-only (the {@code readOnly}
    * flag passed to {@link Coordinator#begin} / {@link #join}) — throws {@link
    * IllegalStateException}.
+   *
+   * <p><b>Concurrency.</b> Implementations must serialize per-transaction work: for one transaction
+   * ID the methods here must be mutually exclusive, so concurrent calls cannot corrupt that
+   * transaction's context. Because a context-reaper drives {@link #releaseContext} and {@link
+   * #hasTransactionContext} from its own thread (see above), either may be invoked concurrently
+   * with an in-flight CRUD or record-level call for the same transaction ID. Calls for different
+   * transaction IDs may proceed concurrently. Decorators that add a background reaper rely on this
+   * contract for their own thread-safety.
    */
   interface Participant extends AutoCloseable {
 
