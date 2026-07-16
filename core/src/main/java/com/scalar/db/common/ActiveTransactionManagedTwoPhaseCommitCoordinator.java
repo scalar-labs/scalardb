@@ -63,11 +63,16 @@ import org.slf4j.LoggerFactory;
  *
  * <p>One boundary of that semantics: a transaction with no registered participants yet (begun but
  * not joined to anything) has nothing to probe, so its expiration time is authoritative and the
- * reap rests on the wall clock alone. Probe-before-reap is what makes the sweep tolerant of clock
- * jumps everywhere else; in the begin-to-first-registration window a forward jump exceeding one
- * period can reap a healthy just-begun transaction, whose next step then fails with the same
- * retriable {@link TransactionNotFoundException} — accepted, as the window is brief and a
- * monotonic-clock scheme was judged not worth the complexity.
+ * reap rests on the wall clock alone. {@link #registerParticipant} publishes the participant into
+ * the tracked entry <em>before</em> delegating the join, so this fast path fires only when no
+ * registration has reached that point — never while a join is in flight, whose participant is
+ * already visible to probe (the delegated join can hold the wrapped coordinator's per-context
+ * monitor across remote I/O and outlast a period, so it must not be reapable on the wall clock
+ * alone). Probe-before-reap is what makes the sweep tolerant of clock jumps everywhere else; in the
+ * begin-to-first-registration window a forward jump exceeding one period can reap a healthy
+ * just-begun transaction, whose next step then fails with the same retriable {@link
+ * TransactionNotFoundException} — accepted, as the window is brief and a monotonic-clock scheme was
+ * judged not worth the complexity.
  *
  * <p>The sweep runs every second (or every {@code expirationTimeMillis}, if that is shorter). A
  * pass only reads each entry's expiration time, and a kept transaction is re-probed only after
@@ -245,15 +250,20 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
       return;
     }
     TrackedTransaction tracked = current.get();
-    // Push the expiration time out under the entry monitor BEFORE delegating: the sweep re-checks
-    // it under the same monitor before reaping, so a reap never overlaps a registration that is
-    // about to succeed (see the class Javadoc).
+    // Push the expiration time out and publish the participant BEFORE delegating (see the class
+    // Javadoc). The sweep re-checks the expiration time under the entry monitor before reaping, so
+    // a reap never overlaps a registration that is about to succeed; and publishing the participant
+    // first means a sweep firing while the (potentially remote, potentially slow) join is in flight
+    // probes it instead of taking the no-participants fast path and reaping on the wall clock
+    // alone.
+    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent registration:
+    // instances registered under the same participant ID front the same stores, so they are
+    // interchangeable for probing. A failed join leaves the participant tracked, which is benign: a
+    // participant that never joined answers false to a probe, so the reap still proceeds; only an
+    // unreachable one pins the entry, the fail-open retention used everywhere else.
     tracked.updateExpirationTime(nextExpirationTimeMillis());
-    super.registerParticipant(transactionId, participant);
-    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent registration.
-    // Instances registered under the same participant ID front the same stores, so they are
-    // interchangeable for probing.
     tracked.addParticipant(participant);
+    super.registerParticipant(transactionId, participant);
   }
 
   @Override

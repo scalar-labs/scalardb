@@ -317,6 +317,56 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
+  void sweep_WhenFirstRegistrationJoinOutlivesExpiration_ShouldProbeNotReap() throws Exception {
+    // A first registration whose join outlives the expiration period. The participant has joined -
+    // the client legitimately owns the transaction on it - but the delegated join call has not
+    // returned yet, so the participant would be invisible to the sweep if it were published only
+    // after the join. It is published before the join instead, so the sweep probes the live
+    // participant and keeps the transaction, rather than taking the no-participants fast path and
+    // reaping it on the wall clock alone.
+    stubHeld(participant, true);
+    coordinator.begin(null, false, Collections.emptyMap(), null);
+
+    CountDownLatch joinStarted = new CountDownLatch(1);
+    CountDownLatch releaseJoin = new CountDownLatch(1);
+    doAnswer(
+            invocation -> {
+              joinStarted.countDown();
+              releaseJoin.await(5, TimeUnit.SECONDS);
+              return null;
+            })
+        .when(delegate)
+        .registerParticipant(eq(TX), any());
+
+    Thread registration =
+        new Thread(
+            () -> {
+              try {
+                coordinator.registerParticipant(TX, participant);
+              } catch (TransactionException e) {
+                throw new AssertionError(e);
+              }
+            });
+    registration.start();
+    try {
+      // Inside the join: the participant is already published, but the join has not returned.
+      assertThat(joinStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+      // The join outlives the expiration period.
+      forceExpire(TX);
+      coordinator.sweep();
+    } finally {
+      releaseJoin.countDown();
+      registration.join(TimeUnit.SECONDS.toMillis(5));
+    }
+
+    // The sweep probed the live participant and kept the transaction; it did not reap.
+    verify(participant).hasTransactionContext(TX);
+    verify(delegate, never()).releaseContext(any());
+    assertThat(registry.get(TX)).isPresent();
+  }
+
+  @Test
   void registerParticipant_ShouldDelegateAndTrackParticipant() throws Exception {
     coordinator.begin(null, false, Collections.emptyMap(), null);
 
@@ -361,11 +411,14 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void registerParticipant_WhenDelegateThrows_ShouldNotTrackParticipant() throws Exception {
-    // Faithfulness: only successfully-joined participants may be probed. A failed registration
-    // (e.g. an unreachable cluster) must not enter the set, or fail-open probing of that stub
-    // would keep the transaction alive forever on the strength of a participant that never
-    // joined.
+  void registerParticipant_WhenDelegateThrows_ShouldStillTrackButReapWhenProbeAnswersAbsent()
+      throws Exception {
+    // The participant is published before the join is delegated, so a sweep firing while a slow
+    // join is in flight probes it instead of reaping on the wall clock alone. The consequence is
+    // that a failed join leaves the participant tracked - accepted, and benign: a participant that
+    // never joined answers false to a probe, so the reap still proceeds, and a failed registration
+    // does not keep a dead transaction alive forever. (Only an unreachable participant pins the
+    // entry, which is the fail-open retention used everywhere else.)
     coordinator.begin(null, false, Collections.emptyMap(), null);
     doThrow(new TransactionException("boom", TX))
         .when(delegate)
@@ -377,7 +430,15 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
       // expected
     }
 
-    assertThat(registry.get(TX).get().hasParticipant("participant-1")).isFalse();
+    assertThat(registry.get(TX).get().hasParticipant("participant-1")).isTrue();
+
+    // The never-joined participant reports no context, so the sweep reaps rather than keeping the
+    // transaction alive on the strength of a participant that never joined.
+    stubHeld(participant, false);
+    forceExpire(TX);
+    coordinator.sweep();
+    verify(delegate).releaseContext(TX);
+    assertThat(registry.get(TX)).isEmpty();
   }
 
   @Test
