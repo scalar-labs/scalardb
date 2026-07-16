@@ -133,7 +133,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
     backupStalenessBoundMillis = config.getBackupStalenessBoundMillis();
     transactionTimeoutMillis = config.getTransactionTimeoutMillis();
-    backupModeDaemon = new BackupModeDaemon(coordinator, config.getBackupCheckIntervalMillis());
+    backupModeDaemon =
+        new BackupModeDaemon(
+            coordinator,
+            config.getBackupCheckIntervalMillis(),
+            cbrlBackupTableExists(admin, config));
     backupModeDaemon.start();
   }
 
@@ -178,7 +182,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
     backupStalenessBoundMillis = config.getBackupStalenessBoundMillis();
     transactionTimeoutMillis = config.getTransactionTimeoutMillis();
-    backupModeDaemon = new BackupModeDaemon(coordinator, config.getBackupCheckIntervalMillis());
+    backupModeDaemon =
+        new BackupModeDaemon(
+            coordinator,
+            config.getBackupCheckIntervalMillis(),
+            cbrlBackupTableExists(admin, config));
     backupModeDaemon.start();
   }
 
@@ -936,6 +944,21 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private void refreshBackupCache() {
     if (backupModeDaemon != null) {
       backupModeDaemon.refreshNow();
+    }
+  }
+
+  // Whether the CBRL backup table exists in the coordinator namespace. This arms the backup-mode
+  // daemon: when the table exists, an unconfirmed flag fails closed; when it does not, CBRL is not
+  // in
+  // use and begin() proceeds. If existence cannot be determined (a storage error), assume it exists
+  // so the daemon fails closed rather than risk committing inside a window without logging redo.
+  private static boolean cbrlBackupTableExists(
+      DistributedStorageAdmin admin, ConsensusCommitConfig config) {
+    try {
+      return admin.tableExists(
+          config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE), Coordinator.BACKUP_TABLE);
+    } catch (ExecutionException e) {
+      return true;
     }
   }
 

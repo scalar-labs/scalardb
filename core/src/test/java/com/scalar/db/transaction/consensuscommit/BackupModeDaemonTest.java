@@ -28,7 +28,7 @@ public class BackupModeDaemonTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    daemon = new BackupModeDaemon(coordinator, 5000, logger, clock);
+    daemon = new BackupModeDaemon(coordinator, 5000, true, logger, clock);
   }
 
   @Test
@@ -77,14 +77,42 @@ public class BackupModeDaemonTest {
   }
 
   @Test
-  public void activeBackupLabel_WhenNeverSuccessfullyRead_ShouldReturnNullWithoutReading()
+  public void activeBackupLabel_WhenArmedAndNeverConfirmedAndReadFails_ShouldFailClosed()
       throws Exception {
-    // Arrange: fresh daemon, no read has ever succeeded (the backup table may not exist / CBRL
-    // off).
-    // Act
+    // Arrange: armed, the flag has never been confirmed, and the on-demand read fails.
+    when(coordinator.getBackupLabel())
+        .thenThrow(new CoordinatorException("unreachable", new RuntimeException()));
+
+    // Act & Assert: it attempts one read, then fails closed rather than beginning unlabeled.
+    assertThatThrownBy(() -> daemon.activeBackupLabel(1))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Failing closed");
+    verify(coordinator).getBackupLabel();
+  }
+
+  @Test
+  public void activeBackupLabel_WhenArmedAndNeverConfirmedAndReadSucceeds_ShouldReturnLabel()
+      throws Exception {
+    // Arrange: armed, never confirmed; the on-demand read finds an open window.
+    when(coordinator.getBackupLabel()).thenReturn(Optional.of("label-1"));
+
+    // Act: activeBackupLabel forces the first read itself.
     String label = daemon.activeBackupLabel(1);
 
-    // Assert: fail open (no window to miss), and do not even attempt a read.
+    // Assert
+    assertThat(label).isEqualTo("label-1");
+    verify(coordinator).getBackupLabel();
+  }
+
+  @Test
+  public void activeBackupLabel_WhenNotArmed_ShouldReturnNullWithoutReading() throws Exception {
+    // Arrange: a daemon that is not armed (the backup table does not exist / CBRL is not in use).
+    BackupModeDaemon unarmed = new BackupModeDaemon(coordinator, 5000, false, logger, clock);
+
+    // Act
+    String label = unarmed.activeBackupLabel(1);
+
+    // Assert: CBRL is off, so proceed with no label and never touch the backup table.
     assertThat(label).isNull();
     verify(coordinator, never()).getBackupLabel();
   }

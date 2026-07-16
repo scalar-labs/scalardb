@@ -20,14 +20,17 @@ import org.slf4j.LoggerFactory;
  * consults it to decide the transaction's backup label. The {@code backup} table holds at most one
  * row (its presence is the open window), so the cache is a single nullable label.
  *
- * <p><b>Fail-closed on staleness.</b> A failing read does <b>not</b> advance the cache's last
- * <i>successful</i> read time, so {@link #activeBackupLabel(long)} can tell when the flag can no
- * longer be confirmed. Once the daemon has read the flag at least once, if the last successful read
- * is older than the staleness bound (e.g. the coordinator is unreachable), {@code
- * activeBackupLabel} throws so {@code begin()} refuses rather than start a transaction that could
- * commit inside a backup window without logging redo. Before the first successful read — when the
- * {@code backup} table may simply not exist (CBRL not in use) — it returns {@code null}: there is
- * no window it could miss, and a transaction cannot commit without the coordinator anyway.
+ * <p><b>Armed vs. not.</b> The daemon arms only when the {@code backup} table exists at startup.
+ * When it does not exist, CBRL is not in use — no window can ever open (opening one writes that
+ * table) — so {@link #activeBackupLabel(long)} returns {@code null} and {@code begin()} proceeds
+ * normally.
+ *
+ * <p><b>Fail-closed when armed.</b> A failing read does <b>not</b> advance the last
+ * <i>successful</i> read time, so {@code activeBackupLabel} can tell when the flag can no longer be
+ * confirmed. When armed, a reading that cannot be confirmed — never successfully read (after one
+ * on-demand retry), or older than the staleness bound (e.g. the coordinator is unreachable) — makes
+ * {@code activeBackupLabel} throw so {@code begin()} refuses rather than start a transaction that
+ * could commit inside a backup window without logging redo.
  */
 @ThreadSafe
 final class BackupModeDaemon {
@@ -37,24 +40,34 @@ final class BackupModeDaemon {
   private final LongSupplier clockMillis;
   private final ScheduledExecutorService scheduler;
   private final AtomicReference<BackupFlagReading> lastReading = new AtomicReference<>();
+  // Whether CBRL is provisioned here: true iff the backup table existed at startup. When false, no
+  // window can ever open (opening one writes that table), so the flag is not consulted and begin()
+  // proceeds normally; when true, a reading that cannot be confirmed fails closed.
+  private final boolean armed;
   @Nullable private ScheduledFuture<?> scheduledTask;
 
   // Bound on how long close() waits for an in-flight read to drain before returning.
   private static final long SHUTDOWN_TIMEOUT_SECONDS = 10;
 
-  BackupModeDaemon(Coordinator coordinator, long checkIntervalMillis) {
+  BackupModeDaemon(Coordinator coordinator, long checkIntervalMillis, boolean armed) {
     this(
         coordinator,
         checkIntervalMillis,
+        armed,
         LoggerFactory.getLogger(BackupModeDaemon.class),
         System::currentTimeMillis);
   }
 
   @VisibleForTesting
   BackupModeDaemon(
-      Coordinator coordinator, long checkIntervalMillis, Logger logger, LongSupplier clockMillis) {
+      Coordinator coordinator,
+      long checkIntervalMillis,
+      boolean armed,
+      Logger logger,
+      LongSupplier clockMillis) {
     this.coordinator = coordinator;
     this.checkIntervalMillis = checkIntervalMillis;
+    this.armed = armed;
     this.logger = logger;
     this.clockMillis = clockMillis;
     scheduler =
@@ -71,6 +84,10 @@ final class BackupModeDaemon {
    * then schedules the periodic refresh.
    */
   void start() {
+    if (!armed) {
+      // CBRL is not provisioned here (no backup table); there is no flag to poll or confirm.
+      return;
+    }
     readAndUpdate();
     scheduledTask =
         scheduler.scheduleWithFixedDelay(
@@ -85,16 +102,30 @@ final class BackupModeDaemon {
    */
   @Nullable
   String activeBackupLabel(long stalenessBoundMillis) {
-    BackupFlagReading current = lastReading.get();
-    if (current == null) {
-      // Never confirmed the flag (the backup table may not exist / CBRL is not in use, or the
-      // coordinator has been unreachable since startup). There is no window to miss, and a
-      // transaction cannot commit without the coordinator anyway, so proceed with no label.
+    if (!armed) {
+      // CBRL is not in use here (the backup table does not exist), so no window can be open and
+      // there
+      // is no redo to miss. Proceed with no label.
       return null;
     }
+    BackupFlagReading current = lastReading.get();
+    if (current == null) {
+      // Armed, but the flag has never been confirmed (e.g. the coordinator was unreachable at
+      // startup). Try once now; if it still cannot be read, fail closed — a window might be open,
+      // and
+      // committing without logging redo would be a silent capture loss.
+      readAndUpdate();
+      current = lastReading.get();
+      if (current == null) {
+        throw new IllegalStateException(
+            "Cannot confirm CBRL backup mode: the backup table could not be read. Failing closed and "
+                + "refusing to begin a transaction that might commit inside a backup window without "
+                + "logging redo. Retry once the coordinator is reachable again.");
+      }
+    }
     // A non-positive staleness bound disables freshness enforcement (as the transaction timeout
-    // does for <= 0): trust the daemon's periodically refreshed reading without forcing a read or
-    // failing closed.
+    // does for <= 0): trust the daemon's periodically refreshed reading without forcing a fresh
+    // read.
     if (stalenessBoundMillis > 0) {
       refreshIfStale(stalenessBoundMillis);
       current = lastReading.get();
