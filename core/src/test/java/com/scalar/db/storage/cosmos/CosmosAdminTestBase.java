@@ -13,7 +13,6 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -761,70 +760,7 @@ public abstract class CosmosAdminTestBase {
   }
 
   @Test
-  public void repairTable_withMissingTableToRepair_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    String namespace = "ns";
-    String table = "tbl";
-    TableMetadata metadata = Mockito.mock(TableMetadata.class);
-    when(client.getDatabase(namespace)).thenReturn(database);
-    when(database.getContainer(table)).thenReturn(container);
-    CosmosException cosmosException = mock(CosmosException.class);
-    when(cosmosException.getStatusCode()).thenReturn(404);
-    when(container.read()).thenThrow(cosmosException);
-
-    // Act Assert
-    assertThatThrownBy(() -> admin.repairTable(namespace, table, metadata, Collections.emptyMap()))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void repairTable_withStoredProcedure_ShouldUpsertMetadata() throws ExecutionException {
-    // Arrange
-    String namespace = "ns";
-    String table = "tbl";
-    TableMetadata tableMetadata =
-        TableMetadata.newBuilder()
-            .addColumn("c1", DataType.INT)
-            .addColumn("c2", DataType.TEXT)
-            .addColumn("c3", DataType.BIGINT)
-            .addPartitionKey("c1")
-            .build();
-    CosmosTableMetadata cosmosTableMetadata =
-        CosmosTableMetadata.newBuilder()
-            .id(getFullTableName(namespace, table))
-            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
-            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
-            .build();
-
-    when(client.getDatabase(namespace)).thenReturn(database);
-    when(database.getContainer(table)).thenReturn(container);
-
-    CosmosContainer metadataContainer = mock(CosmosContainer.class);
-    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
-        .thenReturn(metadataContainer);
-
-    CosmosScripts scripts = mock(CosmosScripts.class);
-    when(container.getScripts()).thenReturn(scripts);
-    CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
-    when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
-        .thenReturn(storedProcedure);
-
-    // Act Assert
-    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
-
-    // Assert
-    verify(container).read();
-    verify(client, times(2)).createDatabaseIfNotExists(eq(metadataDatabaseName), any());
-
-    verify(metadataDatabase, times(2)).createContainerIfNotExists(any());
-    verify(metadataContainer).upsertItem(cosmosTableMetadata);
-    verify(storedProcedure).read();
-  }
-
-  @Test
-  public void repairTable_withoutStoredProcedure_ShouldUpsertMetadataAndCreateProcedure()
+  public void repairTable_withStoredProcedure_ShouldNotAddStoredProcedure()
       throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -846,6 +782,58 @@ public abstract class CosmosAdminTestBase {
     when(client.getDatabase(namespace)).thenReturn(database);
     when(database.getContainer(table)).thenReturn(container);
 
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+
+    CosmosScripts scripts = mock(CosmosScripts.class);
+    when(container.getScripts()).thenReturn(scripts);
+    CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
+    when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
+        .thenReturn(storedProcedure);
+
+    // Existing container properties (for updateIndexingPolicy)
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+
+    // Act Assert
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(client).createDatabaseIfNotExists(eq(metadataDatabaseName), any());
+
+    verify(metadataDatabase).createContainerIfNotExists(any());
+    verify(metadataContainer).upsertItem(cosmosTableMetadata);
+    verify(storedProcedure).read();
+  }
+
+  @Test
+  public void repairTable_withoutStoredProcedure_ShouldCreateStoredProcedure()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .build();
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
+
     // Metadata container
     CosmosContainer metadataContainer = mock(CosmosContainer.class);
     CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
@@ -863,14 +851,20 @@ public abstract class CosmosAdminTestBase {
     when(cosmosException.getStatusCode()).thenReturn(404);
     when(storedProcedure.read()).thenThrow(cosmosException);
 
+    // Existing container properties (for updateIndexingPolicy)
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+
     // Act
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
     // Assert
-    verify(container).read();
-    verify(client, times(2)).createDatabaseIfNotExists(eq(metadataDatabaseName), any());
+    verify(client).createDatabaseIfNotExists(eq(metadataDatabaseName), any());
 
-    verify(metadataDatabase, times(2)).createContainerIfNotExists(any());
+    verify(metadataDatabase).createContainerIfNotExists(any());
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
     verify(storedProcedure).read();
     verify(scripts).createStoredProcedure(any());

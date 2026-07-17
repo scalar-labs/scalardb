@@ -1,7 +1,6 @@
 package com.scalar.db.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -24,7 +23,7 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageAdminRepairTableIntegrationTestBase.class);
 
-  private static final String TEST_NAME = "storage_admin_repair_table";
+  protected static final String TEST_NAME = "storage_admin_repair_table";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
   private static final String TABLE = "tbl";
   private static final String COL_NAME1 = "c1";
@@ -183,15 +182,29 @@ public abstract class DistributedStorageAdminRepairTableIntegrationTestBase {
   }
 
   @Test
-  public void repairTable_ForNonExistingTable_ShouldThrowIllegalArgument() {
-    // Arrange
+  public void repairTable_ForExistingTableAndMetadata_ShouldDoNothing() throws Exception {
+    // Act
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
 
-    // Act Assert
-    assertThatThrownBy(
-            () ->
-                admin.repairTable(
-                    getNamespace(), "non-existing-table", getTableMetadata(), getCreationOptions()))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Assert
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
+  }
+
+  @Test
+  public void repairTable_ForNonExistingTableButExistingMetadata_ShouldCreateTable()
+      throws Exception {
+    // Arrange
+    adminTestUtils.dropTable(getNamespace(), getTable());
+
+    // Act
+    waitForDifferentSessionDdl();
+    admin.repairTable(getNamespace(), getTable(), getTableMetadata(), getCreationOptions());
+
+    // Assert
+    waitForDifferentSessionDdl();
+    assertThat(adminTestUtils.tableExists(getNamespace(), getTable())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), getTable())).isEqualTo(getTableMetadata());
   }
 
   protected boolean isTimestampTypeSupported() {

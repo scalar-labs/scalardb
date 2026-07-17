@@ -209,6 +209,19 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
+    // Error number: 1061; Symbol: ER_DUP_KEYNAME; SQLSTATE: 42000
+    // Message: Duplicate key name '%s'
+    return e.getErrorCode() == 1061;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
+  }
+
+  @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:

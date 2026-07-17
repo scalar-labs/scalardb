@@ -287,6 +287,19 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isDuplicateIndexError(SQLException e) {
+    // Even though the "create index if exists ..." syntax does not exist,
+    // only a warning is raised when the index already exists but no error is thrown
+    // so we return false in any case
+    return false;
+  }
+
+  @Override
+  public String tryAddIfNotExistsToCreateIndexSql(String createIndexSql) {
+    return createIndexSql;
+  }
+
+  @Override
   public SelectQuery buildSelectQuery(SelectQuery.Builder builder, int limit) {
     return new SelectWithLimitQuery(builder, limit);
   }

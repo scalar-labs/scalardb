@@ -119,7 +119,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createTableInternal(
+  @VisibleForTesting
+  void createTableInternal(
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
     String createTableStatement = "CREATE TABLE " + encloseFullTableName(schema, table) + "(";
@@ -158,7 +159,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void addTableMetadata(
+  @VisibleForTesting
+  void addTableMetadata(
       Connection connection,
       String namespace,
       String table,
@@ -766,8 +768,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       if (!tableExistsInternal(connection, namespace, table)) {
-        throw new IllegalArgumentException(
-            CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
+        // Create the table if it does not exist
+        createTableInternal(connection, namespace, table, metadata);
+      }
+
+      // Create any secondary indexes that do not exist yet. This covers both a newly created table
+      // and an existing table that is missing some of its secondary indexes.
+      for (String indexedColumn : metadata.getSecondaryIndexNames()) {
+        createIndex(connection, namespace, table, indexedColumn, true);
       }
 
       if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
@@ -873,9 +881,26 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private void createIndex(Connection connection, String schema, String table, String indexedColumn)
       throws SQLException {
+    createIndex(connection, schema, table, indexedColumn, false);
+  }
+
+  @VisibleForTesting
+  void createIndex(
+      Connection connection, String schema, String table, String indexedColumn, boolean ifNotExists)
+      throws SQLException {
     String indexName = getIndexName(schema, table, indexedColumn);
     String createIndexStatement = rdbEngine.createIndexSql(schema, table, indexName, indexedColumn);
-    execute(connection, createIndexStatement);
+    if (ifNotExists) {
+      createIndexStatement = rdbEngine.tryAddIfNotExistsToCreateIndexSql(createIndexStatement);
+    }
+    try {
+      execute(connection, createIndexStatement);
+    } catch (SQLException e) {
+      // Suppress the exception thrown when the index already exists
+      if (!(ifNotExists && rdbEngine.isDuplicateIndexError(e))) {
+        throw e;
+      }
+    }
   }
 
   private void dropIndex(Connection connection, String schema, String table, String indexedColumn)

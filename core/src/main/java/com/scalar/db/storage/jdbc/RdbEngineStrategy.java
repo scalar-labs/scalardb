@@ -117,6 +117,8 @@ public interface RdbEngineStrategy {
 
   String dropIndexSql(String schema, String table, String indexName);
 
+  String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);
+
   /**
    * Enclose the target (schema, table or column) to use reserved words and special characters.
    *
@@ -161,6 +163,8 @@ public interface RdbEngineStrategy {
   }
 
   boolean isUndefinedIndexError(SQLException e);
+
+  boolean isDuplicateIndexError(SQLException e);
 
   default @Nullable String getCatalogName(String namespace) {
     return null;
