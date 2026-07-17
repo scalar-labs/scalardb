@@ -78,6 +78,8 @@ public abstract class DynamoAdminTestBase {
   @Mock private DynamoDbClient client;
   @Mock private ApplicationAutoScalingClient applicationAutoScalingClient;
   @Mock private DescribeTableResponse tableIsActiveResponse;
+  @Mock private DescribeContinuousBackupsResponse backupIsEnabledResponse;
+  @Mock private ContinuousBackupsDescription continuousBackupsDescription;
   private DynamoAdmin admin;
 
   @BeforeEach
@@ -85,6 +87,10 @@ public abstract class DynamoAdminTestBase {
     MockitoAnnotations.openMocks(this).close();
     when(config.getNamespacePrefix()).thenReturn(getNamespacePrefixConfig());
     when(config.getTableMetadataNamespace()).thenReturn(getTableMetadataNamespaceConfig());
+    when(backupIsEnabledResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
   }
@@ -259,16 +265,8 @@ public abstract class DynamoAdminTestBase {
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
+        .thenReturn(backupIsEnabledResponse);
 
     // for the table metadata table
     describeTableResponse = mock(DescribeTableResponse.class);
@@ -470,16 +468,8 @@ public abstract class DynamoAdminTestBase {
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
-    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(describeContinuousBackupsResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(describeContinuousBackupsResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
+        .thenReturn(backupIsEnabledResponse);
 
     Map<String, String> options = new HashMap<>();
     options.put(DynamoAdmin.REQUEST_UNIT, "100");
@@ -664,17 +654,8 @@ public abstract class DynamoAdminTestBase {
     when(tableIsActiveResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
     when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(tableIsActiveResponse);
-    // prepare backupIsEnabledResponse
-    DescribeContinuousBackupsResponse backupIsEnabledResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
         .thenReturn(backupIsEnabledResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(backupIsEnabledResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
     when(client.putItem(any(PutItemRequest.class))).thenThrow(ResourceNotFoundException.class);
     TableMetadata metadata =
         TableMetadata.newBuilder()
@@ -1110,16 +1091,8 @@ public abstract class DynamoAdminTestBase {
         .thenReturn(tableIsActiveResponse);
 
     // Continuous backup check (already enabled, so update is a no-op semantically)
-    DescribeContinuousBackupsResponse backupIsEnabledResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
         .thenReturn(backupIsEnabledResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(backupIsEnabledResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     // Act
     admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
@@ -1148,6 +1121,73 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void repairTable_WhenMetadataIsInvalid_ShouldThrowIllegalArgumentException() {
+    // Arrange: a BOOLEAN secondary index is rejected by checkMetadata with an
+    // IllegalArgumentException, which repairTable must let propagate (not wrap in
+    // ExecutionException), consistent with the other storage admins.
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BOOLEAN)
+            .addSecondaryIndex("c2")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      repairTable_WhenExistingTableHasSecondaryIndex_ShouldNotRegisterAutoScalingForThatIndex()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.TEXT)
+            .addSecondaryIndex("c2")
+            .build();
+
+    // The table exists and already has the c2 global secondary index (ACTIVE).
+    // The index name format is "<fullTableName>.global_index.<column>".
+    String globalIndexName = getFullTableName() + ".global_index.c2";
+    GlobalSecondaryIndexDescription gsiDescription =
+        GlobalSecondaryIndexDescription.builder()
+            .indexName(globalIndexName)
+            .indexStatus(IndexStatus.ACTIVE)
+            .build();
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(tableDescription.globalSecondaryIndexes()).thenReturn(ImmutableList.of(gsiDescription));
+    DescribeTableResponse tableResponse = mock(DescribeTableResponse.class);
+    when(tableResponse.table()).thenReturn(tableDescription);
+
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableResponse);
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert: auto scaling is registered only for the table, never for the existing index's GSI.
+    // (Before the fix, createTableInternal registered scaling for the index even though the table
+    // already existed, which would fail against a real DynamoDB for a not-yet-created index.)
+    ArgumentCaptor<RegisterScalableTargetRequest> captor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(2)).registerScalableTarget(captor.capture());
+    assertThat(captor.getAllValues())
+        .allSatisfy(
+            request -> assertThat(request.resourceId()).isEqualTo("table/" + getFullTableName()));
+  }
+
+  @Test
   public void repairTable_WithNonExistingTableAndMetadataTables_shouldCreateBothTables()
       throws ExecutionException {
     // Arrange
@@ -1171,16 +1211,8 @@ public abstract class DynamoAdminTestBase {
         .thenReturn(tableIsActiveResponse);
 
     // Continuous backup check
-    DescribeContinuousBackupsResponse backupIsEnabledResponse =
-        mock(DescribeContinuousBackupsResponse.class);
     when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
         .thenReturn(backupIsEnabledResponse);
-    ContinuousBackupsDescription continuousBackupsDescription =
-        mock(ContinuousBackupsDescription.class);
-    when(backupIsEnabledResponse.continuousBackupsDescription())
-        .thenReturn(continuousBackupsDescription);
-    when(continuousBackupsDescription.continuousBackupsStatus())
-        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     // Act
     admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
