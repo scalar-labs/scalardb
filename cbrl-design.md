@@ -20,17 +20,28 @@ them is violated the restore is silently wrong, not erroring.
 
 ```mermaid
 sequenceDiagram
+    participant Op as Operator
     participant App as App (Consensus Commit)
-    participant Co as coordinator (tx_write_set)
-    participant DB as user tables
-    participant R as Restore
-    Note over App,DB: backup window open
-    App->>Co: each commit logs its write ops (keys, columns, prev_tx_id + version)
-    Note over DB: online physical backup copies the user tables (non-snapshot)
-    Note over Co: coordinator snapshotted last and atomically -> the consistency point
-    R->>Co: read the redo for the backup label
-    R->>DB: replay each record's chain forward onto the copy
-    Note over DB: now the committed state as of the consistency point
+    box primary DB
+        participant Co as coordinator (tx_write_set)
+        participant DB as user tables
+    end
+    box restored DB
+        participant UTr as user tables
+        participant COr as coordinator table
+    end
+    participant R as Restore (CBRL replay)
+    Op->>Co: open backup mode (enableRedoLogging)
+    Note over App,Co: window open — commits log redo
+    App->>Co: each commit logs its write ops (keys, columns, prev_tx_id)
+    Op->>DB: physical backup (non-snapshot), taken first
+    Op->>Co: physical backup (atomic), taken last<br/>-> the consistency point
+    Op->>UTr: restore from backup
+    Op->>COr: restore from backup
+    Op->>R: run CBRL restore
+    R->>COr: read the redo
+    R->>UTr: recover, then replay each record's chain forward
+    Note over UTr: committed state as of the consistency point
 ```
 
 ## Requirements & goals
@@ -154,10 +165,12 @@ absolute guarantee** (see *Known gaps*):
 - **Cache wait** — after opening the window, wait until every process has seen the flag and pre-flag
   transactions have drained before trusting the consistency point. This is a manual, unverified sleep;
   there is no readiness probe.
-- **`begin()` freshness** — `begin()` uses the cache but forces a synchronous scan if the cache is
-  older than the staleness bound; once the flag has been read at least once, if it still can't be
-  confirmed `begin()` **fails closed** (refuses), so a process resuming from a stall — or during a
-  coordinator partition — can't begin under a stale flag.
+- **`begin()` freshness (fail-closed when armed)** — the daemon arms only when the `backup` table
+  exists (CBRL is in use); when it does not, `begin()` proceeds with no label. When armed, `begin()`
+  reads the cache, forces a synchronous read if the flag was never confirmed or the cache is older
+  than the staleness bound, and **fails closed** (refuses) if it still can't be confirmed, so a
+  process starting mid-window, resuming from a stall, or reading during a coordinator partition
+  cannot begin under an unconfirmed flag.
 - **Transaction timeout** — a transaction self-aborts (as a `CommitException`) if it runs longer than
   `transaction-timeout`, killing one frozen across the transition. The check runs once, right before
   the coordinator commit-state write (the point of no return), so a slow prepare or validation can no
