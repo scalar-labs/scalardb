@@ -837,8 +837,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public void repairTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    rdbEngine.throwIfInvalidNamespaceName(table);
-
     try {
       withConnection(
           dataSource,
@@ -846,12 +844,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           connection -> {
             throwIfVirtualTableOrSourceTable(connection, namespace, table, "repairTable()");
 
-            if (!internalTableExists(connection, namespace, table)) {
-              throw new IllegalArgumentException(
-                  CoreError.TABLE_NOT_FOUND.buildMessage(getFullTableName(namespace, table)));
-            }
-
             createMetadataSchemaIfNotExists(connection);
+            createTableInternal(connection, namespace, table, metadata, true);
             addTableMetadata(connection, namespace, table, metadata, true, true);
           });
     } catch (SQLException e) {
