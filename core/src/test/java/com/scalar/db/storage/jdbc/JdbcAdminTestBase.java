@@ -2738,7 +2738,6 @@ public abstract class JdbcAdminTestBase {
 
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
     doNothing().when(adminSpy).createTableInternal(connection, namespace, table, metadata);
-    doNothing().when(adminSpy).createIndex(connection, namespace, table, metadata);
     doNothing().when(adminSpy).addTableMetadata(connection, namespace, table, metadata, true);
 
     // Act
@@ -2747,8 +2746,40 @@ public abstract class JdbcAdminTestBase {
     // Assert
     verify(checkTableExistStatement).execute(expectedCheckTableExistStatement);
     verify(adminSpy).createTableInternal(connection, namespace, table, metadata);
-    verify(adminSpy).createIndex(connection, namespace, table, metadata);
     verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void repairTable_WhenTableAlreadyExistsWithoutIndex_ShouldCreateIndex(RdbEngine rdbEngine)
+      throws ExecutionException, SQLException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addClusteringKey("c2")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.DATE)
+            .addSecondaryIndex("c3")
+            .addSecondaryIndex("c4")
+            .build();
+    // The table and the metadata table already exist (every execution succeeds)
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+
+    // Act
+    adminSpy.repairTable(namespace, table, metadata, Collections.emptyMap());
+
+    // Assert
+    // The existing table is not recreated, but the missing secondary indexes are created
+    verify(adminSpy, never()).createTableInternal(connection, namespace, table, metadata);
+    verify(adminSpy).createIndex(connection, namespace, table, "c3", true);
+    verify(adminSpy).createIndex(connection, namespace, table, "c4", true);
   }
 
   @Test
