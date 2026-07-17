@@ -25,8 +25,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * exercises the CBRL-enabled build in this worktree rather than any published artifact.
  *
  * <p>Data model: two user namespaces, {@code transfer} (mapped to MySQL) and {@code transfer_pg}
- * (mapped to PostgreSQL). Each holds {@code numAccounts} single-row accounts (partition key
- * account_id, clustering key account_type=0, INT column balance). A transfer moves an amount from an
+ * (mapped to PostgreSQL). {@code numAccounts} is the TOTAL account count, split evenly so each
+ * namespace holds {@code numAccounts / 2} single-row accounts (partition key account_id, clustering
+ * key account_type=0, INT column balance). A transfer moves an amount from an
  * account in one namespace to an account in the OTHER namespace within a single ScalarDB
  * transaction, so every commit is a genuine two-storage transaction whose atomic state is recorded
  * by the coordinator (PostgreSQL). The grand total across both namespaces is therefore invariant.
@@ -133,10 +134,11 @@ public final class CbrlDemoDriver {
   private static void populate(String propsPath, int numAccounts, int initialBalance)
       throws Exception {
     Properties properties = loadProperties(propsPath);
+    int perNamespace = numAccounts / 2;
     TransactionFactory factory = TransactionFactory.create(properties);
     try (DistributedTransactionManager manager = factory.getTransactionManager()) {
       for (String namespace : new String[] {NS_MYSQL, NS_PG}) {
-        for (int accountId = 0; accountId < numAccounts; accountId++) {
+        for (int accountId = 0; accountId < perNamespace; accountId++) {
           DistributedTransaction tx = manager.start();
           try {
             // Read before write so re-seeding an already-populated primary updates the existing row
@@ -152,10 +154,11 @@ public final class CbrlDemoDriver {
         }
       }
     }
-    long total = 2L * numAccounts * initialBalance;
+    long total = 2L * perNamespace * initialBalance;
     System.out.printf(
-        "Populated %d accounts in each of {%s, %s} at balance %d. Initial grand total = %d.%n",
-        numAccounts, NS_MYSQL, NS_PG, initialBalance, total);
+        "Populated %d accounts total (%d per namespace across {%s, %s}) at balance %d."
+            + " Initial grand total = %d.%n",
+        2 * perNamespace, perNamespace, NS_MYSQL, NS_PG, initialBalance, total);
   }
 
   private static void open(String propsPath, String label) throws Exception {
@@ -181,16 +184,18 @@ public final class CbrlDemoDriver {
       // its BackupModeDaemon picks up the window that a separate `open` step opens mid-run. Commits
       // before that are the pre-window base (carried only by the physical copy); commits after the
       // daemon observes the window log full redo.
+      int perNamespace = numAccounts / 2;
       System.out.printf(
-          "Transfer workload starting: %d threads, %ds, %d accounts/namespace, label '%s'.%n",
-          threads, runSeconds, numAccounts, label);
+          "Transfer workload starting: %d threads, %ds, %d accounts total (%d per namespace),"
+              + " label '%s'.%n",
+          threads, runSeconds, 2 * perNamespace, perNamespace, label);
       List<Future<?>> futures = new ArrayList<>();
       for (int t = 0; t < threads; t++) {
         futures.add(
             executor.submit(
                 () -> {
                   while (!stop.get()) {
-                    if (transferOnce(manager, numAccounts)) {
+                    if (transferOnce(manager, perNamespace)) {
                       committed.incrementAndGet();
                     } else {
                       aborted.incrementAndGet();
@@ -232,12 +237,13 @@ public final class CbrlDemoDriver {
    * One balance-preserving cross-storage transfer between a random account in one namespace and a
    * random account in the other. Returns true if committed, false if it gave up after retries.
    */
-  private static boolean transferOnce(DistributedTransactionManager manager, int numAccounts) {
+  private static boolean transferOnce(
+      DistributedTransactionManager manager, int accountsPerNamespace) {
     boolean mysqlToPg = ThreadLocalRandom.current().nextBoolean();
     String fromNs = mysqlToPg ? NS_MYSQL : NS_PG;
     String toNs = mysqlToPg ? NS_PG : NS_MYSQL;
-    int fromId = ThreadLocalRandom.current().nextInt(numAccounts);
-    int toId = ThreadLocalRandom.current().nextInt(numAccounts);
+    int fromId = ThreadLocalRandom.current().nextInt(accountsPerNamespace);
+    int toId = ThreadLocalRandom.current().nextInt(accountsPerNamespace);
     int amount = 1 + ThreadLocalRandom.current().nextInt(100);
     for (int attempt = 0; attempt < 50; attempt++) {
       DistributedTransaction tx = null;
@@ -299,7 +305,8 @@ public final class CbrlDemoDriver {
   private static void validate(String propsPath, int numAccounts, int initialBalance, String expect)
       throws Exception {
     Properties properties = loadProperties(propsPath);
-    long expected = 2L * numAccounts * initialBalance;
+    int perNamespace = numAccounts / 2;
+    long expected = 2L * perNamespace * initialBalance;
     TransactionFactory factory = TransactionFactory.create(properties);
     long total = 0;
     int mysqlRows = 0;
@@ -337,12 +344,12 @@ public final class CbrlDemoDriver {
       }
     }
 
-    boolean complete = mysqlRows == numAccounts && pgRows == numAccounts;
+    boolean complete = mysqlRows == perNamespace && pgRows == perNamespace;
     boolean conserved = total == expected;
     System.out.printf(
         "Consensus Commit ScanAll: %s=%d/%d rows, %s=%d/%d rows, grand total = %d,"
             + " expected = %d, drift = %d%n",
-        NS_MYSQL, mysqlRows, numAccounts, NS_PG, pgRows, numAccounts, total, expected,
+        NS_MYSQL, mysqlRows, perNamespace, NS_PG, pgRows, perNamespace, total, expected,
         total - expected);
 
     if (expect.isEmpty()) {

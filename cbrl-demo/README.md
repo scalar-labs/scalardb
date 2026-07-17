@@ -46,19 +46,19 @@ or `broken` to turn the report into an assertion.
 Expected shape of a successful run (the without-CBRL oracle finds the copy still broken after
 recovery, then the with-CBRL oracle finds it fixed). The exact sums and drift vary per run, and
 the drift is even signed differently run to run, but the without-CBRL grand total is never
-`2000000` and the with-CBRL one always is:
+`10000000` and the with-CBRL one always is:
 
 ```
 === PHASE 1/2 — WITHOUT CBRL (expect BROKEN) ===
 ...
 === Validate restored (expect broken): Consensus Commit ScanAll ===
-Consensus Commit ScanAll: transfer=100/100 rows, transfer_pg=100/100 rows, grand total = 1997584, expected = 2000000, drift = -2416
+Consensus Commit ScanAll: transfer=500/500 rows, transfer_pg=500/500 rows, grand total = 9998132, expected = 10000000, drift = -1868
 PASS (expect broken): still inconsistent after recovery alone, which only the redo can repair (complete=true, conserved=false).
 ...
 === PHASE 2/2 — WITH CBRL (expect FIXED) ===
 ...
 === Validate restored (expect consistent): Consensus Commit ScanAll ===
-Consensus Commit ScanAll: transfer=100/100 rows, transfer_pg=100/100 rows, grand total = 2000000, expected = 2000000, drift = 0
+Consensus Commit ScanAll: transfer=500/500 rows, transfer_pg=500/500 rows, grand total = 10000000, expected = 10000000, drift = 0
 PASS (expect consistent): complete and conserved.
 ```
 
@@ -133,8 +133,9 @@ back, resetting the volumes between so each starts from a clean, independently t
 1. `up` the four DB containers, wait healthy.
 2. **schema** — `schema-loader --coordinator` on the primaries creates the service
    tables, `coordinator.state`, and the CBRL `backup` / `backup_histories` tables.
-3. **populate** — seed 100 accounts/namespace at balance 10000 (window **closed**, so
-   this pre-window base is carried only by the physical copy).
+3. **populate** — seed `NUM_ACCOUNTS` accounts total (default 1000, split evenly so 500 per
+   namespace) at balance 10000 (window **closed**, so this pre-window base is carried only by the
+   physical copy).
 4. **window phase** — three separate steps run concurrently: the **workload** commits in the
    background the whole time while **cbrl-open** and **backup** fire mid-run, so the app never
    pauses for the backup (`RPO > 0`).
@@ -157,8 +158,8 @@ back, resetting the volumes between so each starts from a clean, independently t
 
 7. **`validate broken`** — read the copy through a single Consensus Commit cross-partition
    `ScanAll`, which triggers lazy recovery on every in-flight record it touches, then evaluate the
-   same two invariants the with-CBRL run checks: completeness (100 rows per namespace) and
-   conservation (grand total `= 2000000`). Assert they do **not** both hold, so the copy is **still
+   same two invariants the with-CBRL run checks: completeness (500 rows per namespace) and
+   conservation (grand total `= 10000000`). Assert they do **not** both hold, so the copy is **still
    BROKEN** after recovery alone; in practice the total is still drifted, which only the redo can
    repair. Fails loudly if the copy is already consistent (the torn-write scenario was not produced,
    so CBRL was not exercised).
@@ -169,9 +170,9 @@ back, resetting the volumes between so each starts from a clean, independently t
    in-flight copy record, replays the committed redo, and writes the result back via the Storage
    API.
 8. **`validate consistent`** — the identical step and `ScanAll` with the same two invariants, now
-   asserted to **both** hold: the copy is **FIXED**, with 100 rows per namespace and the grand total
+   asserted to **both** hold: the copy is **FIXED**, with 500 rows per namespace and the grand total
    back to
-   `2 * 100 * 10000 = 2000000`.
+   `2 * 500 * 10000 = 10000000`.
 
 ## Notes
 

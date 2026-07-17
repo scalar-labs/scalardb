@@ -51,7 +51,7 @@ COPY_PROPS=/app/scalardb-multi-storage-copy.properties
 SCHEMA=/app/schema.json
 
 # Workload parameters.
-NUM_ACCOUNTS="${NUM_ACCOUNTS:-1000}"
+NUM_ACCOUNTS="${NUM_ACCOUNTS:-1000}"     # total accounts, split evenly across the two namespaces
 INITIAL_BALANCE="${INITIAL_BALANCE:-10000}"
 RUN_SECONDS="${RUN_SECONDS:-300}"
 THREADS="${THREADS:-4}"
@@ -96,7 +96,7 @@ step_schema() {
 
 # --- populate: seed both namespaces (window CLOSED -> pre-window base, carried by the copy). --
 step_populate() {
-  log "Populate: seed ${NUM_ACCOUNTS} accounts/namespace at balance ${INITIAL_BALANCE}"
+  log "Populate: seed ${NUM_ACCOUNTS} accounts total (split across both namespaces) at balance ${INITIAL_BALANCE}"
   run_app CbrlDemoDriver populate "${PROPS}" "${NUM_ACCOUNTS}" "${INITIAL_BALANCE}"
 }
 
