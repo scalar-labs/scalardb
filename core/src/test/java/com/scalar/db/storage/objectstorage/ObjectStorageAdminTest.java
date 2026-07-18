@@ -3,6 +3,7 @@ package com.scalar.db.storage.objectstorage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -569,5 +570,76 @@ public class ObjectStorageAdminTest {
         .containsEntry("c1", "int")
         .containsEntry("c2", "text")
         .containsEntry("c3", "bigint");
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataEqualsDesired_ShouldNotWriteMetadata()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .build();
+    String tableMetadataKey = namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + table;
+    String expectedObjectKey =
+        ObjectStorageUtils.getObjectKey(
+            METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE);
+
+    // The stored metadata already equals the desired metadata
+    Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
+    metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(tableMetadata));
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(Serializer.serialize(metadataTable), "version1");
+    when(wrapper.get(expectedObjectKey)).thenReturn(Optional.of(response));
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert: no metadata write is issued
+    verify(wrapper, never()).insert(anyString(), anyString());
+    verify(wrapper, never()).update(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataDiffersFromDesired_ShouldUpdateMetadata()
+      throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .build();
+    String tableMetadataKey = namespace + ObjectStorageUtils.CONCATENATED_KEY_DELIMITER + table;
+    String expectedObjectKey =
+        ObjectStorageUtils.getObjectKey(
+            METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE);
+
+    // The stored metadata is missing a column, so it differs from the desired metadata
+    TableMetadata storedMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addPartitionKey("c1")
+            .build();
+    Map<String, ObjectStorageTableMetadata> metadataTable = new HashMap<>();
+    metadataTable.put(tableMetadataKey, new ObjectStorageTableMetadata(storedMetadata));
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(Serializer.serialize(metadataTable), "version1");
+    when(wrapper.get(expectedObjectKey)).thenReturn(Optional.of(response));
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(wrapper).update(eq(expectedObjectKey), anyString(), eq("version1"));
   }
 }
