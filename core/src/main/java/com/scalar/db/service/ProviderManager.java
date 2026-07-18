@@ -7,6 +7,7 @@ import com.scalar.db.api.DistributedStorageProvider;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
+import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
@@ -150,6 +151,19 @@ final class ProviderManager {
   public static TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config) {
     return getDistributedTransactionProvider(config.getTransactionManager())
         .createTwoPhaseCommitParticipant(config);
+  }
+
+  /**
+   * Returns an instance of {@link GlobalTransactionManager}.
+   *
+   * @param config a database config
+   * @return an instance of {@link GlobalTransactionManager}
+   * @throws UnsupportedOperationException if the transaction manager does not support global
+   *     transactions
+   */
+  public static GlobalTransactionManager createGlobalTransactionManager(DatabaseConfig config) {
+    return getDistributedTransactionProvider(config.getTransactionManager())
+        .createGlobalTransactionManager(config);
   }
 
   private static DistributedTransactionProvider getDistributedTransactionProvider(String name) {

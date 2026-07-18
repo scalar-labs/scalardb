@@ -76,10 +76,10 @@ import javax.annotation.concurrent.ThreadSafe;
  * honoring the {@link TwoPhaseCommitParticipant} concurrency contract — serializing its own
  * per-transaction work. The reaper thread's {@code releaseTransactionContext} call may run
  * concurrently with an in-flight CRUD or record-level call for the same transaction id; the wrapped
- * role is responsible for making those mutually exclusive (e.g. {@code ConsensusCommitParticipant}
- * synchronizes every per-transaction method, including {@code releaseTransactionContext}, on a
- * per-context monitor). A wrapped participant that violates that contract would break this
- * guarantee with no signal at this layer.
+ * role is responsible for making those mutually exclusive (for example, by synchronizing every
+ * per-transaction method, including {@code releaseTransactionContext}, on a per-context monitor). A
+ * wrapped participant that violates that contract would break this guarantee with no signal at this
+ * layer.
  */
 @ThreadSafe
 public class ActiveTransactionManagedTwoPhaseCommitParticipant

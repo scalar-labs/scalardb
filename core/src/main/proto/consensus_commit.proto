@@ -7,7 +7,7 @@
 //
 // This is an internal persistence format owned by ScalarDB. The version suffix in the package
 // (`v1`) lets us introduce a breaking-change variant alongside this one in the future without
-// disrupting deployed clusters.
+// disrupting existing deployments.
 
 syntax = "proto3";
 

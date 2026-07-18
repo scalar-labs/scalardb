@@ -2,6 +2,9 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -9,6 +12,8 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.GlobalTransaction;
+import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
@@ -171,6 +176,32 @@ class AbstractDistributedTransactionProviderTest {
     ArgumentCaptor<Insert> captor = ArgumentCaptor.forClass(Insert.class);
     verify(rawParticipant).insert(eq("tx-1"), captor.capture());
     assertThat(captor.getValue().getAttributes()).containsEntry("k", "v");
+  }
+
+  @Test
+  void createGlobalTransactionManager_WhenBothEnabled_ShouldWireDecoratedParticipant()
+      throws Exception {
+    when(config.isAttributePropagationEnabled()).thenReturn(true);
+    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.getActiveTransactionManagementMaxActiveTransactions()).thenReturn(100);
+    when(rawCoordinator.begin(any(), anyBoolean(), anyMap())).thenReturn("tx-1");
+    // The coordinator tracks joined participants keyed by participant ID.
+    when(rawParticipant.getId()).thenReturn("participant-1");
+
+    GlobalTransactionManager manager = provider.createGlobalTransactionManager(config);
+    GlobalTransaction global = manager.beginGlobal();
+    manager.beginBranch(global.getId());
+
+    // The manager must compose from the decorating factory methods, not the raw ones. Switching to
+    // createRawTwoPhaseCommitParticipant would still compile and leave every other test green,
+    // while silently dropping attribute propagation and active transaction management from the
+    // global-transaction path only. Capturing what the coordinator was handed proves the decorated
+    // participant is the one wired in.
+    ArgumentCaptor<TwoPhaseCommitParticipant> captor =
+        ArgumentCaptor.forClass(TwoPhaseCommitParticipant.class);
+    verify(rawCoordinator).joinParticipant(eq("tx-1"), captor.capture());
+    assertThat(captor.getValue())
+        .isInstanceOf(ActiveTransactionManagedTwoPhaseCommitParticipant.class);
   }
 
   @Test
