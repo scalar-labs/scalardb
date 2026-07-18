@@ -42,9 +42,11 @@ import java.util.Map;
  * a transaction begun elsewhere. Running branches in separate processes therefore requires an
  * implementation that can resolve the transaction from the process issuing the join.
  *
- * <p>The branch-level {@code attributes} passed to {@code beginBranch} are not honored by this
- * backing: the transaction-level attributes supplied to {@code beginGlobal} apply to the whole
- * transaction, and {@link DistributedTransactionManager#join(String)} takes no attributes.
+ * <p>The per-branch {@code attributes} passed to {@code beginBranch} are propagated client-side
+ * into each CRUD operation issued on the branch (via {@link
+ * AttributePropagatingBranchTransaction}), distinct from the transaction-level attributes supplied
+ * to {@code beginGlobal}. They are not sent to {@link DistributedTransactionManager#join(String)},
+ * which takes no attributes.
  */
 public class DistributedTransactionBackedGlobalTransactionManager
     implements GlobalTransactionManager {
@@ -72,8 +74,14 @@ public class DistributedTransactionBackedGlobalTransactionManager
   public BranchTransaction beginBranch(String transactionId, Map<String, String> attributes)
       throws TransactionException {
     // Join the already-begun global transaction by its ID. All branches share the single underlying
-    // distributed transaction.
-    return new DistributedTransactionBackedBranchTransaction(manager.join(transactionId));
+    // distributed transaction. The per-branch attributes are propagated client-side into each CRUD
+    // operation by AttributePropagatingBranchTransaction; they are not sent to join (which carries
+    // no attributes) and differ from the transaction-scoped attributes supplied at beginGlobal.
+    BranchTransaction branch =
+        new DistributedTransactionBackedBranchTransaction(manager.join(transactionId));
+    return attributes.isEmpty()
+        ? branch
+        : new AttributePropagatingBranchTransaction(branch, attributes);
   }
 
   @Override

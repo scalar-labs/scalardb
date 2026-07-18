@@ -25,9 +25,11 @@ import javax.annotation.Nullable;
  *       CRUD handle for that branch.
  * </ul>
  *
- * <p>The branch-level {@code attributes} passed to {@code beginBranch} are not honored: the
- * coordinator forwards the {@code readOnly} flag and attributes supplied to {@code beginGlobal}
- * when it establishes the participant's local context.
+ * <p>The per-branch {@code attributes} passed to {@code beginBranch} are propagated client-side
+ * into each CRUD operation issued on the branch (via {@link
+ * AttributePropagatingBranchTransaction}). The {@code readOnly} flag and the transaction-scoped
+ * attributes supplied to {@code beginGlobal} are forwarded to the participant when the coordinator
+ * establishes its local context.
  *
  * <p>A single in-process participant is wired in, so a global transaction has at most one
  * meaningful branch (joining is idempotent per participant ID). The participant may be {@code null}
@@ -72,10 +74,14 @@ public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTrans
     }
     // Join the in-process participant to the global transaction. joinParticipant establishes the
     // participant's local context, forwarding the readOnly flag and the transaction-scoped
-    // attributes supplied at beginGlobal. The coordinator then drives 2PC across all joined
-    // participants.
+    // attributes supplied at beginGlobal. The per-branch attributes passed here are propagated
+    // client-side into each CRUD operation by AttributePropagatingBranchTransaction.
     coordinator.joinParticipant(transactionId, participant);
-    return new TwoPhaseCommitBackedBranchTransaction(participant, transactionId);
+    BranchTransaction branch =
+        new TwoPhaseCommitBackedBranchTransaction(participant, transactionId);
+    return attributes.isEmpty()
+        ? branch
+        : new AttributePropagatingBranchTransaction(branch, attributes);
   }
 
   @Override
