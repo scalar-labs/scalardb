@@ -1,15 +1,15 @@
 package com.scalar.db.storage.cassandra;
 
-import com.scalar.db.transaction.consensuscommit.TwoPhaseCommitBackedConsensusCommitSpecificIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.DistributedTransactionBackedConsensusCommitGlobalTransactionTestBase;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 
-public class TwoPhaseCommitBackedConsensusCommitSpecificIntegrationTestWithCassandra
-    extends TwoPhaseCommitBackedConsensusCommitSpecificIntegrationTestBase {
+public class DistributedTransactionBackedConsensusCommitGlobalTransactionTestWithCassandra
+    extends DistributedTransactionBackedConsensusCommitGlobalTransactionTestBase {
 
   @Override
-  protected Properties getFacadeStorageProperties(String testName) {
+  protected Properties getProps(String testName) {
     return ConsensusCommitCassandraEnv.getProperties(testName);
   }
 

@@ -7,7 +7,7 @@ import java.util.Properties;
  * Runs the ConsensusCommit cross-partition-scan integration-test corpus against the {@link
  * com.scalar.db.api.TwoPhaseCommitCoordinator} / {@link
  * com.scalar.db.api.TwoPhaseCommitParticipant} roles, driven through the single-phase {@link
- * com.scalar.db.common.TwoPhaseCommitBackedDistributedTransactionManager} facade.
+ * com.scalar.db.common.GlobalTransactionBackedDistributedTransactionManager} facade.
  *
  * <p>Like {@link TwoPhaseCommitBackedConsensusCommitIntegrationTestBase}, it reuses the
  * ConsensusCommit setup and only swaps the transaction manager via {@code getProps}. The
