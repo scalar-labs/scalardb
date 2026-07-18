@@ -778,7 +778,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         createIndex(connection, namespace, table, indexedColumn, true);
       }
 
-      if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
+      if (tableMetadataAlreadyUpToDate(namespace, table, metadata)) {
+        logger.debug(
+            "The metadata for the {} table is already up to date; skipping the metadata update",
+            getFullTableName(namespace, table));
+      } else if (tableExistsInternal(connection, metadataSchema, METADATA_TABLE)) {
         // Delete then add the metadata for the table
         execute(connection, getDeleteTableMetadataStatement(namespace, table));
         addTableMetadata(connection, namespace, table, metadata, false);
@@ -789,6 +793,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     } catch (ExecutionException | SQLException e) {
       throw new ExecutionException(
           String.format("Repairing the table %s.%s failed", namespace, table), e);
+    }
+  }
+
+  /**
+   * Returns whether the stored table metadata already equals the desired metadata. Fails open: if
+   * reading the current metadata throws (e.g. the metadata is corrupt and cannot be parsed), this
+   * returns {@code false} so the caller rewrites the metadata rather than skipping the repair.
+   */
+  private boolean tableMetadataAlreadyUpToDate(
+      String namespace, String table, TableMetadata metadata) {
+    try {
+      return metadata.equals(getTableMetadata(namespace, table));
+    } catch (Exception e) {
+      logger.debug(
+          "Failed to read the stored metadata for the {} table; proceeding with the metadata update",
+          getFullTableName(namespace, table),
+          e);
+      return false;
     }
   }
 
