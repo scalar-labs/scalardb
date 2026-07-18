@@ -6,7 +6,7 @@ import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.AbstractDistributedTransactionProvider;
-import com.scalar.db.common.TwoPhaseCommitBackedDistributedTransactionManager;
+import com.scalar.db.common.GlobalTransactionBackedDistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Properties;
 import javax.annotation.Nullable;
@@ -14,7 +14,8 @@ import javax.annotation.Nullable;
 /**
  * A test-only {@link com.scalar.db.api.DistributedTransactionProvider} that exposes the
  * consensus-commit-backed {@link TwoPhaseCommitCoordinator} / {@link TwoPhaseCommitParticipant}
- * roles through the single-phase {@link TwoPhaseCommitBackedDistributedTransactionManager} facade.
+ * roles through the single-phase {@link GlobalTransactionBackedDistributedTransactionManager}
+ * facade.
  *
  * <p>It is registered via {@code META-INF/services} in the integration-test module only, so it is
  * on the classpath when the integration tests run but never bundled into the production {@code
@@ -41,15 +42,14 @@ public class TwoPhaseCommitBackedConsensusCommitProvider
   @Override
   public DistributedTransactionManager createRawDistributedTransactionManager(
       DatabaseConfig config) {
-    // Build the roles through the inherited final factory methods so the role-level decorators
-    // (active transaction management, attribute propagation) wrap them exactly as in a production
-    // deployment; building the raw roles directly here would bypass those decorators and leave
-    // their code paths untested on this facade route.
+    // Build the global transaction manager through the inherited final factory method so the
+    // role-level decorators (active transaction management, attribute propagation) wrap the
+    // coordinator and participant exactly as in a production deployment; building the raw roles
+    // directly here would bypass those decorators and leave their code paths untested on this
+    // facade route.
     DatabaseConfig ccConfig = toConsensusCommitConfig(config);
-    TwoPhaseCommitCoordinator coordinator = createTwoPhaseCommitCoordinator(ccConfig);
-    TwoPhaseCommitParticipant participant = createTwoPhaseCommitParticipant(ccConfig);
-    return new TwoPhaseCommitBackedDistributedTransactionManager(
-        ccConfig, coordinator, participant);
+    return new GlobalTransactionBackedDistributedTransactionManager(
+        ccConfig, createGlobalTransactionManager(ccConfig));
   }
 
   @Override
