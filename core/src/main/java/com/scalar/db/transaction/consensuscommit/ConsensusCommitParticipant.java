@@ -68,8 +68,8 @@ import org.slf4j.LoggerFactory;
  * the property is unset.
  *
  * <p>State writes on the Coordinator table are <strong>not</strong> performed by this class — those
- * are the {@link TwoPhaseCommitCoordinator}'s responsibility under the new model. This class only
- * touches participant-owned records via {@link CrudHandler} and {@link ParticipantCommitHandler}'s
+ * are the {@link TwoPhaseCommitCoordinator}'s responsibility. This class only touches
+ * participant-owned records via {@link CrudHandler} and {@link ParticipantCommitHandler}'s
  * record-level primitives ({@code prepareRecords}, {@code validateRecords}, {@code commitRecords},
  * {@code rollbackRecords}).
  */
@@ -414,7 +414,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
       } finally {
         // Mark PREPARED even if prepareRecords throws partway: a partial prepare leaves PREPARED
         // records in storage that rollbackRecords must undo (it gates the storage rollback on this
-        // status). Mirrors TwoPhaseConsensusCommit.prepare, which sets needRollback in a finally.
+        // status).
         pc.toPrepared();
       }
       List<TwoPhaseCommitParticipant.WriteSetEntry> writeSet =
@@ -478,8 +478,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     ParticipantContext pc = contexts.get(transactionId);
     if (pc == null) {
       // Unknown or already-released transaction (e.g., a write-less participant that released early
-      // when its later steps were skipped, or a prior rollback): nothing to undo. Lenient no-op,
-      // mirroring TwoPhaseCommitCoordinator#rollback.
+      // when its later steps were skipped, or a prior rollback): nothing to undo. Lenient no-op.
       return;
     }
     synchronized (pc) {
@@ -579,12 +578,12 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     Snapshot snapshot = context.snapshot;
     List<TwoPhaseCommitParticipant.WriteSetEntry> entries = new ArrayList<>();
     // Returns empty iff !snapshot.hasWritesOrDeletes(), so the write set shipped to the Coordinator
-    // is empty exactly for a write-less participant — regardless of detailLevel, which only
-    // controls whether WRITE entries carry non-key columns, never which entries exist. The
-    // Coordinator gates writing the COMMITTED state row on this write set being non-empty (its
-    // hasWrites), which must agree with isCommitRequired and the validate-step self-release (both
-    // derived from context.isCommitRequired(), i.e. snapshot.hasWritesOrDeletes()); preserve this
-    // empty-iff-write-less guarantee if this method ever starts filtering entries.
+    // is empty exactly for a write-less participant, regardless of detailLevel (which controls only
+    // whether WRITE entries carry non-key columns, never which entries exist). The Coordinator
+    // gates writing the COMMITTED state row on this write set being non-empty, which must agree
+    // with isCommitRequired and the validate-step self-release (all derived from
+    // context.isCommitRequired()); preserve this empty-iff-write-less guarantee if this method ever
+    // starts filtering entries.
     if (!snapshot.hasWritesOrDeletes()) {
       return entries;
     }
@@ -820,12 +819,10 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
    * such lifecycle.
    *
    * <p>The entry is removed from {@link #contexts} at the participant's last driven step (no
-   * terminal retention): {@code commitRecords} / {@code rollbackRecords} for a participant with
-   * writes, or an earlier step ({@code validateRecords}, or {@code prepareRecords} when validation
-   * is not required either) for a write-less participant whose later steps the Coordinator skips.
-   * {@link Status#RELEASED} is not for retention: it only lets a concurrent in-flight operation
-   * that obtained its reference before the removal observe the termination (under the lock) and
-   * fail with {@link TransactionNotFoundException} instead of acting on a finished transaction.
+   * terminal retention). {@link Status#RELEASED} is not for retention: it only lets a concurrent
+   * in-flight operation that obtained its reference before the removal observe the termination
+   * (under the lock) and fail with {@link TransactionNotFoundException} instead of acting on a
+   * finished transaction.
    *
    * <p>Not internally synchronized: every status read/transition below must be performed while
    * synchronized on the instance (the participant holds {@code synchronized(context)} across check,

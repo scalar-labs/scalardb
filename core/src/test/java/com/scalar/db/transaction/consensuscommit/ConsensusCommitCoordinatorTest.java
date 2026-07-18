@@ -73,7 +73,7 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void begin_NoTransactionIdGiven_ShouldGenerateAndReturnId() throws Exception {
     // Act
-    String id = consensusCommitCoordinator.begin(null, false, Collections.emptyMap(), null);
+    String id = consensusCommitCoordinator.begin(null, false, Collections.emptyMap());
 
     // Assert
     assertThat(id).isNotNull().isNotEmpty();
@@ -82,7 +82,7 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void begin_TransactionIdGiven_ShouldReturnSameId() throws Exception {
     // Act
-    String id = consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    String id = consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
 
     // Assert
     assertThat(id).isEqualTo("tx-1");
@@ -91,28 +91,28 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void begin_SameTransactionIdTwice_ShouldThrowTransactionException() throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
 
     // Act Assert
     assertThatThrownBy(
-            () -> consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null))
+            () -> consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap()))
         .isInstanceOf(TransactionException.class);
   }
 
   @Test
-  void registerParticipant_UnknownTransaction_ShouldThrowTransactionNotFoundException() {
+  void joinParticipant_UnknownTransaction_ShouldThrowTransactionNotFoundException() {
     // Act Assert
     assertThatThrownBy(
             () ->
-                consensusCommitCoordinator.registerParticipant(
+                consensusCommitCoordinator.joinParticipant(
                     "unknown", mock(TwoPhaseCommitParticipant.class)))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  void registerParticipant_ShouldInvokeJoinAndTrackParticipant() throws Exception {
+  void joinParticipant_ShouldInvokeJoinAndTrackParticipant() throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap());
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
     when(participant.getId()).thenReturn("participant-1");
     // A writer that also requires validation, so all of its record-level steps are driven.
@@ -120,7 +120,7 @@ class ConsensusCommitCoordinatorTest {
         .thenReturn(preparation(writeSet(), true));
 
     // Act
-    consensusCommitCoordinator.registerParticipant("tx-1", participant);
+    consensusCommitCoordinator.joinParticipant("tx-1", participant);
 
     // Assert — join is invoked with the begin-time readOnly flag and attributes ...
     verify(participant).join("tx-1", true, Collections.emptyMap());
@@ -132,16 +132,16 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void registerParticipant_WhenJoinThrows_ShouldNotTrackParticipant() throws Exception {
+  void joinParticipant_WhenJoinThrows_ShouldNotTrackParticipant() throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
     doThrow(new TransactionException("join failed", "tx-1"))
         .when(participant)
         .join("tx-1", false, Collections.emptyMap());
 
     // Act
-    assertThatThrownBy(() -> consensusCommitCoordinator.registerParticipant("tx-1", participant))
+    assertThatThrownBy(() -> consensusCommitCoordinator.joinParticipant("tx-1", participant))
         .isInstanceOf(TransactionException.class);
 
     // Assert — a failed join leaves the participant untracked, so rollback never touches it.
@@ -150,16 +150,18 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void begin_WithParticipant_ShouldRegisterParticipant() throws Exception {
+  void joinParticipant_AfterBegin_ShouldJoinOnParticipantAndTrackIt() throws Exception {
     // Arrange
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
     when(participant.getId()).thenReturn("participant-1");
     when(participant.prepareRecords(anyString(), anyLong(), any())).thenReturn(emptyPreparation());
 
-    // Act — passing a participant to begin registers it exactly as registerParticipant would.
-    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), participant);
+    // Act
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap());
+    consensusCommitCoordinator.joinParticipant("tx-1", participant);
 
-    // Assert — join is invoked with the begin-time readOnly flag and attributes ...
+    // Assert — join is invoked on the participant with the begin-time readOnly flag and attributes
+    // ...
     verify(participant).join("tx-1", true, Collections.emptyMap());
     // ... and the participant is tracked, so a subsequent commit drives its record-level steps.
     consensusCommitCoordinator.commit("tx-1");
@@ -167,29 +169,9 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void begin_WithParticipant_WhenJoinThrows_ShouldReleaseContextAndPropagate() throws Exception {
-    // Arrange
-    TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
-    doThrow(new TransactionException("join failed", "tx-1"))
-        .when(participant)
-        .join("tx-1", false, Collections.emptyMap());
-
-    // Act Assert — the join failure propagates ...
-    assertThatThrownBy(
-            () ->
-                consensusCommitCoordinator.begin(
-                    "tx-1", false, Collections.emptyMap(), participant))
-        .isInstanceOf(TransactionException.class);
-
-    // ... and the context created by begin is released, so the same id can be begun again.
-    assertThat(consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null))
-        .isEqualTo("tx-1");
-  }
-
-  @Test
   void commit_ShouldDelegateCommitStateToCoordinatorHandler() throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
 
     // Act
     consensusCommitCoordinator.commit("tx-1");
@@ -202,7 +184,7 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_WhenCommitStateConflicts_ShouldThrowCommitConflictException() throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     doThrow(new CommitConflictException("conflict", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -217,9 +199,9 @@ class ConsensusCommitCoordinatorTest {
       throws Exception {
     // Arrange — prepare/validate succeed on both participants, but the COMMITTED-state write loses
     // a putState race that resolves to ABORTED (CommitConflictException).
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredWritingParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredWritingParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedWritingParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedWritingParticipant("tx-1", "participant-2");
     doThrow(new CommitConflictException("conflict", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -243,9 +225,9 @@ class ConsensusCommitCoordinatorTest {
     // PREPARED records and a live context; the write-less participant already self-released at
     // prepareRecords, so the Coordinator rolls back only toCommit (the writer), not every
     // participant.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant writer = registeredWritingParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant writeLess = registeredParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant writer = joinedWritingParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant writeLess = joinedParticipant("tx-1", "participant-2");
     doThrow(new CommitConflictException("conflict", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -267,8 +249,8 @@ class ConsensusCommitCoordinatorTest {
     // set with isValidationRequired() == false).
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant participant = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant participant = joinedParticipant("tx-1");
 
     // Act
     consensusCommitCoordinator.commit("tx-1");
@@ -289,9 +271,9 @@ class ConsensusCommitCoordinatorTest {
     // fails.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant =
-        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
+        joinedParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
     doThrow(new ValidationConflictException("validation conflict", "tx-1"))
         .when(participant)
         .validateRecords("tx-1");
@@ -314,9 +296,9 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — omission enabled, but the participant produced writes and validation fails.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant =
-        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), true));
+        joinedParticipant("tx-1", "participant-1", preparation(writeSet(), true));
     doThrow(new ValidationConflictException("validation conflict", "tx-1"))
         .when(participant)
         .validateRecords("tx-1");
@@ -347,9 +329,9 @@ class ConsensusCommitCoordinatorTest {
     // validate).
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant =
-        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
+        joinedParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
     doThrow(new TransactionNotFoundException("transaction not found", "tx-1"))
         .when(participant)
         .validateRecords("tx-1");
@@ -372,9 +354,9 @@ class ConsensusCommitCoordinatorTest {
     // transaction at validate time.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant =
-        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), true));
+        joinedParticipant("tx-1", "participant-1", preparation(writeSet(), true));
     doThrow(new TransactionNotFoundException("transaction not found", "tx-1"))
         .when(participant)
         .validateRecords("tx-1");
@@ -403,8 +385,8 @@ class ConsensusCommitCoordinatorTest {
     // prepare phase of a non-read-only transaction.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant participant = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant participant = joinedParticipant("tx-1");
     doThrow(new PreparationConflictException("conflict", "tx-1"))
         .when(participant)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -427,8 +409,8 @@ class ConsensusCommitCoordinatorTest {
     // read-only transaction).
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant participant = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap());
+    TwoPhaseCommitParticipant participant = joinedParticipant("tx-1");
     doThrow(new PreparationConflictException("conflict", "tx-1"))
         .when(participant)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -451,8 +433,8 @@ class ConsensusCommitCoordinatorTest {
     // knows the transaction while preparing (e.g. its context expired).
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant participant = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap());
+    TwoPhaseCommitParticipant participant = joinedParticipant("tx-1");
     doThrow(new TransactionNotFoundException("transaction not found", "tx-1"))
         .when(participant)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -473,8 +455,8 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — read-only, but omission disabled (the setUp default): the legacy behavior where
     // every terminated transaction leaves a Coordinator state row is preserved, mirroring the
     // commit-success path's gate.
-    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant participant = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap());
+    TwoPhaseCommitParticipant participant = joinedParticipant("tx-1");
     doThrow(new PreparationConflictException("conflict", "tx-1"))
         .when(participant)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -499,8 +481,8 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void rollback_ShouldDriveRollbackRecordsAndReleaseWithoutWritingAbortedState() throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant participant = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant participant = joinedParticipant("tx-1");
 
     // Act
     consensusCommitCoordinator.rollback("tx-1");
@@ -524,8 +506,8 @@ class ConsensusCommitCoordinatorTest {
   void releaseTransactionContext_ShouldReleaseContextWithoutDrivingParticipantsOrWritingState()
       throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant participant = registeredWritingParticipant("tx-1", "participant-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant participant = joinedWritingParticipant("tx-1", "participant-1");
 
     // Act
     consensusCommitCoordinator.releaseTransactionContext("tx-1");
@@ -551,7 +533,7 @@ class ConsensusCommitCoordinatorTest {
 
   @Test
   void commit_AfterCommit_ShouldThrowTransactionNotFoundException() throws Exception {
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     consensusCommitCoordinator.commit("tx-1");
 
     // The context was released by the first commit; a second commit no longer knows the
@@ -561,20 +543,20 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void registerParticipant_AfterCommit_ShouldThrowTransactionNotFoundException() throws Exception {
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+  void joinParticipant_AfterCommit_ShouldThrowTransactionNotFoundException() throws Exception {
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     consensusCommitCoordinator.commit("tx-1");
 
     assertThatThrownBy(
             () ->
-                consensusCommitCoordinator.registerParticipant(
+                consensusCommitCoordinator.joinParticipant(
                     "tx-1", mock(TwoPhaseCommitParticipant.class)))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
   void rollback_AfterCommit_ShouldBeNoOp() throws Exception {
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     consensusCommitCoordinator.commit("tx-1");
 
     // Rolling back an already-committed (released) transaction is a lenient no-op, not an error.
@@ -584,7 +566,7 @@ class ConsensusCommitCoordinatorTest {
 
   @Test
   void releaseTransactionContext_AfterCommit_ShouldBeNoOp() throws Exception {
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     consensusCommitCoordinator.commit("tx-1");
 
     // Releasing the context of an already-committed (released) transaction is a lenient no-op: the
@@ -595,15 +577,15 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void commit_TwoParticipants_ShouldDriveFullTwoPhaseCommitInRegistrationOrder() throws Exception {
+  void commit_TwoParticipants_ShouldDriveFullTwoPhaseCommitInJoinOrder() throws Exception {
     // Arrange — both participants write and require validation, so every record-level step is
     // driven.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant p1 =
-        registeredParticipant(
+        joinedParticipant(
             "tx-1", "participant-1", preparation(writeSet(), /* validationRequired= */ true));
     TwoPhaseCommitParticipant p2 =
-        registeredParticipant(
+        joinedParticipant(
             "tx-1", "participant-2", preparation(writeSet(), /* validationRequired= */ true));
 
     // Act
@@ -624,9 +606,9 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_WriteOnlyParticipant_ShouldSkipValidateRecords() throws Exception {
     // Arrange — the participant writes but does not require validation.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant =
-        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), false));
+        joinedParticipant("tx-1", "participant-1", preparation(writeSet(), false));
 
     // Act
     consensusCommitCoordinator.commit("tx-1");
@@ -642,9 +624,9 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_WriteLessValidatingParticipant_ShouldSkipCommitRecords() throws Exception {
     // Arrange — the participant has no writes but requires validation.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant =
-        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
+        joinedParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
 
     // Act
     consensusCommitCoordinator.commit("tx-1");
@@ -662,13 +644,13 @@ class ConsensusCommitCoordinatorTest {
     //   writer:         writes, no validation        -> prepare + commitRecords, no validate
     //   writeLessVal:   no writes, requires validation -> prepare + validate, no commitRecords
     //   writeLessNoVal: no writes, no validation      -> prepare only
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant writer =
-        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), false));
+        joinedParticipant("tx-1", "participant-1", preparation(writeSet(), false));
     TwoPhaseCommitParticipant writeLessVal =
-        registeredParticipant("tx-1", "participant-2", preparation(Collections.emptyList(), true));
+        joinedParticipant("tx-1", "participant-2", preparation(Collections.emptyList(), true));
     TwoPhaseCommitParticipant writeLessNoVal =
-        registeredParticipant("tx-1", "participant-3", preparation(Collections.emptyList(), false));
+        joinedParticipant("tx-1", "participant-3", preparation(Collections.emptyList(), false));
 
     // Act
     consensusCommitCoordinator.commit("tx-1");
@@ -694,9 +676,9 @@ class ConsensusCommitCoordinatorTest {
   void commit_WhenPrepareFailsOnSecondParticipant_ShouldWriteAbortedAndDriveRollback()
       throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedParticipant("tx-1", "participant-2");
     doThrow(new PreparationConflictException("conflict on p2", "tx-1"))
         .when(p2)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -720,9 +702,9 @@ class ConsensusCommitCoordinatorTest {
       commit_WhenPrepareThrowsTransactionNotFoundOnSecondParticipant_ShouldAbortRollBackAndRethrow()
           throws Exception {
     // Arrange — the second participant no longer knows the transaction (its local context is gone).
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedParticipant("tx-1", "participant-2");
     doThrow(new TransactionNotFoundException("gone on p2", "tx-1"))
         .when(p2)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -746,9 +728,9 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_WhenValidateFails_ShouldWriteAbortedAndDriveRollback() throws Exception {
     // Arrange — the participant requires validation, and validation fails.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant p1 =
-        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
+        joinedParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
     doThrow(new ValidationConflictException("validation conflict", "tx-1"))
         .when(p1)
         .validateRecords("tx-1");
@@ -772,8 +754,8 @@ class ConsensusCommitCoordinatorTest {
       throws Exception {
     // Arrange — a plain (non-conflict) PreparationException, e.g. an I/O failure during prepare
     // rather than a write conflict.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1");
     doThrow(new PreparationException("prepare failed", "tx-1"))
         .when(p1)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -793,9 +775,9 @@ class ConsensusCommitCoordinatorTest {
       throws Exception {
     // Arrange — a plain (non-conflict) ValidationException. The participant must require validation
     // (no writes, validation required) so the Coordinator actually drives validateRecords on it.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant p1 =
-        registeredParticipant(
+        joinedParticipant(
             "tx-1",
             "participant-1",
             preparation(Collections.emptyList(), /* validationRequired= */ true));
@@ -820,8 +802,8 @@ class ConsensusCommitCoordinatorTest {
   void commit_WhenCommitRecordsThrows_ShouldSwallowAndComplete() throws Exception {
     // Arrange — a writing participant, so the Coordinator drives commitRecords on it (a write-less
     // participant would be skipped and the doThrow stub below would never fire).
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredWritingParticipant("tx-1", "participant-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedWritingParticipant("tx-1", "participant-1");
     doThrow(new RuntimeException("network blip")).when(p1).commitRecords(eq("tx-1"), anyLong());
 
     // Act Assert — commitRecords is best-effort: the failure is swallowed and commit completes.
@@ -832,8 +814,8 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_WhenRollbackRecordsThrows_ShouldSwallowAndPropagateOriginal() throws Exception {
     // Arrange
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1");
     doThrow(new PreparationConflictException("conflict", "tx-1"))
         .when(p1)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -852,9 +834,9 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — both participants write (so commitRecords is driven on each) and commit
     // successfully through prepare/commitState; the first participant's best-effort commitRecords
     // then fails.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredWritingParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredWritingParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedWritingParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedWritingParticipant("tx-1", "participant-2");
     doThrow(new RuntimeException("network blip")).when(p1).commitRecords(eq("tx-1"), anyLong());
 
     // Act — commitRecords is best-effort, so the first participant's failure is swallowed.
@@ -871,10 +853,10 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — drive the abort path via a validate conflict on the second participant (which
     // therefore must require validation), then make the first participant's best-effort
     // rollbackRecords fail.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1", "participant-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1", "participant-1");
     TwoPhaseCommitParticipant p2 =
-        registeredParticipant("tx-1", "participant-2", preparation(Collections.emptyList(), true));
+        joinedParticipant("tx-1", "participant-2", preparation(Collections.emptyList(), true));
     doThrow(new ValidationConflictException("conflict", "tx-1")).when(p2).validateRecords("tx-1");
     doThrow(new RuntimeException("network blip")).when(p1).rollbackRecords("tx-1");
 
@@ -893,9 +875,9 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — the first participant reports the unknown transaction on its conventional
     // not-found channel (typical for a remote participant that already self-released or was
     // idle-reaped), which the contract defines as an alternative carrier of the no-op outcome.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedParticipant("tx-1", "participant-2");
     doThrow(new TransactionNotFoundException("gone", "tx-1")).when(p1).rollbackRecords("tx-1");
 
     // Act — the rollback completes normally; the not-found is treated exactly like a no-op return.
@@ -912,8 +894,8 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — prepare fails, and writing the ABORTED state genuinely fails with unknown status
     // (a real coordinator failure, not a mere putState conflict, which the handler would resolve to
     // ABORTED).
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1");
     doThrow(new PreparationConflictException("conflict", "tx-1"))
         .when(p1)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -936,11 +918,11 @@ class ConsensusCommitCoordinatorTest {
   void commit_TwoParticipants_WhenAbortStateWriteFailsUnknown_ShouldReleaseBothContexts()
       throws Exception {
     // Arrange — the first participant's prepare fails, driving the internal abort path, and the
-    // ABORTED-state write fails with unknown status. Both participants are registered, so the
+    // ABORTED-state write fails with unknown status. Both participants joined, so the
     // abort path holds a context for each.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedParticipant("tx-1", "participant-2");
     doThrow(new PreparationConflictException("conflict", "tx-1"))
         .when(p1)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -949,7 +931,7 @@ class ConsensusCommitCoordinatorTest {
         .abortState(anyString(), any());
 
     // Act Assert — the unknown status surfaces, records are not rolled back on either participant,
-    // and the abort path releases every registered participant's context (unlike the commit-state
+    // and the abort path releases every joined participant's context (unlike the commit-state
     // path's toCommit scoping, a participant that never prepared still holds an ACTIVE context
     // here).
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
@@ -966,9 +948,9 @@ class ConsensusCommitCoordinatorTest {
           throws Exception {
     // Arrange — the internal abort path with an unknown-status ABORTED write, and the first
     // participant's release itself fails.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedParticipant("tx-1", "participant-2");
     doThrow(new PreparationConflictException("conflict", "tx-1"))
         .when(p1)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -993,8 +975,8 @@ class ConsensusCommitCoordinatorTest {
   void commit_WhenCommitStateWriteFailsUnknown_ShouldPropagateUnknownStatusAndReleaseContexts()
       throws Exception {
     // Arrange — a writing participant, and the COMMITTED state write fails with unknown status.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredWritingParticipant("tx-1", "participant-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedWritingParticipant("tx-1", "participant-1");
     doThrow(new UnknownTransactionStatusException("unknown", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -1024,8 +1006,8 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — the participant's releaseTransactionContext itself fails (e.g. an unreachable
     // remote participant, which is likely correlated with the coordinator-table trouble that
     // caused the unknown status in the first place).
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredWritingParticipant("tx-1", "participant-1");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedWritingParticipant("tx-1", "participant-1");
     doThrow(new UnknownTransactionStatusException("unknown", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -1045,9 +1027,9 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — a writer and a write-less participant; the COMMITTED-state write fails with
     // unknown status. The write-less participant already self-released at prepareRecords, so only
     // toCommit (the writer) still holds a context.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant writer = registeredWritingParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant writeLess = registeredParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant writer = joinedWritingParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant writeLess = joinedParticipant("tx-1", "participant-2");
     doThrow(new UnknownTransactionStatusException("unknown", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -1067,9 +1049,9 @@ class ConsensusCommitCoordinatorTest {
           throws Exception {
     // Arrange — two writing participants; the COMMITTED-state write fails with unknown status and
     // the first participant's release itself fails.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant p1 = registeredWritingParticipant("tx-1", "participant-1");
-    TwoPhaseCommitParticipant p2 = registeredWritingParticipant("tx-1", "participant-2");
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant p1 = joinedWritingParticipant("tx-1", "participant-1");
+    TwoPhaseCommitParticipant p2 = joinedWritingParticipant("tx-1", "participant-2");
     doThrow(new UnknownTransactionStatusException("unknown", "tx-1"))
         .when(coordinatorCommitHandler)
         .commitState(anyString(), any());
@@ -1087,15 +1069,15 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void registerParticipant_WhenDuplicateParticipantId_ShouldBeNoOp() throws Exception {
-    // Arrange — one participant with a given ID is already registered.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    TwoPhaseCommitParticipant original = registeredParticipant("tx-1", "participant-1");
+  void joinParticipant_WhenDuplicateParticipantId_ShouldBeNoOp() throws Exception {
+    // Arrange — one participant with a given ID is already joined.
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    TwoPhaseCommitParticipant original = joinedParticipant("tx-1", "participant-1");
     TwoPhaseCommitParticipant duplicate = mock(TwoPhaseCommitParticipant.class);
     when(duplicate.getId()).thenReturn("participant-1");
 
-    // Act — registering a second participant that returns the same getId() is a no-op.
-    consensusCommitCoordinator.registerParticipant("tx-1", duplicate);
+    // Act — joining a second participant that returns the same getId() is a no-op.
+    consensusCommitCoordinator.joinParticipant("tx-1", duplicate);
 
     // Assert — the duplicate is never joined, and only the original participant is tracked (a
     // subsequent commit drives the original, not the duplicate).
@@ -1114,13 +1096,13 @@ class ConsensusCommitCoordinatorTest {
     // are aggregated per participant and stamped with the owning participant id.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
-    registeredParticipantWithWrites(
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
+    joinedParticipantWithWrites(
         "tx-1",
         "participant-1",
         writeSetEntry(WriteSetEntry.Type.WRITE, Key.ofInt("pk", 1), Optional.empty()),
         writeSetEntry(WriteSetEntry.Type.DELETE, Key.ofInt("pk", 2), Optional.empty()));
-    registeredParticipantWithWrites(
+    joinedParticipantWithWrites(
         "tx-1",
         "participant-2",
         writeSetEntry(WriteSetEntry.Type.WRITE, Key.ofInt("pk", 3), Optional.empty()));
@@ -1129,7 +1111,7 @@ class ConsensusCommitCoordinatorTest {
     consensusCommitCoordinator.commit("tx-1");
 
     // Assert — the COMMITTED state is written (hasWrites=true overrides write omission) with a
-    // WriteSet that has one EntryGroup per participant, in registration order, each entry stamped
+    // WriteSet that has one EntryGroup per participant, in join order, each entry stamped
     // with the owning participant id and the right entry type.
     ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
     verify(coordinatorCommitHandler).commitState(eq("tx-1"), captor.capture());
@@ -1155,9 +1137,9 @@ class ConsensusCommitCoordinatorTest {
     // Arrange — two writing participants that both require validation; the second fails validation,
     // driving the validate-phase abort. By then every prepareRecords has returned, so the
     // aggregated write set is complete — the same map the commit path would persist.
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant p1 =
-        registeredParticipant(
+        joinedParticipant(
             "tx-1",
             "participant-1",
             preparation(
@@ -1166,7 +1148,7 @@ class ConsensusCommitCoordinatorTest {
                     writeSetEntry(WriteSetEntry.Type.DELETE, Key.ofInt("pk", 2), Optional.empty())),
                 /* validationRequired= */ true));
     TwoPhaseCommitParticipant p2 =
-        registeredParticipant(
+        joinedParticipant(
             "tx-1",
             "participant-2",
             preparation(
@@ -1178,7 +1160,7 @@ class ConsensusCommitCoordinatorTest {
         .validateRecords("tx-1");
 
     // Act Assert — the ABORTED row carries the same participant-grouped, keys-only write set the
-    // commit path encodes (one EntryGroup per participant in registration order), so active
+    // commit path encodes (one EntryGroup per participant in join order), so active
     // recovery can find the touched records.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitConflictException.class)
@@ -1211,13 +1193,13 @@ class ConsensusCommitCoordinatorTest {
     // the second participant then fails to prepare, leaving p1's records PREPARED.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
-    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant p1 =
-        registeredParticipantWithWrites(
+        joinedParticipantWithWrites(
             "tx-1",
             "participant-1",
             writeSetEntry(WriteSetEntry.Type.WRITE, Key.ofInt("pk", 1), Optional.empty()));
-    TwoPhaseCommitParticipant p2 = registeredParticipant("tx-1", "participant-2");
+    TwoPhaseCommitParticipant p2 = joinedParticipant("tx-1", "participant-2");
     doThrow(new PreparationConflictException("conflict on p2", "tx-1"))
         .when(p2)
         .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
@@ -1237,29 +1219,29 @@ class ConsensusCommitCoordinatorTest {
     verify(p2).rollbackRecords("tx-1");
   }
 
-  private TwoPhaseCommitParticipant registeredParticipant(String transactionId) throws Exception {
-    return registeredParticipant(transactionId, "participant-1");
+  private TwoPhaseCommitParticipant joinedParticipant(String transactionId) throws Exception {
+    return joinedParticipant(transactionId, "participant-1");
   }
 
-  private TwoPhaseCommitParticipant registeredParticipant(
-      String transactionId, String participantId) throws Exception {
-    return registeredParticipant(transactionId, participantId, emptyPreparation());
+  private TwoPhaseCommitParticipant joinedParticipant(String transactionId, String participantId)
+      throws Exception {
+    return joinedParticipant(transactionId, participantId, emptyPreparation());
   }
 
-  private TwoPhaseCommitParticipant registeredParticipant(
+  private TwoPhaseCommitParticipant joinedParticipant(
       String transactionId, String participantId, PreparationResult preparationResult)
       throws Exception {
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
     when(participant.getId()).thenReturn(participantId);
     when(participant.prepareRecords(anyString(), anyLong(), any())).thenReturn(preparationResult);
-    consensusCommitCoordinator.registerParticipant(transactionId, participant);
+    consensusCommitCoordinator.joinParticipant(transactionId, participant);
     return participant;
   }
 
-  // A registered participant that produces a write (so the Coordinator drives commitRecords on it).
-  private TwoPhaseCommitParticipant registeredWritingParticipant(
+  // A joined participant that produces a write (so the Coordinator drives commitRecords on it).
+  private TwoPhaseCommitParticipant joinedWritingParticipant(
       String transactionId, String participantId) throws Exception {
-    return registeredParticipant(transactionId, participantId, writePreparation());
+    return joinedParticipant(transactionId, participantId, writePreparation());
   }
 
   private static PreparationResult preparation(
@@ -1331,9 +1313,9 @@ class ConsensusCommitCoordinatorTest {
         });
   }
 
-  // Registers a participant whose prepareRecords returns the given (non-empty) write set, so
+  // Joins a participant whose prepareRecords returns the given (non-empty) write set, so
   // commit() exercises the hasWrites=true aggregation/encoding path.
-  private TwoPhaseCommitParticipant registeredParticipantWithWrites(
+  private TwoPhaseCommitParticipant joinedParticipantWithWrites(
       String transactionId, String participantId, WriteSetEntry... entries) throws Exception {
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
     when(participant.getId()).thenReturn(participantId);
@@ -1342,7 +1324,7 @@ class ConsensusCommitCoordinatorTest {
     // aggregates the write set); validation is not required for these encoding-focused tests.
     when(participant.prepareRecords(anyString(), anyLong(), any()))
         .thenReturn(preparation(writeSet, /* validationRequired= */ false));
-    consensusCommitCoordinator.registerParticipant(transactionId, participant);
+    consensusCommitCoordinator.joinParticipant(transactionId, participant);
     return participant;
   }
 
