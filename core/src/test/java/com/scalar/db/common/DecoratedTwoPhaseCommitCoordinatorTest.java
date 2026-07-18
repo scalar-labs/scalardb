@@ -31,15 +31,15 @@ class DecoratedTwoPhaseCommitCoordinatorTest {
 
   @Test
   void begin_ShouldDelegate() throws Exception {
-    when(delegate.begin(any(), eq(false), eq(Collections.emptyMap()), any())).thenReturn(TX);
-    assertThat(coordinator.begin(null, false, Collections.emptyMap(), null)).isEqualTo(TX);
-    verify(delegate).begin(null, false, Collections.emptyMap(), null);
+    when(delegate.begin(any(), eq(false), eq(Collections.emptyMap()))).thenReturn(TX);
+    assertThat(coordinator.begin(null, false, Collections.emptyMap())).isEqualTo(TX);
+    verify(delegate).begin(null, false, Collections.emptyMap());
   }
 
   @Test
-  void registerParticipant_ShouldDelegate() throws Exception {
-    coordinator.registerParticipant(TX, participant);
-    verify(delegate).registerParticipant(TX, participant);
+  void joinParticipant_ShouldDelegate() throws Exception {
+    coordinator.joinParticipant(TX, participant);
+    verify(delegate).joinParticipant(TX, participant);
   }
 
   @Test

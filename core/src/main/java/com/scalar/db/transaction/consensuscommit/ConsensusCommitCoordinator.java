@@ -40,17 +40,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Consensus-commit-backed {@link TwoPhaseCommitCoordinator} implementation.
  *
- * <p>Drives the two-phase commit protocol across the participants registered for a transaction
+ * <p>Drives the two-phase commit protocol across the participants that joined a transaction
  * (prepare -&gt; validate -&gt; write COMMITTED state -&gt; commit records, with the abort/rollback
  * path on failure) and holds the per-transaction state in an in-memory map keyed by canonical
- * transaction ID. Each entry records the registered participants and the read-only flag and
- * attributes passed at {@code begin}. The map is cleaned up after every {@code commit} or {@code
- * rollback}.
+ * transaction ID. Each entry records the joined participants and the read-only flag and attributes
+ * passed at {@code begin}. The map is cleaned up after every {@code commit} or {@code rollback}.
  *
- * <p>TODO: support group commit on the new Coordinator (tracked separately from this change). This
- * is a planned extension, not a design limitation: the {@code WriteSet} persistence proto's {@code
- * child_id} (group-commit dimension) and {@code participant_id} (two-phase-commit dimension) are
- * orthogonal and already compose, and {@link CoordinatorStateAccessor#getState(String)} already
+ * <p>TODO: support group commit on the new Coordinator. The {@code WriteSet} persistence proto's
+ * {@code child_id} (group-commit dimension) and {@code participant_id} (two-phase-commit dimension)
+ * are orthogonal and already compose, and {@link CoordinatorStateAccessor#getState(String)} already
  * resolves full (parent + child) transaction IDs. The remaining work is reserving a group-commit
  * slot in {@code begin} (so the transaction ID becomes a full key) and routing the COMMITTED-state
  * write through the group-commit variant of the Coordinator-side handler.
@@ -88,7 +86,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
   }
 
   // TODO: Remove this guard once group commit is supported on the new Coordinator (see the class
-  // Javadoc). It is a temporary not-yet-implemented gate, not a permanent restriction.
+  // Javadoc).
   private static void throwIfGroupCommitIsEnabled(ConsensusCommitConfig config) {
     if (CoordinatorGroupCommitter.isEnabled(config)) {
       throw new IllegalArgumentException(
@@ -98,13 +96,9 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
 
   @Override
   public String begin(
-      @Nullable String transactionId,
-      boolean readOnly,
-      Map<String, String> attributes,
-      @Nullable TwoPhaseCommitParticipant participant)
+      @Nullable String transactionId, boolean readOnly, Map<String, String> attributes)
       throws TransactionException {
-    // Use the caller-supplied ID when present; otherwise generate one. Group commit is not yet
-    // supported on this path, so no parent-prefix logic is needed.
+    // Use the caller-supplied ID when present; otherwise generate one.
     String canonical = transactionId != null ? transactionId : UUID.randomUUID().toString();
     CoordinatorContext existing =
         contexts.putIfAbsent(canonical, new CoordinatorContext(canonical, readOnly, attributes));
@@ -112,37 +106,26 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
       throw new TransactionException(
           CoreError.TRANSACTION_ALREADY_EXISTS.buildMessage(), canonical);
     }
-    if (participant != null) {
-      // Register the optional participant exactly as registerParticipant would. If join fails, drop
-      // the just-created context so a failed begin leaves no orphaned state.
-      try {
-        registerParticipant(canonical, participant);
-      } catch (TransactionException e) {
-        releaseResources(canonical);
-        throw e;
-      }
-    }
     return canonical;
   }
 
   @Override
-  public void registerParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  public void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
     CoordinatorContext context = getContext(transactionId);
     synchronized (context) {
       context.checkActive();
-      // Registration is idempotent per participant ID: if a participant with the same getId() is
-      // already registered, this is a no-op (the participant is not joined again). commit() keys
-      // each participant's write set by getId(), so registering the same ID twice would otherwise
+      // Joining is idempotent per participant ID: if a participant with the same getId() is
+      // already joined, this is a no-op (the participant is not joined again). commit() keys
+      // each participant's write set by getId(), so joining the same ID twice would otherwise
       // merge into one EntryGroup and misattribute the persisted records.
-      for (TwoPhaseCommitParticipant registered : context.participants) {
-        if (registered.getId().equals(participant.getId())) {
+      for (TwoPhaseCommitParticipant joined : context.participants) {
+        if (joined.getId().equals(participant.getId())) {
           return;
         }
       }
       // Invoke TwoPhaseCommitParticipant.join first; only on success do we add the participant to
-      // the list so
-      // subsequent commit/rollback drives only successfully-joined participants.
+      // the list so subsequent commit/rollback drives only successfully-joined participants.
       participant.join(transactionId, context.readOnly, context.attributes);
       context.participants.add(participant);
     }
@@ -358,8 +341,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
   // snapshot it owns): no PREPARED record exists for lazy recovery to consult the row for, and
   // skipping the write also avoids surfacing a spurious UnknownTransactionStatusException from a
   // failed abortState whose outcome is in fact fully known. When the omission is disabled, the row
-  // is written regardless, preserving the legacy behavior that every terminated transaction leaves
-  // a Coordinator state row.
+  // is written regardless.
   //
   // For a transaction NOT known write-less, the ABORTED row is written unconditionally: records
   // may be left PREPARED, and writing ABORTED lets lazy recovery abort them on the next read
@@ -482,9 +464,8 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
   }
 
   // Writes the ABORTED state row via the Coordinator-side handler, persisting the write set encoded
-  // from writeSetsByParticipant (keys only), or none when null. Mirrors commitState, which likewise
-  // takes the aggregated map and encodes it here. See abortAndRollbackRecords for when a
-  // write set is supplied.
+  // from writeSetsByParticipant (keys only), or none when null. See abortAndRollbackRecords for
+  // when a write set is supplied.
   private void abortState(
       String transactionId, @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant)
       throws UnknownTransactionStatusException {

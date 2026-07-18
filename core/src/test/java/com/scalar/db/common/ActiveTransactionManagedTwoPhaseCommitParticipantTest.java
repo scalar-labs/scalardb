@@ -208,8 +208,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
   }
 
   // Stubs the wrapped participant's prepareRecords to report the given terminality, so the
-  // decorator
-  // can decide where this transaction's terminal step lands.
+  // decorator can decide where this transaction's terminal step lands.
   private void stubPrepare(boolean commitRequired, boolean validationRequired) throws Exception {
     TwoPhaseCommitParticipant.PreparationResult result =
         mock(TwoPhaseCommitParticipant.PreparationResult.class);
@@ -296,11 +295,9 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
 
     // Removal is success-only: a failed validateRecords must NOT remove the entry (the abort path's
     // rollbackRecords owns cleanup). With no rollback driven here, the entry survives, so the
-    // reaper
-    // still releases the context. This distinguishes "not removed on failure" from "removed": had
-    // the failure wrongly removed the entry, releaseTransactionContext would never fire and this
-    // would time
-    // out.
+    // reaper still releases the context. This distinguishes "not removed on failure" from
+    // "removed": had the failure wrongly removed the entry, releaseTransactionContext would never
+    // fire and this would time out.
     verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext(TX);
   }
 

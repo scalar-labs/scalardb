@@ -184,8 +184,7 @@ class AbstractDistributedTransactionProviderTest {
   }
 
   // A provider that does not support the two-phase commit interface: its raw two-phase-commit
-  // factory
-  // methods throw UnsupportedOperationException.
+  // factory methods throw UnsupportedOperationException.
   private AbstractDistributedTransactionProvider unsupportedProvider() {
     return new AbstractDistributedTransactionProvider() {
       @Override

@@ -84,10 +84,9 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
   String getId();
 
   /**
-   * Joins an existing transaction and establishes a local context on this participant.
+   * Joins an existing transaction, establishing a local context on this participant.
    *
-   * <p>Invoked by {@link TwoPhaseCommitCoordinator#registerParticipant} (including when {@link
-   * TwoPhaseCommitCoordinator#begin} is called with a participant); not intended to be invoked
+   * <p>Invoked by {@link TwoPhaseCommitCoordinator#joinParticipant}; not intended to be invoked
    * directly by other callers. {@code transactionId} must be the canonical ID returned by {@link
    * TwoPhaseCommitCoordinator#begin}.
    *
@@ -98,11 +97,11 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
    *     TwoPhaseCommitCoordinator#begin}
    * @param readOnly whether the transaction is known to be read-only
    * @param attributes implementation-specific transaction attributes (may be empty)
-   * @throws TransactionNotFoundException if joining the transaction fails due to transient faults.
-   *     You can retry the transaction from the beginning
-   * @throws TransactionException if joining the transaction fails due to transient or nontransient
-   *     faults. You can try retrying the transaction from the beginning, but the transaction may
-   *     still fail if the cause is nontransient
+   * @throws TransactionNotFoundException if joining the transaction on this participant fails due
+   *     to transient faults. You can retry the transaction from the beginning
+   * @throws TransactionException if joining the transaction on this participant fails due to
+   *     transient or nontransient faults. You can try retrying the transaction from the beginning,
+   *     but the transaction may still fail if the cause is nontransient
    */
   void join(String transactionId, boolean readOnly, Map<String, String> attributes)
       throws TransactionNotFoundException, TransactionException;
@@ -293,10 +292,6 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
    * and their keys are identical at either level, so an empty write set means a write-less
    * participant regardless of the requested detail.
    *
-   * <p>Throws {@link IllegalStateException} if any scanner opened on this transaction via {@link
-   * #getScanner} is still open; the application must close such scanners before the transaction
-   * proceeds to commit.
-   *
    * @param transactionId the canonical transaction ID
    * @param preparedAt the timestamp written as the {@code prepared_at} column on the PREPARED
    *     records
@@ -416,15 +411,14 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
    *     (never joined, already finished, or already reaped)
    * @throws TransactionNotFoundException if this participant definitely holds no context for the
    *     transaction. This is an alternative carrier of the {@code false} answer: a remote
-   *     implementation may surface its conventional not-found error mapping - for example, a probe
-   *     rerouted to a successor node after a crash, where the context is genuinely gone - instead
-   *     of converting it to a return value. Callers must treat it exactly like a {@code false}
-   *     return. Note the inversion from every other method on this interface, where this exception
-   *     marks a transient, retriable condition: here it is an authoritative answer that callers act
-   *     on terminally (by reaping). An implementation must therefore throw it only when the absence
-   *     is authoritative for the participant as a whole - never for a transient miss, such as a
-   *     probe answered by a node that does not hold the context while another node still might. A
-   *     condition like that must surface as {@link TransactionException} (fail-open) instead
+   *     implementation may surface its conventional not-found error mapping instead of converting
+   *     it to a return value, so callers must treat it exactly like a {@code false} return. Note
+   *     the inversion from every other method on this interface, where this exception marks a
+   *     transient, retriable condition: here it is an authoritative answer that callers act on
+   *     terminally (by reaping). An implementation must therefore throw it only when the absence is
+   *     authoritative for the participant as a whole — never for a transient miss (such as a probe
+   *     answered by a node that does not hold the context while another node still might), which
+   *     must surface as {@link TransactionException} (fail-open) instead
    * @throws TransactionException if the probe fails due to transient or nontransient faults (for
    *     example, a remote participant that cannot be reached, or one that does not implement the
    *     probe). Callers must treat a failed probe conservatively, as possibly present
@@ -476,8 +470,7 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
    * <p>It lets the participant report what the Coordinator needs to drive the rest of the protocol
    * — the write set to record, whether this participant still requires validation, and whether its
    * records still require committing — so the Coordinator can skip steps that would have nothing to
-   * do (see {@link TwoPhaseCommitParticipant}). It is a dedicated envelope so the prepare phase can
-   * report additional information in the future without changing the method signature.
+   * do (see {@link TwoPhaseCommitParticipant}).
    */
   interface PreparationResult {
 
@@ -582,12 +575,6 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
    * primary keys are identical at every level; it only controls whether {@link
    * WriteSetEntry#getColumns()} is populated. {@link WriteSetEntry.Type#DELETE} entries never carry
    * columns at any level.
-   *
-   * <p>This enum is a single ordered axis of record-content detail, and {@link #FULL} is its
-   * permanent ceiling. Additions that go beyond the record content of a write — transaction
-   * metadata, before images, and the like — are not higher levels; they belong on a separate axis
-   * (for example, dedicated {@link WriteSetEntry} fields gated by their own flag), so that {@code
-   * FULL} keeps meaning exactly "the whole record content".
    */
   enum WriteSetDetailLevel {
     /**
