@@ -32,37 +32,30 @@ import javax.annotation.concurrent.ThreadSafe;
  * A {@link TwoPhaseCommitParticipant} decorator that propagates the transaction-scoped attributes
  * supplied at {@link #join} into every CRUD operation issued for that transaction.
  *
- * <p>Begin-attributes reach the participant via {@link
- * TwoPhaseCommitCoordinator#registerParticipant} → {@code join}; this decorator captures them
- * (keyed by transaction ID) and merges them into each operation before delegating, with an
- * attribute set directly on the operation winning over the transaction-scoped one (see {@link
- * OperationAttributeMerger}). It therefore sits <em>outside</em> any decorator that reads operation
- * attributes (e.g. ABAC).
+ * <p>Begin-attributes reach the participant via {@link TwoPhaseCommitCoordinator#joinParticipant} →
+ * {@code join}; this decorator captures them (keyed by transaction ID) and merges them into each
+ * operation before delegating, with an attribute set directly on the operation winning over the
+ * transaction-scoped one (see {@link OperationAttributeMerger}). It therefore sits <em>outside</em>
+ * any decorator that reads operation attributes (e.g. ABAC).
  *
  * <p>The captured attributes are needed only while CRUD operations are still issued, so they are
  * dropped as soon as the CRUD phase ends. {@code prepareRecords} is that boundary: no CRUD is
- * accepted once a transaction has been prepared, so this decorator drops the attributes there.
- * Dropping at {@code prepareRecords} rather than at {@code commitRecords} matters because the
- * Coordinator skips {@code commitRecords} (and possibly {@code validateRecords}) for a write-less
- * participant — including every read-only transaction — so a normally-committed write-less
- * transaction would otherwise never reach a terminal step that clears its entry. The attributes are
- * also dropped on {@code rollbackRecords} and {@code releaseTransactionContext} to cover
- * transactions that are rolled back or reaped before ever preparing.
+ * accepted once a transaction has been prepared. Dropping there rather than at {@code
+ * commitRecords} also covers write-less transactions (including every read-only one), whose {@code
+ * commitRecords} the Coordinator skips. The attributes are also dropped on {@code rollbackRecords}
+ * and {@code releaseTransactionContext} to cover transactions that are rolled back or reaped before
+ * ever preparing.
  *
  * <p>The record-level step {@code validateRecords} and non-CRUD methods are forwarded unchanged;
  * they do not read the transaction-scoped attributes.
  *
- * <p>The captured attributes are released only on a step driven through this decorator. A
- * transaction abandoned before any such step (e.g. a crashed client that never prepares, rolls
- * back, or is released) leaves its entry until the JVM exits. This is reaped only when {@link
- * ActiveTransactionManagedTwoPhaseCommitParticipant} wraps this decorator <em>and</em> idle expiry
- * is actually running — which requires both active transaction management to be enabled and a
- * positive {@code scalar.db.active_transaction_management.expiration_time_millis} (a non-positive
- * value, which is the default, disables the reaper). Only then does idle expiry call {@code
- * releaseTransactionContext} and clear the entry. The leak is in lockstep with the wrapped
- * participant's own per-transaction context, which active transaction management reaps under the
- * same precondition. Enable active transaction management with a positive expiration time whenever
- * this decorator is used.
+ * <p>The captured attributes are released only on a step driven through this decorator, so a
+ * transaction abandoned beforehand (e.g. a crashed client that never prepares, rolls back, or is
+ * released) leaks its entry until the JVM exits. Idle expiry clears it only when {@link
+ * ActiveTransactionManagedTwoPhaseCommitParticipant} wraps this decorator and a positive {@code
+ * scalar.db.active_transaction_management.expiration_time_millis} is set (a non-positive value, the
+ * default, disables the reaper). Enable active transaction management with a positive expiration
+ * time whenever this decorator is used.
  */
 @ThreadSafe
 public class AttributePropagatingTwoPhaseCommitParticipant
@@ -162,9 +155,9 @@ public class AttributePropagatingTwoPhaseCommitParticipant
       return super.prepareRecords(transactionId, preparedAt, detailLevel);
     } finally {
       // prepareRecords ends the CRUD phase (no CRUD is accepted once prepared), so the captured
-      // attributes are no longer needed and are dropped here. Dropping here rather than at
-      // commitRecords also covers write-less transactions (including every read-only one), whose
-      // commitRecords the Coordinator skips; commitRecords is therefore not a terminal step here.
+      // attributes are dropped here. Dropping here rather than at commitRecords also covers
+      // write-less transactions (including every read-only one), whose commitRecords the
+      // Coordinator skips.
       transactionAttributes.remove(transactionId);
     }
   }

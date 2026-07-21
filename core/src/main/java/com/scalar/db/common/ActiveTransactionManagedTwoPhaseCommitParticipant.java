@@ -47,13 +47,12 @@ import javax.annotation.concurrent.ThreadSafe;
  * TwoPhaseCommitParticipant#releaseTransactionContext} directly on the wrapped participant. An
  * embedder that interposes a cross-cutting decorator between this decorator and the wrapped
  * participant — for example, an authorization decorator that credential-checks every call — may
- * need that reap-driven release to run in a different execution context than a normal caller-driven
- * one, because the reaper runs on an internal timer thread that carries no caller credentials. The
- * {@linkplain #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommitParticipant, long,
- * int, ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} lets such an
- * embedder substitute the reap-driven release action (e.g. wrap it in a privileged mode) while
- * leaving every other path untouched. This mirrors the seam {@link
- * ActiveTransactionManagedDistributedTransactionManager} already exposes for its 1PC reaper.
+ * need the reap-driven release to run in a different execution context, because the reaper runs on
+ * an internal timer thread that carries no caller credentials. The {@linkplain
+ * #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommitParticipant, long, int,
+ * ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} lets such an embedder
+ * substitute the reap-driven release action while leaving every other path untouched, mirroring the
+ * seam {@link ActiveTransactionManagedDistributedTransactionManager} exposes for its 1PC reaper.
  *
  * <p>A write-less participant does not always reach {@link #commitRecords}: the Coordinator skips
  * the steps a participant no longer needs, so for such a participant the last driven step is {@link
@@ -115,13 +114,12 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
    * wrapped participant.
    *
    * <p>Use this when the reap-driven release must run in a special execution context — for example,
-   * when a cross-cutting decorator between this decorator and the wrapped participant would reject
-   * a call made from the credential-less reaper thread, so the embedder needs to wrap the release
-   * in a privileged mode (see the class documentation). The handler is invoked for both idle expiry
-   * and cap eviction, and it fully replaces the default action: the embedder performs the actual
-   * release itself (typically {@code participant.releaseTransactionContext(transactionId)}) and, if
-   * its wrapped participant can report an already-released context as a {@link
-   * TransactionNotFoundException}, is responsible for treating that as the benign no-op it denotes.
+   * when a cross-cutting decorator would reject a call made from the credential-less reaper thread
+   * (see the class documentation). The handler is invoked for both idle expiry and cap eviction,
+   * and it fully replaces the default action: the embedder performs the actual release itself
+   * (typically {@code participant.releaseTransactionContext(transactionId)}) and, if its wrapped
+   * participant can report an already-released context as a {@link TransactionNotFoundException},
+   * is responsible for treating that as the benign no-op it denotes.
    *
    * @param participant the wrapped participant
    * @param expirationTimeMillis the idle expiration time in milliseconds
@@ -262,9 +260,8 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
     TwoPhaseCommitParticipant.PreparationResult result =
         super.prepareRecords(transactionId, preparedAt, detailLevel);
     if (result.isCommitRequired()) {
-      // Intentionally nothing to do here: commitRecords will be driven and is the terminal step,
-      // and its override removes the entry. Kept as an explicit arm so all three terminal-step
-      // cases read in protocol order.
+      // Nothing to do: commitRecords will be driven and is the terminal step; its override removes
+      // the entry.
     } else if (result.isValidationRequired()) {
       // Write-less but validating: validateRecords is the terminal step. Flag the entry so
       // validateRecords removes it.

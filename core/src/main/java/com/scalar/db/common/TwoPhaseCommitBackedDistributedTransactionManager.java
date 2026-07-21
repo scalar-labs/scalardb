@@ -42,7 +42,7 @@ import javax.annotation.Nullable;
  * Adapts a {@link TwoPhaseCommitCoordinator} + a single in-process {@link
  * TwoPhaseCommitParticipant} to the {@link com.scalar.db.api.DistributedTransactionManager} API.
  *
- * <p>Each {@code begin} allocates a transaction via the coordinator, registers the in-process
+ * <p>Each {@code begin} allocates a transaction via the coordinator, joins the in-process
  * participant, and returns a {@link TwoPhaseCommitBackedDistributedTransaction}. The full two-phase
  * commit protocol is internalized behind the single-phase {@code commit()} — so this manager can
  * front the new Coordinator/Participant pair for (a) single-cluster clients and (b) running the
@@ -91,7 +91,18 @@ public class TwoPhaseCommitBackedDistributedTransactionManager
 
   private DistributedTransaction beginInternal(
       String txId, boolean readOnly, Map<String, String> attributes) throws TransactionException {
-    String canonicalId = coordinator.begin(txId, readOnly, attributes, participant);
+    String canonicalId = coordinator.begin(txId, readOnly, attributes);
+    if (participant != null) {
+      try {
+        coordinator.joinParticipant(canonicalId, participant);
+      } catch (TransactionException e) {
+        // A failed join would leave the just-begun coordinator context orphaned; release it so
+        // begin-then-join is atomic from the caller's perspective. The release is a pure
+        // in-memory reap that no-ops on an unknown transaction and does not throw.
+        coordinator.releaseTransactionContext(canonicalId);
+        throw e;
+      }
+    }
     DistributedTransaction transaction = createTransaction(coordinator, participant, canonicalId);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
@@ -101,7 +112,7 @@ public class TwoPhaseCommitBackedDistributedTransactionManager
   @Override
   public DistributedTransaction join(String txId) throws TransactionException {
     checkParticipantConfigured();
-    coordinator.registerParticipant(txId, participant);
+    coordinator.joinParticipant(txId, participant);
     DistributedTransaction transaction = createTransaction(coordinator, participant, txId);
     getNamespace().ifPresent(transaction::withNamespace);
     getTable().ifPresent(transaction::withTable);
