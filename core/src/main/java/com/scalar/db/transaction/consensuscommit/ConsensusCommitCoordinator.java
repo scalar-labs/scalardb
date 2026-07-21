@@ -162,8 +162,8 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
 
         // A write-less transaction (every participant returns an empty write set) writes no
         // COMMITTED Coordinator state row when coordinator-write omission on read-only is enabled.
-        // Only the commit-success path is gated on this; the abort path always writes ABORTED (see
-        // abortAndRollbackRecords).
+        // The abort path applies the same omission when the transaction is known write-less (see
+        // the knownWriteLess arguments below and abortAndRollbackRecords).
         boolean hasWrites = false;
 
         // Drive only the steps each participant still needs (mirroring CommitHandler, minus the
@@ -202,32 +202,55 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
                 .computeIfAbsent(participant.getId(), k -> new ArrayList<>())
                 .addAll(entries);
           }
-          for (Participant participant : toValidate) {
-            participant.validateRecords(transactionId);
-          }
-        } catch (PreparationException | ValidationException e) {
-          // Prepare or validate failed. Abort the transaction and roll back every participant:
-          // writers undo their PREPARED records; others (not yet prepared, or already
-          // self-released) just release, and rollbackRecords is a no-op for an already-released
-          // participant. The prepare/validate phases are internal to commit(), so the failure is
+        } catch (PreparationException e) {
+          // Prepare failed. Abort the transaction and roll back every participant: writers undo
+          // their PREPARED records; others (not yet prepared, or already self-released) just
+          // release, and rollbackRecords is a no-op for an already-released participant. hasWrites
+          // is NOT trustworthy here — a participant that threw part-way through prepareRecords
+          // never returned its write set — so only the static readOnly flag can prove the
+          // transaction write-less. The prepare phase is internal to commit(), so the failure is
           // reported as a commit-level exception: a conflict as CommitConflictException so the
           // caller's retry logic still sees it as retriable, anything else as CommitException.
-          abortAndRollbackRecords(transactionId, participants);
-          if (e instanceof PreparationConflictException
-              || e instanceof ValidationConflictException) {
+          abortAndRollbackRecords(transactionId, context.readOnly, participants);
+          if (e instanceof PreparationConflictException) {
             throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
           }
           throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
         } catch (TransactionNotFoundException e) {
-          // A participant no longer knows this transaction (its local context is gone, e.g. it
-          // expired). The transaction cannot commit: abort it and roll back the records already
-          // PREPARED on the other participants, then surface the TransactionNotFoundException as-is
-          // (the facade maps it to a retriable conflict).
-          abortAndRollbackRecords(transactionId, participants);
+          // A participant no longer knows this transaction while preparing (its local context is
+          // gone, e.g. it expired). The transaction cannot commit: abort it and roll back the
+          // records already PREPARED on the other participants, then surface the
+          // TransactionNotFoundException as-is (the facade maps it to a retriable conflict). As
+          // above, hasWrites is not trustworthy mid-prepare, so only readOnly counts.
+          abortAndRollbackRecords(transactionId, context.readOnly, participants);
           throw e;
         }
+
+        try {
+          for (Participant participant : toValidate) {
+            participant.validateRecords(transactionId);
+          }
+        } catch (ValidationException e) {
+          // Validate failed. Unlike the prepare-phase failures above, every prepareRecords has
+          // returned by now, so hasWrites authoritatively reflects every participant's write set
+          // and can prove the transaction write-less (matching CommitHandler, which gates its
+          // abort on the snapshot it owns). The failure is reported as a commit-level exception,
+          // mirroring the prepare phase: a conflict as CommitConflictException, anything else as
+          // CommitException.
+          abortAndRollbackRecords(transactionId, !hasWrites, participants);
+          if (e instanceof ValidationConflictException) {
+            throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+          }
+          throw new CommitException(e.getMessage(), e, e.getTransactionId().orElse(null));
+        } catch (TransactionNotFoundException e) {
+          // A participant no longer knows this transaction while validating. As above, hasWrites
+          // is authoritative at this point.
+          abortAndRollbackRecords(transactionId, !hasWrites, participants);
+          throw e;
+        }
+
         long committedAt;
-        if (hasWrites || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+        if (isCoordinatorStateWriteRequired(hasWrites)) {
           try {
             committedAt = commitState(transactionId, writeSetsByParticipant);
           } catch (CommitConflictException e) {
@@ -310,24 +333,39 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     storage.close();
   }
 
-  // Aborts the transaction and rolls back the PREPARED records on every participant. The ABORTED
-  // Coordinator state row is always written here, unconditionally: a prepare/validate failure can
-  // leave records PREPARED that hasWrites has not observed (a participant that threw part-way
-  // through prepareRecords never returned its write set, and the first writer to throw leaves
-  // hasWrites false), so the write-less/read-only omission cannot be applied safely on the abort
-  // path. Writing ABORTED lets lazy recovery abort those records on the next read instead of
-  // leaving them locked until the transaction lifetime expires. This is more conservative than
-  // CommitHandler, which gates its abort on hasWritesOrDeletesInSnapshot -- a flag it derives
-  // accurately up-front from the snapshot; the Coordinator only learns each participant's write set
-  // incrementally during prepare, so it cannot compute that flag cheaply and always writes ABORTED
-  // here. (The omission still applies on the commit-success path, where hasWrites accurately
-  // reflects every participant's returned write set.)
-  private void abortAndRollbackRecords(String transactionId, List<Participant> participants)
+  // Aborts the transaction and rolls back the PREPARED records on every participant.
+  //
+  // knownWriteLess reports whether the transaction provably has no writes anywhere — the static
+  // readOnly flag on a prepare-phase failure, or the observed !hasWrites once every prepareRecords
+  // has returned (see the call sites in commit()). When it is true and coordinator-write omission
+  // on read-only is enabled, the ABORTED Coordinator state row is skipped, mirroring the
+  // commit-success path's COMMITTED-row gate (and CommitHandler's abort path, which gates on the
+  // snapshot it owns): no PREPARED record exists for lazy recovery to consult the row for, and
+  // skipping the write also avoids surfacing a spurious UnknownTransactionStatusException from a
+  // failed abortState whose outcome is in fact fully known. When the omission is disabled, the row
+  // is written regardless, preserving the legacy behavior that every terminated transaction leaves
+  // a Coordinator state row.
+  //
+  // For a transaction NOT known write-less, the ABORTED row is written unconditionally: records
+  // may be left PREPARED, and writing ABORTED lets lazy recovery abort them on the next read
+  // instead of leaving them locked until the transaction lifetime expires.
+  private void abortAndRollbackRecords(
+      String transactionId, boolean knownWriteLess, List<Participant> participants)
       throws UnknownTransactionStatusException {
-    abortState(transactionId);
+    if (isCoordinatorStateWriteRequired(!knownWriteLess)) {
+      abortState(transactionId);
+    }
     for (Participant participant : participants) {
       bestEffortRollbackRecords(participant, transactionId);
     }
+  }
+
+  // The single policy behind both Coordinator state gates: the row (COMMITTED on the
+  // commit-success path, ABORTED on the abort path) is written unless the transaction is provably
+  // write-less and coordinator-write omission on read-only is enabled. Mirrors CommitHandler's
+  // gate of the same name.
+  private boolean isCoordinatorStateWriteRequired(boolean mayHaveWrites) {
+    return mayHaveWrites || !coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
   private void bestEffortCommitRecords(Participant participant, String txId, long committedAt) {
