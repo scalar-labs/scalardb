@@ -71,7 +71,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ParallelExecutor parallelExecutor;
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
-  protected final CommitHandler commit;
+  private final CommitHandler commit;
   private final Isolation isolation;
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
@@ -830,6 +830,21 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
    */
   protected TransactionTableMetadataManager getTableMetadataManager() {
     return tableMetadataManager;
+  }
+
+  /**
+   * Sets a {@link BeforePreparationHook} that runs before the preparation phase of a two-phase
+   * commit. The hook is not invoked when the one-phase commit optimization is taken; see {@link
+   * BeforePreparationHook} for details.
+   *
+   * <p>Subclasses must call this during construction, before any transaction begins. The hook is
+   * not set atomically with respect to in-flight commits, so setting it later races with them.
+   *
+   * @param beforePreparationHook a {@link BeforePreparationHook} to run before the preparation
+   *     phase of a two-phase commit
+   */
+  protected void setBeforePreparationHook(BeforePreparationHook beforePreparationHook) {
+    commit.setBeforePreparationHook(beforePreparationHook);
   }
 
   @Override

@@ -2544,4 +2544,16 @@ public class ConsensusCommitManagerTest {
     // recoverRecord must never perform Coordinator state cleanup, even on failure.
     verify(coordinator, never()).deleteState(anyString());
   }
+
+  @Test
+  public void setBeforePreparationHook_HookGiven_ShouldSetItToCommitHandler() {
+    // Arrange
+    BeforePreparationHook beforePreparationHook = mock(BeforePreparationHook.class);
+
+    // Act
+    manager.setBeforePreparationHook(beforePreparationHook);
+
+    // Assert
+    verify(commit).setBeforePreparationHook(beforePreparationHook);
+  }
 }
