@@ -807,6 +807,31 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return groupCommitter != null;
   }
 
+  /**
+   * Returns the {@link DistributedStorage} instance this manager uses.
+   *
+   * <p>This instance is owned by this manager and is closed by {@link #close()}. Subclasses that
+   * reuse it must not close it themselves.
+   *
+   * @return the {@link DistributedStorage} instance this manager uses
+   */
+  protected DistributedStorage getStorage() {
+    return storage;
+  }
+
+  /**
+   * Returns the {@link TransactionTableMetadataManager} instance this manager uses.
+   *
+   * <p>This instance is owned by this manager. It holds no closeable resource, but it caches table
+   * metadata read through the {@link DistributedStorageAdmin} that {@link #close()} closes, so
+   * subclasses must not use it after this manager is closed.
+   *
+   * @return the {@link TransactionTableMetadataManager} instance this manager uses
+   */
+  protected TransactionTableMetadataManager getTableMetadataManager() {
+    return tableMetadataManager;
+  }
+
   @Override
   public void close() {
     storage.close();
