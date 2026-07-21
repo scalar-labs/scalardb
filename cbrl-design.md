@@ -21,18 +21,20 @@ them is violated the restore is silently wrong, not erroring.
 ```mermaid
 sequenceDiagram
     participant Op as Operator
-    participant App as App (Consensus Commit)
+    participant App as App<br/>(Consensus Commit)
     box primary DB
-        participant Co as coordinator (tx_write_set)
-        participant DB as user tables
+        participant Flag as backup flag<br/>table
+        participant Co as coordinator<br/>(tx_write_set) table
+        participant DB as user<br/>tables
     end
     box restored DB
-        participant UTr as user tables
-        participant COr as coordinator table
+        participant UTr as user<br/>tables
+        participant COr as coordinator<br/>table
     end
-    participant R as Restore (CBRL replay)
-    Op->>Co: open backup mode (enableRedoLogging)
-    Note over App,Co: window open — commits log redo
+    participant R as Restore<br/>(CBRL replay)
+    Op->>Flag: open backup mode (enableRedoLogging)
+    App->>Flag: daemon polls the flag (per process)
+    Flag-->>App: window open, begin() starts redo logging
     App->>Co: each commit logs its write ops (keys, columns, prev_tx_id)
     Op->>DB: physical backup (non-snapshot), taken first
     Op->>Co: physical backup (atomic), taken last<br/>-> the consistency point
@@ -146,10 +148,10 @@ sequenceDiagram
     participant Op as Operator
     participant T as backup table
     participant P as App process
-    Op->>T: putIfNotExists the single row (label); a second open is rejected
+    Op->>T: putIfNotExists the single row (label), a second open is rejected
     loop every check-interval, 5s
         P->>T: get the single row
-        T-->>P: present, cache the label and log redo; absent, stop
+        T-->>P: if present cache the label and log redo, else stop
     end
     Note over Op,P: cache wait spans interval + staleness-bound + tx-timeout + skew
     Note over Op,P: every process sees the flag and pre-flag txns drain
