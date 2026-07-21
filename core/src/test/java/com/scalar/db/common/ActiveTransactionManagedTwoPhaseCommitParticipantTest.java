@@ -1,5 +1,6 @@
 package com.scalar.db.common;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
@@ -76,6 +78,35 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     verify(delegate).join(TX, false, Collections.emptyMap());
     // After the idle expiration, the reaper releases the context on the wrapped participant.
     verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseContext(TX);
+  }
+
+  @Test
+  void hasTransactionContext_ShouldForwardToDelegateUntouched() throws Exception {
+    // Deliberately not overridden: the probe passes through to the wrapped participant so it can
+    // never refresh this decorator's idle timer - the quiet contract holds by construction. This
+    // pins that no registry-based override gets reintroduced.
+    when(delegate.hasTransactionContext(TX)).thenReturn(true);
+
+    assertThat(participant.hasTransactionContext(TX)).isTrue();
+
+    verify(delegate).hasTransactionContext(TX);
+  }
+
+  @Test
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  void hasTransactionContext_ShouldNotTouchRegistry() throws Exception {
+    // The quiet contract pinned from the registry side: the probe must not count as activity (no
+    // touch, no get), or the probing coordinator would keep an abandoned transaction's idle timer
+    // fresh forever. The forwarding test above stays green even for an override that also touches
+    // the registry; this one does not.
+    ActiveTransactionRegistry registry = mock(ActiveTransactionRegistry.class);
+    ActiveTransactionManagedTwoPhaseCommitParticipant p =
+        new ActiveTransactionManagedTwoPhaseCommitParticipant(delegate, registry);
+    when(delegate.hasTransactionContext(TX)).thenReturn(true);
+
+    assertThat(p.hasTransactionContext(TX)).isTrue();
+
+    verifyNoInteractions(registry);
   }
 
   @Test

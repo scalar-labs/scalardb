@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.google.common.util.concurrent.Uninterruptibles;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -202,6 +204,32 @@ public class ActiveExpiringMapTest {
       present++;
     }
     assertThat(present).isEqualTo(2);
+  }
+
+  @Test
+  public void forEach_ShouldVisitEntriesWithoutCountingAsAccess() {
+    // Pins the claim the forEach() Javadoc makes: traversal must not refresh the visited entries'
+    // idle timers, or a caller sweeping the map periodically would keep every entry alive forever.
+    FakeTicker ticker = new FakeTicker();
+    Set<String> expired = ConcurrentHashMap.newKeySet();
+    ActiveExpiringMap<String, String> activeExpiringMap =
+        new ActiveExpiringMap<>(
+            300, 0, (k, v) -> expired.add(k), (k, v) -> {}, ticker, DIRECT_EXECUTOR);
+    activeExpiringMap.put("k1", "v1");
+    activeExpiringMap.put("k2", "v2");
+
+    // Act: traverse just before the idle expiration would fire...
+    ticker.advance(200, TimeUnit.MILLISECONDS);
+    Map<String, String> seen = new HashMap<>();
+    activeExpiringMap.forEach(seen::put);
+    assertThat(seen).containsOnlyKeys("k1", "k2");
+
+    // ...and the entries still expire on the original schedule: the traversal refreshed nothing.
+    ticker.advance(200, TimeUnit.MILLISECONDS);
+    activeExpiringMap.cleanUp();
+    assertThat(expired).containsExactlyInAnyOrder("k1", "k2");
+    assertThat(activeExpiringMap.get("k1")).isEmpty();
+    assertThat(activeExpiringMap.get("k2")).isEmpty();
   }
 
   @Test
