@@ -11,7 +11,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
@@ -65,7 +64,7 @@ public abstract class AbstractDistributedTransactionManager
   }
 
   @Override
-  public DistributedTransaction join(String txId) throws TransactionException {
+  public DistributedTransaction join(String txId) throws TransactionNotFoundException {
     throw new UnsupportedOperationException("join is not supported in this implementation");
   }
 
