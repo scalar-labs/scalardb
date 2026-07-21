@@ -182,10 +182,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
-    // Error number: 1050; Symbol: ER_TABLE_EXISTS_ERROR; SQLSTATE: 42S01
-    // Message: Table '%s' already exists
-    return e.getErrorCode() == 1050;
+    // Since the "IF NOT EXISTS" syntax is used to create a table, we always return false
+    return false;
   }
 
   @Override
