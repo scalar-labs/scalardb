@@ -133,11 +133,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
     backupStalenessBoundMillis = config.getBackupStalenessBoundMillis();
     transactionTimeoutMillis = config.getTransactionTimeoutMillis();
-    backupModeDaemon =
-        new BackupModeDaemon(
-            coordinator,
-            config.getBackupCheckIntervalMillis(),
-            cbrlBackupTableExists(admin, config));
+    backupModeDaemon = new BackupModeDaemon(coordinator, config.getBackupCheckIntervalMillis());
     backupModeDaemon.start();
   }
 
@@ -182,11 +178,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
     backupStalenessBoundMillis = config.getBackupStalenessBoundMillis();
     transactionTimeoutMillis = config.getTransactionTimeoutMillis();
-    backupModeDaemon =
-        new BackupModeDaemon(
-            coordinator,
-            config.getBackupCheckIntervalMillis(),
-            cbrlBackupTableExists(admin, config));
+    backupModeDaemon = new BackupModeDaemon(coordinator, config.getBackupCheckIntervalMillis());
     backupModeDaemon.start();
   }
 
@@ -338,6 +330,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkNotNull(isolation);
+    // Capture the active backup label from the daemon cache once, at begin, and do it BEFORE
+    // reserving a group-commit slot. A stale cache is refreshed synchronously first so a process
+    // resuming from a stall cannot begin under a stale flag, and activeBackupLabel may refuse
+    // (throw) when the flag cannot be confirmed; capturing it first means such a refusal never
+    // leaks
+    // a reserved slot.
+    String activeBackupLabel =
+        backupModeDaemon == null
+            ? null
+            : backupModeDaemon.activeBackupLabel(backupStalenessBoundMillis);
+
     // Reserve a group commit slot for every non-read-only transaction, and for a read-only
     // transaction only when coordinator write omission is disabled. Such a read-only transaction
     // writes a coordinator state row, so without a slot it would reach the group commit path with a
@@ -350,13 +353,6 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       txId = groupCommitter.reserve(txId);
       groupCommitSlotReserved = true;
     }
-    // Capture the active backup label from the daemon cache once, at begin. A stale cache is
-    // refreshed synchronously first so a process resuming from a stall cannot begin under a stale
-    // flag.
-    String activeBackupLabel =
-        backupModeDaemon == null
-            ? null
-            : backupModeDaemon.activeBackupLabel(backupStalenessBoundMillis);
     Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
         new TransactionContext(
@@ -944,21 +940,6 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private void refreshBackupCache() {
     if (backupModeDaemon != null) {
       backupModeDaemon.refreshNow();
-    }
-  }
-
-  // Whether the CBRL backup table exists in the coordinator namespace. This arms the backup-mode
-  // daemon: when the table exists, an unconfirmed flag fails closed; when it does not, CBRL is not
-  // in
-  // use and begin() proceeds. If existence cannot be determined (a storage error), assume it exists
-  // so the daemon fails closed rather than risk committing inside a window without logging redo.
-  private static boolean cbrlBackupTableExists(
-      DistributedStorageAdmin admin, ConsensusCommitConfig config) {
-    try {
-      return admin.tableExists(
-          config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE), Coordinator.BACKUP_TABLE);
-    } catch (ExecutionException e) {
-      return true;
     }
   }
 

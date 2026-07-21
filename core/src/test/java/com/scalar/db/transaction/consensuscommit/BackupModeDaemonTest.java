@@ -2,7 +2,6 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +18,7 @@ public class BackupModeDaemonTest {
   @Mock private Coordinator coordinator;
   @Mock private Logger logger;
 
-  // A controllable clock so staleness/fail-closed is deterministic (no real sleeps).
+  // A controllable clock so staleness handling is deterministic (no real sleeps).
   private long nowMillis = 1000L;
   private final LongSupplier clock = () -> nowMillis;
 
@@ -28,7 +27,7 @@ public class BackupModeDaemonTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    daemon = new BackupModeDaemon(coordinator, 5000, true, logger, clock);
+    daemon = new BackupModeDaemon(coordinator, 5000, logger, clock);
   }
 
   @Test
@@ -77,23 +76,22 @@ public class BackupModeDaemonTest {
   }
 
   @Test
-  public void activeBackupLabel_WhenArmedAndNeverConfirmedAndReadFails_ShouldFailClosed()
-      throws Exception {
-    // Arrange: armed, the flag has never been confirmed, and the on-demand read fails.
+  public void activeBackupLabel_WhenNeverConfirmedAndReadFails_ShouldRefuse() throws Exception {
+    // Arrange: the flag has never been confirmed, and the on-demand read fails.
     when(coordinator.getBackupLabel())
         .thenThrow(new CoordinatorException("unreachable", new RuntimeException()));
 
-    // Act & Assert: it attempts one read, then fails closed rather than beginning unlabeled.
+    // Act & Assert: it attempts one read, then refuses rather than beginning unlabeled.
     assertThatThrownBy(() -> daemon.activeBackupLabel(1))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Failing closed");
+        .hasMessageContaining("Refusing");
     verify(coordinator).getBackupLabel();
   }
 
   @Test
-  public void activeBackupLabel_WhenArmedAndNeverConfirmedAndReadSucceeds_ShouldReturnLabel()
+  public void activeBackupLabel_WhenNeverConfirmedAndReadSucceeds_ShouldReturnLabel()
       throws Exception {
-    // Arrange: armed, never confirmed; the on-demand read finds an open window.
+    // Arrange: never confirmed; the on-demand read finds an open window.
     when(coordinator.getBackupLabel()).thenReturn(Optional.of("label-1"));
 
     // Act: activeBackupLabel forces the first read itself.
@@ -105,20 +103,7 @@ public class BackupModeDaemonTest {
   }
 
   @Test
-  public void activeBackupLabel_WhenNotArmed_ShouldReturnNullWithoutReading() throws Exception {
-    // Arrange: a daemon that is not armed (the backup table does not exist / CBRL is not in use).
-    BackupModeDaemon unarmed = new BackupModeDaemon(coordinator, 5000, false, logger, clock);
-
-    // Act
-    String label = unarmed.activeBackupLabel(1);
-
-    // Assert: CBRL is off, so proceed with no label and never touch the backup table.
-    assertThat(label).isNull();
-    verify(coordinator, never()).getBackupLabel();
-  }
-
-  @Test
-  public void activeBackupLabel_WhenStaleAfterSuccessAndRereadFails_ShouldFailClosed()
+  public void activeBackupLabel_WhenStaleAfterSuccessAndRereadFails_ShouldRefuse()
       throws Exception {
     // Arrange: one successful read at t=1000, then reads start failing; the cache goes stale.
     when(coordinator.getBackupLabel())
@@ -128,10 +113,10 @@ public class BackupModeDaemonTest {
     daemon.readAndUpdate();
     nowMillis = 7000L; // 6000ms since the last success, past the 5000ms bound.
 
-    // Act & Assert: it forces a re-read (which fails) and then fails closed.
+    // Act & Assert: it forces a re-read (which fails) and then refuses.
     assertThatThrownBy(() -> daemon.activeBackupLabel(5000))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Failing closed");
+        .hasMessageContaining("Refusing");
     assertThat(daemon.lastSuccessfulReadAtMillis()).isEqualTo(1000L);
   }
 
@@ -156,7 +141,7 @@ public class BackupModeDaemonTest {
   }
 
   @Test
-  public void activeBackupLabel_WhenStalenessBoundNonPositive_ShouldUseCacheWithoutFailingClosed()
+  public void activeBackupLabel_WhenStalenessBoundNonPositive_ShouldUseCacheWithoutRefusing()
       throws Exception {
     // Arrange: one successful read, then a long time passes with no re-read.
     when(coordinator.getBackupLabel()).thenReturn(Optional.of("label-1"));
@@ -167,7 +152,7 @@ public class BackupModeDaemonTest {
     // Act: a non-positive bound disables staleness enforcement.
     String label = daemon.activeBackupLabel(0);
 
-    // Assert: returns the cached label without failing closed or forcing a re-read.
+    // Assert: returns the cached label without refusing or forcing a re-read.
     assertThat(label).isEqualTo("label-1");
     verify(coordinator, org.mockito.Mockito.times(1)).getBackupLabel();
   }
