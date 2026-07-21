@@ -200,11 +200,11 @@ public class ConsensusCommitConfig {
   }
 
   /**
-   * Returns the stable logical identifier of this participant in the new TwoPhaseCommit API path.
+   * Returns the stable logical identifier of this participant in the two-phase commit API path.
    *
-   * <p>Required for the multi-participant Participant implementation (constructor will throw if
-   * absent). Optional for the existing single-participant ConsensusCommit path, which never reads
-   * this property even when it is set.
+   * <p>Required for the multi-participant TwoPhaseCommitParticipant implementation (constructor
+   * will throw if absent). Optional for the existing single-participant ConsensusCommit path, which
+   * never reads this property even when it is set.
    *
    * @return an {@code Optional} containing the configured participant ID, or empty if unset
    */

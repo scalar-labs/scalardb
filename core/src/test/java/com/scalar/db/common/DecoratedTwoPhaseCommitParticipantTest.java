@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.Optional;
@@ -24,7 +24,7 @@ class DecoratedTwoPhaseCommitParticipantTest {
   private static final String TBL = "tbl";
   private static final String TX = "tx-1";
 
-  @Mock private TwoPhaseCommit.Participant delegate;
+  @Mock private TwoPhaseCommitParticipant delegate;
   private DecoratedTwoPhaseCommitParticipant participant;
 
   @BeforeEach
@@ -84,8 +84,9 @@ class DecoratedTwoPhaseCommitParticipantTest {
 
   @Test
   void prepareRecords_ShouldDelegate() throws Exception {
-    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
-    verify(delegate).prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommitParticipant.WriteSetDetailLevel.KEYS_ONLY);
+    verify(delegate)
+        .prepareRecords(TX, 100L, TwoPhaseCommitParticipant.WriteSetDetailLevel.KEYS_ONLY);
   }
 
   @Test

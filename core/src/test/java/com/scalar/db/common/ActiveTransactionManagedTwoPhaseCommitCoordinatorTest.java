@@ -16,7 +16,8 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitCoordinator.TrackedTransaction;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -39,8 +40,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   // clock (only the scheduling smoke test uses the wall clock).
   private static final long EXPIRATION_MILLIS = 60_000;
 
-  @Mock private TwoPhaseCommit.Coordinator delegate;
-  @Mock private TwoPhaseCommit.Participant participant;
+  @Mock private TwoPhaseCommitCoordinator delegate;
+  @Mock private TwoPhaseCommitParticipant participant;
 
   private ActiveTransactionRegistry<TrackedTransaction> registry;
   private ActiveTransactionManagedTwoPhaseCommitCoordinator coordinator;
@@ -64,7 +65,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     registry.get(transactionId).get().updateExpirationTime(0);
   }
 
-  private void stubHeld(TwoPhaseCommit.Participant p, boolean held) throws TransactionException {
+  private void stubHeld(TwoPhaseCommitParticipant p, boolean held) throws TransactionException {
     when(p.hasTransactionContext(TX)).thenReturn(held);
   }
 
@@ -144,7 +145,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   void sweep_WhenAnyParticipantHoldsTransaction_ShouldKeep() throws Exception {
     // any-semantics: one participant already released it, the other still holds it. The
     // coordinator context stays: the transaction could still be driven for the present one.
-    TwoPhaseCommit.Participant gone = mock(TwoPhaseCommit.Participant.class);
+    TwoPhaseCommitParticipant gone = mock(TwoPhaseCommitParticipant.class);
     when(gone.getId()).thenReturn("participant-2");
     stubHeld(gone, false);
     stubHeld(participant, true);
@@ -181,7 +182,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // probed and reaped.
     when(participant.hasTransactionContext(TX)).thenThrow(new RuntimeException("boom"));
     coordinator.begin(null, false, Collections.emptyMap(), participant);
-    TwoPhaseCommit.Participant otherParticipant = mock(TwoPhaseCommit.Participant.class);
+    TwoPhaseCommitParticipant otherParticipant = mock(TwoPhaseCommitParticipant.class);
     when(otherParticipant.getId()).thenReturn("participant-2");
     when(delegate.begin(eq("tx-2"), eq(false), any(), any())).thenReturn("tx-2");
     coordinator.begin("tx-2", false, Collections.emptyMap(), otherParticipant);
@@ -206,7 +207,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     doThrow(new RuntimeException("boom")).when(delegate).releaseTransactionContext(TX);
     stubHeld(participant, false);
     coordinator.begin(null, false, Collections.emptyMap(), participant);
-    TwoPhaseCommit.Participant otherParticipant = mock(TwoPhaseCommit.Participant.class);
+    TwoPhaseCommitParticipant otherParticipant = mock(TwoPhaseCommitParticipant.class);
     when(otherParticipant.getId()).thenReturn("participant-2");
     when(delegate.begin(eq("tx-2"), eq(false), any(), any())).thenReturn("tx-2");
     coordinator.begin("tx-2", false, Collections.emptyMap(), otherParticipant);
@@ -278,7 +279,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   void sweep_WhenNotFoundAndPresentMix_ShouldKeep() throws Exception {
     // any-semantics: one participant's context is definitively gone (not-found carrier), the
     // other still holds it - the coordinator context stays.
-    TwoPhaseCommit.Participant gone = mock(TwoPhaseCommit.Participant.class);
+    TwoPhaseCommitParticipant gone = mock(TwoPhaseCommitParticipant.class);
     when(gone.getId()).thenReturn("participant-2");
     when(gone.hasTransactionContext(TX))
         .thenThrow(new TransactionNotFoundException("no context on this node", TX));
@@ -338,7 +339,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // The reap-vs-registration race: a registration lands while the probe is in flight. It pushes
     // the expiration time out under the entry monitor before delegating, so the reap re-check
     // must back off even though every probed participant answered absent.
-    TwoPhaseCommit.Participant late = mock(TwoPhaseCommit.Participant.class);
+    TwoPhaseCommitParticipant late = mock(TwoPhaseCommitParticipant.class);
     when(late.getId()).thenReturn("participant-2");
     when(participant.hasTransactionContext(TX))
         .thenAnswer(
@@ -485,7 +486,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   void registerParticipant_WithDuplicateParticipantId_ShouldKeepFirstInstance() throws Exception {
     // First-wins per participant ID, mirroring the wrapped coordinator's idempotent registration:
     // the wrapped side joined the first instance, so that is the instance the probe must use.
-    TwoPhaseCommit.Participant second = mock(TwoPhaseCommit.Participant.class);
+    TwoPhaseCommitParticipant second = mock(TwoPhaseCommitParticipant.class);
     when(second.getId()).thenReturn("participant-1");
     stubHeld(participant, false);
     coordinator.begin(null, false, Collections.emptyMap(), null);
@@ -643,7 +644,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   void eviction_ShouldReleaseContextUnconditionallyWithoutProbing() throws Exception {
     // Cap pressure means memory must be freed: eviction releases without consulting the probe.
     // Local mocks keep this test independent of the shared setUp stubbing.
-    TwoPhaseCommit.Coordinator localDelegate = mock(TwoPhaseCommit.Coordinator.class);
+    TwoPhaseCommitCoordinator localDelegate = mock(TwoPhaseCommitCoordinator.class);
     when(localDelegate.begin(any(), eq(false), any(), any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
     CountDownLatch released = new CountDownLatch(1);
