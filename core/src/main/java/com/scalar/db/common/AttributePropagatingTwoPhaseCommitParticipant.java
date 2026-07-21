@@ -45,8 +45,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * Coordinator skips {@code commitRecords} (and possibly {@code validateRecords}) for a write-less
  * participant — including every read-only transaction — so a normally-committed write-less
  * transaction would otherwise never reach a terminal step that clears its entry. The attributes are
- * also dropped on {@code rollbackRecords} and {@code releaseContext} to cover transactions that are
- * rolled back or reaped before ever preparing.
+ * also dropped on {@code rollbackRecords} and {@code releaseTransactionContext} to cover
+ * transactions that are rolled back or reaped before ever preparing.
  *
  * <p>The record-level step {@code validateRecords} and non-CRUD methods are forwarded unchanged;
  * they do not read the transaction-scoped attributes.
@@ -58,10 +58,10 @@ import javax.annotation.concurrent.ThreadSafe;
  * is actually running — which requires both active transaction management to be enabled and a
  * positive {@code scalar.db.active_transaction_management.expiration_time_millis} (a non-positive
  * value, which is the default, disables the reaper). Only then does idle expiry call {@code
- * releaseContext} and clear the entry. The leak is in lockstep with the wrapped participant's own
- * per-transaction context, which active transaction management reaps under the same precondition.
- * Enable active transaction management with a positive expiration time whenever this decorator is
- * used.
+ * releaseTransactionContext} and clear the entry. The leak is in lockstep with the wrapped
+ * participant's own per-transaction context, which active transaction management reaps under the
+ * same precondition. Enable active transaction management with a positive expiration time whenever
+ * this decorator is used.
  */
 @ThreadSafe
 public class AttributePropagatingTwoPhaseCommitParticipant
@@ -167,7 +167,8 @@ public class AttributePropagatingTwoPhaseCommitParticipant
   }
 
   @Override
-  public void rollbackRecords(String transactionId) throws RollbackException {
+  public void rollbackRecords(String transactionId)
+      throws RollbackException, TransactionNotFoundException {
     try {
       super.rollbackRecords(transactionId);
     } finally {
@@ -176,9 +177,9 @@ public class AttributePropagatingTwoPhaseCommitParticipant
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseTransactionContext(String transactionId) throws TransactionException {
     try {
-      super.releaseContext(transactionId);
+      super.releaseTransactionContext(transactionId);
     } finally {
       transactionAttributes.remove(transactionId);
     }

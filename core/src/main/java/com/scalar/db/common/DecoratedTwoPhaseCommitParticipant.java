@@ -140,13 +140,14 @@ public abstract class DecoratedTwoPhaseCommitParticipant implements TwoPhaseComm
   }
 
   @Override
-  public void rollbackRecords(String transactionId) throws RollbackException {
+  public void rollbackRecords(String transactionId)
+      throws RollbackException, TransactionNotFoundException {
     participant.rollbackRecords(transactionId);
   }
 
   @Override
-  public void releaseContext(String transactionId) {
-    participant.releaseContext(transactionId);
+  public void releaseTransactionContext(String transactionId) throws TransactionException {
+    participant.releaseTransactionContext(transactionId);
   }
 
   @Override

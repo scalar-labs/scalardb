@@ -31,17 +31,17 @@ import javax.annotation.concurrent.ThreadSafe;
  * A {@link TwoPhaseCommit.Participant} decorator that reaps the contexts of inactive transactions.
  *
  * <p>Each transaction is tracked from {@link #join} until its terminal step ({@link #commitRecords}
- * / {@link #rollbackRecords} / {@link #releaseContext}). Every CRUD operation and record-level step
- * refreshes the transaction's idle timer, so inactivity here is measured as true idle time. When a
- * transaction stays inactive longer than the configured expiration time, this decorator calls
- * {@link TwoPhaseCommit.Participant#releaseContext} on the wrapped participant to free its
- * role-local resources (e.g. open scanners, the snapshot) without performing any storage rollback,
- * even when the records are prepared. The records left behind are recovered lazily by the usual
- * recovery path.
+ * / {@link #rollbackRecords} / {@link #releaseTransactionContext}). Every CRUD operation and
+ * record-level step refreshes the transaction's idle timer, so inactivity here is measured as true
+ * idle time. When a transaction stays inactive longer than the configured expiration time, this
+ * decorator calls {@link TwoPhaseCommit.Participant#releaseTransactionContext} on the wrapped
+ * participant to free its role-local resources (e.g. open scanners, the snapshot) without
+ * performing any storage rollback, even when the records are prepared. The records left behind are
+ * recovered lazily by the usual recovery path.
  *
  * <p>This decorator is intended to be the outermost participant decorator so that the reap
- * traverses the inner decorators via {@code releaseContext}. It is the participant-side counterpart
- * of {@link ActiveTransactionManagedTwoPhaseCommitCoordinator}.
+ * traverses the inner decorators via {@code releaseTransactionContext}. It is the participant-side
+ * counterpart of {@link ActiveTransactionManagedTwoPhaseCommitCoordinator}.
  *
  * <p>A write-less participant does not always reach {@link #commitRecords}: the Coordinator skips
  * the steps a participant no longer needs, so for such a participant the last driven step is {@link
@@ -62,12 +62,12 @@ import javax.annotation.concurrent.ThreadSafe;
  *
  * <p>Thread safety: the {@link ThreadSafe} guarantee here relies on the wrapped participant
  * honoring the {@link TwoPhaseCommit.Participant} concurrency contract — serializing its own
- * per-transaction work. The reaper thread's {@code releaseContext} call may run concurrently with
- * an in-flight CRUD or record-level call for the same transaction id; the wrapped role is
- * responsible for making those mutually exclusive (e.g. {@code ConsensusCommitParticipant}
- * synchronizes every per-transaction method, including {@code releaseContext}, on a per-context
- * monitor). A wrapped participant that violates that contract would break this guarantee with no
- * signal at this layer.
+ * per-transaction work. The reaper thread's {@code releaseTransactionContext} call may run
+ * concurrently with an in-flight CRUD or record-level call for the same transaction id; the wrapped
+ * role is responsible for making those mutually exclusive (e.g. {@code ConsensusCommitParticipant}
+ * synchronizes every per-transaction method, including {@code releaseTransactionContext}, on a
+ * per-context monitor). A wrapped participant that violates that contract would break this
+ * guarantee with no signal at this layer.
  */
 @ThreadSafe
 public class ActiveTransactionManagedTwoPhaseCommitParticipant
@@ -88,7 +88,14 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
         new ActiveTransactionRegistry<>(
             expirationTimeMillis,
             maxActiveTransactions,
-            tracked -> participant.releaseContext(tracked.transactionId));
+            tracked -> {
+              try {
+                participant.releaseTransactionContext(tracked.transactionId);
+              } catch (TransactionNotFoundException e) {
+                // The context is already gone — the outcome this release wanted; not-found is its
+                // alternative carrier (see the interface Javadoc).
+              }
+            });
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -232,7 +239,8 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   }
 
   @Override
-  public void rollbackRecords(String transactionId) throws RollbackException {
+  public void rollbackRecords(String transactionId)
+      throws RollbackException, TransactionNotFoundException {
     try {
       super.rollbackRecords(transactionId);
     } finally {
@@ -241,9 +249,9 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseTransactionContext(String transactionId) throws TransactionException {
     try {
-      super.releaseContext(transactionId);
+      super.releaseTransactionContext(transactionId);
     } finally {
       registry.remove(transactionId);
     }

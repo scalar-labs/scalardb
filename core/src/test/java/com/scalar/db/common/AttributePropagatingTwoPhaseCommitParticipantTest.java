@@ -18,6 +18,7 @@ import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
@@ -320,10 +321,28 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
   }
 
   @Test
-  void releaseContext_ShouldDropTheCapturedAttributes() throws Exception {
+  void rollbackRecords_WhenDelegateThrowsNotFound_ShouldPropagateAndStillDropAttributes()
+      throws Exception {
+    // The wrapped participant may report the unknown-transaction no-op on its conventional
+    // not-found channel; this decorator must pass it through untouched (the callers decide what it
+    // means per path) while the finally block still drops the captured attributes.
+    participant.join(TX, false, attrs("k", "v"));
+    doThrow(new TransactionNotFoundException("gone", TX)).when(delegate).rollbackRecords(TX);
+
+    assertThatThrownBy(() -> participant.rollbackRecords(TX))
+        .isInstanceOf(TransactionNotFoundException.class);
+
+    participant.get(TX, get());
+    ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
+    verify(delegate).get(eq(TX), captor.capture());
+    assertThat(captor.getValue().getAttributes()).isEmpty();
+  }
+
+  @Test
+  void releaseTransactionContext_ShouldDropTheCapturedAttributes() throws Exception {
     participant.join(TX, false, attrs("k", "v"));
 
-    participant.releaseContext(TX);
+    participant.releaseTransactionContext(TX);
 
     participant.get(TX, get());
     ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);

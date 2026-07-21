@@ -75,7 +75,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     coordinator.sweep();
 
     verify(participant, never()).hasTransactionContext(any());
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
   }
 
@@ -88,7 +88,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isEmpty();
   }
 
@@ -103,7 +103,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     forceExpire(TX);
     coordinator.sweep();
     verify(participant).hasTransactionContext(TX);
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
 
     // The alive verdict pushed the expiration time out, so another pass must not probe again.
@@ -115,7 +115,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     stubHeld(participant, false);
     forceExpire(TX);
     coordinator.sweep();
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isEmpty();
   }
 
@@ -154,7 +154,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
   }
 
@@ -170,7 +170,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
   }
 
@@ -190,9 +190,9 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isPresent();
-    verify(delegate).releaseContext("tx-2");
+    verify(delegate).releaseTransactionContext("tx-2");
     assertThat(registry.get("tx-2")).isEmpty();
   }
 
@@ -203,7 +203,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // retrying a release that keeps throwing would re-attempt (and WARN) every pass forever, so
     // a leaked wrapped context is left as the wrapped coordinator's responsibility - and other
     // expired transactions in the same pass are still reaped.
-    doThrow(new RuntimeException("boom")).when(delegate).releaseContext(TX);
+    doThrow(new RuntimeException("boom")).when(delegate).releaseTransactionContext(TX);
     stubHeld(participant, false);
     coordinator.begin(null, false, Collections.emptyMap(), participant);
     TwoPhaseCommit.Participant otherParticipant = mock(TwoPhaseCommit.Participant.class);
@@ -215,9 +215,9 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     assertThatCode(coordinator::sweep).doesNotThrowAnyException();
 
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isEmpty();
-    verify(delegate).releaseContext("tx-2");
+    verify(delegate).releaseTransactionContext("tx-2");
     assertThat(registry.get("tx-2")).isEmpty();
   }
 
@@ -232,7 +232,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     assertThatThrownBy(coordinator::sweep).isInstanceOf(LinkageError.class);
 
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
   }
 
@@ -247,14 +247,14 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     forceExpire(TX);
 
     assertThatCode(coordinator::sweepSafely).doesNotThrowAnyException();
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
 
     // The entry is still expired (the aborted pass extended nothing), so the next pass retries
     // the probe; the participant now answers definitively and the transaction is reaped.
     doReturn(false).when(participant).hasTransactionContext(TX);
     coordinator.sweepSafely();
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isEmpty();
   }
 
@@ -270,7 +270,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isEmpty();
   }
 
@@ -289,8 +289,48 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
+  }
+
+  @Test
+  void sweep_WhenReleaseThrowsNotFound_ShouldTreatAsAlreadyGoneAndFinishThePass() throws Exception {
+    // TransactionNotFoundException from the wrapped release is the contract's alternative carrier
+    // of "there was no context to release" - the outcome the reap wanted. The entry must still be
+    // removed, and the pass must go on to reap the other expired transaction.
+    doThrow(new TransactionNotFoundException("already gone", TX))
+        .when(delegate)
+        .releaseTransactionContext(TX);
+    coordinator.begin(null, false, Collections.emptyMap(), null);
+    when(delegate.begin(eq("tx-2"), eq(false), any(), any())).thenReturn("tx-2");
+    coordinator.begin("tx-2", false, Collections.emptyMap(), null);
+    forceExpire(TX);
+    forceExpire("tx-2");
+
+    coordinator.sweep();
+
+    assertThat(registry.get(TX)).isEmpty();
+    verify(delegate).releaseTransactionContext("tx-2");
+    assertThat(registry.get("tx-2")).isEmpty();
+  }
+
+  @Test
+  void sweep_WhenReleaseThrowsException_ShouldFinishThePass() throws Exception {
+    // A failed release must not abort the rest of the pass: the guard logs and moves on, the
+    // entry is still removed (the release is best-effort), and the other expired transaction is
+    // still reaped.
+    doThrow(new TransactionException("boom", TX)).when(delegate).releaseTransactionContext(TX);
+    coordinator.begin(null, false, Collections.emptyMap(), null);
+    when(delegate.begin(eq("tx-2"), eq(false), any(), any())).thenReturn("tx-2");
+    coordinator.begin("tx-2", false, Collections.emptyMap(), null);
+    forceExpire(TX);
+    forceExpire("tx-2");
+
+    coordinator.sweep();
+
+    assertThat(registry.get(TX)).isEmpty();
+    verify(delegate).releaseTransactionContext("tx-2");
+    assertThat(registry.get("tx-2")).isEmpty();
   }
 
   @Test
@@ -311,7 +351,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
     assertThat(registry.get(TX).get().hasParticipant("participant-2")).isTrue();
   }
@@ -362,7 +402,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     // The sweep probed the live participant and kept the transaction; it did not reap.
     verify(participant).hasTransactionContext(TX);
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
   }
 
@@ -387,7 +427,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     coordinator.sweep();
 
     verify(participant, never()).hasTransactionContext(any());
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
   }
 
@@ -437,7 +477,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     stubHeld(participant, false);
     forceExpire(TX);
     coordinator.sweep();
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isEmpty();
   }
 
@@ -469,7 +509,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // The transaction is no longer tracked, so the sweep must not release its context.
     assertThat(registry.get(TX)).isEmpty();
     coordinator.sweep();
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
   }
 
   @Test
@@ -481,7 +521,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     verify(delegate).rollback(TX);
     assertThat(registry.get(TX)).isEmpty();
     coordinator.sweep();
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
   }
 
   @Test
@@ -499,7 +539,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // not subsequently release its context (no double reap).
     assertThat(registry.get(TX)).isEmpty();
     coordinator.sweep();
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
   }
 
   @Test
@@ -515,19 +555,19 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     assertThat(registry.get(TX)).isEmpty();
     coordinator.sweep();
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
   }
 
   @Test
-  void releaseContext_ShouldDelegateOnceAndStopTracking() throws Exception {
+  void releaseTransactionContext_ShouldDelegateOnceAndStopTracking() throws Exception {
     coordinator.begin(null, false, Collections.emptyMap(), null);
 
-    coordinator.releaseContext(TX);
+    coordinator.releaseTransactionContext(TX);
 
-    // The sweep must not call releaseContext again after the client already released it.
+    // The sweep must not call releaseTransactionContext again after the client already released it.
     assertThat(registry.get(TX)).isEmpty();
     coordinator.sweep();
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
   }
 
   @Test
@@ -544,7 +584,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     // A failed begin tracked nothing, so the sweep must not release any context.
     coordinator.sweep();
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
   }
 
   @Test
@@ -560,7 +600,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // A pass overlapping the shutdown must not probe or release on behalf of a closed
     // coordinator: the wrapped close discards the contexts.
     verify(participant, never()).hasTransactionContext(any());
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
   }
 
   @Test
@@ -579,7 +619,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
     coordinator.sweep();
 
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
     verify(delegate).close();
   }
 
@@ -593,7 +633,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
             delegate, /* expirationTimeMillis= */ 100, /* maxActiveTransactions= */ -1);
     try {
       scheduled.begin(null, false, Collections.emptyMap(), participant);
-      verify(delegate, timeout(10000)).releaseContext(TX);
+      verify(delegate, timeout(10000)).releaseTransactionContext(TX);
     } finally {
       scheduled.close();
     }
@@ -613,7 +653,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
               return null;
             })
         .when(localDelegate)
-        .releaseContext(any());
+        .releaseTransactionContext(any());
     ActiveTransactionManagedTwoPhaseCommitCoordinator capped =
         new ActiveTransactionManagedTwoPhaseCommitCoordinator(
             localDelegate, /* expirationTimeMillis= */ -1, /* maxActiveTransactions= */ 1);
@@ -633,7 +673,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
         TimeUnit.MILLISECONDS.sleep(50);
       }
 
-      verify(localDelegate, atLeastOnce()).releaseContext(any());
+      verify(localDelegate, atLeastOnce()).releaseTransactionContext(any());
       verify(participant, never()).hasTransactionContext(any());
     } finally {
       capped.close();
