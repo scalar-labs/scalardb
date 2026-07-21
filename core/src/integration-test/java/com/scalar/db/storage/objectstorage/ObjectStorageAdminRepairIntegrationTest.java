@@ -6,7 +6,11 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "storage_admin|all")
 public class ObjectStorageAdminRepairIntegrationTest
     extends DistributedStorageAdminRepairIntegrationTestBase {
 

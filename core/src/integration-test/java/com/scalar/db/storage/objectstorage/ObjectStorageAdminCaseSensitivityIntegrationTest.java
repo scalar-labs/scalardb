@@ -8,7 +8,11 @@ import com.scalar.db.util.AdminTestUtils;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+@EnabledIfSystemProperty(
+    named = "scalardb.object_storage.test_group",
+    matches = "storage_admin|all")
 public class ObjectStorageAdminCaseSensitivityIntegrationTest
     extends DistributedStorageAdminCaseSensitivityIntegrationTestBase {
 
