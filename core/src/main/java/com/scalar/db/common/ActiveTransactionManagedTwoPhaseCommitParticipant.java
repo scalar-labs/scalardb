@@ -180,10 +180,12 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(String transactionId, long preparedAt)
+  public TwoPhaseCommit.PreparationResult prepareRecords(
+      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
     registry.touch(transactionId);
-    TwoPhaseCommit.PreparationResult result = super.prepareRecords(transactionId, preparedAt);
+    TwoPhaseCommit.PreparationResult result =
+        super.prepareRecords(transactionId, preparedAt, detailLevel);
     if (result.isCommitRequired()) {
       // Intentionally nothing to do here: commitRecords will be driven and is the terminal step,
       // and its override removes the entry. Kept as an explicit arm so all three terminal-step

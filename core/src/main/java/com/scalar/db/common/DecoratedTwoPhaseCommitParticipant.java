@@ -116,9 +116,10 @@ public abstract class DecoratedTwoPhaseCommitParticipant implements TwoPhaseComm
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(String transactionId, long preparedAt)
+  public TwoPhaseCommit.PreparationResult prepareRecords(
+      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
-    return participant.prepareRecords(transactionId, preparedAt);
+    return participant.prepareRecords(transactionId, preparedAt, detailLevel);
   }
 
   @Override
