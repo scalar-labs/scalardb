@@ -56,6 +56,26 @@ to every database it changed, if all of these conditions hold:
 Replay cannot prove that these conditions held. Missing redo can produce a plausible but incorrect
 result, so the backup workflow must enforce them.
 
+### Why the coordinator snapshot is atomic and taken last
+
+Conditions 1 and 2 are the easiest to violate, and each has a concrete failure:
+
+- **Atomic.** The coordinator snapshot defines which transactions are in the restored consistency
+  point. A non-atomic read, taken partition by partition at different instants, can capture a
+  transaction but miss one it read from. Replay then applies the reader without the value it depended
+  on, producing a state that never existed. A single-instant, read-from-committed dump (for example
+  `pg_dump --single-transaction` on a single-database coordinator) cannot capture the reader without
+  the writer.
+- **Taken last.** Replay only rolls each record forward to the consistency point; it never rolls one
+  back. A user-table copy newer than the coordinator snapshot may already hold a transaction absent
+  from the consistency point, and replay cannot remove it, leaving that record ahead of the rest of
+  the database. Finishing every user-table copy before the coordinator snapshot begins keeps all
+  copies no newer than the consistency point.
+
+Neither is enforced yet. Enforcing them means recording the latest user-copy completion time,
+verifying the coordinator snapshot began after it, and rejecting coordinator backends that cannot
+snapshot atomically.
+
 ## Coordinator data
 
 The coordinator's `state` row already carries a write set in `tx_write_set`: master writes it for
