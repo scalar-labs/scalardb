@@ -124,16 +124,16 @@ label for every backup; the implementation should eventually generate an ID that
 3. **Wait for the consistency point to become safe.** Every library process polls the row and caches
    its label. The operator waits long enough for all processes to observe the window and for
    transactions that began before observation to finish or time out.
-4. **Copy all user databases.** These may be online, non-atomic copies. Each individual copy must not
-   contain data newer than the later coordinator snapshot.
-5. **Snapshot the coordinator last.** This must be a single-point-in-time snapshot of committed
+4. **Back up all user databases.** These may be online, non-atomic backups. Each individual backup
+   must not contain data newer than the later coordinator backup.
+5. **Back up the coordinator last.** This must be a single-point-in-time, atomic backup of committed
    coordinator state. It defines the consistency point.
 6. **Close the window.** `disableRedoLogging()` appends `BACKED_UP` history best-effort and deletes the
    live row with a label condition.
 
-The saved backup should include a metadata file that lists the backup ID, coordinator snapshot, user
-table copies, and whether all copies completed. Restore must reject missing, incomplete, or mismatched
-metadata. This check is designed but not implemented.
+The saved backup should include a metadata file that lists the backup ID, coordinator backup,
+user-table backups, and whether all backups completed. Restore must reject missing, incomplete, or
+mismatched metadata. This check is designed but not implemented.
 
 ### Library-mode propagation
 
@@ -154,14 +154,22 @@ here is for library mode.
 
 ### Transactions spanning the transition
 
-A transaction records its window label at `begin()`. Transactions begun before a process observes the
-window therefore remain unlabeled. A global transaction lifetime limit bounds how long such a
-transaction may remain able to commit. The timeout is checked immediately before the coordinator
-commit-state write and raises `CommitException` when exceeded.
+A transaction stamps its backup label at `begin()`, so one that began before its process observed the
+window is unlabeled and logs no redo. The risk is a spanning transaction: it began unlabeled but
+commits during the window, after the user-table backups were taken, landing in the coordinator
+snapshot with no redo to reconstruct it, the gap condition 3 forbids.
 
-This is a mitigation, not a strict elapsed-time guarantee: a process can pause after the timeout check,
-and group-commit batching can add delay before the durable state write. The operator wait must include
-the polling delay, staleness bound, transaction timeout, expected scheduling delay, and clock margin.
+To bound this, CBRL adds a global transaction lifetime limit: a transaction that has run longer than
+`transaction_timeout_millis` self-aborts with `CommitException`, checked immediately before the
+coordinator commit-state write. Once the operator has waited for every process to observe the window
+and for this limit to elapse, no unlabeled transaction can still commit, so the backups can be taken.
+The limit applies to every transaction, not just during a backup; that breadth is the deliberate cost
+of using it as the drain bound.
+
+This is a mitigation, not an exact elapsed-time guarantee: a process can pause after the check but
+before the durable write, and group-commit batching can add a bounded delay after it. So the operator
+wait must budget for the polling delay, staleness bound, transaction timeout, scheduling delay, and
+clock margin.
 
 ### Coordinator-row retention
 
@@ -190,10 +198,12 @@ successful replay, and failures are currently reported without failing the compl
 
 ### Parallelism
 
-Steps 4-7 run in parallel. Redo is partitioned into `replay_buckets` buckets by record key, and
-`replay_workers` workers each own the full recover, replay, and write-back pipeline for the keys in
-their buckets. Because each key belongs to exactly one bucket owned by one worker, replay needs no
-locks or CAS, and a record's whole chain is always applied in order by a single worker.
+Steps 4-7 run in parallel. Redo is partitioned into `replay_buckets` buckets by record key, and each
+bucket spills to its own temporary file so the whole window's redo never has to sit in memory at once,
+which is what keeps a large restore from exhausting the heap. `replay_workers` workers each own the
+full recover, replay, and write-back pipeline for the keys in their buckets. Because each key belongs
+to exactly one bucket owned by one worker, replay needs no locks or CAS, and a record's whole chain is
+always applied in order by a single worker.
 
 ### Replay ordering
 
@@ -209,20 +219,24 @@ For example, operations `INSERT(null -> T0)`, `UPDATE(T0 -> T1)`, and `DELETE(T1
 valid chain regardless of scan order. If the copy contains T1, restore applies only the delete. If the
 copy is absent, restore starts at the insert.
 
+The ordering is computed in memory in the restore process over the buffered redo, not by the underlying
+databases: a worker walks the chain in its heap, reading a database only to fetch each record's copied
+base version and writing only to store the reconstructed result.
+
 ### Delete and reinsert
 
-A delete followed by a later insert creates separate chain segments because each insert has
-`prev_tx_id = null`:
+A delete followed by a later insert starts a new generation of the record, a fresh chain, because each
+insert has `prev_tx_id = null`:
 
 ```text
-INSERT(null -> T0) -> DELETE(T0 -> T1)
-INSERT(null -> T2) -> UPDATE(T2 -> T3)
+INSERT(null -> T0) -> DELETE(T0 -> T1)   (generation A)
+INSERT(null -> T2) -> UPDATE(T2 -> T3)   (generation B)
 ```
 
-Replay processes a segment through its delete and then considers another unused insert. It marks
-the copied version and its ancestors as already reflected so a later delete cannot revive an insert
-already represented by the copy. For a complete, valid backup, replay produces the same result
-regardless of which insert it tries first.
+Replay processes generation A through its delete, so the record is now deleted, then considers
+generation B's unused insert. It marks the copied version and its ancestors as already reflected so a
+later delete cannot revive an insert already represented by the copy. For a complete, valid backup,
+replay produces the same result regardless of whether it starts with generation A or B.
 
 ### Changes older than the copied record
 
@@ -236,9 +250,9 @@ change.
 Write-back is atomic per record, not across the restore. Re-running restore from the same backup
 calculates and overwrites each record in the same way, so running restore again repairs a partial run.
 
-Each bucket spills to a temporary file, and a worker reads a whole bucket into memory, so peak heap
-depends on bucket skew and worker count, not only total redo size. The transaction-ID-to-commit-time
-map is still held entirely in heap.
+A worker still reads its current bucket fully into memory, so peak heap depends on bucket skew and
+worker count, not only total redo size. The transaction-ID-to-commit-time map is still held entirely
+in heap.
 
 ## Configuration
 
@@ -262,7 +276,7 @@ map is still held entirely in heap.
 `RecordApplier` is a local implementation modeled after ScalarDB Cluster's Semi-Synchronous
 Replication (SSR). It follows the same record-restoration idea but does not reuse SSR code.
 
-## Known gaps
+## Known gaps (Stale)
 
 - Processes do not report when they have seen the backup row, so the operator uses a fixed wait that
   cannot prove every process is ready.
