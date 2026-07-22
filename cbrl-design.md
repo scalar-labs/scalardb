@@ -45,38 +45,23 @@ sequenceDiagram
 The restored databases represent one valid point in the commit history, with each transaction applied
 to every database it changed, if all of these conditions hold:
 
-1. All user-table copies finish before the coordinator snapshot begins.
-2. The coordinator snapshot is atomic and read-from-committed state.
-3. Every transaction that may be included in that snapshot either began under the backup window and
-   logged redo, or completed before the trusted consistency point.
-4. Coordinator rows containing window redo are not deleted before the coordinator snapshot.
+1. All user-table copies finish before the coordinator snapshot begins, so no copy is newer than the
+   snapshot. Replay only rolls a record forward, never back, so a copy newer than the snapshot would
+   keep a transaction the snapshot excludes, with no way to remove it.
+2. The coordinator snapshot is atomic and read-from-committed state, so it cannot include a
+   transaction while missing one it read from. A read taken partition by partition at different
+   instants could, and replay would then apply the reader without the value it depended on,
+   reconstructing a state that never existed.
+3. Every transaction included in the snapshot either logged redo, meaning it began under the backup
+   window, or committed before the user-table copies were taken, so its writes are already in them.
+4. Coordinator rows containing window redo are not deleted while the backup window is open.
 5. The coordinator is restored completely before user-record recovery or replay starts.
 6. Restore selects the exact backup window being restored.
 
 Replay cannot prove that these conditions held. Missing redo can produce a plausible but incorrect
 result, so the backup workflow must enforce them.
 
-### Why the coordinator snapshot is atomic and taken last
-
-Conditions 1 and 2 are the easiest to violate, and each has a concrete failure:
-
-- **Atomic.** The coordinator snapshot defines which transactions are in the restored consistency
-  point. A non-atomic read, taken partition by partition at different instants, can capture a
-  transaction but miss one it read from. Replay then applies the reader without the value it depended
-  on, producing a state that never existed. A single-instant, read-from-committed dump (for example
-  `pg_dump --single-transaction` on a single-database coordinator) cannot capture the reader without
-  the writer.
-- **Taken last.** Replay only rolls each record forward to the consistency point; it never rolls one
-  back. A user-table copy newer than the coordinator snapshot may already hold a transaction absent
-  from the consistency point, and replay cannot remove it, leaving that record ahead of the rest of
-  the database. Finishing every user-table copy before the coordinator snapshot begins keeps all
-  copies no newer than the consistency point.
-
-Neither is enforced yet. Enforcing them means recording the latest user-copy completion time,
-verifying the coordinator snapshot began after it, and rejecting coordinator backends that cannot
-snapshot atomically.
-
-## Coordinator data
+## Coordinator write set
 
 The coordinator's `state` row already carries a write set in `tx_write_set`: master writes it for
 active recovery, recording each record's primary key only. CBRL reuses that column. While a backup
@@ -94,7 +79,9 @@ Restore stamps each rebuilt record with the original commit time from `tx_create
 row. The record's current transaction ID is the enclosing coordinator entry's ID, and `prev_tx_id`
 links each operation to the version it follows; that link is the ordering relation replay uses.
 
-Two additional coordinator tables manage backup windows:
+## Backup control tables
+
+Two coordinator tables manage backup windows.
 
 ### `backup`
 
@@ -104,11 +91,12 @@ key, so it contains at most one row. A row means a backup is running; no row mea
 | Column | Type | Meaning |
 |---|---|---|
 | `id` | TEXT, PK | Fixed key such as `backup` |
-| `label` | TEXT | Window identifier stamped into redo |
+| `label` | TEXT | Window identifier stamped into redo (e.g. `2026-07-23T01:00:00`) |
 | `created_at` | BIGINT | Open time in epoch milliseconds |
 | `updated_by` | TEXT | Operator identifier |
 
-Opening uses `putIfNotExists`, so a second backup cannot start while one is already running.
+Opening uses `putIfNotExists`, so at most one window is ever open: re-opening the same label is
+idempotent and succeeds, while opening a different label while one is running is rejected.
 
 ### `backup_histories`
 
@@ -280,6 +268,9 @@ Replication (SSR). It follows the same record-restoration idea but does not reus
   cannot prove every process is ready.
 - The implementation does not prevent reuse of a backup label.
 - Saved backups have no metadata file proving which copies belong together and completed successfully.
+- The atomic, taken-last coordinator snapshot (conditions 1 and 2) is not verified. Recording the
+  latest user-copy completion time, checking the coordinator snapshot began after it, and rejecting
+  backends that cannot snapshot atomically would enforce it.
 - Coordinator completeness is not verified before recovery.
 - `upgrade()` adds columns to `state` but does not create `backup` or `backup_histories`. Existing
   deployments must provision them before rolling the new library. Manager construction also does not
