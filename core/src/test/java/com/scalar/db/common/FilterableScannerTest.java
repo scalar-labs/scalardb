@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,12 +14,16 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection.Conjunction;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.TextColumn;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -115,6 +120,69 @@ public class FilterableScannerTest {
     assertThat(results1.get(0)).isEqualTo(result2);
     assertThat(results2).isEmpty();
     verify(scanner, times(2)).one();
+  }
+
+  @Test
+  public void one_WithCollationComparator_ShouldFilterRangeByCollation() throws ExecutionException {
+    // Arrange: a case-insensitive ICU PRIMARY collation. The scan filters `col >= 'apple'` on a
+    // TEXT column. 'Apple' is excluded by byte order but included by the case-insensitive
+    // collation.
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, "PRIMARY");
+    CollationComparator comparator = CollationComparator.from(new DatabaseConfig(props)).get();
+
+    Scanner textScanner = mock(Scanner.class);
+    Result apple = mock(Result.class);
+    Result zebra = mock(Result.class);
+    when(textScanner.one())
+        .thenReturn(Optional.of(apple))
+        .thenReturn(Optional.of(zebra))
+        .thenReturn(Optional.empty());
+    when(apple.getColumns()).thenReturn(ImmutableMap.of("col", TextColumn.of("col", "Apple")));
+    when(zebra.getColumns()).thenReturn(ImmutableMap.of("col", TextColumn.of("col", "zebra")));
+    Scan textScan = mock(Scan.class);
+    when(textScan.getConjunctions())
+        .thenReturn(
+            ImmutableSet.of(
+                Conjunction.of(
+                    ConditionBuilder.column("col").isGreaterThanOrEqualToText("apple"))));
+
+    // Act: with the collation, both rows pass; without it, 'Apple' would be filtered out.
+    FilterableScanner withCollation =
+        new FilterableScanner(textScan, textScanner, Optional.of(comparator));
+
+    // Assert
+    assertThat(withCollation.all()).containsExactly(apple, zebra);
+  }
+
+  @Test
+  public void one_WithoutCollationComparator_ShouldFilterRangeByByteOrder()
+      throws ExecutionException {
+    // Arrange: no collation. 'Apple' (0x41) < 'apple' (0x61) so it is excluded; 'zebra' passes.
+    Scanner textScanner = mock(Scanner.class);
+    Result apple = mock(Result.class);
+    Result zebra = mock(Result.class);
+    when(textScanner.one())
+        .thenReturn(Optional.of(apple))
+        .thenReturn(Optional.of(zebra))
+        .thenReturn(Optional.empty());
+    when(apple.getColumns()).thenReturn(ImmutableMap.of("col", TextColumn.of("col", "Apple")));
+    when(zebra.getColumns()).thenReturn(ImmutableMap.of("col", TextColumn.of("col", "zebra")));
+    Scan textScan = mock(Scan.class);
+    when(textScan.getConjunctions())
+        .thenReturn(
+            ImmutableSet.of(
+                Conjunction.of(
+                    ConditionBuilder.column("col").isGreaterThanOrEqualToText("apple"))));
+
+    // Act
+    FilterableScanner withoutCollation = new FilterableScanner(textScan, textScanner);
+
+    // Assert
+    assertThat(withoutCollation.all()).containsExactly(zebra);
   }
 
   @Test

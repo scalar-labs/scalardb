@@ -33,6 +33,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
   private final SelectStatementHandler selectStatementHandler;
   private final MutateStatementHandler mutateStatementHandler;
   private final OperationChecker operationChecker;
+  private final Optional<CollationComparator> collationComparator;
 
   public ObjectStorage(DatabaseConfig databaseConfig) {
     super(databaseConfig);
@@ -49,7 +50,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
     operationChecker =
         new ObjectStorageOperationChecker(
             databaseConfig, metadataManager, new StorageInfoProvider(admin));
-    Optional<CollationComparator> collationComparator = CollationComparator.from(databaseConfig);
+    this.collationComparator = CollationComparator.from(databaseConfig);
     selectStatementHandler =
         new SelectStatementHandler(wrapper, metadataManager, collationComparator);
     mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager);
@@ -68,6 +69,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
     this.selectStatementHandler = selectStatementHandler;
     this.mutateStatementHandler = mutateStatementHandler;
     this.operationChecker = operationChecker;
+    this.collationComparator = CollationComparator.from(databaseConfig);
   }
 
   @Override
@@ -81,7 +83,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
       } else {
         scanner =
             new FilterableScanner(
-                get, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)));
+                get,
+                selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)),
+                collationComparator);
       }
       Optional<Result> result = scanner.one();
       if (!result.isPresent()) {
@@ -117,7 +121,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
       return selectStatementHandler.handle(scan);
     } else {
       return new FilterableScanner(
-          scan, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)));
+          scan,
+          selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)),
+          collationComparator);
     }
   }
 

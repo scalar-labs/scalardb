@@ -24,6 +24,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -54,6 +55,7 @@ public class CrudHandler {
   private final boolean isIndexEventuallyConsistentReadEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
   private final ParallelExecutor parallelExecutor;
+  private final Optional<CollationComparator> collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
@@ -62,7 +64,8 @@ public class CrudHandler {
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
       boolean isIndexEventuallyConsistentReadEnabled,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      Optional<CollationComparator> collationComparator) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -70,6 +73,7 @@ public class CrudHandler {
     this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
     this.mutationConditionsValidator = new MutationConditionsValidator();
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.collationComparator = checkNotNull(collationComparator);
   }
 
   @VisibleForTesting
@@ -80,7 +84,8 @@ public class CrudHandler {
       boolean isIncludeMetadataEnabled,
       boolean isIndexEventuallyConsistentReadEnabled,
       MutationConditionsValidator mutationConditionsValidator,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      Optional<CollationComparator> collationComparator) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -88,6 +93,7 @@ public class CrudHandler {
     this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
     this.mutationConditionsValidator = checkNotNull(mutationConditionsValidator);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.collationComparator = checkNotNull(collationComparator);
   }
 
   public Optional<Result> get(Get get, TransactionContext context) throws CrudException {
@@ -349,7 +355,7 @@ public class CrudHandler {
           ret.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), selection.getConjunctions()));
+                      r.getColumns(), selection.getConjunctions(), collationComparator));
     }
 
     return new RecoveredResult(ret, indexKeyFilteredOut);

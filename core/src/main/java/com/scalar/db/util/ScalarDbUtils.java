@@ -36,6 +36,7 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -365,11 +366,34 @@ public final class ScalarDbUtils {
 
   public static boolean columnsMatchAnyOfConjunctions(
       Map<String, Column<?>> columns, Set<Conjunction> conjunctions) {
+    return columnsMatchAnyOfConjunctions(columns, conjunctions, Optional.empty());
+  }
+
+  /**
+   * Returns whether the given columns match any of the given conjunctions.
+   *
+   * <p>When a {@link CollationComparator} is present, the range operators ({@code GT}, {@code GTE},
+   * {@code LT}, {@code LTE}) on {@code TEXT} columns are evaluated with the configured collation
+   * ordering (R4). All other operators ({@code EQ}, {@code NE}, {@code IS_NULL}, {@code
+   * IS_NOT_NULL}, {@code LIKE}, {@code NOT_LIKE}) stay byte-exact (R7). When the comparator is
+   * absent, the behavior is identical to ScalarDB's current natural-order comparison.
+   *
+   * @param columns the columns of a record keyed by column name
+   * @param conjunctions the conjunctions to evaluate
+   * @param collationComparator the collation comparator, or {@link Optional#empty()} for current
+   *     natural-order behavior
+   * @return {@code true} if the columns match any of the conjunctions
+   */
+  public static boolean columnsMatchAnyOfConjunctions(
+      Map<String, Column<?>> columns,
+      Set<Conjunction> conjunctions,
+      Optional<CollationComparator> collationComparator) {
     for (Conjunction conjunction : conjunctions) {
       boolean allMatched = true;
       for (ConditionalExpression condition : conjunction.getConditions()) {
         if (!columns.containsKey(condition.getColumn().getName())
-            || !columnMatchesCondition(columns.get(condition.getColumn().getName()), condition)) {
+            || !columnMatchesCondition(
+                columns.get(condition.getColumn().getName()), condition, collationComparator)) {
           allMatched = false;
           break;
         }
@@ -383,7 +407,9 @@ public final class ScalarDbUtils {
 
   @SuppressWarnings("unchecked")
   private static <T> boolean columnMatchesCondition(
-      Column<T> column, ConditionalExpression condition) {
+      Column<T> column,
+      ConditionalExpression condition,
+      Optional<CollationComparator> collationComparator) {
     assert column.getClass() == condition.getColumn().getClass();
     switch (condition.getOperator()) {
       case EQ:
@@ -393,13 +419,13 @@ public final class ScalarDbUtils {
       case IS_NOT_NULL:
         return !column.equals(condition.getColumn());
       case GT:
-        return column.compareTo((Column<T>) condition.getColumn()) > 0;
+        return compareForRange(column, condition, collationComparator) > 0;
       case GTE:
-        return column.compareTo((Column<T>) condition.getColumn()) >= 0;
+        return compareForRange(column, condition, collationComparator) >= 0;
       case LT:
-        return column.compareTo((Column<T>) condition.getColumn()) < 0;
+        return compareForRange(column, condition, collationComparator) < 0;
       case LTE:
-        return column.compareTo((Column<T>) condition.getColumn()) <= 0;
+        return compareForRange(column, condition, collationComparator) <= 0;
       case LIKE:
       case NOT_LIKE:
         // assert condition instanceof LikeExpression;
@@ -407,6 +433,17 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError("Unknown operator: " + condition.getOperator());
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> int compareForRange(
+      Column<T> column,
+      ConditionalExpression condition,
+      Optional<CollationComparator> collationComparator) {
+    if (collationComparator.isPresent() && column.getDataType() == DataType.TEXT) {
+      return collationComparator.get().columnComparator().compare(column, condition.getColumn());
+    }
+    return column.compareTo((Column<T>) condition.getColumn());
   }
 
   @VisibleForTesting
