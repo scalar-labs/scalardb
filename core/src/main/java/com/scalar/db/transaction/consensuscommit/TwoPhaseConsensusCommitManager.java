@@ -35,6 +35,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.util.ThrowableFunction;
@@ -88,7 +89,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(
@@ -131,7 +133,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(

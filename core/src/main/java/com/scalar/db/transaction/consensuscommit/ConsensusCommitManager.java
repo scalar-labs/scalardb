@@ -38,6 +38,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
@@ -102,7 +103,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();
@@ -142,7 +144,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();

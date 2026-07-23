@@ -117,7 +117,8 @@ public class CrudHandlerTest {
             false,
             false,
             mutationConditionsValidator,
-            parallelExecutor);
+            parallelExecutor,
+            Optional.empty());
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
@@ -2966,7 +2967,8 @@ public class CrudHandlerTest {
             false,
             true,
             mutationConditionsValidator,
-            parallelExecutor);
+            parallelExecutor,
+            Optional.empty());
     Get getWithIndex = prepareGetWithIndex();
     Scan scanWithIndex = prepareScanWithIndex();
     Scan scanAll =

@@ -34,6 +34,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
@@ -108,7 +109,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     this.commit =
         new ParticipantCommitHandler(
