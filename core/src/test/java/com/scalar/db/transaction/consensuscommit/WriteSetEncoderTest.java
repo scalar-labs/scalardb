@@ -68,7 +68,7 @@ class WriteSetEncoderTest {
   }
 
   private Snapshot newSnapshot() {
-    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor);
+    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor, Optional.empty());
   }
 
   @ParameterizedTest

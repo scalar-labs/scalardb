@@ -26,6 +26,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
@@ -57,6 +58,15 @@ public class Snapshot {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
+  // The collation comparator governing clustering-key range-membership ordering in the
+  // scan-after-write validation. Empty means ScalarDB's current natural-order behavior. It governs
+  // ordering only; key identity and map keying stay byte-exact.
+  private final Optional<CollationComparator> collationComparator;
+
+  // The resolved clustering-key comparator: collation-aware when a collation is configured,
+  // otherwise the natural Key.compareTo (preserving current behavior).
+  private final Comparator<com.scalar.db.io.Key> clusteringKeyComparator;
+
   // The read set stores information about the records that are read in this transaction. This is
   // used as a previous version for write operations.
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
@@ -82,10 +92,13 @@ public class Snapshot {
   public Snapshot(
       String id,
       TransactionTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      Optional<CollationComparator> collationComparator) {
     this.id = id;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
+    this.collationComparator = collationComparator;
+    this.clusteringKeyComparator = resolveClusteringKeyComparator(this.collationComparator);
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -99,6 +112,7 @@ public class Snapshot {
       String id,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      Optional<CollationComparator> collationComparator,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
       ConcurrentMap<Get, Optional<TransactionResult>> getSet,
       Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet,
@@ -108,12 +122,24 @@ public class Snapshot {
     this.id = id;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
+    this.collationComparator = collationComparator;
+    this.clusteringKeyComparator = resolveClusteringKeyComparator(this.collationComparator);
     this.readSet = readSet;
     this.getSet = getSet;
     this.scanSet = scanSet;
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
     this.scannerSet = scannerSet;
+  }
+
+  // Resolves the clustering-key range-membership comparator: collation-aware when configured,
+  // otherwise the natural Key.compareTo, which preserves ScalarDB's current behavior when the
+  // collation setting is unset.
+  private static Comparator<com.scalar.db.io.Key> resolveClusteringKeyComparator(
+      Optional<CollationComparator> collationComparator) {
+    return collationComparator
+        .map(CollationComparator::keyComparator)
+        .orElseGet(() -> Comparator.naturalOrder());
   }
 
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet
@@ -502,13 +528,18 @@ public class Snapshot {
         return true;
       }
 
+      // The range-membership check is a pure ordering test using the resolved clustering-key
+      // comparator: collation-aware when configured (KTD3), otherwise the natural Key.compareTo,
+      // which reproduces ScalarDB's current behavior when the collation setting is unset (AE3).
+      // Using ordering only (>= / <= / > / <) rather than mixing byte-equals with compareTo means a
+      // key that collates-equal to an inclusive boundary is judged in-range. This is ordering only;
+      // it keys no map and collapses no identity.
       if (isStartGiven && isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
         // If startKey <= writtenKey <= endKey
-        if ((scan.getStartInclusive() && writtenKey.equals(startKey))
-            || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
-            || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
+        if (isAfterStart(writtenKey, startKey, scan.getStartInclusive())
+            && isBeforeEnd(writtenKey, endKey, scan.getEndInclusive())) {
           return true;
         }
       }
@@ -516,8 +547,7 @@ public class Snapshot {
       if (isStartGiven && !isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         // If startKey <= writtenKey
-        if ((scan.getStartInclusive() && startKey.equals(writtenKey))
-            || writtenKey.compareTo(startKey) > 0) {
+        if (isAfterStart(writtenKey, startKey, scan.getStartInclusive())) {
           return true;
         }
       }
@@ -525,13 +555,24 @@ public class Snapshot {
       if (!isStartGiven) {
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
         // If writtenKey <= endKey
-        if ((scan.getEndInclusive() && writtenKey.equals(endKey))
-            || writtenKey.compareTo(endKey) < 0) {
+        if (isBeforeEnd(writtenKey, endKey, scan.getEndInclusive())) {
           return true;
         }
       }
     }
     return false;
+  }
+
+  private boolean isAfterStart(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key startKey, boolean inclusive) {
+    int cmp = clusteringKeyComparator.compare(writtenKey, startKey);
+    return inclusive ? cmp >= 0 : cmp > 0;
+  }
+
+  private boolean isBeforeEnd(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key endKey, boolean inclusive) {
+    int cmp = clusteringKeyComparator.compare(writtenKey, endKey);
+    return inclusive ? cmp <= 0 : cmp < 0;
   }
 
   private boolean areConjunctionsOverlapped(Put put, Scan scan) {

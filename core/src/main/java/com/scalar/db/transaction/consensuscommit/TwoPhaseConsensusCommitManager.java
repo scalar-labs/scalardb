@@ -64,6 +64,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final ConsensusCommitOperationChecker operationChecker;
+  private final Optional<CollationComparator> collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -80,6 +81,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -88,7 +90,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor,
-            CollationComparator.from(databaseConfig));
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(
@@ -124,6 +126,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -132,7 +135,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor,
-            CollationComparator.from(databaseConfig));
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(
@@ -179,6 +182,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.recoveryExecutor = recoveryExecutor;
     this.crud = crud;
     this.commit = commit;
+    this.collationComparator = CollationComparator.from(databaseConfig);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -236,7 +240,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
-    Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, tableMetadataManager, parallelExecutor, collationComparator);
     TransactionContext context =
         new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation, false);
     TwoPhaseConsensusCommit transaction =

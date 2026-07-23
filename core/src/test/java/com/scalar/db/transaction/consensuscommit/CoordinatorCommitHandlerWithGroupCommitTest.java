@@ -97,14 +97,15 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   }
 
   private Snapshot prepareSnapshotWithWrite(String id) throws CrudException {
-    Snapshot snapshot = new Snapshot(id, tableMetadataManager, new ParallelExecutor(config));
+    Snapshot snapshot =
+        new Snapshot(id, tableMetadataManager, new ParallelExecutor(config), Optional.empty());
     Put put = preparePut();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     return snapshot;
   }
 
   private Snapshot prepareEmptySnapshot(String id) {
-    return new Snapshot(id, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(id, tableMetadataManager, new ParallelExecutor(config), Optional.empty());
   }
 
   private TransactionContext createContext(String id, Snapshot snapshot, boolean slotReserved) {

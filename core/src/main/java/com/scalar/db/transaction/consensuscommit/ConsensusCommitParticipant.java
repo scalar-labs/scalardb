@@ -87,6 +87,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
   private final CrudHandler crud;
   private final ParticipantCommitHandler commit;
   private final ConsensusCommitOperationChecker operationChecker;
+  private final Optional<CollationComparator> collationComparator;
 
   private final ConcurrentMap<String, ParticipantContext> contexts = new ConcurrentHashMap<>();
 
@@ -104,6 +105,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     this.recoveryExecutor =
         new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
+    this.collationComparator = CollationComparator.from(databaseConfig);
     this.crud =
         new CrudHandler(
             storage,
@@ -112,7 +114,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor,
-            CollationComparator.from(databaseConfig));
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     this.commit =
         new ParticipantCommitHandler(
@@ -150,6 +152,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.operationChecker = checkNotNull(operationChecker);
+    this.collationComparator = Optional.empty();
   }
 
   private static String resolveParticipantId(ConsensusCommitConfig config) {
@@ -169,7 +172,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
   @Override
   public void join(String transactionId, boolean readOnly, Map<String, String> attributes)
       throws TransactionException {
-    Snapshot snapshot = new Snapshot(transactionId, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(transactionId, tableMetadataManager, parallelExecutor, collationComparator);
     // The isolation level can be overridden per transaction via the transaction-isolation
     // attribute; otherwise it falls back to the participant's configured default.
     Isolation isolation =

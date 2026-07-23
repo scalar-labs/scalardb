@@ -124,7 +124,8 @@ class ParticipantCommitHandlerTest {
   }
 
   private Snapshot prepareSnapshot() {
-    return new Snapshot(ANY_ID, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(
+        ANY_ID, tableMetadataManager, new ParallelExecutor(config), Optional.empty());
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() throws CrudException {
