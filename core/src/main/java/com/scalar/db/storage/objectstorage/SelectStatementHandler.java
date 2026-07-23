@@ -1,6 +1,5 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.google.common.collect.Ordering;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
@@ -206,9 +205,7 @@ public class SelectStatementHandler extends StatementHandler {
       boolean isInclusive,
       TableMetadata metadata) {
     Comparator<Column<?>> perColumn =
-        collationComparator
-            .map(CollationComparator::columnComparator)
-            .orElseGet(() -> (a, b) -> Ordering.natural().compare(a, b));
+        ClusteringKeyComparator.resolveColumnComparator(collationComparator);
     for (Column<?> column : clusteringKey.getColumns()) {
       Scan.Ordering.Order order = metadata.getClusteringOrder(column.getName());
       if (clusteringKey.getColumns().indexOf(column) == clusteringKey.size() - 1) {
