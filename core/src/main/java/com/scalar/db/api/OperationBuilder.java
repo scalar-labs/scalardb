@@ -326,13 +326,23 @@ public class OperationBuilder {
     T clearValue(String columnName);
   }
 
+  /**
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
+   */
+  @Deprecated
   public interface ImplicitPreReadEnabled<T> {
     /**
      * Disables implicit pre-read for this put operation. This is a utility method for Consensus
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T disableImplicitPreRead();
 
     /**
@@ -340,7 +350,11 @@ public class OperationBuilder {
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T enableImplicitPreRead();
 
     /**
@@ -349,17 +363,31 @@ public class OperationBuilder {
      *
      * @param implicitPreReadEnabled whether implicit pre-read is enabled or not
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T implicitPreReadEnabled(boolean implicitPreReadEnabled);
   }
 
+  /**
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
+   */
+  @Deprecated
   public interface InsertModeEnabled<T> {
     /**
      * Disables the insert mode for this put operation. This is a utility method for Consensus
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T disableInsertMode();
 
     /**
@@ -367,7 +395,11 @@ public class OperationBuilder {
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T enableInsertMode();
 
     /**
@@ -376,7 +408,11 @@ public class OperationBuilder {
      *
      * @param insertModeEnabled whether the insert mode is enabled or not
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T insertModeEnabled(boolean insertModeEnabled);
   }
 
