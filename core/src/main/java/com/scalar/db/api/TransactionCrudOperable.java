@@ -55,7 +55,8 @@ public interface TransactionCrudOperable extends CrudOperable<CrudException> {
    *     still fail if the cause is nontransient
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
-   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0.
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use the insert, upsert, or
+   *     update operations instead.
    */
   @Deprecated
   @Override
@@ -72,7 +73,7 @@ public interface TransactionCrudOperable extends CrudOperable<CrudException> {
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
    * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use {@link #mutate(List)}
-   *     instead.
+   *     instead, or the insert, upsert, or update operations for individual writes.
    */
   @Deprecated
   @Override
