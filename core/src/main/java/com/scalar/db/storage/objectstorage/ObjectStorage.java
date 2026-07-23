@@ -19,6 +19,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.CollationComparator;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -48,7 +49,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
     operationChecker =
         new ObjectStorageOperationChecker(
             databaseConfig, metadataManager, new StorageInfoProvider(admin));
-    selectStatementHandler = new SelectStatementHandler(wrapper, metadataManager);
+    Optional<CollationComparator> collationComparator = CollationComparator.from(databaseConfig);
+    selectStatementHandler =
+        new SelectStatementHandler(wrapper, metadataManager, collationComparator);
     mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager);
     logger.info("ObjectStorage object is created properly");
   }
