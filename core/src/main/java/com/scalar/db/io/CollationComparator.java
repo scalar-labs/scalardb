@@ -1,0 +1,205 @@
+package com.scalar.db.io;
+
+import com.google.common.primitives.UnsignedBytes;
+import com.ibm.icu.text.Collator;
+import com.ibm.icu.text.RuleBasedCollator;
+import com.ibm.icu.util.ULocale;
+import com.scalar.db.config.DatabaseConfig;
+import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.concurrent.Immutable;
+import javax.annotation.concurrent.ThreadSafe;
+
+/**
+ * A thread-safe, immutable comparator that orders text according to the configured {@link
+ * Collation}.
+ *
+ * <p>This is the shared ordering primitive consumed by the in-memory comparison sites (object
+ * storage scan sorting and range filtering, in-memory range filtering, and the Consensus Commit
+ * snapshot's scan-after-write range check). All three sites order text identically because they all
+ * build on {@link #textComparator()} through {@link #columnComparator()} and {@link
+ * #keyComparator()}.
+ *
+ * <p>It governs ordering only. Equality and identity comparisons are unchanged and stay byte-exact.
+ *
+ * <ul>
+ *   <li>{@link Collation#BINARY} orders text by unsigned UTF-8 byte sequence, using Guava's {@link
+ *       UnsignedBytes#lexicographicalComparator()} over {@link
+ *       String#getBytes(java.nio.charset.Charset)} with UTF-8. This intentionally diverges from
+ *       Java's natural UTF-16 code-unit order above U+FFFF, matching byte-order backends.
+ *   <li>{@link Collation#ICU} orders text according to a frozen ICU {@link Collator} built from the
+ *       configured locale and strength, or from a custom {@link RuleBasedCollator} tailoring-rule
+ *       string. The collator is frozen at construction time so it is immutable and safe for
+ *       concurrent {@code compare} calls.
+ * </ul>
+ *
+ * <p>When {@code scalar.db.collation} is unset, {@link #from(DatabaseConfig)} returns {@link
+ * Optional#empty()} so callers keep ScalarDB's current natural-order behavior.
+ */
+@Immutable
+@ThreadSafe
+public final class CollationComparator {
+
+  private final Comparator<String> textComparator;
+  private final Comparator<Column<?>> columnComparator;
+  private final Comparator<Key> keyComparator;
+
+  private CollationComparator(Comparator<String> textComparator) {
+    this.textComparator = textComparator;
+    Comparator<String> nullsFirstText = Comparator.nullsFirst(textComparator);
+    this.columnComparator = buildColumnComparator(nullsFirstText);
+    this.keyComparator = buildKeyComparator(this.columnComparator);
+  }
+
+  /**
+   * Creates a {@code CollationComparator} from the given configuration.
+   *
+   * @param config the database configuration
+   * @return an {@code Optional} holding the comparator when {@code scalar.db.collation} is set, or
+   *     {@link Optional#empty()} when it is unset (callers keep current natural-order behavior)
+   * @throws IllegalArgumentException if an ICU custom tailoring-rule string is malformed
+   */
+  public static Optional<CollationComparator> from(DatabaseConfig config) {
+    Optional<Collation> collation = config.getCollation();
+    if (!collation.isPresent()) {
+      return Optional.empty();
+    }
+    switch (collation.get()) {
+      case BINARY:
+        return Optional.of(new CollationComparator(binaryTextComparator()));
+      case ICU:
+        return Optional.of(new CollationComparator(icuTextComparator(config)));
+      default:
+        throw new AssertionError("Unknown collation: " + collation.get());
+    }
+  }
+
+  private static Comparator<String> binaryTextComparator() {
+    Comparator<byte[]> byteComparator = UnsignedBytes.lexicographicalComparator();
+    return (left, right) ->
+        byteComparator.compare(
+            left.getBytes(StandardCharsets.UTF_8), right.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static Comparator<String> icuTextComparator(DatabaseConfig config) {
+    Collator collator;
+    Optional<String> rules = config.getCollationRules();
+    if (rules.isPresent()) {
+      try {
+        collator = new RuleBasedCollator(rules.get());
+      } catch (Exception e) {
+        throw new IllegalArgumentException(
+            "Failed to build an ICU collator from the custom collation rules: " + rules.get(), e);
+      }
+    } else {
+      ULocale locale = config.getCollationLocale().map(ULocale::new).orElse(ULocale.ROOT);
+      collator = Collator.getInstance(locale);
+    }
+    config
+        .getCollationStrength()
+        .ifPresent(strength -> collator.setStrength(toIcuStrength(strength)));
+
+    // Freeze so the collator is immutable and safe for concurrent compare (KTD5).
+    Collator frozen = collator.freeze();
+    return frozen::compare;
+  }
+
+  private static int toIcuStrength(CollationStrength strength) {
+    switch (strength) {
+      case PRIMARY:
+        return Collator.PRIMARY;
+      case SECONDARY:
+        return Collator.SECONDARY;
+      case TERTIARY:
+        return Collator.TERTIARY;
+      case QUATERNARY:
+        return Collator.QUATERNARY;
+      case IDENTICAL:
+        return Collator.IDENTICAL;
+      default:
+        throw new AssertionError("Unknown collation strength: " + strength);
+    }
+  }
+
+  private static Comparator<Column<?>> buildColumnComparator(Comparator<String> nullsFirstText) {
+    return (left, right) -> {
+      if (left.getDataType() == DataType.TEXT && right.getDataType() == DataType.TEXT) {
+        // Preserve TextColumn's null-first semantics; value ordering is collation-aware. Names are
+        // equal at the call sites, so we compare values only (identity is unchanged).
+        return nullsFirstText.compare(left.getTextValue(), right.getTextValue());
+      }
+      // Non-text columns keep natural ordering.
+      return compareNatural(left, right);
+    };
+  }
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private static int compareNatural(Column<?> left, Column<?> right) {
+    return ((Comparable) left).compareTo(right);
+  }
+
+  private static Comparator<Key> buildKeyComparator(Comparator<Column<?>> columnComparator) {
+    return (left, right) -> {
+      List<Column<?>> leftColumns = left.getColumns();
+      List<Column<?>> rightColumns = right.getColumns();
+      int size = Math.min(leftColumns.size(), rightColumns.size());
+      for (int i = 0; i < size; i++) {
+        int result = columnComparator.compare(leftColumns.get(i), rightColumns.get(i));
+        if (result != 0) {
+          return result;
+        }
+      }
+      return Integer.compare(leftColumns.size(), rightColumns.size());
+    };
+  }
+
+  /**
+   * Returns the collation-aware comparator over non-null text values.
+   *
+   * @return the text comparator
+   */
+  public Comparator<String> textComparator() {
+    return textComparator;
+  }
+
+  /**
+   * Returns the shared per-column comparator. Two {@code TEXT} columns are ordered by value using
+   * {@link #textComparator()} with null-first semantics; any other column type delegates to natural
+   * ordering.
+   *
+   * @return the column comparator
+   */
+  public Comparator<Column<?>> columnComparator() {
+    return columnComparator;
+  }
+
+  /**
+   * Returns a lexicographical (always-ascending) comparator over a {@link Key}'s columns, built on
+   * {@link #columnComparator()}.
+   *
+   * @return the key comparator
+   */
+  public Comparator<Key> keyComparator() {
+    return keyComparator;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof CollationComparator)) {
+      return false;
+    }
+    CollationComparator that = (CollationComparator) o;
+    return textComparator.equals(that.textComparator);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(textComparator);
+  }
+}
