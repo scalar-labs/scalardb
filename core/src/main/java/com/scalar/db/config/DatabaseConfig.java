@@ -9,6 +9,8 @@ import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.io.Collation;
+import com.scalar.db.io.CollationStrength;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nullable;
@@ -42,6 +45,10 @@ public class DatabaseConfig {
   private boolean crossPartitionScanOrderingEnabled;
   private String systemNamespaceName;
   private int scanFetchSize;
+  @Nullable private Collation collation;
+  @Nullable private String collationLocale;
+  @Nullable private CollationStrength collationStrength;
+  @Nullable private String collationRules;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -67,6 +74,10 @@ public class DatabaseConfig {
   public static final String CROSS_PARTITION_SCAN_ORDERING = SCAN_PREFIX + "ordering.enabled";
   public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
   public static final String SCAN_FETCH_SIZE = PREFIX + "scan_fetch_size";
+  public static final String COLLATION = PREFIX + "collation";
+  public static final String COLLATION_LOCALE = PREFIX + "collation.locale";
+  public static final String COLLATION_STRENGTH = PREFIX + "collation.strength";
+  public static final String COLLATION_RULES = PREFIX + "collation.rules";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final int DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS = 10000;
@@ -138,6 +149,17 @@ public class DatabaseConfig {
     systemNamespaceName = getSystemNamespaceName(getProperties());
 
     scanFetchSize = getInt(getProperties(), SCAN_FETCH_SIZE, DEFAULT_SCAN_FETCH_SIZE);
+
+    String collationValue = getString(getProperties(), COLLATION, null);
+    collation =
+        collationValue == null ? null : Collation.valueOf(collationValue.toUpperCase(Locale.ROOT));
+    collationLocale = getString(getProperties(), COLLATION_LOCALE, null);
+    String collationStrengthValue = getString(getProperties(), COLLATION_STRENGTH, null);
+    collationStrength =
+        collationStrengthValue == null
+            ? null
+            : CollationStrength.valueOf(collationStrengthValue.toUpperCase(Locale.ROOT));
+    collationRules = getString(getProperties(), COLLATION_RULES, null);
   }
 
   public List<String> getContactPoints() {
@@ -206,6 +228,22 @@ public class DatabaseConfig {
 
   public int getScanFetchSize() {
     return scanFetchSize;
+  }
+
+  public Optional<Collation> getCollation() {
+    return Optional.ofNullable(collation);
+  }
+
+  public Optional<String> getCollationLocale() {
+    return Optional.ofNullable(collationLocale);
+  }
+
+  public Optional<CollationStrength> getCollationStrength() {
+    return Optional.ofNullable(collationStrength);
+  }
+
+  public Optional<String> getCollationRules() {
+    return Optional.ofNullable(collationRules);
   }
 
   public static String getTransactionManager(Properties properties) {

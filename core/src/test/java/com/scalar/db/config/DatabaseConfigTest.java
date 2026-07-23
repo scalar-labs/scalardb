@@ -3,6 +3,8 @@ package com.scalar.db.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.io.Collation;
+import com.scalar.db.io.CollationStrength;
 import java.util.Collections;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
@@ -454,5 +456,168 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.isAttributePropagationEnabled()).isFalse();
+  }
+
+  @Test
+  public void constructor_PropertiesWithBinaryCollationGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "BINARY");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getCollation()).hasValue(Collation.BINARY);
+    assertThat(config.getCollationLocale()).isEmpty();
+    assertThat(config.getCollationStrength()).isEmpty();
+    assertThat(config.getCollationRules()).isEmpty();
+  }
+
+  @Test
+  public void constructor_PropertiesWithIcuCollationGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_LOCALE, "en-US");
+    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, "PRIMARY");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollationLocale()).hasValue("en-US");
+    assertThat(config.getCollationStrength()).hasValue(CollationStrength.PRIMARY);
+    assertThat(config.getCollationRules()).isEmpty();
+  }
+
+  @Test
+  public void constructor_PropertiesWithCollationRulesGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_RULES, "&a < b < c");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollationRules()).hasValue("&a < b < c");
+  }
+
+  @Test
+  public void constructor_PropertiesWithLowerCaseCollationValuesGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "icu");
+    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, "primary");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollationStrength()).hasValue(CollationStrength.PRIMARY);
+  }
+
+  @Test
+  public void constructor_PropertiesWithLowerCaseBinaryCollationGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "binary");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getCollation()).hasValue(Collation.BINARY);
+  }
+
+  @Test
+  public void constructor_PropertiesWithoutCollationGiven_ShouldLeaveCollationEmpty() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getCollation()).isEmpty();
+    assertThat(config.getCollationLocale()).isEmpty();
+    assertThat(config.getCollationStrength()).isEmpty();
+    assertThat(config.getCollationRules()).isEmpty();
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithIcuCollationAndNoLocaleOrStrengthGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollationLocale()).isEmpty();
+    assertThat(config.getCollationStrength()).isEmpty();
+    assertThat(config.getCollationRules()).isEmpty();
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithUnknownCollationGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "unknown");
+
+    // Act Assert
+    assertThatThrownBy(() -> new DatabaseConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithUnknownCollationStrengthGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, "unknown");
+
+    // Act Assert
+    assertThatThrownBy(() -> new DatabaseConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithNoSqlStorageAndIcuCollationGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_LOCALE, "en-US");
+    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, "PRIMARY");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert: no compatibility validation is performed, so this constructs successfully.
+    assertThat(config.getStorage()).isEqualTo("dynamo");
+    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollationLocale()).hasValue("en-US");
+    assertThat(config.getCollationStrength()).hasValue(CollationStrength.PRIMARY);
   }
 }
