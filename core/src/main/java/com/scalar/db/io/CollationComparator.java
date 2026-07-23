@@ -8,7 +8,6 @@ import com.ibm.icu.util.ULocale;
 import com.scalar.db.config.DatabaseConfig;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
-import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -102,7 +101,8 @@ public final class CollationComparator {
         .getCollationStrength()
         .ifPresent(strength -> collator.setStrength(toIcuStrength(strength)));
 
-    // Freeze so the collator is immutable and safe for concurrent compare (KTD5).
+    // Freeze so the collator is immutable and safe for concurrent compare: an unfrozen ICU
+    // Collator is mutable and not thread-safe, while a frozen one is safe for concurrent compare.
     Collator frozen = collator.freeze();
     return frozen::compare;
   }
@@ -171,22 +171,5 @@ public final class CollationComparator {
    */
   public Comparator<Key> keyComparator() {
     return keyComparator;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof CollationComparator)) {
-      return false;
-    }
-    CollationComparator that = (CollationComparator) o;
-    return textComparator.equals(that.textComparator);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(textComparator);
   }
 }

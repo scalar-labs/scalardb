@@ -374,9 +374,10 @@ public final class ScalarDbUtils {
    *
    * <p>When a {@link CollationComparator} is present, the range operators ({@code GT}, {@code GTE},
    * {@code LT}, {@code LTE}) on {@code TEXT} columns are evaluated with the configured collation
-   * ordering (R4). All other operators ({@code EQ}, {@code NE}, {@code IS_NULL}, {@code
-   * IS_NOT_NULL}, {@code LIKE}, {@code NOT_LIKE}) stay byte-exact (R7). When the comparator is
-   * absent, the behavior is identical to ScalarDB's current natural-order comparison.
+   * ordering. All other operators ({@code EQ}, {@code NE}, {@code IS_NULL}, {@code IS_NOT_NULL},
+   * {@code LIKE}, {@code NOT_LIKE}) stay byte-exact, since the collation governs ordering only, not
+   * equality. When the comparator is absent, the behavior is identical to ScalarDB's current
+   * natural-order comparison.
    *
    * @param columns the columns of a record keyed by column name
    * @param conjunctions the conjunctions to evaluate
