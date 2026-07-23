@@ -106,3 +106,9 @@ the storage is the operator's responsibility.
   ScalarDB Core as a runtime dependency for all consumers (including `BINARY`-only and unset
   ones). A downstream application pinning a different ICU4J major version can hit Gradle
   conflict resolution, and ICU version differences carry collation-table changes.
+- **An unrecognized `scalar.db.collation.locale` falls back silently.** Unlike an invalid
+  `scalar.db.collation`, `scalar.db.collation.strength`, or a malformed
+  `scalar.db.collation.rules` — all of which fail fast at startup — a locale tag with no ICU
+  collation data is not rejected; ICU falls back to its root collation, producing ordering that
+  differs from the intended locale with no error. Configure a valid ICU locale (for example
+  `en`, `en_US`, `ja`) and verify the ordering matches your storage.
