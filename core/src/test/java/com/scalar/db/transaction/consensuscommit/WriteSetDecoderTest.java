@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +57,7 @@ class WriteSetDecoderTest {
   }
 
   private Snapshot newSnapshot() {
-    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor);
+    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor, Optional.empty());
   }
 
   private Entry encodeSinglePut(DataType pkType, Key partitionKey) throws Exception {

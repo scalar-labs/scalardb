@@ -77,6 +77,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  private final Optional<CollationComparator> collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -96,6 +97,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -104,7 +106,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor,
-            CollationComparator.from(databaseConfig));
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();
@@ -137,6 +139,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -145,7 +148,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor,
-            CollationComparator.from(databaseConfig));
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();
@@ -189,6 +192,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.groupCommitter = groupCommitter;
     this.coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    this.collationComparator = CollationComparator.from(databaseConfig);
     this.isolation = isolation;
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -312,7 +316,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       txId = groupCommitter.reserve(txId);
       groupCommitSlotReserved = true;
     }
-    Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, tableMetadataManager, parallelExecutor, collationComparator);
     TransactionContext context =
         new TransactionContext(
             txId, snapshot, isolation, readOnly, oneOperation, groupCommitSlotReserved);

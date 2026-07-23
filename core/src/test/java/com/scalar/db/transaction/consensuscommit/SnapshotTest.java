@@ -29,9 +29,11 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
@@ -47,6 +49,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -130,6 +133,10 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot() {
+    return prepareSnapshot(Optional.empty());
+  }
+
+  private Snapshot prepareSnapshot(Optional<CollationComparator> collationComparator) {
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -142,6 +149,7 @@ public class SnapshotTest {
             ANY_ID,
             tableMetadataManager,
             new ParallelExecutor(config),
+            collationComparator,
             readSet,
             getSet,
             scanSet,
@@ -2733,5 +2741,189 @@ public class SnapshotTest {
 
     // Assert
     assertThat(result).isFalse();
+  }
+
+  // ---- Collation-aware scan-after-write range check (U5) ----
+
+  private static DatabaseConfig collationConfig(String... keyValues) {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    for (int i = 0; i < keyValues.length; i += 2) {
+      props.setProperty(keyValues[i], keyValues[i + 1]);
+    }
+    return new DatabaseConfig(props);
+  }
+
+  private static CollationComparator caseInsensitiveIcuCollation() {
+    return CollationComparator.from(
+            collationConfig(
+                DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_STRENGTH, "PRIMARY"))
+        .get();
+  }
+
+  private static CollationComparator binaryCollation() {
+    return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY")).get();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithRangeAndCaseInsensitiveCollationGivenAndCaseDifferingWrittenKeyInRange_ShouldThrowException()
+          throws CrudException {
+    // Arrange (Covers AE2): under a case-insensitive ICU collation, a written clustering key
+    // 'Apple' falls in the range ['apple','banana'] even though it differs by case from the
+    // inclusive start boundary.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", "banana"]
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .end(Key.ofText(ANY_NAME_2, "banana"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithRangeAndBinaryCollationGivenAndCaseDifferingWrittenKey_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange: under BINARY collation, 'Apple' (0x41...) sorts before 'apple' (0x61...) so it is
+    // out of the range ['apple','banana'] (documented behavior, mirrors AE3's byte ordering).
+    snapshot = prepareSnapshot(Optional.of(binaryCollation()));
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", "banana"]
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .end(Key.ofText(ANY_NAME_2, "banana"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_StartInclusiveBoundaryKeyCollatesEqualButNotByteIdentical_ShouldThrowException()
+          throws CrudException {
+    // Arrange (guards the removed equals/compareTo mix): a written key that collates-equal to the
+    // inclusive start boundary but is not byte-identical must be treated as in-range.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", infinite)
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      putIntoWriteSetAndReadSet_CollateEqualButByteDifferentKeys_ShouldRemainDistinctUnderCollation()
+          throws CrudException {
+    // Arrange (Covers R7): two keys that collate-equal under a case-insensitive collation but
+    // differ in bytes must stay DISTINCT in identity-keyed maps (writeSet, readSet) and in
+    // results.containsKey, because identity stays byte-exact.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put putUpper = preparePut(ANY_TEXT_1, "Apple");
+    Put putLower = preparePut(ANY_TEXT_1, "apple");
+    Snapshot.Key keyUpper = new Snapshot.Key(putUpper);
+    Snapshot.Key keyLower = new Snapshot.Key(putLower);
+
+    // Act
+    snapshot.putIntoWriteSet(keyUpper, putUpper);
+    snapshot.putIntoWriteSet(keyLower, putLower);
+    snapshot.putIntoReadSet(keyUpper, Optional.empty());
+    snapshot.putIntoReadSet(keyLower, Optional.empty());
+
+    // Assert
+    assertThat(keyUpper).isNotEqualTo(keyLower);
+    assertThat(writeSet).hasSize(2);
+    assertThat(readSet).hasSize(2);
+    assertThat(snapshot.containsKeyInWriteSet(keyUpper)).isTrue();
+    assertThat(snapshot.containsKeyInWriteSet(keyLower)).isTrue();
+    assertThat(snapshot.containsKeyInReadSet(keyUpper)).isTrue();
+    assertThat(snapshot.containsKeyInReadSet(keyLower)).isTrue();
+
+    Map<Snapshot.Key, TransactionResult> results = new HashMap<>();
+    results.put(keyUpper, prepareResult(ANY_ID, ANY_TEXT_1, "Apple"));
+    assertThat(results.containsKey(keyUpper)).isTrue();
+    assertThat(results.containsKey(keyLower)).isFalse();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_EqualityConjunctionUnderCaseInsensitiveCollation_ShouldStayByteExactAndNotThrow()
+          throws CrudException {
+    // Arrange (documented KTD3 bound): overlap that depends only on an equality conjunction stays
+    // byte-exact, so a case-only-differing value is NOT detected as overlapping even under a
+    // case-insensitive collation. This is intended, not a regression.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    // preparePut sets ANY_NAME_3 = ANY_TEXT_3 ("text3").
+    Put put = preparePut(ANY_TEXT_1, ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder(prepareCrossPartitionScan())
+            .clearConditions()
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("TEXT3"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithRangeAndCollationUnsetGivenAndCaseDifferingWrittenKey_ShouldReproduceCurrentBehavior()
+          throws CrudException {
+    // Arrange (Covers AE3): with the collation unset, 'Apple' (UTF-16 natural order) sorts before
+    // 'apple' and is out of range ['apple','banana'] — identical to the current release behavior.
+    snapshot = prepareSnapshot(Optional.empty());
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", "banana"]
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .end(Key.ofText(ANY_NAME_2, "banana"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
   }
 }
