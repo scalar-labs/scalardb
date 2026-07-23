@@ -1,5 +1,6 @@
 package com.scalar.db.io;
 
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.UnsignedBytes;
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.text.RuleBasedCollator;
@@ -7,7 +8,6 @@ import com.ibm.icu.util.ULocale;
 import com.scalar.db.config.DatabaseConfig;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
@@ -132,28 +132,15 @@ public final class CollationComparator {
         return nullsFirstText.compare(left.getTextValue(), right.getTextValue());
       }
       // Non-text columns keep natural ordering.
-      return compareNatural(left, right);
+      return Ordering.natural().compare(left, right);
     };
-  }
-
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private static int compareNatural(Column<?> left, Column<?> right) {
-    return ((Comparable) left).compareTo(right);
   }
 
   private static Comparator<Key> buildKeyComparator(Comparator<Column<?>> columnComparator) {
-    return (left, right) -> {
-      List<Column<?>> leftColumns = left.getColumns();
-      List<Column<?>> rightColumns = right.getColumns();
-      int size = Math.min(leftColumns.size(), rightColumns.size());
-      for (int i = 0; i < size; i++) {
-        int result = columnComparator.compare(leftColumns.get(i), rightColumns.get(i));
-        if (result != 0) {
-          return result;
-        }
-      }
-      return Integer.compare(leftColumns.size(), rightColumns.size());
-    };
+    return (left, right) ->
+        Ordering.from(columnComparator)
+            .lexicographical()
+            .compare(left.getColumns(), right.getColumns());
   }
 
   /**

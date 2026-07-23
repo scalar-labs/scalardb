@@ -17,10 +17,14 @@ public class ClusteringKeyComparator implements Comparator<Map<String, Object>> 
   public ClusteringKeyComparator(
       TableMetadata metadata, Optional<CollationComparator> collationComparator) {
     this.metadata = metadata;
-    this.perColumn =
-        collationComparator
-            .map(CollationComparator::columnComparator)
-            .orElseGet(() -> (a, b) -> Ordering.natural().compare(a, b));
+    this.perColumn = resolveColumnComparator(collationComparator);
+  }
+
+  static Comparator<Column<?>> resolveColumnComparator(
+      Optional<CollationComparator> collationComparator) {
+    return collationComparator
+        .map(CollationComparator::columnComparator)
+        .orElseGet(() -> (a, b) -> Ordering.natural().compare(a, b));
   }
 
   @Override
