@@ -341,7 +341,8 @@ public class Snapshot {
             // We need to apply conditions if it is a merged result because the transaction’s write
             // makes the record no longer match the conditions.
             !r.isMergedResult()
-                || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
+                || ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                    r.getColumns(), conjunctions, collationComparator));
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
@@ -529,11 +530,11 @@ public class Snapshot {
       }
 
       // The range-membership check is a pure ordering test using the resolved clustering-key
-      // comparator: collation-aware when configured (KTD3), otherwise the natural Key.compareTo,
-      // which reproduces ScalarDB's current behavior when the collation setting is unset (AE3).
-      // Using ordering only (>= / <= / > / <) rather than mixing byte-equals with compareTo means a
-      // key that collates-equal to an inclusive boundary is judged in-range. This is ordering only;
-      // it keys no map and collapses no identity.
+      // comparator: collation-aware when configured, otherwise the natural Key.compareTo, which
+      // reproduces ScalarDB's current behavior when the collation setting is unset. Using ordering
+      // only (>= / <= / > / <) rather than mixing byte-equals with compareTo means a key that
+      // collates-equal to an inclusive boundary is judged in-range. This is ordering only; it keys
+      // no map and collapses no identity.
       if (isStartGiven && isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
@@ -581,7 +582,8 @@ public class Snapshot {
     }
 
     Map<String, Column<?>> columns = getAllColumns(put);
-    return ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, scan.getConjunctions());
+    return ScalarDbUtils.columnsMatchAnyOfConjunctions(
+        columns, scan.getConjunctions(), collationComparator);
   }
 
   private Map<String, Column<?>> getAllColumns(Put put) {
@@ -800,7 +802,7 @@ public class Snapshot {
           next.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), scan.getConjunctions()));
+                      r.getColumns(), scan.getConjunctions(), collationComparator));
     }
 
     return next.isPresent() ? next : getNextResult(scanner, scan);
@@ -845,7 +847,7 @@ public class Snapshot {
           latestResult.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), get.getConjunctions()));
+                      r.getColumns(), get.getConjunctions(), collationComparator));
     }
 
     if (isChanged(latestResult, originalResult)) {

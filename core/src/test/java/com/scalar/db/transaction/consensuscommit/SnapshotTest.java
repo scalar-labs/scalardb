@@ -2926,4 +2926,315 @@ public class SnapshotTest {
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
   }
+
+  // ---- Collation-aware conjunction matching at the four Snapshot call sites ----
+  //
+  // These tests prove that TEXT range conjunctions (GT/GTE/LT/LTE) are evaluated with the
+  // configured collation ordering at all four ScalarDbUtils.columnsMatchAnyOfConjunctions call
+  // sites in Snapshot: areConjunctionsOverlapped (scan-after-write overlap), mergeResult
+  // (merged-result read path), getNextResult (scan validation), and validateGetResult (Get
+  // validation). Under a case-insensitive ICU collation, "B" collates greater than "a"
+  // (base letter 'b' > 'a'), whereas in natural UTF-16 order "B" (0x42) sorts before "a" (0x61).
+  // A written/read value "B" with a conjunction "col > 'a'" therefore only matches under
+  // collation ordering, which isolates the collation-awareness. EQ/NE stay byte-exact regardless.
+
+  private Put preparePutWithName3(String name3Value) {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+        .textValue(ANY_NAME_3, name3Value)
+        .textValue(ANY_NAME_4, ANY_TEXT_4)
+        .build();
+  }
+
+  private TransactionResult prepareResultWithName3(String txId, String name3Value) {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, name3Value))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, txId))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
+  }
+
+  // Site: areConjunctionsOverlapped -> isWriteSetOverlappedWith(Scan) (plain Scan overlap path).
+  @Test
+  public void
+      verifyNoOverlap_PlainScanRangeConjunctionAndCaseInsensitiveCollation_WrittenValueMatchesOnlyUnderCollation_ShouldThrowException()
+          throws CrudException {
+    // Arrange: a buffered write with name3="B" and a scan whose WHERE range conjunction is
+    // name3 > "a". "B" collates after "a" under a case-insensitive collation, so the write
+    // overlaps the scan and scan-after-write must be prohibited.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Site: areConjunctionsOverlapped -> isWriteSetOverlappedWith(Scan). Backward-compat when unset.
+  @Test
+  public void
+      verifyNoOverlap_PlainScanRangeConjunctionAndCollationUnset_ShouldReproduceCurrentBehavior()
+          throws CrudException {
+    // Arrange: with the collation unset, "B" (0x42) sorts before "a" (0x61) in natural order and
+    // does not match name3 > "a", so there is no overlap -- the current release behavior.
+    snapshot = prepareSnapshot(Optional.empty());
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  // Site: areConjunctionsOverlapped -> isWriteSetOverlappedWith(ScanAll) (cross-partition path).
+  @Test
+  public void
+      verifyNoOverlap_ScanAllRangeConjunctionAndCaseInsensitiveCollation_WrittenValueMatchesOnlyUnderCollation_ShouldThrowException()
+          throws CrudException {
+    // Arrange: same divergence exercised through the ScanAll (cross-partition) overlap branch.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scanAll, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Site: areConjunctionsOverlapped. EQ conjunction stays byte-exact even under collation.
+  @Test
+  public void
+      verifyNoOverlap_PlainScanEqualityConjunctionUnderCaseInsensitiveCollation_ShouldStayByteExactAndNotThrow()
+          throws CrudException {
+    // Arrange: a case-only-differing value must NOT match an "=" conjunction, proving the equality
+    // bound is preserved after threading the collation comparator.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("b"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  // Site: mergeResult (merged-result read path).
+  @Test
+  public void
+      getResult_MergedResultRangeConjunctionUnderCaseInsensitiveCollation_ShouldMatchUnderCollation()
+          throws CrudException {
+    // Arrange: the merged (write-over-read) result has name3="B" and the Get carries a range
+    // conjunction name3 > "a". Under a case-insensitive collation the merged result still matches,
+    // so it is returned rather than filtered out.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePutWithName3("B");
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get);
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID)));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isPresent();
+  }
+
+  // Site: mergeResult. Backward-compat when the collation is unset.
+  @Test
+  public void
+      getResult_MergedResultRangeConjunctionUnderCollationUnset_ShouldReproduceCurrentBehavior()
+          throws CrudException {
+    // Arrange: with the collation unset, name3="B" does not match name3 > "a" in natural order, so
+    // the merged result is filtered out -- the current release behavior.
+    snapshot = prepareSnapshot(Optional.empty());
+    Put put = preparePutWithName3("B");
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get);
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID)));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  // Site: mergeResult. EQ conjunction stays byte-exact even under collation.
+  @Test
+  public void
+      getResult_MergedResultEqualityConjunctionUnderCaseInsensitiveCollation_ShouldStayByteExact()
+          throws CrudException {
+    // Arrange: name3="B" against an "=" conjunction on "b" must NOT match under a case-insensitive
+    // collation, so the merged result is filtered out (equality stays byte-exact).
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePutWithName3("B");
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("b"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get);
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID)));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  // Site: validateGetResult (Get validation in toSerializable).
+  @Test
+  public void
+      toSerializable_GetRangeConjunctionUnderCaseInsensitiveCollation_LatestMatchesOnlyUnderCollation_ShouldThrowValidationConflictException()
+          throws ExecutionException, CrudException {
+    // Arrange: the Get originally matched no record (empty), but the latest storage record has
+    // name3="B" which matches name3 > "a" under a case-insensitive collation. The result set thus
+    // changed, so an anti-dependency must be detected.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoGetSet(get, Optional.empty());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Get getForStorage = ConsensusCommitUtils.prepareGetForStorage(get, TABLE_METADATA);
+    when(storage.get(getForStorage))
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")));
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+  }
+
+  // Site: validateGetResult. Backward-compat when the collation is unset.
+  @Test
+  public void toSerializable_GetRangeConjunctionUnderCollationUnset_ShouldReproduceCurrentBehavior()
+      throws ExecutionException, CrudException {
+    // Arrange: with the collation unset, the latest record name3="B" does not match name3 > "a" in
+    // natural order, so it is filtered out and the result set is unchanged (no anti-dependency).
+    snapshot = prepareSnapshot(Optional.empty());
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoGetSet(get, Optional.empty());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Get getForStorage = ConsensusCommitUtils.prepareGetForStorage(get, TABLE_METADATA);
+    when(storage.get(getForStorage))
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")));
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+  }
+
+  // Site: getNextResult (scan validation in toSerializable).
+  @Test
+  public void
+      toSerializable_ScanRangeConjunctionUnderCaseInsensitiveCollation_LatestMatchesOnlyUnderCollation_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange: the scan originally returned no record, but the latest storage record has name3="B"
+    // which matches name3 > "a" under a case-insensitive collation. getNextResult must keep it, so
+    // the extra record (written by another transaction) is detected as an anti-dependency.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoScanSet(scan, new LinkedHashMap<>());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+  }
+
+  // Site: getNextResult. Backward-compat when the collation is unset.
+  @Test
+  public void
+      toSerializable_ScanRangeConjunctionUnderCollationUnset_ShouldReproduceCurrentBehavior()
+          throws ExecutionException {
+    // Arrange: with the collation unset, the latest record name3="B" does not match name3 > "a" in
+    // natural order, so getNextResult filters it out and the scan result set is unchanged.
+    snapshot = prepareSnapshot(Optional.empty());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoScanSet(scan, new LinkedHashMap<>());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+  }
 }
