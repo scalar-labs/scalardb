@@ -1,11 +1,18 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.scalar.db.api.BranchTransaction;
+import com.scalar.db.api.GlobalTransaction;
 import com.scalar.db.api.GlobalTransactionTestBase;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.common.TwoPhaseCommitBackedGlobalTransactionManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.service.TwoPhaseCommitFactory;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
 
 /**
  * Runs the {@link GlobalTransactionTestBase} corpus against the consensus-commit implementation.
@@ -78,5 +85,46 @@ public abstract class TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestBa
     } catch (Exception ignored) {
       // Best-effort close during teardown.
     }
+  }
+
+  /**
+   * Backing-specific scenario, so it lives here rather than in the shared corpus: the coordinator
+   * observes only begin and joinParticipant — the CRUD a branch issues goes to the participant — so
+   * a healthy long-running global transaction is silent from the coordinator's point of view for
+   * its whole lifetime, and only the expiry-time participant probe keeps it from being reaped as
+   * abandoned.
+   */
+  @Test
+  public void
+      commit_GlobalTransactionExceedingExpirationWithContinuousCrud_ShouldCommitSuccessfully()
+          throws Exception {
+    // Arrange: a committed record to work on, and a dedicated coordinator/participant pair whose
+    // active-transaction expiration is much shorter than the transaction below.
+    putThenCommit(0, 0, INITIAL_BALANCE);
+    Properties properties =
+        propertiesWithParticipantId(getTestName(), "participant-short-expiration");
+    properties.setProperty(
+        DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, "2000");
+    TwoPhaseCommitFactory factory = TwoPhaseCommitFactory.create(properties);
+    try (TwoPhaseCommitBackedGlobalTransactionManager shortExpirationManager =
+        new TwoPhaseCommitBackedGlobalTransactionManager(
+            factory.getTwoPhaseCommitCoordinator(), factory.getTwoPhaseCommitParticipant())) {
+      // Act: keep issuing CRUD for ~3x the expiration, then commit. Continuous CRUD keeps the
+      // participant-side idle timer fresh while the coordinator sees nothing.
+      GlobalTransaction global = shortExpirationManager.beginGlobal();
+      BranchTransaction branch = shortExpirationManager.beginBranch(global.getId());
+      int balance = 0;
+      long deadlineMillis = System.currentTimeMillis() + 6000;
+      while (System.currentTimeMillis() < deadlineMillis) {
+        balance = branch.get(prepareGet(0, 0)).get().getInt(BALANCE);
+        TimeUnit.MILLISECONDS.sleep(100);
+      }
+      branch.put(preparePut(0, 0, balance + 100));
+      branch.end();
+      global.commit();
+    }
+
+    // Assert: the transaction outlived several expiration periods and still committed.
+    assertThat(get(0, 0).get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
   }
 }
