@@ -328,14 +328,14 @@ public abstract class GlobalTransactionTestBase {
     global.rollback();
   }
 
-  private void putThenCommit(int id, int type, int balance) throws TransactionException {
+  protected void putThenCommit(int id, int type, int balance) throws TransactionException {
     GlobalTransaction global = manager1.beginGlobal();
     BranchTransaction branch = manager1.beginBranch(global.getId());
     branch.put(preparePut(id, type, balance));
     global.commit();
   }
 
-  private Optional<Result> get(int id, int type) throws TransactionException {
+  protected Optional<Result> get(int id, int type) throws TransactionException {
     GlobalTransaction global = manager1.beginGlobal();
     BranchTransaction branch = manager1.beginBranch(global.getId());
     Optional<Result> result = branch.get(prepareGet(id, type));
@@ -343,7 +343,7 @@ public abstract class GlobalTransactionTestBase {
     return result;
   }
 
-  private Put preparePut(int id, int type, int balance) {
+  protected Put preparePut(int id, int type, int balance) {
     return Put.newBuilder()
         .namespace(namespace)
         .table(TABLE)
@@ -372,7 +372,7 @@ public abstract class GlobalTransactionTestBase {
         .build();
   }
 
-  private Get prepareGet(int id, int type) {
+  protected Get prepareGet(int id, int type) {
     return Get.newBuilder()
         .namespace(namespace)
         .table(TABLE)
