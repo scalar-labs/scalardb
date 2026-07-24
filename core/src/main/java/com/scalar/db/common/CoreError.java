@@ -1133,6 +1133,12 @@ public enum CoreError implements ScalarDbError {
       ""),
   BRANCH_TRANSACTION_ALREADY_ENDED(
       Category.USER_ERROR, "0299", "The branch has already been ended. Transaction ID: %s", "", ""),
+  COORDINATOR_ONLY_GLOBAL_TRANSACTION_MANAGER_BRANCH_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0300",
+      "Branches are not supported by this coordinator-only global transaction manager because no participant is configured",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
