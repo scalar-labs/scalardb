@@ -9,6 +9,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * Adapts a {@link TwoPhaseCommitCoordinator} and a single in-process {@link
@@ -35,6 +36,7 @@ import javax.annotation.Nullable;
  * meaningful branch (joining is idempotent per participant ID). The participant may be {@code null}
  * (coordinator-only), in which case {@code beginBranch} is unsupported.
  */
+@ThreadSafe
 public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTransactionManager {
 
   private final TwoPhaseCommitCoordinator coordinator;

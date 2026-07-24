@@ -7,6 +7,7 @@ import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.exception.transaction.TransactionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * Adapts a {@link DistributedTransactionManager} to the {@link GlobalTransactionManager} API,
@@ -48,6 +49,7 @@ import java.util.Map;
  * to {@code beginGlobal}. They are not sent to {@link DistributedTransactionManager#join(String)},
  * which takes no attributes.
  */
+@ThreadSafe
 public class DistributedTransactionBackedGlobalTransactionManager
     implements GlobalTransactionManager {
 
