@@ -1113,6 +1113,32 @@ public enum CoreError implements ScalarDbError {
       "Two-phase commit is not supported in single CRUD operation transactions",
       "",
       ""),
+  CONSENSUS_COMMIT_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0296",
+      "Global transactions are not supported in Consensus Commit transactions",
+      "",
+      ""),
+  JDBC_TRANSACTION_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0297",
+      "Global transactions are not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0298",
+      "Global transactions are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  BRANCH_TRANSACTION_ALREADY_ENDED(
+      Category.USER_ERROR, "0299", "The branch has already been ended. Transaction ID: %s", "", ""),
+  COORDINATOR_ONLY_GLOBAL_TRANSACTION_MANAGER_BRANCH_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0300",
+      "Branches are not supported by this coordinator-only global transaction manager because no participant is configured",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
