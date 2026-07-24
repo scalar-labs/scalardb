@@ -1131,6 +1131,8 @@ public enum CoreError implements ScalarDbError {
       "Global transactions are not supported in single CRUD operation transactions",
       "",
       ""),
+  BRANCH_TRANSACTION_ALREADY_ENDED(
+      Category.USER_ERROR, "0299", "The branch has already been ended. Transaction ID: %s", "", ""),
 
   //
   // Errors for the concurrency error category

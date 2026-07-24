@@ -1,6 +1,9 @@
 package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -86,9 +89,26 @@ class DistributedTransactionBackedBranchTransactionTest {
   }
 
   @Test
-  void end_ShouldBeNoOpAndNotTouchTransaction() throws Exception {
+  void end_ShouldNotTouchTransaction() throws Exception {
     branch.end();
 
     verifyNoInteractions(transaction);
+  }
+
+  @Test
+  void end_CalledTwice_ShouldThrowIllegalStateException() throws Exception {
+    branch.end();
+
+    assertThatThrownBy(branch::end).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void crud_AfterEnd_ShouldThrowIllegalStateExceptionWithoutDelegating() throws Exception {
+    branch.end();
+
+    assertThatThrownBy(() -> branch.get(get())).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> branch.insert(insert(1))).isInstanceOf(IllegalStateException.class);
+    verify(transaction, never()).get(any(Get.class));
+    verify(transaction, never()).insert(any(Insert.class));
   }
 }
