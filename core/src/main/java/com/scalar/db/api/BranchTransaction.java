@@ -26,8 +26,10 @@ public interface BranchTransaction extends TransactionCrudOperable {
    *
    * <p>Every branch must call this exactly once, after its last CRUD operation and before the
    * owning {@link GlobalTransaction} is committed or rolled back. Issuing CRUD on this branch once
-   * {@code end()} has been called is not allowed.
+   * {@code end()} has been called is not allowed and is rejected with {@link
+   * IllegalStateException}, as is calling {@code end()} again.
    *
+   * @throws IllegalStateException if the branch has already been ended
    * @throws CrudConflictException if ending the branch fails due to transient faults (e.g., a
    *     conflict). You can retry the transaction from the beginning
    * @throws CrudException if ending the branch fails due to transient or nontransient faults

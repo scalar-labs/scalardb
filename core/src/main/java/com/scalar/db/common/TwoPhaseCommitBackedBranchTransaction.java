@@ -27,9 +27,11 @@ import java.util.Optional;
  * <p>This is a per-participant branch of a distributed transaction. CRUD is delegated to the
  * participant (keyed by the global transaction's ID); the record-level two-phase commit steps
  * (prepare/validate/commit/rollback) are not exposed here — they are driven by the coordinator
- * behind {@link com.scalar.db.api.GlobalTransaction#commit()}. {@link #end()} is a no-op for this
- * backing, which buffers nothing to flush; the participant's local context is released by the
- * coordinator-driven commit/rollback (or reclaimed by idle expiry), not by {@link #end()}.
+ * behind {@link com.scalar.db.api.GlobalTransaction#commit()}. {@link #end()} triggers no backing
+ * action for this backing, which buffers nothing to flush — it only marks the branch ended, after
+ * which CRUD (or another {@code end()}) is rejected with {@link IllegalStateException}; the
+ * participant's local context is released by the coordinator-driven commit/rollback (or reclaimed
+ * by idle expiry), not by {@link #end()}.
  *
  * <p>Operations must be fully qualified with their namespace and table; this handle carries no
  * default target. See {@link TwoPhaseCommitBackedGlobalTransactionManager} for how the participant
@@ -39,6 +41,8 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
 
   private final TwoPhaseCommitParticipant participant;
   private final String transactionId;
+
+  private boolean ended;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseCommitBackedBranchTransaction(
@@ -120,7 +124,10 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
   }
 
   @Override
-  public void end() throws CrudException {}
+  public void end() throws CrudException {
+    checkNotEnded();
+    ended = true;
+  }
 
   @FunctionalInterface
   private interface CrudSupplier<T> {
@@ -133,6 +140,7 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
   }
 
   private <T> T crud(CrudSupplier<T> supplier) throws CrudException {
+    checkNotEnded();
     try {
       return supplier.get();
     } catch (TransactionNotFoundException e) {
@@ -148,5 +156,12 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
           runnable.run();
           return null;
         });
+  }
+
+  private void checkNotEnded() {
+    if (ended) {
+      throw new IllegalStateException(
+          CoreError.BRANCH_TRANSACTION_ALREADY_ENDED.buildMessage(transactionId));
+    }
   }
 }

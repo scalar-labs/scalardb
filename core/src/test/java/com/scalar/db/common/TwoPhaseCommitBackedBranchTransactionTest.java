@@ -98,9 +98,27 @@ class TwoPhaseCommitBackedBranchTransactionTest {
   }
 
   @Test
-  void end_ShouldBeNoOp() throws Exception {
+  void end_ShouldNotInteractWithParticipant() throws Exception {
     branch().end();
 
+    verifyNoInteractions(participant);
+  }
+
+  @Test
+  void end_CalledTwice_ShouldThrowIllegalStateException() throws Exception {
+    TwoPhaseCommitBackedBranchTransaction branch = branch();
+    branch.end();
+
+    assertThatThrownBy(branch::end).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void crud_AfterEnd_ShouldThrowIllegalStateExceptionWithoutDelegating() throws Exception {
+    TwoPhaseCommitBackedBranchTransaction branch = branch();
+    branch.end();
+
+    assertThatThrownBy(() -> branch.get(get())).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> branch.insert(insert(1))).isInstanceOf(IllegalStateException.class);
     verifyNoInteractions(participant);
   }
 }
