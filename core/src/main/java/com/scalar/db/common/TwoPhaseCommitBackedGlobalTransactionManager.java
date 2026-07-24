@@ -69,8 +69,8 @@ public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTrans
       throws TransactionException {
     if (participant == null) {
       throw new UnsupportedOperationException(
-          "Branches are not supported by this coordinator-only global transaction manager because no"
-              + " participant is configured");
+          CoreError.COORDINATOR_ONLY_GLOBAL_TRANSACTION_MANAGER_BRANCH_NOT_SUPPORTED
+              .buildMessage());
     }
     // Join the in-process participant to the global transaction. joinParticipant establishes the
     // participant's local context, forwarding the readOnly flag and the transaction-scoped
