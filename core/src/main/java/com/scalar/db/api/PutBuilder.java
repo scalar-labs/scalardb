@@ -264,18 +264,24 @@ public class PutBuilder {
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public Buildable disableImplicitPreRead() {
       ConsensusCommitOperationAttributes.disableImplicitPreRead(attributes);
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public Buildable enableImplicitPreRead() {
       ConsensusCommitOperationAttributes.enableImplicitPreRead(attributes);
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
       if (implicitPreReadEnabled) {
@@ -286,18 +292,24 @@ public class PutBuilder {
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public Buildable disableInsertMode() {
       ConsensusCommitOperationAttributes.disableInsertMode(attributes);
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public Buildable enableInsertMode() {
       ConsensusCommitOperationAttributes.enableInsertMode(attributes);
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public Buildable insertModeEnabled(boolean insertModeEnabled) {
       if (insertModeEnabled) {
@@ -542,36 +554,48 @@ public class PutBuilder {
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public BuildableFromExisting disableImplicitPreRead() {
       super.disableImplicitPreRead();
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public BuildableFromExisting enableImplicitPreRead() {
       super.enableImplicitPreRead();
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public BuildableFromExisting implicitPreReadEnabled(boolean implicitPreReadEnabled) {
       super.implicitPreReadEnabled(implicitPreReadEnabled);
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public BuildableFromExisting disableInsertMode() {
       super.disableInsertMode();
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public BuildableFromExisting enableInsertMode() {
       super.enableInsertMode();
       return this;
     }
 
+    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    @Deprecated
     @Override
     public BuildableFromExisting insertModeEnabled(boolean insertModeEnabled) {
       super.insertModeEnabled(insertModeEnabled);
