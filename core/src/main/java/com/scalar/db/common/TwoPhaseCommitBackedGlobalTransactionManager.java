@@ -86,9 +86,12 @@ public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTrans
 
   @Override
   public void close() {
-    coordinator.close();
-    if (participant != null) {
-      participant.close();
+    try {
+      coordinator.close();
+    } finally {
+      if (participant != null) {
+        participant.close();
+      }
     }
   }
 }
