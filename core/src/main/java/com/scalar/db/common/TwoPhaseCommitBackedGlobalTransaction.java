@@ -8,6 +8,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Adapts a {@link TwoPhaseCommitCoordinator} to the {@link GlobalTransaction} API.
@@ -21,6 +22,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * <p>See {@link TwoPhaseCommitBackedGlobalTransactionManager} for how the coordinator is wired and
  * the global transaction and its branches are begun.
  */
+@NotThreadSafe
 public class TwoPhaseCommitBackedGlobalTransaction implements GlobalTransaction {
 
   private final TwoPhaseCommitCoordinator coordinator;

@@ -20,6 +20,7 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Adapts a {@link TwoPhaseCommitParticipant} to the {@link BranchTransaction} API.
@@ -37,6 +38,7 @@ import java.util.Optional;
  * default target. See {@link TwoPhaseCommitBackedGlobalTransactionManager} for how the participant
  * is wired and the branch is begun.
  */
+@NotThreadSafe
 public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction {
 
   private final TwoPhaseCommitParticipant participant;

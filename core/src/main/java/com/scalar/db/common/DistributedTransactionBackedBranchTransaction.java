@@ -16,6 +16,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Adapts a {@link DistributedTransaction} to the {@link BranchTransaction} API.
@@ -31,6 +32,7 @@ import java.util.Optional;
  * default target. See {@link DistributedTransactionBackedGlobalTransactionManager} for how the
  * transaction is wired and the branch is begun.
  */
+@NotThreadSafe
 public class DistributedTransactionBackedBranchTransaction implements BranchTransaction {
 
   private final DistributedTransaction transaction;

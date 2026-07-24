@@ -17,6 +17,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * A {@link DecoratedBranchTransaction} that propagates the per-branch attributes supplied at {@link
@@ -36,6 +37,7 @@ import java.util.Optional;
  * transaction-scoped attribute supplied at {@code beginGlobal}. The narrower scope takes
  * precedence.
  */
+@NotThreadSafe
 public class AttributePropagatingBranchTransaction extends DecoratedBranchTransaction {
 
   private final Map<String, String> attributes;

@@ -6,6 +6,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Adapts a {@link DistributedTransaction} to the {@link GlobalTransaction} API.
@@ -18,6 +19,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * <p>See {@link DistributedTransactionBackedGlobalTransactionManager} for how the manager is wired
  * and the global transaction and its branches are begun.
  */
+@NotThreadSafe
 public class DistributedTransactionBackedGlobalTransaction implements GlobalTransaction {
 
   private final DistributedTransaction transaction;
