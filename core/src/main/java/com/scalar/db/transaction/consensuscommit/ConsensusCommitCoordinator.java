@@ -211,8 +211,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
           // transaction write-less. The prepare phase is internal to commit(), so the failure is
           // reported as a commit-level exception: a conflict as CommitConflictException so the
           // caller's retry logic still sees it as retriable, anything else as CommitException.
-          abortAndRollbackRecords(
-              transactionId, context.readOnly, /* writeSetsByParticipant= */ null, participants);
+          abortAndRollbackRecords(transactionId, context.readOnly, participants);
           if (e instanceof PreparationConflictException) {
             throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
           }
@@ -223,8 +222,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
           // records already PREPARED on the other participants, then surface the
           // TransactionNotFoundException as-is (the facade maps it to a retriable conflict). As
           // above, hasWrites is not trustworthy mid-prepare, so only readOnly counts.
-          abortAndRollbackRecords(
-              transactionId, context.readOnly, /* writeSetsByParticipant= */ null, participants);
+          abortAndRollbackRecords(transactionId, context.readOnly, participants);
           throw e;
         }
 
@@ -365,12 +363,10 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   // instead of leaving them locked until the transaction lifetime expires.
   //
   // writeSetsByParticipant is the aggregated per-participant write set (keys only) to persist on
-  // the ABORTED row, or null to persist none. Only the validate-phase abort paths supply it: by
-  // then every prepareRecords has returned, so the aggregate is complete (the same map the commit
-  // path persists). The prepare-phase paths pass null because a participant may have thrown before
-  // returning its entries, leaving the aggregate incomplete — a partial write set would be worse
-  // than none. This mirrors CommitHandler, which persists the keys-only write set on its own
-  // abort path.
+  // the ABORTED row, or null to persist none. The validate-phase abort paths call this form with
+  // the complete aggregate — by then every prepareRecords has returned, so it is the same map the
+  // commit path persists — mirroring CommitHandler, which persists the keys-only write set on its
+  // own abort path. The prepare-phase paths use the overload below, which persists none.
   private void abortAndRollbackRecords(
       String transactionId,
       boolean knownWriteLess,
@@ -394,6 +390,16 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     for (Participant participant : participants) {
       bestEffortRollbackRecords(participant, transactionId);
     }
+  }
+
+  // Prepare-phase form: persists no write set on the ABORTED row. A participant may have thrown
+  // before returning its entries from prepareRecords, leaving the aggregate incomplete, and a
+  // partial write set would be worse than none.
+  private void abortAndRollbackRecords(
+      String transactionId, boolean knownWriteLess, List<Participant> participants)
+      throws UnknownTransactionStatusException {
+    abortAndRollbackRecords(
+        transactionId, knownWriteLess, /* writeSetsByParticipant= */ null, participants);
   }
 
   // The single policy behind both Coordinator state gates: the row (COMMITTED on the
