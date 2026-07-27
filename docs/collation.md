@@ -80,6 +80,10 @@ the storage is the operator's responsibility.
 - Use **`ICU`** (with a matching locale/strength) for UCA-based collations: MySQL 8 defaults
   and PostgreSQL's ICU collation provider.
 
+See [Storage collation compatibility](collation-storage-compatibility.md) for a per-storage
+breakdown of which collations each supported backend offers and whether `BINARY` or `ICU` can
+match them (including why the bundled ICU version bounds how closely `ICU` mode can align).
+
 ## Limitations
 
 - **Equality/uniqueness is not collation-aware.** On case-insensitive collations
