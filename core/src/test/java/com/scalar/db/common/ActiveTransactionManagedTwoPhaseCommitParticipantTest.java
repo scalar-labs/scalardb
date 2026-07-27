@@ -25,6 +25,7 @@ import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -77,7 +78,23 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
 
     verify(delegate).join(TX, false, Collections.emptyMap());
     // After the idle expiration, the reaper releases the context on the wrapped participant.
-    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseContext(TX);
+    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext(TX);
+  }
+
+  @Test
+  void join_WhenReleaseThrowsNotFound_ShouldTreatItAsAlreadyGoneAndKeepReaping() throws Exception {
+    // A remote wrapped participant may report the reap's no-op outcome on its conventional
+    // not-found channel (the contract's alternative carrier of "there was no context to
+    // release"); the disposal path tolerates it, and the reaper keeps collecting other
+    // transactions.
+    doThrow(new TransactionNotFoundException("already gone", TX))
+        .when(delegate)
+        .releaseTransactionContext(TX);
+    participant.join(TX, false, Collections.emptyMap());
+    participant.join("tx-2", false, Collections.emptyMap());
+
+    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext(TX);
+    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext("tx-2");
   }
 
   @Test
@@ -190,7 +207,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     // prepareRecords is this participant's terminal step, so the entry is removed now: the reaper
     // never releases the context (and logs no spurious expiry warning).
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -203,7 +220,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.validateRecords(TX); // terminal step for a write-less, validating participant
 
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -216,7 +233,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.commitRecords(TX, 1L); // terminal step
 
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -229,7 +246,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.rollbackRecords(TX);
 
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -249,9 +266,10 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     // rollbackRecords owns cleanup). With no rollback driven here, the entry survives, so the
     // reaper
     // still releases the context. This distinguishes "not removed on failure" from "removed": had
-    // the failure wrongly removed the entry, releaseContext would never fire and this would time
+    // the failure wrongly removed the entry, releaseTransactionContext would never fire and this
+    // would time
     // out.
-    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseContext(TX);
+    verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext(TX);
   }
 
   @Test
@@ -271,7 +289,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     // rollbackRecords is driven, which removes the entry. The reaper must then not release it.
     participant.rollbackRecords(TX);
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -283,7 +301,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     verify(delegate).commitRecords(TX, 1L);
     // The transaction is no longer tracked, so the reaper must not release its context.
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -294,7 +312,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
 
     verify(delegate).rollbackRecords(TX);
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -311,7 +329,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     // The finally block deregistered the transaction even though commitRecords threw, so the
     // reaper must not subsequently release its context (no double reap).
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
@@ -326,18 +344,19 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     }
 
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(TX);
+    verify(delegate, never()).releaseTransactionContext(TX);
   }
 
   @Test
-  void releaseContext_ShouldDelegateOnceAndStopReaping() throws Exception {
+  void releaseTransactionContext_ShouldDelegateOnceAndStopReaping() throws Exception {
     participant.join(TX, false, Collections.emptyMap());
 
-    participant.releaseContext(TX);
+    participant.releaseTransactionContext(TX);
 
-    // The reaper must not call releaseContext again after the client already released it.
+    // The reaper must not call releaseTransactionContext again after the client already released
+    // it.
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate).releaseContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
   }
 
   @Test
@@ -352,7 +371,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
 
     // A failed join registered nothing, so the reaper must not release any context.
     Thread.sleep(PAST_SWEEP_MILLIS);
-    verify(delegate, never()).releaseContext(any());
+    verify(delegate, never()).releaseTransactionContext(any());
   }
 
   // Deterministic wiring check (no Thread.sleep): every CRUD and record-level override must refresh

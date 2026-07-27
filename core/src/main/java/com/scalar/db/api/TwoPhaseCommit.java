@@ -78,10 +78,11 @@ public interface TwoPhaseCommit {
    *
    * <p><b>Concurrency.</b> Implementations must serialize per-transaction work: for one transaction
    * ID the methods here must be mutually exclusive, so concurrent calls cannot corrupt that
-   * transaction's state. This explicitly covers {@link #releaseContext}, which a context-reaper
-   * drives from its own thread and may therefore invoke concurrently with any other method for the
-   * same transaction ID. Calls for different transaction IDs may proceed concurrently. Decorators
-   * that add a background reaper rely on this contract for their own thread-safety.
+   * transaction's state. This explicitly covers {@link #releaseTransactionContext}, which a
+   * context-reaper drives from its own thread and may therefore invoke concurrently with any other
+   * method for the same transaction ID. Calls for different transaction IDs may proceed
+   * concurrently. Decorators that add a background reaper rely on this contract for their own
+   * thread-safety.
    */
   interface Coordinator extends AutoCloseable {
 
@@ -226,8 +227,16 @@ public interface TwoPhaseCommit {
      * treat this as a terminal step, releasing any per-transaction resources it holds.
      *
      * @param transactionId the canonical transaction ID returned by {@link #begin}
+     * @throws TransactionNotFoundException if the implementation reports the unknown-transaction
+     *     no-op on its conventional not-found channel instead of returning silently (typical across
+     *     a transport boundary). An alternative carrier of the no-op outcome — there was no context
+     *     to release — so callers must treat it like a normal return
+     * @throws TransactionException if releasing the context fails due to transient or nontransient
+     *     faults. The context may still be held; reap-style callers treat the failure as
+     *     best-effort, since the context is reclaimed by other means (e.g. a later reap or close)
      */
-    void releaseContext(String transactionId);
+    void releaseTransactionContext(String transactionId)
+        throws TransactionNotFoundException, TransactionException;
 
     /**
      * Closes the Coordinator and releases any resources it holds.
@@ -266,10 +275,10 @@ public interface TwoPhaseCommit {
    *   <li>Lifecycle and record-level two-phase commit methods ({@link #join}, {@link
    *       #prepareRecords}, {@link #validateRecords}, {@link #commitRecords}, {@link
    *       #rollbackRecords}) are invoked by {@link Coordinator}.
-   *   <li>{@link #releaseContext} and {@link #hasTransactionContext} are invoked by neither — they
-   *       are driven by a context-reaper/decorator: the former a reap-only terminal that reclaims
-   *       an abandoned or idle-reaped context without touching storage, the latter a liveness probe
-   *       consulted before such a reap.
+   *   <li>{@link #releaseTransactionContext} and {@link #hasTransactionContext} are invoked by
+   *       neither — they are driven by a context-reaper/decorator: the former a reap-only terminal
+   *       that reclaims an abandoned or idle-reaped context without touching storage, the latter a
+   *       liveness probe consulted before such a reap.
    * </ul>
    *
    * <p>Operations must follow the transaction's lifecycle: CRUD while the transaction is open, then
@@ -282,11 +291,11 @@ public interface TwoPhaseCommit {
    *
    * <p><b>Concurrency.</b> Implementations must serialize per-transaction work: for one transaction
    * ID the methods here must be mutually exclusive, so concurrent calls cannot corrupt that
-   * transaction's context. Because a context-reaper drives {@link #releaseContext} and {@link
-   * #hasTransactionContext} from its own thread (see above), either may be invoked concurrently
-   * with an in-flight CRUD or record-level call for the same transaction ID. Calls for different
-   * transaction IDs may proceed concurrently. Decorators that add a background reaper rely on this
-   * contract for their own thread-safety.
+   * transaction's context. Because a context-reaper drives {@link #releaseTransactionContext} and
+   * {@link #hasTransactionContext} from its own thread (see above), either may be invoked
+   * concurrently with an in-flight CRUD or record-level call for the same transaction ID. Calls for
+   * different transaction IDs may proceed concurrently. Decorators that add a background reaper
+   * rely on this contract for their own thread-safety.
    */
   interface Participant extends AutoCloseable {
 
@@ -589,15 +598,22 @@ public interface TwoPhaseCommit {
      *
      * <p>Unlike the other record-level steps, an unknown transaction — one this participant never
      * joined, or whose context it has already released (for example, a write-less participant that
-     * released early when its later steps were skipped, or a prior rollback) — is a no-op rather
-     * than an error: there is nothing left to undo.
+     * released early when its later steps were skipped, or a prior rollback) — is not an error:
+     * there is nothing left for this participant to undo. Implementations report it as a silent
+     * no-op or as a {@link TransactionNotFoundException}, never as a {@link RollbackException}.
      *
      * @param transactionId the canonical transaction ID
+     * @throws TransactionNotFoundException if the implementation reports the unknown-transaction
+     *     no-op on its conventional not-found channel instead of returning silently (typical across
+     *     a transport boundary). An alternative carrier of the no-op outcome — there was nothing
+     *     left for this participant to undo — so callers must treat it like a normal return.
+     *     Routine on abort paths: the Coordinator rolls back every participant uniformly, including
+     *     ones that already self-released
      * @throws RollbackException if rolling back the records of a known transaction fails due to
-     *     transient or nontransient faults; never thrown for an unknown transaction, which is a
-     *     no-op
+     *     transient or nontransient faults; never thrown for an unknown transaction
      */
-    void rollbackRecords(String transactionId) throws RollbackException;
+    void rollbackRecords(String transactionId)
+        throws RollbackException, TransactionNotFoundException;
 
     /**
      * Returns whether this participant still holds a local context for the transaction.
@@ -651,9 +667,21 @@ public interface TwoPhaseCommit {
      * A decorator may treat this as a terminal step, releasing any per-transaction resources it
      * holds.
      *
+     * <p>Callers invoke this from housekeeping paths (e.g. an idle reaper), or best-effort while a
+     * client awaits a terminal outcome; an implementation that crosses a network must bound the
+     * call with its own deadline rather than block indefinitely.
+     *
      * @param transactionId the canonical transaction ID
+     * @throws TransactionNotFoundException if the implementation reports the unknown-transaction
+     *     no-op on its conventional not-found channel instead of returning silently (typical across
+     *     a transport boundary). An alternative carrier of the no-op outcome — there was no context
+     *     to release — so callers must treat it like a normal return
+     * @throws TransactionException if releasing the context fails due to transient or nontransient
+     *     faults. The context may still be held; reap-style callers treat the failure as
+     *     best-effort, since the context is reclaimed by other means (e.g. a later reap or close)
      */
-    void releaseContext(String transactionId);
+    void releaseTransactionContext(String transactionId)
+        throws TransactionNotFoundException, TransactionException;
 
     /**
      * Closes the Participant and releases any resources it holds.
