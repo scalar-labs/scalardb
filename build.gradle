@@ -95,7 +95,7 @@ subprojects {
         postgresqlDriverVersion = '42.7.13'
         oracleDriverVersion = '23.26.2.0.0'
         sqlserverDriverVersion = '12.8.2.jre8'
-        sqliteDriverVersion = '3.53.2.0'
+        sqliteDriverVersion = '3.53.2.1'
         yugabyteDriverVersion = '42.7.3-yb-4'
         db2DriverVersion = '12.1.5.0'
         mariadDbDriverVersion = '3.5.9'
