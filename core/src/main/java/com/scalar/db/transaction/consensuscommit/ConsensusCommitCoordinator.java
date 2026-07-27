@@ -474,14 +474,16 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     return context;
   }
 
-  // Encodes the per-participant write sets and writes the COMMITTED state row via the
-  // Coordinator-side handler, which generates the committedAt and returns it so the records are
-  // committed with the same timestamp.
+  // Writes the COMMITTED state row via the Coordinator-side handler, persisting the write set
+  // encoded from writeSetsByParticipant (keys only), or none when null — the same null tolerance
+  // as abortState, matching the handler's @Nullable contract. The handler generates the
+  // committedAt and returns it so the records are committed with the same timestamp.
   private long commitState(
-      String transactionId, Map<String, List<WriteSetEntry>> writeSetsByParticipant)
+      String transactionId, @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant)
       throws CommitConflictException, UnknownTransactionStatusException {
-    return coordinatorCommitHandler.commitState(
-        transactionId, encodeKeysOnlyWriteSet(writeSetsByParticipant));
+    WriteSet writeSet =
+        writeSetsByParticipant == null ? null : encodeKeysOnlyWriteSet(writeSetsByParticipant);
+    return coordinatorCommitHandler.commitState(transactionId, writeSet);
   }
 
   // Writes the ABORTED state row via the Coordinator-side handler, persisting the write set encoded
