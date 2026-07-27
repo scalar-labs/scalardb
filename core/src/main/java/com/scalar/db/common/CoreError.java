@@ -1145,6 +1145,20 @@ public enum CoreError implements ScalarDbError {
       "Some scanners were not closed. All scanners must be closed before ending the branch. Transaction ID: %s",
       "",
       ""),
+  COLLATION_INVALID_RULES(
+      Category.USER_ERROR,
+      "0302",
+      "Failed to build an ICU collator from the specified custom collation rules. Rules: %s",
+      "",
+      "Specify a valid ICU tailoring-rule string for the property scalar.db.collation.rules"),
+  COLLATION_UNRECOGNIZED_LOCALE(
+      Category.USER_ERROR,
+      "0303",
+      "The specified collation locale is not recognized by ICU and would fall back to "
+          + "root-collation ordering. Locale: %s",
+      "",
+      "Specify a locale that ICU has collation data for (for example en, en_US, or ja) for the "
+          + "property scalar.db.collation.locale"),
 
   //
   // Errors for the concurrency error category
