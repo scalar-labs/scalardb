@@ -8,15 +8,22 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import com.scalar.db.io.CollationComparator;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class MutateStatementHandler extends StatementHandler {
+  private final Optional<CollationComparator> collationComparator;
+
   public MutateStatementHandler(
-      ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
+      ObjectStorageWrapper wrapper,
+      TableMetadataManager metadataManager,
+      Optional<CollationComparator> collationComparator) {
     super(wrapper, metadataManager);
+    this.collationComparator = collationComparator;
   }
 
   public void handle(Mutation mutation) throws ExecutionException {
@@ -49,10 +56,10 @@ public class MutateStatementHandler extends StatementHandler {
     for (Mutation mutation : mutations) {
       TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
       if (mutation instanceof Put) {
-        snapshot.applyPut((Put) mutation, tableMetadata);
+        snapshot.applyPut((Put) mutation, tableMetadata, collationComparator);
       } else {
         assert mutation instanceof Delete;
-        snapshot.applyDelete((Delete) mutation, tableMetadata);
+        snapshot.applyDelete((Delete) mutation, tableMetadata, collationComparator);
       }
     }
     writePartition(snapshot);

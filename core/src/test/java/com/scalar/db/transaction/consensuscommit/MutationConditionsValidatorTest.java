@@ -20,10 +20,14 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.TextColumn;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import javax.annotation.Nullable;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -325,5 +329,76 @@ public class MutationConditionsValidatorTest {
     } else {
       validator.checkIfConditionIsSatisfied((Delete) mutation, existingRecord, TRANSACTION_ID);
     }
+  }
+
+  // ---- Collation-aware range operators on TEXT ----
+
+  private static CollationComparator caseInsensitiveIcuCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
+    return CollationComparator.from(new DatabaseConfig(props)).get();
+  }
+
+  private void prepareExistingTextColumn(String value) {
+    when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, TextColumn.of(C1, value)));
+  }
+
+  private Put putIfExpression(ConditionalExpression expression) {
+    Put put = mock(Put.class);
+    when(put.getCondition())
+        .thenReturn(Optional.of(ConditionBuilder.putIf(ImmutableList.of(expression))));
+    return put;
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndGtOnText_ShouldNotThrowWhereNaturalWould() {
+    // Arrange: existing TEXT value "B", condition col > "a". Under natural UTF-16/byte order
+    // 'B'(0x42) < 'a'(0x61), so under a case-insensitive ICU collation ('b' > 'a') the condition
+    // is satisfied.
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
+    prepareExistingTextColumn("B");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isGreaterThanText("a"));
+
+    // Act Assert
+    Assertions.assertThatCode(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithoutCollationAndGtOnText_ShouldThrowUnsatisfiedConditionException() {
+    // Arrange: no-arg validator (unset collation) keeps natural order: 'B'(0x42) < 'a'(0x61), so
+    // col > "a" is unsatisfied.
+    MutationConditionsValidator naturalValidator = new MutationConditionsValidator();
+    prepareExistingTextColumn("B");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isGreaterThanText("a"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () -> naturalValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndEqOnText_ShouldStayByteExact() {
+    // Arrange: EQ stays byte-exact even under a case-insensitive collation: existing "B" is not
+    // equal to "b".
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
+    prepareExistingTextColumn("B");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("b"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
   }
 }

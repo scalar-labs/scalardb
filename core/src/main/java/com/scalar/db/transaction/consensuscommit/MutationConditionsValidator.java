@@ -13,8 +13,11 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -24,6 +27,24 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public class MutationConditionsValidator {
+
+  private final Optional<CollationComparator> collationComparator;
+
+  /** Creates a validator that keeps natural-order behavior for range operators on TEXT. */
+  public MutationConditionsValidator() {
+    this(Optional.empty());
+  }
+
+  /**
+   * Creates a validator that uses the given collation for range operators (GT/GTE/LT/LTE) on TEXT
+   * columns. Equality and identity operators (EQ/NE/IS_NULL/IS_NOT_NULL) always stay byte-exact.
+   *
+   * @param collationComparator the collation comparator, or {@link Optional#empty()} to keep
+   *     natural-order behavior
+   */
+  public MutationConditionsValidator(Optional<CollationComparator> collationComparator) {
+    this.collationComparator = collationComparator;
+  }
 
   /**
    * This checks if the condition of the specified Put operation is satisfied for the specified
@@ -139,18 +160,26 @@ public class MutationConditionsValidator {
         // the condition was executed by the underlying storage
       case GT:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) > 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) > 0;
       case GTE:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) >= 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) >= 0;
       case LT:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) < 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) < 0;
       case LTE:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) <= 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) <= 0;
       default:
         throw new AssertionError();
     }
+  }
+
+  private int rangeCompare(Column<?> a, Column<?> b) {
+    Comparator<Column<?>> rangeComparator =
+        collationComparator
+            .map(CollationComparator::columnComparator)
+            .orElseGet(() -> (x, y) -> Ordering.natural().compare(x, y));
+    return rangeComparator.compare(a, b);
   }
 }

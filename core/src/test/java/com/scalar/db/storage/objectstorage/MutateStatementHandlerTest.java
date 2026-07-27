@@ -57,7 +57,7 @@ public class MutateStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new MutateStatementHandler(wrapper, metadataManager);
+    handler = new MutateStatementHandler(wrapper, metadataManager, Optional.empty());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())

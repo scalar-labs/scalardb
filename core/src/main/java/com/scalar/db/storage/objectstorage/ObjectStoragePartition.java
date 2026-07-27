@@ -16,9 +16,11 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +61,9 @@ public class ObjectStoragePartition {
     return records.isEmpty();
   }
 
-  public void applyPut(Put put, TableMetadata tableMetadata) throws NoMutationException {
+  public void applyPut(
+      Put put, TableMetadata tableMetadata, Optional<CollationComparator> collationComparator)
+      throws NoMutationException {
     ObjectStorageMutation mutation = new ObjectStorageMutation(put, tableMetadata);
     if (!put.getCondition().isPresent()) {
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
@@ -89,7 +93,10 @@ public class ObjectStoragePartition {
       }
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
       if (areConditionsMet(
-          existingRecord, put.getCondition().get().getExpressions(), tableMetadata)) {
+          existingRecord,
+          put.getCondition().get().getExpressions(),
+          tableMetadata,
+          collationComparator)) {
         records.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
         return;
       }
@@ -98,7 +105,9 @@ public class ObjectStoragePartition {
     }
   }
 
-  public void applyDelete(Delete delete, TableMetadata tableMetadata) throws NoMutationException {
+  public void applyDelete(
+      Delete delete, TableMetadata tableMetadata, Optional<CollationComparator> collationComparator)
+      throws NoMutationException {
     ObjectStorageMutation mutation = new ObjectStorageMutation(delete, tableMetadata);
     if (!delete.getCondition().isPresent()) {
       records.remove(mutation.getRecordId());
@@ -116,7 +125,10 @@ public class ObjectStoragePartition {
       }
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
       if (areConditionsMet(
-          existingRecord, delete.getCondition().get().getExpressions(), tableMetadata)) {
+          existingRecord,
+          delete.getCondition().get().getExpressions(),
+          tableMetadata,
+          collationComparator)) {
         records.remove(mutation.getRecordId());
         return;
       }
@@ -132,7 +144,14 @@ public class ObjectStoragePartition {
 
   @VisibleForTesting
   protected boolean areConditionsMet(
-      ObjectStorageRecord record, List<ConditionalExpression> expressions, TableMetadata metadata) {
+      ObjectStorageRecord record,
+      List<ConditionalExpression> expressions,
+      TableMetadata metadata,
+      Optional<CollationComparator> collationComparator) {
+    Comparator<Column<?>> rangeComparator =
+        collationComparator
+            .map(CollationComparator::columnComparator)
+            .orElseGet(() -> (a, b) -> Ordering.natural().compare(a, b));
     for (ConditionalExpression expression : expressions) {
       Column<?> expectedColumn = expression.getColumn();
       Column<?> actualColumn =
@@ -161,7 +180,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (Ordering.natural().compare(actualColumn, expectedColumn) <= 0) {
+          if (rangeComparator.compare(actualColumn, expectedColumn) <= 0) {
             return false;
           }
           break;
@@ -169,7 +188,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (Ordering.natural().compare(actualColumn, expectedColumn) < 0) {
+          if (rangeComparator.compare(actualColumn, expectedColumn) < 0) {
             return false;
           }
           break;
@@ -177,7 +196,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (Ordering.natural().compare(actualColumn, expectedColumn) >= 0) {
+          if (rangeComparator.compare(actualColumn, expectedColumn) >= 0) {
             return false;
           }
           break;
@@ -185,7 +204,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (Ordering.natural().compare(actualColumn, expectedColumn) > 0) {
+          if (rangeComparator.compare(actualColumn, expectedColumn) > 0) {
             return false;
           }
           break;
