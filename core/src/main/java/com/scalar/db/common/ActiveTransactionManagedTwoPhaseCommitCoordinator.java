@@ -26,13 +26,13 @@ import org.slf4j.LoggerFactory;
  * participants no longer hold them.
  *
  * <p>Each transaction is tracked from {@link #begin} until its terminal step ({@link #commit} /
- * {@link #rollback} / {@link #releaseContext}), with a per-transaction expiration time that {@code
- * begin} and {@link #registerParticipant} push {@code expirationTimeMillis} out. The coordinator
- * observes only those two calls — the CRUD a transaction issues goes directly to its participants —
- * so an elapsed expiration time alone cannot tell an abandoned transaction from a healthy
- * long-running one. A background sweep therefore probes the registered participants of every
- * expired transaction ({@link TwoPhaseCommit.Participant#hasTransactionContext}) — in place, while
- * the transaction stays tracked:
+ * {@link #rollback} / {@link #releaseTransactionContext}), with a per-transaction expiration time
+ * that {@code begin} and {@link #registerParticipant} push {@code expirationTimeMillis} out. The
+ * coordinator observes only those two calls — the CRUD a transaction issues goes directly to its
+ * participants — so an elapsed expiration time alone cannot tell an abandoned transaction from a
+ * healthy long-running one. A background sweep therefore probes the registered participants of
+ * every expired transaction ({@link TwoPhaseCommit.Participant#hasTransactionContext}) — in place,
+ * while the transaction stays tracked:
  *
  * <ul>
  *   <li>If any participant still holds the transaction — or cannot be probed — the expiration time
@@ -41,8 +41,8 @@ import org.slf4j.LoggerFactory;
  *       errs on the side of retention.
  *   <li>If no participant holds it, the transaction can no longer commit (the participants' own
  *       idle reaping has already released their contexts), so the sweep calls {@link
- *       TwoPhaseCommit.Coordinator#releaseContext} on the wrapped coordinator to free its
- *       role-local resources without any storage rollback. A subsequent {@code commit}/{@code
+ *       TwoPhaseCommit.Coordinator#releaseTransactionContext} on the wrapped coordinator to free
+ *       its role-local resources without any storage rollback. A subsequent {@code commit}/{@code
  *       rollback} for a reaped transaction fails with {@link TransactionNotFoundException}, which
  *       is retriable from the client's perspective; the records left behind are recovered lazily by
  *       the usual recovery path.
@@ -92,22 +92,22 @@ import org.slf4j.LoggerFactory;
  * this small.
  *
  * <p>This decorator is intended to be the outermost coordinator decorator so that the reap
- * traverses the inner decorators via {@code releaseContext}.
+ * traverses the inner decorators via {@code releaseTransactionContext}.
  *
  * <p>Thread safety: the {@link ThreadSafe} guarantee relies on two mechanisms. First, the wrapped
  * coordinator honors the {@link TwoPhaseCommit.Coordinator} concurrency contract — it serializes
- * its own per-transaction work, including {@code releaseContext} concurrently with any other method
- * for the same transaction ID (e.g. {@code ConsensusCommitCoordinator} synchronizes every
- * per-transaction method on a per-context monitor) — which makes the sweep's {@code releaseContext}
- * safe against an in-flight {@code commit}/{@code rollback}. Second, the sweep and {@link
- * #registerParticipant} shake hands on the tracked entry's monitor: a registration pushes the
- * expiration time out under the monitor <em>before</em> delegating to the wrapped coordinator, and
- * the sweep re-checks under the same monitor that the expiration time has not moved before
- * releasing and removing. A reap therefore never overlaps a registration that is about to succeed —
- * either the registration extends the deadline first and the sweep backs off, or the reap completes
- * first and the delegated registration is rejected by the wrapped coordinator, whose context is
- * already released. Probing itself is I/O and runs outside the monitor, so a slow probe never
- * blocks a registration.
+ * its own per-transaction work, including {@code releaseTransactionContext} concurrently with any
+ * other method for the same transaction ID (e.g. {@code ConsensusCommitCoordinator} synchronizes
+ * every per-transaction method on a per-context monitor) — which makes the sweep's {@code
+ * releaseTransactionContext} safe against an in-flight {@code commit}/{@code rollback}. Second, the
+ * sweep and {@link #registerParticipant} shake hands on the tracked entry's monitor: a registration
+ * pushes the expiration time out under the monitor <em>before</em> delegating to the wrapped
+ * coordinator, and the sweep re-checks under the same monitor that the expiration time has not
+ * moved before releasing and removing. A reap therefore never overlaps a registration that is about
+ * to succeed — either the registration extends the deadline first and the sweep backs off, or the
+ * reap completes first and the delegated registration is rejected by the wrapped coordinator, whose
+ * context is already released. Probing itself is I/O and runs outside the monitor, so a slow probe
+ * never blocks a registration.
  *
  * <p>The accepted cost of those two mechanisms combined: a reap whose release lands behind an
  * in-flight terminal step for the same transaction blocks on the wrapped coordinator's
@@ -198,7 +198,14 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     return new ActiveTransactionRegistry<>(
         /* expirationTimeMillis= */ -1,
         maxActiveTransactions,
-        tracked -> coordinator.releaseContext(tracked.transactionId));
+        tracked -> {
+          try {
+            coordinator.releaseTransactionContext(tracked.transactionId);
+          } catch (TransactionNotFoundException e) {
+            // The context is already gone — the outcome this release wanted; not-found is its
+            // alternative carrier (see the interface Javadoc).
+          }
+        });
   }
 
   private static ScheduledExecutorService newSweeperExecutor() {
@@ -278,7 +285,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
       // This intentionally differs from the manager-side decorator, which keeps the entry when
       // commit throws so that idle expiry later rolls it back: the coordinator's durable state
       // record (not this in-memory entry) is the source of truth for recovery, so keeping the
-      // entry would only produce a spurious reap log and a no-op releaseContext.
+      // entry would only produce a spurious reap log and a no-op releaseTransactionContext.
       registry.remove(transactionId);
     }
   }
@@ -293,9 +300,9 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   @Override
-  public void releaseContext(String transactionId) {
+  public void releaseTransactionContext(String transactionId) throws TransactionException {
     try {
-      super.releaseContext(transactionId);
+      super.releaseTransactionContext(transactionId);
     } finally {
       registry.remove(transactionId);
     }
@@ -443,10 +450,15 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
 
   private void releaseOnWrapped(String transactionId) {
     try {
-      super.releaseContext(transactionId);
+      super.releaseTransactionContext(transactionId);
+    } catch (TransactionNotFoundException e) {
+      // The context is already gone — the outcome this release wanted; not-found is its
+      // alternative carrier (see the interface Javadoc).
     } catch (Exception e) {
-      // A failed release must not abort the rest of the sweep pass. (The wrapped releaseContext
-      // is not expected to throw at all — this is a guard, not a path.)
+      // A failed release must not abort the rest of the sweep pass. For the in-process wrapped
+      // coordinator this is a guard, not a path (it never throws); a remote implementation may
+      // legitimately fail here per the interface contract — still best-effort, the context is
+      // reclaimed by other means (see the interface Javadoc).
       logger.warn(
           "Failed to release the context of the expired transaction. Transaction ID: {}",
           transactionId,

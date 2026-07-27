@@ -54,9 +54,9 @@ class DecoratedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void releaseContext_ShouldDelegate() {
-    coordinator.releaseContext(TX);
-    verify(delegate).releaseContext(TX);
+  void releaseTransactionContext_ShouldDelegate() throws Exception {
+    coordinator.releaseTransactionContext(TX);
+    verify(delegate).releaseTransactionContext(TX);
   }
 
   @Test
