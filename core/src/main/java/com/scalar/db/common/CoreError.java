@@ -1122,8 +1122,7 @@ public enum CoreError implements ScalarDbError {
   COLLATION_UNRECOGNIZED_LOCALE(
       Category.USER_ERROR,
       "0297",
-      "The specified collation locale is not recognized by ICU and would fall back to "
-          + "root-collation ordering. Locale: %s",
+      "The specified collation locale is not recognized by ICU. Locale: %s",
       "",
       "Specify a locale that ICU has collation data for (for example en, en_US, or ja) for the "
           + "property scalar.db.collation.locale"),

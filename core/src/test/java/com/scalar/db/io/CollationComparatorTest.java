@@ -158,6 +158,39 @@ public class CollationComparatorTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void textComparator_WhenIcuWithLocaleAndCustomRules_ShouldComposeBaseLocaleWithRules() {
+    // Arrange: the same custom rule (reorder so 'b' sorts before 'a') with and without a locale.
+    Comparator<String> localePlusRules =
+        CollationComparator.from(
+                config(
+                    props(
+                        DatabaseConfig.COLLATION, "ICU",
+                        DatabaseConfig.COLLATION_LOCALE, "sv",
+                        DatabaseConfig.COLLATION_RULES, "& b < a")))
+            .get()
+            .textComparator();
+    Comparator<String> rulesOnly =
+        CollationComparator.from(
+                config(
+                    props(
+                        DatabaseConfig.COLLATION, "ICU",
+                        DatabaseConfig.COLLATION_RULES, "& b < a")))
+            .get()
+            .textComparator();
+
+    // Assert: the custom rule applies in both cases.
+    assertThat(localePlusRules.compare("b", "a")).isNegative();
+    assertThat(rulesOnly.compare("b", "a")).isNegative();
+
+    // The Swedish base collation is retained when rules are present (Swedish sorts 'z' before 'ö'),
+    // unlike the root base used when only rules are set (root sorts 'ö' before 'z'). This proves
+    // the
+    // locale is composed with the rules rather than ignored.
+    assertThat(localePlusRules.compare("z", "ö")).isNegative();
+    assertThat(rulesOnly.compare("z", "ö")).isPositive();
+  }
+
   // ---- Locale ----
 
   @Test

@@ -31,9 +31,9 @@ import javax.annotation.concurrent.ThreadSafe;
  *       String#getBytes(java.nio.charset.Charset)} with UTF-8. This intentionally diverges from
  *       Java's natural UTF-16 code-unit order above U+FFFF, matching byte-order backends.
  *   <li>{@link Collation#ICU} orders text according to a frozen ICU {@link Collator} built from the
- *       configured locale and strength, or from a custom {@link RuleBasedCollator} tailoring-rule
- *       string. The collator is frozen at construction time so it is immutable and safe for
- *       concurrent {@code compare} calls.
+ *       configured locale and strength, optionally extended by a custom {@link RuleBasedCollator}
+ *       tailoring-rule string that builds on the locale's collation. The collator is frozen at
+ *       construction time so it is immutable and safe for concurrent {@code compare} calls.
  * </ul>
  *
  * <p>When {@code scalar.db.collation} is unset, {@link #from(DatabaseConfig)} returns {@link
@@ -60,7 +60,8 @@ public final class CollationComparator {
    * @param config the database configuration
    * @return an {@code Optional} holding the comparator when {@code scalar.db.collation} is set, or
    *     {@link Optional#empty()} when it is unset (callers keep current natural-order behavior)
-   * @throws IllegalArgumentException if an ICU custom tailoring-rule string is malformed
+   * @throws IllegalArgumentException if an ICU custom tailoring-rule string is malformed or the
+   *     configured ICU locale is not recognized
    */
   public static Optional<CollationComparator> from(DatabaseConfig config) {
     Optional<Collation> collation = config.getCollation();
@@ -85,35 +86,7 @@ public final class CollationComparator {
   }
 
   private static Comparator<String> icuTextComparator(DatabaseConfig config) {
-    Collator collator;
-    Optional<String> rules = config.getCollationRules();
-    if (rules.isPresent()) {
-      try {
-        collator = new RuleBasedCollator(rules.get());
-      } catch (Exception e) {
-        throw new IllegalArgumentException(
-            CoreError.COLLATION_INVALID_RULES.buildMessage(rules.get()), e);
-      }
-    } else {
-      Optional<String> localeName = config.getCollationLocale();
-      if (localeName.isPresent()) {
-        ULocale locale = new ULocale(localeName.get());
-        collator = Collator.getInstance(locale);
-        // ICU silently falls back to the root collation for a locale it has no collation data for,
-        // which would order text differently from the intended locale with no error. Reject such a
-        // locale so a misconfiguration fails at startup instead of producing wrong ordering. A
-        // recognized locale resolves to a non-root VALID_LOCALE; ACTUAL_LOCALE is not usable here
-        // because locales whose collation equals the root order (e.g. English) legitimately have an
-        // empty ACTUAL_LOCALE.
-        ULocale validLocale = collator.getLocale(ULocale.VALID_LOCALE);
-        if (validLocale == null || validLocale.getName().isEmpty()) {
-          throw new IllegalArgumentException(
-              CoreError.COLLATION_UNRECOGNIZED_LOCALE.buildMessage(localeName.get()));
-        }
-      } else {
-        collator = Collator.getInstance(ULocale.ROOT);
-      }
-    }
+    Collator collator = buildIcuCollator(config);
     config
         .getCollationStrength()
         .ifPresent(strength -> collator.setStrength(toIcuStrength(strength)));
@@ -122,6 +95,50 @@ public final class CollationComparator {
     // Collator is mutable and not thread-safe, while a frozen one is safe for concurrent compare.
     Collator frozen = collator.freeze();
     return frozen::compare;
+  }
+
+  private static Collator buildIcuCollator(DatabaseConfig config) {
+    // The base collation is the configured locale's collation, or the root collation when no locale
+    // is configured. Custom tailoring rules, when present, extend that base rather than replacing
+    // it
+    // so they fine-tune ordering beyond the locale (and strength), not instead of it.
+    Optional<String> localeName = config.getCollationLocale();
+    Collator base =
+        localeName.isPresent()
+            ? buildValidatedLocaleCollator(localeName.get())
+            : Collator.getInstance(ULocale.ROOT);
+
+    Optional<String> rules = config.getCollationRules();
+    if (!rules.isPresent()) {
+      return base;
+    }
+
+    // Compose: prepend the base collation's rules so the custom tailoring builds on the locale.
+    // For the root base this is empty, so rules-only ordering is unchanged.
+    String baseRules =
+        base instanceof RuleBasedCollator ? ((RuleBasedCollator) base).getRules() : "";
+    try {
+      return new RuleBasedCollator(baseRules + rules.get());
+    } catch (Exception e) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_INVALID_RULES.buildMessage(rules.get()), e);
+    }
+  }
+
+  private static Collator buildValidatedLocaleCollator(String localeName) {
+    Collator collator = Collator.getInstance(new ULocale(localeName));
+    // ICU silently falls back to the root collation for a locale it has no collation data for,
+    // which would order text differently from the intended locale with no error. Reject such a
+    // locale so a misconfiguration fails at startup instead of producing wrong ordering. A
+    // recognized locale resolves to a non-root VALID_LOCALE; ACTUAL_LOCALE is not usable here
+    // because locales whose collation equals the root order (e.g. English) legitimately have an
+    // empty ACTUAL_LOCALE.
+    ULocale validLocale = collator.getLocale(ULocale.VALID_LOCALE);
+    if (validLocale == null || validLocale.getName().isEmpty()) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_UNRECOGNIZED_LOCALE.buildMessage(localeName));
+    }
+    return collator;
   }
 
   private static int toIcuStrength(CollationStrength strength) {

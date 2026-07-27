@@ -22,7 +22,7 @@ its current comparison behavior and upgrading has no behavioral impact.
 | `scalar.db.collation` | Collation mode: `BINARY` or `ICU`. When absent, ScalarDB uses its current comparison behavior (Java UTF-16 code-unit order). |
 | `scalar.db.collation.locale` | *(ICU only)* Locale that selects the collation rules (for example `en`, `en_US`, `ja`). When absent, ICU's root locale is used. |
 | `scalar.db.collation.strength` | *(ICU only)* One of `PRIMARY`, `SECONDARY`, `TERTIARY`, `QUATERNARY`, `IDENTICAL`. Controls how much detail ordering distinguishes: `PRIMARY` is case- and accent-insensitive; `SECONDARY` adds accent sensitivity; `TERTIARY` adds case sensitivity. When absent, ICU's default strength applies. |
-| `scalar.db.collation.rules` | *(ICU only)* An optional custom ICU tailoring-rule string to fine-tune ordering beyond locale and strength. A malformed rule string is rejected at startup. |
+| `scalar.db.collation.rules` | *(ICU only)* An optional custom ICU tailoring-rule string that fine-tunes ordering *on top of* the configured `locale` (its rules extend the locale's collation, or the root collation when no locale is set) and `strength`. A malformed rule string is rejected at startup. |
 
 ### Values
 
