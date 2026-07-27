@@ -175,6 +175,35 @@ public class CollationComparatorTest {
     assertThat(comparator.get().textComparator().compare("a", "b")).isNegative();
   }
 
+  @Test
+  public void from_WhenIcuWithRegionQualifiedLocale_ShouldBuildComparator() {
+    // Arrange Act: a region-qualified locale ICU recognizes (falls back to the language collation).
+    Optional<CollationComparator> comparator =
+        CollationComparator.from(
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_LOCALE, "en_US")));
+
+    // Assert
+    assertThat(comparator).isPresent();
+  }
+
+  @Test
+  public void from_WhenIcuWithUnrecognizedLocale_ShouldThrowIllegalArgumentException() {
+    // Arrange: a locale ICU has no collation data for (it would silently fall back to root order).
+    DatabaseConfig config =
+        config(
+            props(
+                DatabaseConfig.COLLATION, "ICU",
+                DatabaseConfig.COLLATION_LOCALE, "not_a_locale"));
+
+    // Act Assert
+    assertThatThrownBy(() -> CollationComparator.from(config))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(DatabaseConfig.COLLATION_LOCALE);
+  }
+
   // ---- Concurrency (guards KTD5) ----
 
   @Test

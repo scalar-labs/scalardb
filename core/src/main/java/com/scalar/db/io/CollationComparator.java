@@ -94,8 +94,30 @@ public final class CollationComparator {
             "Failed to build an ICU collator from the custom collation rules: " + rules.get(), e);
       }
     } else {
-      ULocale locale = config.getCollationLocale().map(ULocale::new).orElse(ULocale.ROOT);
-      collator = Collator.getInstance(locale);
+      Optional<String> localeName = config.getCollationLocale();
+      if (localeName.isPresent()) {
+        ULocale locale = new ULocale(localeName.get());
+        collator = Collator.getInstance(locale);
+        // ICU silently falls back to the root collation for a locale it has no collation data for,
+        // which would order text differently from the intended locale with no error. Reject such a
+        // locale so a misconfiguration fails at startup instead of producing wrong ordering. A
+        // recognized locale resolves to a non-root VALID_LOCALE; ACTUAL_LOCALE is not usable here
+        // because locales whose collation equals the root order (e.g. English) legitimately have an
+        // empty ACTUAL_LOCALE.
+        ULocale validLocale = collator.getLocale(ULocale.VALID_LOCALE);
+        if (validLocale == null || validLocale.getName().isEmpty()) {
+          throw new IllegalArgumentException(
+              "Unrecognized "
+                  + DatabaseConfig.COLLATION_LOCALE
+                  + ": '"
+                  + localeName.get()
+                  + "'. ICU has no collation data for this locale and would fall back to "
+                  + "root-collation ordering. Configure a valid ICU locale such as 'en', 'en_US', "
+                  + "or 'ja'.");
+        }
+      } else {
+        collator = Collator.getInstance(ULocale.ROOT);
+      }
     }
     config
         .getCollationStrength()
