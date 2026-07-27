@@ -12,13 +12,13 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
  *
  * <p>It drives the transaction's outcome across all its branches — {@link #commit()} or {@link
  * #rollback()} — but does not itself perform CRUD. CRUD is issued on the {@link BranchTransaction}
- * handles that join this transaction by its {@link #getId() ID}.
+ * handles begun for this transaction with its {@link #getId() ID}.
  */
 public interface GlobalTransaction {
 
   /**
-   * Returns the ID of this global transaction. Pass it to {@link
-   * GlobalTransactionManager#beginBranch(String)} on each branch to join this transaction.
+   * Returns the ID of this global transaction. Branches of this transaction are begun by passing it
+   * to {@link GlobalTransactionManager#beginBranch(String)}.
    *
    * @return the global transaction ID
    */

@@ -22,8 +22,9 @@ import javax.annotation.concurrent.NotThreadSafe;
  * Adapts a {@link DistributedTransaction} to the {@link BranchTransaction} API.
  *
  * <p>This is a branch of a single-phase-backed distributed transaction. CRUD is delegated directly
- * to the underlying {@link DistributedTransaction} (which this branch joined by the global
- * transaction's ID); the commit/rollback outcome is driven by the owning {@link
+ * to the underlying {@link DistributedTransaction}, which every branch of the global transaction
+ * shares (see {@link DistributedTransactionBackedGlobalTransactionManager} for the concurrency
+ * implications); the commit/rollback outcome is driven by the owning {@link
  * com.scalar.db.api.GlobalTransaction}. {@link #end()} triggers no backing action for this backing
  * — it only marks the branch ended, after which CRUD (or another {@code end()}) is rejected with
  * {@link IllegalStateException}.

@@ -13,11 +13,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 /**
  * Adapts a {@link TwoPhaseCommitCoordinator} to the {@link GlobalTransaction} API.
  *
- * <p>This is the overall (global) handle of a distributed transaction. It holds no data-store
- * resources itself; CRUD happens on the {@link com.scalar.db.api.BranchTransaction} handles that
- * join this transaction by its ID. {@link #commit()} drives the full two-phase commit across the
- * joined participants through the coordinator (which generates the prepared/committed timestamps
- * internally); {@link #rollback()} drives the coordinator's rollback.
+ * <p>{@link #commit()} drives the full two-phase commit across the joined participants through the
+ * coordinator (which generates the prepared/committed timestamps internally); {@link #rollback()}
+ * drives the coordinator's rollback. The handle holds no data-store resources itself.
  *
  * <p>See {@link TwoPhaseCommitBackedGlobalTransactionManager} for how the coordinator is wired and
  * the global transaction and its branches are begun.

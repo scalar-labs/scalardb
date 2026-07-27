@@ -21,10 +21,10 @@ import java.util.Map;
  * </ul>
  *
  * <p>A typical flow: an initiator begins the global transaction with {@link #beginGlobal()}, reads
- * the transaction ID with {@link GlobalTransaction#getId()}, and shares it; each branch joins the
- * transaction by calling {@link #beginBranch(String)} with that ID, performs CRUD on the returned
- * {@link BranchTransaction}, and calls {@link BranchTransaction#end()}; finally the initiator calls
- * {@link GlobalTransaction#commit()} (or {@link GlobalTransaction#rollback()}).
+ * the transaction ID with {@link GlobalTransaction#getId()}, and shares it; each branch is begun by
+ * calling {@link #beginBranch(String)} with that ID, performs its CRUD on the returned {@link
+ * BranchTransaction}, and is ended with {@link BranchTransaction#end()}; finally the initiator
+ * calls {@link GlobalTransaction#commit()} (or {@link GlobalTransaction#rollback()}).
  *
  * <p>The {@code beginGlobalReadOnly} variants begin a read-only transaction, which the
  * implementation may optimize. The {@code startXxx} methods are aliases of the corresponding {@code
@@ -150,10 +150,10 @@ public interface GlobalTransactionManager extends AutoCloseable {
   }
 
   /**
-   * Begins a branch of the global transaction with the specified ID, joining it as a participant.
+   * Begins a branch of the global transaction with the specified ID.
    *
-   * @param transactionId the ID of the global transaction to join, as returned by {@link
-   *     GlobalTransaction#getId()}
+   * @param transactionId the ID of the global transaction this branch belongs to, as returned by
+   *     {@link GlobalTransaction#getId()}
    * @return the {@link BranchTransaction} CRUD handle for this branch
    * @throws TransactionNotFoundException if the branch fails to begin due to transient faults. You
    *     can retry the transaction from the beginning
@@ -166,12 +166,12 @@ public interface GlobalTransactionManager extends AutoCloseable {
   }
 
   /**
-   * Begins a branch of the global transaction with the specified ID, joining it as a participant.
-   * The given per-branch attributes are attached to every operation issued on the branch (an
-   * attribute set directly on an operation takes precedence).
+   * Begins a branch of the global transaction with the specified ID. The given per-branch
+   * attributes are attached to every operation issued on the branch (an attribute set directly on
+   * an operation takes precedence).
    *
-   * @param transactionId the ID of the global transaction to join, as returned by {@link
-   *     GlobalTransaction#getId()}
+   * @param transactionId the ID of the global transaction this branch belongs to, as returned by
+   *     {@link GlobalTransaction#getId()}
    * @param attributes per-branch, implementation-specific attributes attached to each operation
    *     issued on the branch (may be empty)
    * @return the {@link BranchTransaction} CRUD handle for this branch
@@ -187,8 +187,8 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * Begins a branch of the global transaction with the specified ID. This method is an alias of
    * {@link #beginBranch(String)}.
    *
-   * @param transactionId the ID of the global transaction to join, as returned by {@link
-   *     GlobalTransaction#getId()}
+   * @param transactionId the ID of the global transaction this branch belongs to, as returned by
+   *     {@link GlobalTransaction#getId()}
    * @return the {@link BranchTransaction} CRUD handle for this branch
    * @throws TransactionNotFoundException if the branch fails to begin due to transient faults. You
    *     can retry the transaction from the beginning
@@ -204,8 +204,8 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * Begins a branch of the global transaction with the specified ID and attributes. This method is
    * an alias of {@link #beginBranch(String, Map)}.
    *
-   * @param transactionId the ID of the global transaction to join, as returned by {@link
-   *     GlobalTransaction#getId()}
+   * @param transactionId the ID of the global transaction this branch belongs to, as returned by
+   *     {@link GlobalTransaction#getId()}
    * @param attributes per-branch, implementation-specific attributes attached to each operation
    *     issued on the branch (may be empty)
    * @return the {@link BranchTransaction} CRUD handle for this branch

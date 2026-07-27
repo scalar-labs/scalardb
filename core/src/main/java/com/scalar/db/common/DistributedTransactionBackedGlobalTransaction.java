@@ -11,10 +11,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 /**
  * Adapts a {@link DistributedTransaction} to the {@link GlobalTransaction} API.
  *
- * <p>This is the overall (global) handle of a single-phase-backed distributed transaction. It holds
- * the underlying {@link DistributedTransaction} only to drive commit/rollback; CRUD happens on the
- * {@link com.scalar.db.api.BranchTransaction} handles that join this transaction by its ID. {@link
- * #commit()} performs the single-phase commit; {@link #rollback()} rolls it back.
+ * <p>{@link #commit()} performs the single-phase commit of the shared underlying transaction;
+ * {@link #rollback()} rolls it back. The handle holds the underlying {@link DistributedTransaction}
+ * only to drive that outcome.
  *
  * <p>See {@link DistributedTransactionBackedGlobalTransactionManager} for how the manager is wired
  * and the global transaction and its branches are begun.

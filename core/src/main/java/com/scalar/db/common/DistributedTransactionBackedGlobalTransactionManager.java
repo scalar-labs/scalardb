@@ -25,8 +25,8 @@ import javax.annotation.concurrent.ThreadSafe;
  *   <li>{@code beginGlobal} begins a new distributed transaction via the manager and returns a
  *       {@link DistributedTransactionBackedGlobalTransaction} — the overall handle used to drive
  *       commit/rollback.
- *   <li>{@code beginBranch} joins the already-begun distributed transaction by its ID (via {@link
- *       DistributedTransactionManager#join(String)}) and returns a {@link
+ *   <li>{@code beginBranch} begins a branch served by that same shared transaction, looked up by
+ *       the global transaction ID, and returns a {@link
  *       DistributedTransactionBackedBranchTransaction} — the CRUD handle for that branch.
  * </ul>
  *
@@ -36,18 +36,23 @@ import javax.annotation.concurrent.ThreadSafe;
  * interference and the combined validation is equivalent to per-branch validation. The assumption
  * is a precondition on the caller rather than something this class enforces. Branches that do touch
  * the same records observe each other's uncommitted writes, unlike the per-participant snapshots
- * that {@link TwoPhaseCommitBackedGlobalTransactionManager} gives each branch.
+ * that {@link TwoPhaseCommitBackedGlobalTransactionManager} gives each branch. Sharing the
+ * transaction also shares its thread-unsafety: every branch handle drives the same non-thread-safe
+ * {@link DistributedTransaction}, so CRUD on different branches of one global transaction must
+ * never run concurrently — the branches must be driven one at a time, with the caller providing the
+ * happens-before when they hop threads.
  *
- * <p>Because branches join by transaction ID, this backing requires a {@link
- * DistributedTransactionManager} whose {@link DistributedTransactionManager#join(String)} resolves
- * a transaction begun elsewhere. Running branches in separate processes therefore requires an
- * implementation that can resolve the transaction from the process issuing the join.
+ * <p>The shared transaction lives in the manager instance this backing wraps, so a global
+ * transaction and all of its branches must be driven through that same instance — in practice,
+ * within one process. This backing is for in-process orchestration; the separated, multi-process
+ * arrangement is what {@link TwoPhaseCommitBackedGlobalTransactionManager} is for. (The current
+ * implementation resolves the shared transaction via {@link
+ * DistributedTransactionManager#join(String)}.)
  *
  * <p>The per-branch {@code attributes} passed to {@code beginBranch} are propagated client-side
  * into each CRUD operation issued on the branch (via {@link
  * AttributePropagatingBranchTransaction}), distinct from the transaction-level attributes supplied
- * to {@code beginGlobal}. They are not sent to {@link DistributedTransactionManager#join(String)},
- * which takes no attributes.
+ * to {@code beginGlobal}. They are held client-side on the branch handle only.
  */
 @ThreadSafe
 public class DistributedTransactionBackedGlobalTransactionManager
@@ -75,10 +80,9 @@ public class DistributedTransactionBackedGlobalTransactionManager
   @Override
   public BranchTransaction beginBranch(String transactionId, Map<String, String> attributes)
       throws TransactionException {
-    // Join the already-begun global transaction by its ID. All branches share the single underlying
-    // distributed transaction. The per-branch attributes are propagated client-side into each CRUD
-    // operation by AttributePropagatingBranchTransaction; they are not sent to join (which carries
-    // no attributes) and differ from the transaction-scoped attributes supplied at beginGlobal.
+    // Look up the shared underlying transaction by the global transaction ID (via the manager's
+    // join) and front it with a branch handle; per-branch attributes are applied client-side by
+    // AttributePropagatingBranchTransaction.
     BranchTransaction branch =
         new DistributedTransactionBackedBranchTransaction(manager.join(transactionId));
     return attributes.isEmpty()
