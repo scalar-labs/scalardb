@@ -152,10 +152,11 @@ public class AttributePropagatingTwoPhaseCommitParticipant
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(String transactionId, long preparedAt)
+  public TwoPhaseCommit.PreparationResult prepareRecords(
+      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
     try {
-      return super.prepareRecords(transactionId, preparedAt);
+      return super.prepareRecords(transactionId, preparedAt, detailLevel);
     } finally {
       // prepareRecords ends the CRUD phase (no CRUD is accepted once prepared), so the captured
       // attributes are no longer needed and are dropped here. Dropping here rather than at

@@ -349,9 +349,9 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
   void prepareRecords_ShouldForwardAndDropTheCapturedAttributes() throws Exception {
     participant.join(TX, false, attrs("k", "v"));
 
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
-    verify(delegate).prepareRecords(TX, 100L);
+    verify(delegate).prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
     // prepareRecords ends the CRUD phase, so the captured attributes are dropped here. This is the
     // terminal step for a write-less transaction, whose commitRecords the Coordinator skips: a
@@ -369,7 +369,7 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
     participant.join("tx-1", false, attrs("k", "v1"));
     participant.join("tx-2", false, attrs("k", "v2"));
 
-    participant.prepareRecords("tx-1", 100L);
+    participant.prepareRecords("tx-1", 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
     // tx-2 is untouched by tx-1's terminal step: its attributes still merge.
     participant.get("tx-2", get());
