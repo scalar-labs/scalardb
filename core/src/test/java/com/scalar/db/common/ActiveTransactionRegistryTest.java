@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -55,5 +57,22 @@ class ActiveTransactionRegistryTest {
       present++;
     }
     assertThat(present).isEqualTo(1);
+  }
+
+  @Test
+  void forEach_ShouldVisitRegisteredTransactions() {
+    // Arrange
+    ActiveTransactionRegistry<String> registry = new ActiveTransactionRegistry<>(-1, 0, t -> {});
+    registry.add("tx1", "v1");
+    registry.add("tx2", "v2");
+
+    // Act
+    Map<String, String> seen = new HashMap<>();
+    registry.forEach(seen::put);
+
+    // Assert
+    assertThat(seen).containsOnlyKeys("tx1", "tx2");
+    assertThat(seen.get("tx1")).isEqualTo("v1");
+    assertThat(seen.get("tx2")).isEqualTo("v2");
   }
 }
