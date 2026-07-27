@@ -18,8 +18,11 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -46,6 +49,11 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
 
   private boolean ended;
 
+  // Scanners handed out and not yet closed; end() refuses to run while any remain, so a scanner
+  // can never legitimately outlive the branch (mirroring the scanner-not-closed guard consensus
+  // commit applies at commit).
+  private final Set<TransactionCrudOperable.Scanner> openScanners = new HashSet<>();
+
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseCommitBackedBranchTransaction(
       TwoPhaseCommitParticipant participant, String transactionId) {
@@ -70,7 +78,40 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
 
   @Override
   public TransactionCrudOperable.Scanner getScanner(Scan scan) throws CrudException {
-    return crud(() -> participant.getScanner(transactionId, scan));
+    return trackScanner(crud(() -> participant.getScanner(transactionId, scan)));
+  }
+
+  private TransactionCrudOperable.Scanner trackScanner(TransactionCrudOperable.Scanner scanner) {
+    TransactionCrudOperable.Scanner tracked =
+        new TransactionCrudOperable.Scanner() {
+          @Override
+          public Optional<Result> one() throws CrudException {
+            return scanner.one();
+          }
+
+          @Override
+          public List<Result> all() throws CrudException {
+            return scanner.all();
+          }
+
+          @Override
+          public Iterator<Result> iterator() {
+            return scanner.iterator();
+          }
+
+          @Override
+          public void close() throws CrudException {
+            // Untrack even if the close fails: the guard is about forgotten closes, and an
+            // uncloseable scanner must not make the branch unendable forever.
+            try {
+              scanner.close();
+            } finally {
+              openScanners.remove(this);
+            }
+          }
+        };
+    openScanners.add(tracked);
+    return tracked;
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0 */
@@ -128,6 +169,10 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
   @Override
   public void end() throws CrudException {
     checkNotEnded();
+    if (!openScanners.isEmpty()) {
+      throw new IllegalStateException(
+          CoreError.BRANCH_TRANSACTION_SCANNER_NOT_CLOSED.buildMessage(transactionId));
+    }
     ended = true;
   }
 

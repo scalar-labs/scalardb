@@ -14,8 +14,11 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CrudException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -39,6 +42,11 @@ public class DistributedTransactionBackedBranchTransaction implements BranchTran
   private final DistributedTransaction transaction;
 
   private boolean ended;
+
+  // Scanners handed out and not yet closed; end() refuses to run while any remain, so a scanner
+  // can never legitimately outlive the branch (mirroring the scanner-not-closed guard consensus
+  // commit applies at commit).
+  private final Set<Scanner> openScanners = new HashSet<>();
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DistributedTransactionBackedBranchTransaction(DistributedTransaction transaction) {
@@ -65,7 +73,40 @@ public class DistributedTransactionBackedBranchTransaction implements BranchTran
   @Override
   public Scanner getScanner(Scan scan) throws CrudException {
     checkNotEnded();
-    return transaction.getScanner(scan);
+    return trackScanner(transaction.getScanner(scan));
+  }
+
+  private Scanner trackScanner(Scanner scanner) {
+    Scanner tracked =
+        new Scanner() {
+          @Override
+          public Optional<Result> one() throws CrudException {
+            return scanner.one();
+          }
+
+          @Override
+          public List<Result> all() throws CrudException {
+            return scanner.all();
+          }
+
+          @Override
+          public Iterator<Result> iterator() {
+            return scanner.iterator();
+          }
+
+          @Override
+          public void close() throws CrudException {
+            // Untrack even if the close fails: the guard is about forgotten closes, and an
+            // uncloseable scanner must not make the branch unendable forever.
+            try {
+              scanner.close();
+            } finally {
+              openScanners.remove(this);
+            }
+          }
+        };
+    openScanners.add(tracked);
+    return tracked;
   }
 
   /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
@@ -135,6 +176,10 @@ public class DistributedTransactionBackedBranchTransaction implements BranchTran
   @Override
   public void end() throws CrudException {
     checkNotEnded();
+    if (!openScanners.isEmpty()) {
+      throw new IllegalStateException(
+          CoreError.BRANCH_TRANSACTION_SCANNER_NOT_CLOSED.buildMessage(transaction.getId()));
+    }
     ended = true;
   }
 

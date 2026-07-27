@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -9,6 +10,8 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
@@ -36,6 +39,10 @@ class TwoPhaseCommitBackedBranchTransactionTest {
 
   private TwoPhaseCommitBackedBranchTransaction branch() {
     return new TwoPhaseCommitBackedBranchTransaction(participant, TX_ID);
+  }
+
+  private static Scan scan() {
+    return Scan.newBuilder().namespace(NS).table(TBL).partitionKey(Key.ofInt("pk", 1)).build();
   }
 
   private static Get get() {
@@ -110,6 +117,21 @@ class TwoPhaseCommitBackedBranchTransactionTest {
     branch.end();
 
     assertThatThrownBy(branch::end).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void end_WithOpenScanner_ShouldThrowIllegalStateException_ThenSucceedAfterClose()
+      throws Exception {
+    TransactionCrudOperable.Scanner delegateScanner = mock(TransactionCrudOperable.Scanner.class);
+    when(participant.getScanner(TX_ID, scan())).thenReturn(delegateScanner);
+    TwoPhaseCommitBackedBranchTransaction branch = branch();
+    TransactionCrudOperable.Scanner scanner = branch.getScanner(scan());
+
+    assertThatThrownBy(branch::end).isInstanceOf(IllegalStateException.class);
+
+    scanner.close();
+    verify(delegateScanner).close();
+    branch.end();
   }
 
   @Test

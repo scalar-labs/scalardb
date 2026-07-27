@@ -1139,6 +1139,12 @@ public enum CoreError implements ScalarDbError {
       "Branches are not supported by this coordinator-only global transaction manager because no participant is configured",
       "",
       ""),
+  BRANCH_TRANSACTION_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0301",
+      "Some scanners were not closed. All scanners must be closed before ending the branch. Transaction ID: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
