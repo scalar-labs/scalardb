@@ -85,7 +85,6 @@ subprojects {
     ext {
         guiceVersion = '7.0.0'
         guavaVersion = '33.6.0-jre'
-        icu4jVersion = '77.1'
         slf4jVersion = '1.7.36'
         cassandraDriverVersion = '3.12.1'
         azureCosmosVersion = '4.81.0'
@@ -106,6 +105,7 @@ subprojects {
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
+        icu4jVersion = '77.1'
         protobufVersion = '4.35.1'
         junitVersion = '5.14.4'
         commonsLangVersion = '3.20.0'
