@@ -373,7 +373,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(String transactionId, long preparedAt)
+  public TwoPhaseCommit.PreparationResult prepareRecords(
+      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
     ParticipantContext pc = getParticipantContext(transactionId);
     synchronized (pc) {
@@ -413,7 +414,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
         // status). Mirrors TwoPhaseConsensusCommit.prepare, which sets needRollback in a finally.
         pc.toPrepared();
       }
-      List<TwoPhaseCommit.WriteSetEntry> writeSet = buildWriteSetEntries(context);
+      List<TwoPhaseCommit.WriteSetEntry> writeSet = buildWriteSetEntries(context, detailLevel);
       boolean validationRequired = context.isValidationRequired();
       boolean commitRequired = context.isCommitRequired();
       // The Coordinator skips validateRecords when validation is not required and commitRecords
@@ -564,26 +565,41 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
     }
   }
 
-  private List<TwoPhaseCommit.WriteSetEntry> buildWriteSetEntries(TransactionContext context) {
+  private List<TwoPhaseCommit.WriteSetEntry> buildWriteSetEntries(
+      TransactionContext context, TwoPhaseCommit.WriteSetDetailLevel detailLevel) {
     Snapshot snapshot = context.snapshot;
     List<TwoPhaseCommit.WriteSetEntry> entries = new ArrayList<>();
     // Returns empty iff !snapshot.hasWritesOrDeletes(), so the write set shipped to the Coordinator
-    // is empty exactly for a write-less participant. The Coordinator gates writing the COMMITTED
-    // state row on this write set being non-empty (its hasWrites), which must agree with
-    // isCommitRequired and the validate-step self-release (both derived from
-    // context.isCommitRequired(), i.e. snapshot.hasWritesOrDeletes()); preserve this
+    // is empty exactly for a write-less participant — regardless of detailLevel, which only
+    // controls whether WRITE entries carry non-key columns, never which entries exist. The
+    // Coordinator gates writing the COMMITTED state row on this write set being non-empty (its
+    // hasWrites), which must agree with isCommitRequired and the validate-step self-release (both
+    // derived from context.isCommitRequired(), i.e. snapshot.hasWritesOrDeletes()); preserve this
     // empty-iff-write-less guarantee if this method ever starts filtering entries.
     if (!snapshot.hasWritesOrDeletes()) {
       return entries;
     }
     for (Map.Entry<Snapshot.Key, Put> e : snapshot.getWriteSet()) {
       Put put = e.getValue();
-      TableMetadata metadata = getTableMetadataForMutation(put);
-      List<Column<?>> filteredColumns = new ArrayList<>();
-      for (Column<?> column : put.getColumns().values()) {
-        if (!ConsensusCommitUtils.isTransactionMetaColumn(column.getName(), metadata)) {
-          filteredColumns.add(column);
-        }
+      List<Column<?>> columns;
+      switch (detailLevel) {
+        case KEYS_ONLY:
+          // KEYS_ONLY entries must carry no non-key columns. Skipping the column pass also skips
+          // the table-metadata lookup, which is needed only to filter transaction-meta columns.
+          columns = Collections.emptyList();
+          break;
+        case FULL:
+          TableMetadata metadata = getTableMetadataForMutation(put);
+          List<Column<?>> filteredColumns = new ArrayList<>();
+          for (Column<?> column : put.getColumns().values()) {
+            if (!ConsensusCommitUtils.isTransactionMetaColumn(column.getName(), metadata)) {
+              filteredColumns.add(column);
+            }
+          }
+          columns = Collections.unmodifiableList(filteredColumns);
+          break;
+        default:
+          throw new AssertionError("Unknown write-set detail: " + detailLevel);
       }
       entries.add(
           new WriteSetEntryImpl(
@@ -592,7 +608,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
               put.forTable().get(),
               put.getPartitionKey(),
               put.getClusteringKey(),
-              Collections.unmodifiableList(filteredColumns)));
+              columns));
     }
     for (Map.Entry<Snapshot.Key, Delete> e : snapshot.getDeleteSet()) {
       Delete delete = e.getValue();
