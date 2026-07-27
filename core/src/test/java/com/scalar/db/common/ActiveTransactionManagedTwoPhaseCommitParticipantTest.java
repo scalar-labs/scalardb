@@ -30,6 +30,9 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -95,6 +98,91 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
 
     verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext(TX);
     verify(delegate, timeout(PAST_SWEEP_MILLIS * 4)).releaseTransactionContext("tx-2");
+  }
+
+  @Test
+  void disposalHandler_OnIdleExpiry_ShouldInvokeHandlerWithTransactionId_NotDefaultRelease()
+      throws Exception {
+    // The privileged-reap seam: when a disposal handler is supplied, the reaper invokes it with the
+    // transaction ID instead of releasing the context on the wrapped participant itself, so an
+    // embedder can run the release in its own execution context (e.g. a privileged mode).
+    CountDownLatch disposed = new CountDownLatch(1);
+    AtomicReference<String> disposedId = new AtomicReference<>();
+    ActiveTransactionManagedTwoPhaseCommitParticipant p =
+        new ActiveTransactionManagedTwoPhaseCommitParticipant(
+            delegate,
+            EXPIRATION_MILLIS,
+            /* maxActiveTransactions= */ -1,
+            transactionId -> {
+              disposedId.set(transactionId);
+              disposed.countDown();
+            });
+
+    p.join(TX, false, Collections.emptyMap());
+
+    assertThat(disposed.await(PAST_SWEEP_MILLIS * 4, TimeUnit.MILLISECONDS)).isTrue();
+    assertThat(disposedId.get()).isEqualTo(TX);
+    // The handler replaced the default action: the reaper does not release the context on the
+    // wrapped participant itself.
+    verify(delegate, never()).releaseTransactionContext(TX);
+  }
+
+  @Test
+  void disposalHandler_OnCapEviction_ShouldInvokeHandlerWithTransactionId_NotDefaultRelease()
+      throws Exception {
+    // The disposal-handler constructor promises the handler fires for cap eviction as well as
+    // idle expiry; this pins the eviction path, so a registry change that routed eviction around
+    // the handler would fail here instead of silently breaking an embedder's privileged reap.
+    // Idle expiration is disabled so only the cap can trigger disposal.
+    CountDownLatch disposed = new CountDownLatch(1);
+    AtomicReference<String> disposedId = new AtomicReference<>();
+    ActiveTransactionManagedTwoPhaseCommitParticipant p =
+        new ActiveTransactionManagedTwoPhaseCommitParticipant(
+            delegate,
+            /* expirationTimeMillis= */ -1,
+            /* maxActiveTransactions= */ 1,
+            transactionId -> {
+              disposedId.set(transactionId);
+              disposed.countDown();
+            });
+
+    p.join(TX, false, Collections.emptyMap());
+    p.join("tx-2", false, Collections.emptyMap());
+
+    // Caffeine decides size-based eviction during maintenance, and maintenance is re-triggered by
+    // cache writes; two racing writes can leave the cache over capacity but quiescent. Poke with
+    // further joins - each a real write and itself over-capacity pressure - while polling, so the
+    // eviction decision is reliably driven (mirroring the coordinator-side cap-eviction test).
+    long deadlineMillis = System.currentTimeMillis() + 10000;
+    int poke = 0;
+    while (disposed.getCount() > 0 && System.currentTimeMillis() < deadlineMillis) {
+      p.join("tx-poke-" + poke++, false, Collections.emptyMap());
+      TimeUnit.MILLISECONDS.sleep(50);
+    }
+
+    assertThat(disposed.await(0, TimeUnit.MILLISECONDS)).isTrue();
+    assertThat(disposedId.get()).isNotNull();
+    // The handler replaced the default action: the evicting reaper does not release the context
+    // on the wrapped participant itself.
+    verify(delegate, never()).releaseTransactionContext(any());
+  }
+
+  @Test
+  void defaultDisposalHandler_ShouldReleaseOnParticipant_AndTreatNotFoundAsNoOp() throws Exception {
+    // The publicly composable form of the default reap action: it releases the context on the
+    // given participant and swallows the not-found that denotes an already-released context, so
+    // an embedder wrapping it (e.g. in a privileged mode) inherits both behaviors.
+    ActiveTransactionRegistry.DisposalHandler<String> handler =
+        ActiveTransactionManagedTwoPhaseCommitParticipant.defaultDisposalHandler(delegate);
+
+    handler.onDisposed(TX);
+    verify(delegate).releaseTransactionContext(TX);
+
+    doThrow(new TransactionNotFoundException("already gone", "tx-2"))
+        .when(delegate)
+        .releaseTransactionContext("tx-2");
+    handler.onDisposed("tx-2");
+    verify(delegate).releaseTransactionContext("tx-2");
   }
 
   @Test
