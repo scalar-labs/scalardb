@@ -470,7 +470,7 @@ public class SelectStatementHandlerTest {
   private Optional<CollationComparator> icuPrimaryCollation() {
     return CollationComparator.from(
         collationConfig(
-            DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_STRENGTH, "PRIMARY"));
+            DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY"));
   }
 
   private void stubPartition(ObjectStoragePartition partition) throws Exception {

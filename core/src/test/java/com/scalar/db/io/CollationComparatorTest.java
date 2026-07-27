@@ -81,7 +81,7 @@ public class CollationComparatorTest {
                 config(
                     props(
                         DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_STRENGTH, "PRIMARY")))
+                        DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")))
             .get();
     Comparator<String> textComparator = comparator.textComparator();
 
@@ -99,7 +99,7 @@ public class CollationComparatorTest {
                 config(
                     props(
                         DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_STRENGTH, "TERTIARY")))
+                        DatabaseConfig.COLLATION_ICU_STRENGTH, "TERTIARY")))
             .get();
     Comparator<String> textComparator = comparator.textComparator();
 
@@ -136,7 +136,7 @@ public class CollationComparatorTest {
                 config(
                     props(
                         DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_RULES, "& b < a")))
+                        DatabaseConfig.COLLATION_ICU_RULES, "& b < a")))
             .get();
     Comparator<String> textComparator = comparator.textComparator();
 
@@ -151,7 +151,7 @@ public class CollationComparatorTest {
         config(
             props(
                 DatabaseConfig.COLLATION, "ICU",
-                DatabaseConfig.COLLATION_RULES, "this is not a valid rule <<< &&&"));
+                DatabaseConfig.COLLATION_ICU_RULES, "this is not a valid rule <<< &&&"));
 
     // Act Assert
     assertThatThrownBy(() -> CollationComparator.from(config))
@@ -166,8 +166,8 @@ public class CollationComparatorTest {
                 config(
                     props(
                         DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_LOCALE, "sv",
-                        DatabaseConfig.COLLATION_RULES, "& b < a")))
+                        DatabaseConfig.COLLATION_ICU_LOCALE, "sv",
+                        DatabaseConfig.COLLATION_ICU_RULES, "& b < a")))
             .get()
             .textComparator();
     Comparator<String> rulesOnly =
@@ -175,7 +175,7 @@ public class CollationComparatorTest {
                 config(
                     props(
                         DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_RULES, "& b < a")))
+                        DatabaseConfig.COLLATION_ICU_RULES, "& b < a")))
             .get()
             .textComparator();
 
@@ -201,7 +201,7 @@ public class CollationComparatorTest {
             config(
                 props(
                     DatabaseConfig.COLLATION, "ICU",
-                    DatabaseConfig.COLLATION_LOCALE, "de")));
+                    DatabaseConfig.COLLATION_ICU_LOCALE, "de")));
 
     // Assert
     assertThat(comparator).isPresent();
@@ -216,7 +216,7 @@ public class CollationComparatorTest {
             config(
                 props(
                     DatabaseConfig.COLLATION, "ICU",
-                    DatabaseConfig.COLLATION_LOCALE, "en_US")));
+                    DatabaseConfig.COLLATION_ICU_LOCALE, "en_US")));
 
     // Assert
     assertThat(comparator).isPresent();
@@ -229,7 +229,7 @@ public class CollationComparatorTest {
         config(
             props(
                 DatabaseConfig.COLLATION, "ICU",
-                DatabaseConfig.COLLATION_LOCALE, "not_a_locale"));
+                DatabaseConfig.COLLATION_ICU_LOCALE, "not_a_locale"));
 
     // Act Assert
     assertThatThrownBy(() -> CollationComparator.from(config))
@@ -248,7 +248,7 @@ public class CollationComparatorTest {
                 config(
                     props(
                         DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_STRENGTH, "TERTIARY")))
+                        DatabaseConfig.COLLATION_ICU_STRENGTH, "TERTIARY")))
             .get();
     Comparator<String> textComparator = comparator.textComparator();
     int expected = sign(textComparator.compare("apple", "Banana"));
@@ -292,7 +292,7 @@ public class CollationComparatorTest {
         config(
             props(
                 DatabaseConfig.COLLATION, "ICU",
-                DatabaseConfig.COLLATION_STRENGTH, "PRIMARY")));
+                DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")));
   }
 
   private void assertConsistency(DatabaseConfig config) {
@@ -366,7 +366,7 @@ public class CollationComparatorTest {
                 config(
                     props(
                         DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_STRENGTH, "PRIMARY")))
+                        DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")))
             .get();
     Comparator<Key> keyComparator = comparator.keyComparator();
     Key k1 = Key.newBuilder().addText("p", "apple").addInt("c", 1).build();

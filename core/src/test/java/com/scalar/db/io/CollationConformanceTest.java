@@ -56,8 +56,8 @@ public class CollationConformanceTest {
   private static CollationComparator icu(String strength) {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.COLLATION, "ICU");
-    props.setProperty(DatabaseConfig.COLLATION_LOCALE, "en_US");
-    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, strength);
+    props.setProperty(DatabaseConfig.COLLATION_ICU_LOCALE, "en_US");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, strength);
     return CollationComparator.from(config(props)).get();
   }
 

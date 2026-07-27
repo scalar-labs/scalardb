@@ -2757,7 +2757,7 @@ public class SnapshotTest {
   private static CollationComparator caseInsensitiveIcuCollation() {
     return CollationComparator.from(
             collationConfig(
-                DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_STRENGTH, "PRIMARY"))
+                DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY"))
         .get();
   }
 
