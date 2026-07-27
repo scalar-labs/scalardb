@@ -210,7 +210,7 @@ public class CommitHandler {
     waitBeforePreparationHookFuture(
         context, beforePreparationHookFuture.orElse(null), hasWritesOrDeletesInSnapshot);
 
-    if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+    if (isCoordinatorStateWriteRequired(hasWritesOrDeletesInSnapshot)) {
       long committedAt;
       try {
         // commitState writes the COMMITTED Coordinator state row and returns the committedAt it
@@ -244,12 +244,20 @@ public class CommitHandler {
   private void abortStateAndRollbackRecordsIfNeeded(
       TransactionContext context, boolean hasWritesOrDeletesInSnapshot)
       throws UnknownTransactionStatusException {
-    if (hasWritesOrDeletesInSnapshot || !coordinatorWriteOmissionOnReadOnlyEnabled) {
+    if (isCoordinatorStateWriteRequired(hasWritesOrDeletesInSnapshot)) {
       abortState(context);
     }
     if (hasWritesOrDeletesInSnapshot) {
       rollbackRecords(context);
     }
+  }
+
+  // The single policy behind both Coordinator state gates: the row (COMMITTED on the commit path,
+  // ABORTED on the abort path) is written unless the transaction has no writes or deletes and
+  // coordinator write omission on read-only is enabled. Mirrored by ConsensusCommitCoordinator's
+  // gate of the same name.
+  private boolean isCoordinatorStateWriteRequired(boolean hasWritesOrDeletes) {
+    return hasWritesOrDeletes || !coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
   // ---------- Pass-through methods that delegate to the specialized handlers. ----------
