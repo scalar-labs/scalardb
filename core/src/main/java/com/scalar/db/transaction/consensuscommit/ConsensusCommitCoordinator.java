@@ -62,6 +62,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   private final DistributedStorage storage;
   private final CoordinatorCommitHandler coordinatorCommitHandler;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  private final boolean coordinatorWriteSetLoggingEnabled;
 
   private final ConcurrentMap<String, CoordinatorContext> contexts = new ConcurrentHashMap<>();
 
@@ -74,6 +75,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         new CoordinatorCommitHandler(new CoordinatorStateAccessor(storage, config));
     this.coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    this.coordinatorWriteSetLoggingEnabled = config.isCoordinatorWriteSetLoggingEnabled();
   }
 
   @VisibleForTesting
@@ -85,6 +87,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     this.coordinatorCommitHandler = checkNotNull(coordinatorCommitHandler);
     this.coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    this.coordinatorWriteSetLoggingEnabled = config.isCoordinatorWriteSetLoggingEnabled();
   }
 
   // TODO: Remove this guard once group commit is supported on the new Coordinator (see the class
@@ -482,7 +485,9 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       String transactionId, @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant)
       throws CommitConflictException, UnknownTransactionStatusException {
     WriteSet writeSet =
-        writeSetsByParticipant == null ? null : encodeKeysOnlyWriteSet(writeSetsByParticipant);
+        writeSetsByParticipant == null
+            ? null
+            : encodeWriteSetIfLoggingEnabled(writeSetsByParticipant);
     return coordinatorCommitHandler.commitState(transactionId, writeSet);
   }
 
@@ -494,15 +499,29 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
       String transactionId, @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant)
       throws UnknownTransactionStatusException {
     WriteSet writeSet =
-        writeSetsByParticipant == null ? null : encodeKeysOnlyWriteSet(writeSetsByParticipant);
+        writeSetsByParticipant == null
+            ? null
+            : encodeWriteSetIfLoggingEnabled(writeSetsByParticipant);
     coordinatorCommitHandler.abortState(transactionId, writeSet);
   }
 
   // Keys only (includeColumns=false), matching the KEYS_ONLY detail requested at prepareRecords:
   // the Coordinator persists which records the transaction touched, not their column values.
-  private static WriteSet encodeKeysOnlyWriteSet(
+  //
+  // The tx_write_set column is part of the Coordinator schema only when the opt-in
+  // `coordinator.write_set_logging.enabled` config is on. When it is off, skip encoding entirely so
+  // no WriteSet is persisted (the column is not part of the schema in that case). Mirrors
+  // CommitHandler's gate of the same name.
+  //
+  // This gate is branch-3-only: master has no coordinator.write_set_logging.enabled config and
+  // always creates the tx_write_set column, so master encodes unconditionally. Keep the gate when
+  // porting master changes to this file.
+  @Nullable
+  private WriteSet encodeWriteSetIfLoggingEnabled(
       Map<String, List<WriteSetEntry>> writeSetsByParticipant) {
-    return WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant, false);
+    return coordinatorWriteSetLoggingEnabled
+        ? WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant, false)
+        : null;
   }
 
   private void releaseResources(String transactionId) {

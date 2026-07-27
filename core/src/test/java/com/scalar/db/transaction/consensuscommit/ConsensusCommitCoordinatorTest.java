@@ -54,6 +54,9 @@ class ConsensusCommitCoordinatorTest {
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(config.isCoordinatorGroupCommitEnabled()).thenReturn(false);
+    // Opt in to write-set logging by default so the write-set assertions below see the encoded
+    // WriteSet; the opted-out (production default) path has its own tests.
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(true);
     // The handler generates the committedAt and returns it (in production it stamps the COMMITTED
     // row with it); the orchestrator drives commitRecords with that returned value.
     when(coordinatorCommitHandler.commitState(anyString(), any())).thenReturn(ANY_COMMITTED_AT);
@@ -1232,6 +1235,51 @@ class ConsensusCommitCoordinatorTest {
     verify(coordinatorCommitHandler).abortState("tx-1", null);
     verify(p1).rollbackRecords("tx-1");
     verify(p2).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void commit_WhenWriteSetLoggingDisabled_ShouldSkipEncodingAndPassNullWriteSet() throws Exception {
+    // Arrange — write-set logging is opted out (the production default), so the tx_write_set
+    // Coordinator column is not part of the schema and no WriteSet may be persisted.
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(false);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipantWithWrites(
+            "tx-1",
+            "participant-1",
+            writeSetEntry(WriteSetEntry.Type.WRITE, Key.ofInt("pk", 1), Optional.empty()));
+
+    // Act
+    consensusCommitCoordinator.commit("tx-1");
+
+    // Assert — the COMMITTED state row is still written (the transaction has writes) but carries no
+    // write set, and the records are committed as usual.
+    verify(coordinatorCommitHandler).commitState("tx-1", null);
+    verify(participant).commitRecords(eq("tx-1"), anyLong());
+  }
+
+  @Test
+  void commit_WhenValidateFailsAndWriteSetLoggingDisabled_ShouldSkipEncodingAndPassNullWriteSet()
+      throws Exception {
+    // Arrange — write-set logging is opted out; the participant produced writes and requires
+    // validation, and validation fails, driving the validate-phase abort.
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(false);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), true));
+    doThrow(new ValidationConflictException("validation conflict", "tx-1"))
+        .when(participant)
+        .validateRecords("tx-1");
+
+    // Act Assert — the ABORTED row is still written for lazy recovery (PREPARED records exist) but
+    // carries no write set, unlike the same abort with logging opted in.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(ValidationConflictException.class);
+    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    verify(participant).rollbackRecords("tx-1");
   }
 
   private Participant registeredParticipant(String transactionId) throws Exception {
