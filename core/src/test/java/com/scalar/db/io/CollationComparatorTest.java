@@ -201,7 +201,7 @@ public class CollationComparatorTest {
     // Act Assert
     assertThatThrownBy(() -> CollationComparator.from(config))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining(DatabaseConfig.COLLATION_LOCALE);
+        .hasMessageContaining("not_a_locale");
   }
 
   // ---- Concurrency (guards KTD5) ----

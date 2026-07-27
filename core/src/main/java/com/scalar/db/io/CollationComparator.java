@@ -5,6 +5,7 @@ import com.google.common.primitives.UnsignedBytes;
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.text.RuleBasedCollator;
 import com.ibm.icu.util.ULocale;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
@@ -91,7 +92,7 @@ public final class CollationComparator {
         collator = new RuleBasedCollator(rules.get());
       } catch (Exception e) {
         throw new IllegalArgumentException(
-            "Failed to build an ICU collator from the custom collation rules: " + rules.get(), e);
+            CoreError.COLLATION_INVALID_RULES.buildMessage(rules.get()), e);
       }
     } else {
       Optional<String> localeName = config.getCollationLocale();
@@ -107,13 +108,7 @@ public final class CollationComparator {
         ULocale validLocale = collator.getLocale(ULocale.VALID_LOCALE);
         if (validLocale == null || validLocale.getName().isEmpty()) {
           throw new IllegalArgumentException(
-              "Unrecognized "
-                  + DatabaseConfig.COLLATION_LOCALE
-                  + ": '"
-                  + localeName.get()
-                  + "'. ICU has no collation data for this locale and would fall back to "
-                  + "root-collation ordering. Configure a valid ICU locale such as 'en', 'en_US', "
-                  + "or 'ja'.");
+              CoreError.COLLATION_UNRECOGNIZED_LOCALE.buildMessage(localeName.get()));
         }
       } else {
         collator = Collator.getInstance(ULocale.ROOT);
