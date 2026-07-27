@@ -136,7 +136,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     TwoPhaseCommit.PreparationResult result = mock(TwoPhaseCommit.PreparationResult.class);
     when(result.isCommitRequired()).thenReturn(commitRequired);
     when(result.isValidationRequired()).thenReturn(validationRequired);
-    when(delegate.prepareRecords(eq(TX), anyLong())).thenReturn(result);
+    when(delegate.prepareRecords(eq(TX), anyLong(), any())).thenReturn(result);
   }
 
   @Test
@@ -144,9 +144,9 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.join(TX, false, Collections.emptyMap());
     stubPrepare(true, false); // commit required, so the entry stays until commitRecords
 
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
-    verify(delegate).prepareRecords(TX, 100L);
+    verify(delegate).prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
   }
 
   @Test
@@ -154,7 +154,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.join(TX, false, Collections.emptyMap());
     stubPrepare(false, false);
 
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
     // prepareRecords is this participant's terminal step, so the entry is removed now: the reaper
     // never releases the context (and logs no spurious expiry warning).
@@ -168,7 +168,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.join(TX, false, Collections.emptyMap());
     stubPrepare(false, true);
 
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
     participant.validateRecords(TX); // terminal step for a write-less, validating participant
 
     Thread.sleep(PAST_SWEEP_MILLIS);
@@ -180,7 +180,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     participant.join(TX, false, Collections.emptyMap());
     stubPrepare(true, true);
 
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
     participant.validateRecords(TX); // not terminal: commitRecords is still to come
     participant.commitRecords(TX, 1L); // terminal step
 
@@ -192,7 +192,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
   void rollbackRecords_AfterValidateTerminalFlagged_ShouldStopReaping() throws Exception {
     participant.join(TX, false, Collections.emptyMap());
     stubPrepare(false, true); // flags the entry terminal-at-validate
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
 
     // Abort before validate: rollbackRecords removes the entry (and with it the flag).
     participant.rollbackRecords(TX);
@@ -205,7 +205,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
   void validateRecords_WhenDelegateThrows_AndNoRollback_ShouldRemainReapable() throws Exception {
     participant.join(TX, false, Collections.emptyMap());
     stubPrepare(false, true); // write-less but validating: validateRecords is the terminal step
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
     doThrow(new ValidationException("boom", TX)).when(delegate).validateRecords(TX);
 
     try {
@@ -227,7 +227,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
   void validateRecords_WhenDelegateThrows_ThenRollbackRecords_ShouldStopReaping() throws Exception {
     participant.join(TX, false, Collections.emptyMap());
     stubPrepare(false, true); // write-less but validating: validateRecords is the terminal step
-    participant.prepareRecords(TX, 100L);
+    participant.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
     doThrow(new ValidationException("boom", TX)).when(delegate).validateRecords(TX);
 
     try {
@@ -376,7 +376,7 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
     p.delete(TX, delete);
     p.mutate(TX, Collections.singletonList(insert));
     p.batch(TX, Collections.singletonList(insert));
-    p.prepareRecords(TX, 100L);
+    p.prepareRecords(TX, 100L, TwoPhaseCommit.WriteSetDetailLevel.KEYS_ONLY);
     p.validateRecords(TX);
 
     // One touch per operation above; if any override drops its touch(), this count fails.
