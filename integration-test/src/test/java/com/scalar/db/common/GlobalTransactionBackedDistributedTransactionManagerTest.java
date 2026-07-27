@@ -20,12 +20,10 @@ import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.io.Key;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -245,73 +243,8 @@ class GlobalTransactionBackedDistributedTransactionManagerTest {
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
-  // ---- join: unsupported by the Global/Branch-backed adapter ----
-  //
-  // The adapter now sits on the GlobalTransactionManager / GlobalTransaction / BranchTransaction
-  // layer, which exposes no way to reach an existing global transaction; join is therefore
-  // unsupported (it falls through to resume, which throws UnsupportedOperationException). The
-  // following tests describe the previous by-ID registration behavior and are disabled.
-
-  @Disabled("join is unsupported by the Global/Branch-backed adapter")
-  @Test
-  void join_ShouldRegisterParticipantAndReturnJoinedTransaction() throws Exception {
-    // Act
-    DistributedTransaction transaction = manager.join(CANONICAL_ID);
-
-    // Assert — the participant is registered into the existing transaction.
-    verify(coordinator).joinParticipant(CANONICAL_ID, participant);
-    assertThat(transaction.getId()).isEqualTo(CANONICAL_ID);
-  }
-
-  @Disabled("join is unsupported by the Global/Branch-backed adapter")
-  @Test
-  void join_WhenCoordinatorThrowsTransactionNotFound_ShouldPropagate() throws Exception {
-    doThrow(new TransactionNotFoundException("not found", CANONICAL_ID))
-        .when(coordinator)
-        .joinParticipant(CANONICAL_ID, participant);
-
-    assertThatThrownBy(() -> manager.join(CANONICAL_ID))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Disabled("join is unsupported by the Global/Branch-backed adapter")
-  @Test
-  void join_WhenRegisterParticipantFails_ShouldPropagateTransactionException() throws Exception {
-    // A non-not-found registration failure propagates as-is, no longer masked as not-found (join
-    // now allows TransactionException).
-    doThrow(new TransactionException("join failed", CANONICAL_ID))
-        .when(coordinator)
-        .joinParticipant(CANONICAL_ID, participant);
-
-    assertThatThrownBy(() -> manager.join(CANONICAL_ID))
-        .isInstanceOf(TransactionException.class)
-        .isNotInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Disabled("join is unsupported by the Global/Branch-backed adapter")
-  @Test
-  void joinedTransactionCrud_ShouldDelegateToParticipant() throws Exception {
-    Get get = Get.newBuilder().namespace(NS).table(TBL).partitionKey(Key.ofInt("pk", 1)).build();
-    when(participant.get(eq(CANONICAL_ID), any(Get.class))).thenReturn(Optional.empty());
-
-    DistributedTransaction transaction = manager.join(CANONICAL_ID);
-    transaction.get(get);
-
-    // A joined transaction participates in CRUD, keyed by the joined transaction ID.
-    verify(participant).get(eq(CANONICAL_ID), any(Get.class));
-  }
-
-  @Disabled("join is unsupported by the Global/Branch-backed adapter")
-  @Test
-  void joinedTransactionCommitAndRollback_ShouldDelegateToCoordinator() throws Exception {
-    // A joined transaction behaves the same as a begun one: commit/rollback drive the coordinator.
-    manager.join(CANONICAL_ID).commit();
-    verify(coordinator).commit(CANONICAL_ID);
-
-    manager.join(CANONICAL_ID).rollback();
-    verify(coordinator).rollback(CANONICAL_ID);
-  }
-
+  // The adapter sits on the GlobalTransactionManager layer, which exposes no way to reach an
+  // existing global transaction, so join falls through to resume and is unsupported.
   @Test
   void join_ShouldThrowUnsupportedOperationException() {
     assertThatThrownBy(() -> manager.join(CANONICAL_ID))
