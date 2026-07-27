@@ -168,6 +168,24 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
   }
 
   @Test
+  void defaultDisposalHandler_ShouldReleaseOnParticipant_AndTreatNotFoundAsNoOp() throws Exception {
+    // The publicly composable form of the default reap action: it releases the context on the
+    // given participant and swallows the not-found that denotes an already-released context, so
+    // an embedder wrapping it (e.g. in a privileged mode) inherits both behaviors.
+    ActiveTransactionRegistry.DisposalHandler<String> handler =
+        ActiveTransactionManagedTwoPhaseCommitParticipant.defaultDisposalHandler(delegate);
+
+    handler.onDisposed(TX);
+    verify(delegate).releaseTransactionContext(TX);
+
+    doThrow(new TransactionNotFoundException("already gone", "tx-2"))
+        .when(delegate)
+        .releaseTransactionContext("tx-2");
+    handler.onDisposed("tx-2");
+    verify(delegate).releaseTransactionContext("tx-2");
+  }
+
+  @Test
   void hasTransactionContext_ShouldForwardToDelegateUntouched() throws Exception {
     // Deliberately not overridden: the probe passes through to the wrapped participant so it can
     // never refresh this decorator's idle timer - the quiet contract holds by construction. This

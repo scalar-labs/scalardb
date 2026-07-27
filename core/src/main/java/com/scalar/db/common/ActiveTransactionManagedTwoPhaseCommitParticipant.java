@@ -51,9 +51,10 @@ import javax.annotation.concurrent.ThreadSafe;
  * one, because the reaper runs on an internal timer thread that carries no caller credentials. The
  * {@linkplain #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommit.Participant, long,
  * int, ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} lets such an
- * embedder substitute the reap-driven release action (e.g. wrap it in a privileged mode) while
- * leaving every other path untouched. This mirrors the seam {@link
- * ActiveTransactionManagedDistributedTransactionManager} already exposes for its 1PC reaper.
+ * embedder substitute the reap-driven release action — typically by wrapping {@link
+ * #defaultDisposalHandler} in a privileged mode — while leaving every other path untouched. This
+ * mirrors the seam {@link ActiveTransactionManagedDistributedTransactionManager} already exposes
+ * for its 1PC reaper.
  *
  * <p>A write-less participant does not always reach {@link #commitRecords}: the Coordinator skips
  * the steps a participant no longer needs, so for such a participant the last driven step is {@link
@@ -102,12 +103,11 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
       TwoPhaseCommit.Participant participant,
       long expirationTimeMillis,
       int maxActiveTransactions) {
-    // The default disposal action releases the wrapped participant's context directly.
     this(
         participant,
         expirationTimeMillis,
         maxActiveTransactions,
-        transactionId -> releaseTransactionContextQuietly(participant, transactionId));
+        defaultDisposalHandler(participant));
   }
 
   /**
@@ -119,10 +119,9 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
    * when a cross-cutting decorator between this decorator and the wrapped participant would reject
    * a call made from the credential-less reaper thread, so the embedder needs to wrap the release
    * in a privileged mode (see the class documentation). The handler is invoked for both idle expiry
-   * and cap eviction, and it fully replaces the default action: the embedder performs the actual
-   * release itself (typically {@code participant.releaseTransactionContext(transactionId)}) and, if
-   * its wrapped participant can report an already-released context as a {@link
-   * TransactionNotFoundException}, is responsible for treating that as the benign no-op it denotes.
+   * and cap eviction, and it fully replaces the default action: an embedder that still wants the
+   * default release semantics composes {@link #defaultDisposalHandler} inside its wrapper rather
+   * than re-implementing the release and its not-found handling.
    *
    * @param participant the wrapped participant
    * @param expirationTimeMillis the idle expiration time in milliseconds
@@ -157,14 +156,30 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
     this.registry = registry;
   }
 
-  private static void releaseTransactionContextQuietly(
-      TwoPhaseCommit.Participant participant, String transactionId) throws TransactionException {
-    try {
-      participant.releaseTransactionContext(transactionId);
-    } catch (TransactionNotFoundException e) {
-      // The context is already gone — the outcome this release wanted; not-found is its
-      // alternative carrier (see the interface Javadoc).
-    }
+  /**
+   * Returns the disposal handler the default constructor reaps with: it releases the transaction's
+   * context directly on {@code participant}, treating a {@link TransactionNotFoundException} from
+   * the release as the already-released no-op it denotes.
+   *
+   * <p>An embedder supplying its own handler to the {@linkplain
+   * #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommit.Participant, long, int,
+   * ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} typically composes
+   * this handler inside its wrapper (e.g. invokes it in a privileged mode) rather than
+   * re-implementing the release and its not-found handling.
+   *
+   * @param participant the participant to release contexts on
+   * @return the disposal handler used by the default constructor
+   */
+  public static ActiveTransactionRegistry.DisposalHandler<String> defaultDisposalHandler(
+      TwoPhaseCommit.Participant participant) {
+    return transactionId -> {
+      try {
+        participant.releaseTransactionContext(transactionId);
+      } catch (TransactionNotFoundException e) {
+        // The context is already gone — the outcome this release wanted; not-found is its
+        // alternative carrier (see the interface Javadoc).
+      }
+    };
   }
 
   @Override
