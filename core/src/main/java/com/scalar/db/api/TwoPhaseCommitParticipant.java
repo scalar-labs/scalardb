@@ -66,13 +66,13 @@ import java.util.Optional;
  * passed to {@link TwoPhaseCommitCoordinator#begin} / {@link #join}) — throws {@link
  * IllegalStateException}.
  *
- * <p><b>Concurrency.</b> Implementations must serialize per-transaction work: for one transaction
- * ID the methods here must be mutually exclusive, so concurrent calls cannot corrupt that
- * transaction's context. Because a context-reaper drives {@link #releaseTransactionContext} and
- * {@link #hasTransactionContext} from its own thread (see above), either may be invoked
- * concurrently with an in-flight CRUD or record-level call for the same transaction ID. Calls for
- * different transaction IDs may proceed concurrently. Decorators that add a background reaper rely
- * on this contract for their own thread-safety.
+ * <p><b>Concurrency.</b> The per-transaction serialization contract stated in the {@link
+ * TwoPhaseCommitCoordinator} Concurrency section applies to this role as well: for one transaction
+ * ID the methods here must be mutually exclusive, while calls for different transaction IDs may
+ * proceed concurrently. For this role a context-reaper drives both {@link
+ * #releaseTransactionContext} and {@link #hasTransactionContext} from its own thread (see above),
+ * so either may be invoked concurrently with an in-flight CRUD or record-level call for the same
+ * transaction ID.
  */
 public interface TwoPhaseCommitParticipant extends AutoCloseable {
 
