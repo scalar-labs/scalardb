@@ -47,6 +47,11 @@ public abstract class DecoratedTwoPhaseCommitParticipant implements TwoPhaseComm
   }
 
   @Override
+  public boolean hasTransactionContext(String transactionId) throws TransactionException {
+    return participant.hasTransactionContext(transactionId);
+  }
+
+  @Override
   public void join(String transactionId, boolean readOnly, Map<String, String> attributes)
       throws TransactionException {
     participant.join(transactionId, readOnly, attributes);

@@ -54,13 +54,20 @@ import javax.annotation.concurrent.ThreadSafe;
  * by a flag on the registry entry itself ({@link TrackedTransaction#terminalAtValidate}), so it
  * shares the entry's lifecycle and adds no separate state to clean up.
  *
+ * <p>{@link TwoPhaseCommit.Participant#hasTransactionContext} is deliberately <em>not</em>
+ * overridden here: the probe passes through untouched to the wrapped participant's context map, so
+ * it can never refresh this decorator's idle timer — the probe's quiet contract holds by
+ * construction. Do not add a registry-based override without preserving that property (a probe that
+ * counted as activity would form a feedback loop that keeps abandoned transactions alive forever).
+ *
  * <p>Thread safety: the {@link ThreadSafe} guarantee here relies on the wrapped participant
- * serializing its own per-transaction work. The reaper thread's {@code releaseContext} call may run
- * concurrently with an in-flight CRUD or record-level call for the same transaction id; the wrapped
- * role is responsible for making those mutually exclusive (e.g. {@code ConsensusCommitParticipant}
+ * honoring the {@link TwoPhaseCommit.Participant} concurrency contract — serializing its own
+ * per-transaction work. The reaper thread's {@code releaseContext} call may run concurrently with
+ * an in-flight CRUD or record-level call for the same transaction id; the wrapped role is
+ * responsible for making those mutually exclusive (e.g. {@code ConsensusCommitParticipant}
  * synchronizes every per-transaction method, including {@code releaseContext}, on a per-context
- * monitor). A wrapped participant that does not serialize per-transaction calls would break this
- * guarantee with no signal at this layer.
+ * monitor). A wrapped participant that violates that contract would break this guarantee with no
+ * signal at this layer.
  */
 @ThreadSafe
 public class ActiveTransactionManagedTwoPhaseCommitParticipant

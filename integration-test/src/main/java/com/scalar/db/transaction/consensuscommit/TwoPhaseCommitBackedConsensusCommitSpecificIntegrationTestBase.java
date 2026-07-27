@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -160,6 +161,36 @@ public abstract class TwoPhaseCommitBackedConsensusCommitSpecificIntegrationTest
       // Assert: with omission disabled, a COMMITTED Coordinator state row is written even for the
       // read-only transaction.
       Optional<CoordinatorStateAccessor.State> state = coordinator.getState(readOnlyId);
+      assertThat(state).isPresent();
+      assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    }
+  }
+
+  @Test
+  public void commit_TransactionExceedingExpirationWithContinuousCrud_ShouldCommitSuccessfully()
+      throws Exception {
+    // Arrange: a facade manager whose active-transaction expiration is much shorter than the
+    // transaction below. Continuous CRUD keeps the participant-side (and manager-level) idle
+    // timers fresh, but the coordinator role observes only begin/commit, so from the coordinator's
+    // point of view this healthy transaction is silent for its whole lifetime.
+    Properties properties = copyForFacade(storageProperties);
+    properties.setProperty(
+        DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, "1000");
+    try (DistributedTransactionManager shortExpirationManager =
+        TransactionFactory.create(properties).getTransactionManager()) {
+      // Act: keep issuing CRUD for ~3x the expiration time, then commit.
+      DistributedTransaction transaction = shortExpirationManager.begin();
+      String transactionId = transaction.getId();
+      long deadlineMillis = System.currentTimeMillis() + 3000;
+      while (System.currentTimeMillis() < deadlineMillis) {
+        transaction.get(getBalance(0, 0));
+        TimeUnit.MILLISECONDS.sleep(100);
+      }
+      transaction.put(putBalance(0, 0));
+      transaction.commit();
+
+      // Assert: the transaction committed and its Coordinator state row is COMMITTED.
+      Optional<CoordinatorStateAccessor.State> state = coordinator.getState(transactionId);
       assertThat(state).isPresent();
       assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
     }

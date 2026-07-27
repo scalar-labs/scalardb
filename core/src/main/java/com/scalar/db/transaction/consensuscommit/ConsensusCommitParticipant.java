@@ -502,6 +502,11 @@ public class ConsensusCommitParticipant implements TwoPhaseCommit.Participant {
   }
 
   @Override
+  public boolean hasTransactionContext(String transactionId) {
+    return contexts.containsKey(transactionId);
+  }
+
+  @Override
   public void releaseContext(String transactionId) {
     ParticipantContext pc = contexts.get(transactionId);
     if (pc == null) {

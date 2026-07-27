@@ -42,6 +42,13 @@ class DecoratedTwoPhaseCommitParticipantTest {
   }
 
   @Test
+  void hasTransactionContext_ShouldDelegate() throws Exception {
+    when(delegate.hasTransactionContext(TX)).thenReturn(true);
+    assertThat(participant.hasTransactionContext(TX)).isTrue();
+    verify(delegate).hasTransactionContext(TX);
+  }
+
+  @Test
   void join_ShouldDelegate() throws Exception {
     participant.join(TX, true, Collections.emptyMap());
     verify(delegate).join(TX, true, Collections.emptyMap());

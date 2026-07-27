@@ -94,6 +94,17 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
+  void hasTransactionContext_ShouldReflectContextLifecycle() throws Exception {
+    assertThat(participant.hasTransactionContext(ANY_TX_ID)).isFalse();
+
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    assertThat(participant.hasTransactionContext(ANY_TX_ID)).isTrue();
+
+    participant.releaseContext(ANY_TX_ID);
+    assertThat(participant.hasTransactionContext(ANY_TX_ID)).isFalse();
+  }
+
+  @Test
   void constructor_WithoutParticipantId_ShouldThrowIllegalArgumentException() {
     when(config.getParticipantId()).thenReturn(Optional.empty());
     assertThatThrownBy(
