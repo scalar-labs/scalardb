@@ -128,6 +128,46 @@ class ActiveTransactionManagedTwoPhaseCommitParticipantTest {
   }
 
   @Test
+  void disposalHandler_OnCapEviction_ShouldInvokeHandlerWithTransactionId_NotDefaultRelease()
+      throws Exception {
+    // The disposal-handler constructor promises the handler fires for cap eviction as well as
+    // idle expiry; this pins the eviction path, so a registry change that routed eviction around
+    // the handler would fail here instead of silently breaking an embedder's privileged reap.
+    // Idle expiration is disabled so only the cap can trigger disposal.
+    CountDownLatch disposed = new CountDownLatch(1);
+    AtomicReference<String> disposedId = new AtomicReference<>();
+    ActiveTransactionManagedTwoPhaseCommitParticipant p =
+        new ActiveTransactionManagedTwoPhaseCommitParticipant(
+            delegate,
+            /* expirationTimeMillis= */ -1,
+            /* maxActiveTransactions= */ 1,
+            transactionId -> {
+              disposedId.set(transactionId);
+              disposed.countDown();
+            });
+
+    p.join(TX, false, Collections.emptyMap());
+    p.join("tx-2", false, Collections.emptyMap());
+
+    // Caffeine decides size-based eviction during maintenance, and maintenance is re-triggered by
+    // cache writes; two racing writes can leave the cache over capacity but quiescent. Poke with
+    // further joins - each a real write and itself over-capacity pressure - while polling, so the
+    // eviction decision is reliably driven (mirroring the coordinator-side cap-eviction test).
+    long deadlineMillis = System.currentTimeMillis() + 10000;
+    int poke = 0;
+    while (disposed.getCount() > 0 && System.currentTimeMillis() < deadlineMillis) {
+      p.join("tx-poke-" + poke++, false, Collections.emptyMap());
+      TimeUnit.MILLISECONDS.sleep(50);
+    }
+
+    assertThat(disposed.await(0, TimeUnit.MILLISECONDS)).isTrue();
+    assertThat(disposedId.get()).isNotNull();
+    // The handler replaced the default action: the evicting reaper does not release the context
+    // on the wrapped participant itself.
+    verify(delegate, never()).releaseTransactionContext(any());
+  }
+
+  @Test
   void hasTransactionContext_ShouldForwardToDelegateUntouched() throws Exception {
     // Deliberately not overridden: the probe passes through to the wrapped participant so it can
     // never refresh this decorator's idle timer - the quiet contract holds by construction. This
