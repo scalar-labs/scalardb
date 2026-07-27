@@ -36,12 +36,12 @@ class DistributedTransactionBackedGlobalTransactionManagerTest {
   }
 
   @Test
-  void beginGlobal_ShouldDelegateToManagerBeginAndWrapTransaction() throws Exception {
+  void begin_ShouldDelegateToManagerBeginAndWrapTransaction() throws Exception {
     Map<String, String> attributes = attrs("k", "v");
     when(manager.begin(attributes)).thenReturn(transaction);
     when(transaction.getId()).thenReturn("tx-1");
 
-    GlobalTransaction global = globalManager.beginGlobal(attributes);
+    GlobalTransaction global = globalManager.begin(attributes);
 
     verify(manager).begin(attributes);
     assertThat(global).isInstanceOf(DistributedTransactionBackedGlobalTransaction.class);
@@ -49,13 +49,12 @@ class DistributedTransactionBackedGlobalTransactionManagerTest {
   }
 
   @Test
-  void beginGlobalReadOnly_ShouldDelegateToManagerBeginReadOnlyAndWrapTransaction()
-      throws Exception {
+  void beginReadOnly_ShouldDelegateToManagerBeginReadOnlyAndWrapTransaction() throws Exception {
     Map<String, String> attributes = attrs("k", "v");
     when(manager.beginReadOnly(attributes)).thenReturn(transaction);
     when(transaction.getId()).thenReturn("tx-2");
 
-    GlobalTransaction global = globalManager.beginGlobalReadOnly(attributes);
+    GlobalTransaction global = globalManager.beginReadOnly(attributes);
 
     verify(manager).beginReadOnly(attributes);
     assertThat(global).isInstanceOf(DistributedTransactionBackedGlobalTransaction.class);

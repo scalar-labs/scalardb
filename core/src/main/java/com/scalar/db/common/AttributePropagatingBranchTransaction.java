@@ -27,15 +27,14 @@ import javax.annotation.concurrent.NotThreadSafe;
  * <p>The attributes are merged into each operation before delegating, with an attribute set
  * directly on the operation winning over the per-branch one (see {@link OperationAttributeMerger}).
  * These per-branch attributes are held client-side and differ per branch; they are distinct from
- * the transaction-scoped attributes supplied at {@code beginGlobal}, which the backing propagates
+ * the transaction-scoped attributes supplied at {@code begin}, which the backing propagates
  * separately (on the participant side for the two-phase-commit backing).
  *
  * <p>Since this decorator merges before the backing propagates the transaction-scoped attributes,
  * and merging never overwrites an attribute already present on the operation, the effective
  * precedence for a key supplied at more than one scope is: the attribute set directly on the
  * operation, then the per-branch attribute supplied at {@code beginBranch}, then the
- * transaction-scoped attribute supplied at {@code beginGlobal}. The narrower scope takes
- * precedence.
+ * transaction-scoped attribute supplied at {@code begin}. The narrower scope takes precedence.
  */
 @NotThreadSafe
 public class AttributePropagatingBranchTransaction extends DecoratedBranchTransaction {

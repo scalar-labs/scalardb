@@ -111,7 +111,7 @@ public abstract class TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestBa
             factory.getTwoPhaseCommitCoordinator(), factory.getTwoPhaseCommitParticipant())) {
       // Act: keep issuing CRUD for ~3x the expiration, then commit. Continuous CRUD keeps the
       // participant-side idle timer fresh while the coordinator sees nothing.
-      GlobalTransaction global = shortExpirationManager.beginGlobal();
+      GlobalTransaction global = shortExpirationManager.begin();
       BranchTransaction branch = shortExpirationManager.beginBranch(global.getId());
       int balance = 0;
       long deadlineMillis = System.currentTimeMillis() + 6000;

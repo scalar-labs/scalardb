@@ -105,8 +105,8 @@ public class GlobalTransactionBackedDistributedTransactionManager
     // The caller-supplied txId is not honored; the coordinator generates the global transaction ID.
     GlobalTransaction global =
         readOnly
-            ? globalTransactionManager.beginGlobalReadOnly(attributes)
-            : globalTransactionManager.beginGlobal(attributes);
+            ? globalTransactionManager.beginReadOnly(attributes)
+            : globalTransactionManager.begin(attributes);
     BranchTransaction branch;
     try {
       branch = globalTransactionManager.beginBranch(global.getId(), attributes);

@@ -22,8 +22,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * <p>The mapping onto the global/branch roles:
  *
  * <ul>
- *   <li>{@code beginGlobal} begins a new distributed transaction via the manager and returns a
- *       {@link DistributedTransactionBackedGlobalTransaction} — the overall handle used to drive
+ *   <li>{@code begin} begins a new distributed transaction via the manager and returns a {@link
+ *       DistributedTransactionBackedGlobalTransaction} — the overall handle used to drive
  *       commit/rollback.
  *   <li>{@code beginBranch} begins a branch served by that same shared transaction, looked up by
  *       the global transaction ID, and returns a {@link
@@ -55,7 +55,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * <p>The per-branch {@code attributes} passed to {@code beginBranch} are propagated client-side
  * into each CRUD operation issued on the branch (via {@link
  * AttributePropagatingBranchTransaction}), distinct from the transaction-level attributes supplied
- * to {@code beginGlobal}. They are held client-side on the branch handle only.
+ * to {@code begin}. They are held client-side on the branch handle only.
  */
 @ThreadSafe
 public class DistributedTransactionBackedGlobalTransactionManager
@@ -70,12 +70,12 @@ public class DistributedTransactionBackedGlobalTransactionManager
   }
 
   @Override
-  public GlobalTransaction beginGlobal(Map<String, String> attributes) throws TransactionException {
+  public GlobalTransaction begin(Map<String, String> attributes) throws TransactionException {
     return new DistributedTransactionBackedGlobalTransaction(manager.begin(attributes));
   }
 
   @Override
-  public GlobalTransaction beginGlobalReadOnly(Map<String, String> attributes)
+  public GlobalTransaction beginReadOnly(Map<String, String> attributes)
       throws TransactionException {
     return new DistributedTransactionBackedGlobalTransaction(manager.beginReadOnly(attributes));
   }

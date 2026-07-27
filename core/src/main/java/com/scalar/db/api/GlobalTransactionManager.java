@@ -15,20 +15,19 @@ import java.util.Map;
  *
  * <ul>
  *   <li>a {@link GlobalTransaction} — the overall handle that drives the commit/rollback outcome,
- *       obtained from {@link #beginGlobal()};
+ *       obtained from {@link #begin()};
  *   <li>one {@link BranchTransaction} per branch — the CRUD handle for that branch, obtained from
  *       {@link #beginBranch(String)}.
  * </ul>
  *
- * <p>A typical flow: an initiator begins the global transaction with {@link #beginGlobal()}, reads
- * the transaction ID with {@link GlobalTransaction#getId()}, and shares it; each branch is begun by
+ * <p>A typical flow: an initiator begins the global transaction with {@link #begin()}, reads the
+ * transaction ID with {@link GlobalTransaction#getId()}, and shares it; each branch is begun by
  * calling {@link #beginBranch(String)} with that ID, performs its CRUD on the returned {@link
  * BranchTransaction}, and is ended with {@link BranchTransaction#end()}; finally the initiator
  * calls {@link GlobalTransaction#commit()} (or {@link GlobalTransaction#rollback()}).
  *
- * <p>The {@code beginGlobalReadOnly} variants begin a read-only transaction, which the
- * implementation may optimize. The {@code startXxx} methods are aliases of the corresponding {@code
- * beginXxx} methods.
+ * <p>The {@code beginReadOnly} variants begin a read-only transaction, which the implementation may
+ * optimize. The {@code startXxx} methods are aliases of the corresponding {@code beginXxx} methods.
  */
 public interface GlobalTransactionManager extends AutoCloseable {
 
@@ -41,9 +40,8 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  default GlobalTransaction beginGlobal()
-      throws TransactionNotFoundException, TransactionException {
-    return beginGlobal(Collections.emptyMap());
+  default GlobalTransaction begin() throws TransactionNotFoundException, TransactionException {
+    return begin(Collections.emptyMap());
   }
 
   /**
@@ -56,7 +54,7 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  GlobalTransaction beginGlobal(Map<String, String> attributes)
+  GlobalTransaction begin(Map<String, String> attributes)
       throws TransactionNotFoundException, TransactionException;
 
   /**
@@ -69,9 +67,9 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  default GlobalTransaction beginGlobalReadOnly()
+  default GlobalTransaction beginReadOnly()
       throws TransactionNotFoundException, TransactionException {
-    return beginGlobalReadOnly(Collections.emptyMap());
+    return beginReadOnly(Collections.emptyMap());
   }
 
   /**
@@ -85,11 +83,11 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  GlobalTransaction beginGlobalReadOnly(Map<String, String> attributes)
+  GlobalTransaction beginReadOnly(Map<String, String> attributes)
       throws TransactionNotFoundException, TransactionException;
 
   /**
-   * Begins a new global transaction. This method is an alias of {@link #beginGlobal()}.
+   * Begins a new global transaction. This method is an alias of {@link #begin()}.
    *
    * @return the {@link GlobalTransaction} handle used to drive the transaction's outcome
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
@@ -97,14 +95,13 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  default GlobalTransaction startGlobal()
-      throws TransactionNotFoundException, TransactionException {
-    return beginGlobal();
+  default GlobalTransaction start() throws TransactionNotFoundException, TransactionException {
+    return begin();
   }
 
   /**
    * Begins a new global transaction with attributes. This method is an alias of {@link
-   * #beginGlobal(Map)}.
+   * #begin(Map)}.
    *
    * @param attributes implementation-specific transaction attributes (may be empty)
    * @return the {@link GlobalTransaction} handle used to drive the transaction's outcome
@@ -113,14 +110,13 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  default GlobalTransaction startGlobal(Map<String, String> attributes)
+  default GlobalTransaction start(Map<String, String> attributes)
       throws TransactionNotFoundException, TransactionException {
-    return beginGlobal(attributes);
+    return begin(attributes);
   }
 
   /**
-   * Begins a new read-only global transaction. This method is an alias of {@link
-   * #beginGlobalReadOnly()}.
+   * Begins a new read-only global transaction. This method is an alias of {@link #beginReadOnly()}.
    *
    * @return the {@link GlobalTransaction} handle used to drive the transaction's outcome
    * @throws TransactionNotFoundException if the transaction fails to begin due to transient faults.
@@ -128,14 +124,14 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  default GlobalTransaction startGlobalReadOnly()
+  default GlobalTransaction startReadOnly()
       throws TransactionNotFoundException, TransactionException {
-    return beginGlobalReadOnly();
+    return beginReadOnly();
   }
 
   /**
    * Begins a new read-only global transaction with attributes. This method is an alias of {@link
-   * #beginGlobalReadOnly(Map)}.
+   * #beginReadOnly(Map)}.
    *
    * @param attributes implementation-specific transaction attributes (may be empty)
    * @return the {@link GlobalTransaction} handle used to drive the transaction's outcome
@@ -144,9 +140,9 @@ public interface GlobalTransactionManager extends AutoCloseable {
    * @throws TransactionException if the transaction fails to begin due to transient or nontransient
    *     faults
    */
-  default GlobalTransaction startGlobalReadOnly(Map<String, String> attributes)
+  default GlobalTransaction startReadOnly(Map<String, String> attributes)
       throws TransactionNotFoundException, TransactionException {
-    return beginGlobalReadOnly(attributes);
+    return beginReadOnly(attributes);
   }
 
   /**

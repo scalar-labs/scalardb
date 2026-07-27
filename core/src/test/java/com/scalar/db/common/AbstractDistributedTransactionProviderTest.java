@@ -189,7 +189,7 @@ class AbstractDistributedTransactionProviderTest {
     when(rawParticipant.getId()).thenReturn("participant-1");
 
     GlobalTransactionManager manager = provider.createGlobalTransactionManager(config);
-    GlobalTransaction global = manager.beginGlobal();
+    GlobalTransaction global = manager.begin();
     manager.beginBranch(global.getId());
 
     // The manager must compose from the decorating factory methods, not the raw ones. Switching to

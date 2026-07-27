@@ -18,8 +18,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * <p>The coordinator/participant split maps directly onto the global/branch roles:
  *
  * <ul>
- *   <li>{@code beginGlobal} allocates a new distributed transaction via the coordinator and returns
- *       a {@link TwoPhaseCommitBackedGlobalTransaction} — the overall handle used to drive
+ *   <li>{@code begin} allocates a new distributed transaction via the coordinator and returns a
+ *       {@link TwoPhaseCommitBackedGlobalTransaction} — the overall handle used to drive
  *       commit/rollback. The transaction begins with no participants.
  *   <li>{@code beginBranch} joins the in-process participant to the transaction for the given
  *       global transaction ID and returns a {@link TwoPhaseCommitBackedBranchTransaction} — the
@@ -29,7 +29,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * <p>The per-branch {@code attributes} passed to {@code beginBranch} are propagated client-side
  * into each CRUD operation issued on the branch (via {@link
  * AttributePropagatingBranchTransaction}). The {@code readOnly} flag and the transaction-scoped
- * attributes supplied to {@code beginGlobal} are forwarded to the participant when the coordinator
+ * attributes supplied to {@code begin} are forwarded to the participant when the coordinator
  * establishes its local context.
  *
  * <p>A single in-process participant is wired in, so a global transaction has at most one
@@ -53,17 +53,17 @@ public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTrans
   }
 
   @Override
-  public GlobalTransaction beginGlobal(Map<String, String> attributes) throws TransactionException {
-    return beginGlobalInternal(false, attributes);
+  public GlobalTransaction begin(Map<String, String> attributes) throws TransactionException {
+    return beginInternal(false, attributes);
   }
 
   @Override
-  public GlobalTransaction beginGlobalReadOnly(Map<String, String> attributes)
+  public GlobalTransaction beginReadOnly(Map<String, String> attributes)
       throws TransactionException {
-    return beginGlobalInternal(true, attributes);
+    return beginInternal(true, attributes);
   }
 
-  private GlobalTransaction beginGlobalInternal(boolean readOnly, Map<String, String> attributes)
+  private GlobalTransaction beginInternal(boolean readOnly, Map<String, String> attributes)
       throws TransactionException {
     String canonicalId = coordinator.begin(null, readOnly, attributes);
     return new TwoPhaseCommitBackedGlobalTransaction(coordinator, canonicalId);
@@ -79,7 +79,7 @@ public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTrans
     }
     // Join the in-process participant to the global transaction. joinParticipant establishes the
     // participant's local context, forwarding the readOnly flag and the transaction-scoped
-    // attributes supplied at beginGlobal. The per-branch attributes passed here are propagated
+    // attributes supplied at begin. The per-branch attributes passed here are propagated
     // client-side into each CRUD operation by AttributePropagatingBranchTransaction.
     coordinator.joinParticipant(transactionId, participant);
     BranchTransaction branch =

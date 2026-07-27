@@ -25,14 +25,14 @@ public abstract class DecoratedGlobalTransactionManager implements GlobalTransac
   }
 
   @Override
-  public GlobalTransaction beginGlobal(Map<String, String> attributes) throws TransactionException {
-    return globalTransactionManager.beginGlobal(attributes);
+  public GlobalTransaction begin(Map<String, String> attributes) throws TransactionException {
+    return globalTransactionManager.begin(attributes);
   }
 
   @Override
-  public GlobalTransaction beginGlobalReadOnly(Map<String, String> attributes)
+  public GlobalTransaction beginReadOnly(Map<String, String> attributes)
       throws TransactionException {
-    return globalTransactionManager.beginGlobalReadOnly(attributes);
+    return globalTransactionManager.beginReadOnly(attributes);
   }
 
   @Override

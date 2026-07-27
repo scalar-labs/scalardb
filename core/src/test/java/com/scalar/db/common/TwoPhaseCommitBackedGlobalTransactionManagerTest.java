@@ -43,12 +43,12 @@ class TwoPhaseCommitBackedGlobalTransactionManagerTest {
   }
 
   @Test
-  void beginGlobal_ShouldDelegateToCoordinatorBeginAndReturnGlobalTransactionWithCanonicalId()
+  void begin_ShouldDelegateToCoordinatorBeginAndReturnGlobalTransactionWithCanonicalId()
       throws Exception {
     Map<String, String> attributes = attrs("k", "v");
     when(coordinator.begin(null, false, attributes)).thenReturn(CANONICAL_ID);
 
-    GlobalTransaction transaction = manager().beginGlobal(attributes);
+    GlobalTransaction transaction = manager().begin(attributes);
 
     verify(coordinator).begin(null, false, attributes);
     assertThat(transaction).isInstanceOf(TwoPhaseCommitBackedGlobalTransaction.class);
@@ -56,11 +56,11 @@ class TwoPhaseCommitBackedGlobalTransactionManagerTest {
   }
 
   @Test
-  void beginGlobalReadOnly_ShouldDelegateToCoordinatorBeginWithReadOnlyTrue() throws Exception {
+  void beginReadOnly_ShouldDelegateToCoordinatorBeginWithReadOnlyTrue() throws Exception {
     Map<String, String> attributes = attrs("k", "v");
     when(coordinator.begin(null, true, attributes)).thenReturn(CANONICAL_ID);
 
-    GlobalTransaction transaction = manager().beginGlobalReadOnly(attributes);
+    GlobalTransaction transaction = manager().beginReadOnly(attributes);
 
     verify(coordinator).begin(null, true, attributes);
     assertThat(transaction).isInstanceOf(TwoPhaseCommitBackedGlobalTransaction.class);

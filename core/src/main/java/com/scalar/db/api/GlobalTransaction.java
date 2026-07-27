@@ -7,8 +7,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 
 /**
- * The overall handle of a global transaction begun via {@link
- * GlobalTransactionManager#beginGlobal()}.
+ * The overall handle of a global transaction begun via {@link GlobalTransactionManager#begin()}.
  *
  * <p>It drives the transaction's outcome across all its branches — {@link #commit()} or {@link
  * #rollback()} — but does not itself perform CRUD. CRUD is issued on the {@link BranchTransaction}

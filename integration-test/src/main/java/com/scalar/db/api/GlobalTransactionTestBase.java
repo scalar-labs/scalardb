@@ -157,7 +157,7 @@ public abstract class GlobalTransactionTestBase {
   public void commit_PutsOnTwoBranches_ShouldPersistBothRecords() throws TransactionException {
     // Act: one global transaction with two branches on two managers, each writing a distinct
     // record.
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     branch1.put(preparePut(0, 0, 100));
@@ -176,7 +176,7 @@ public abstract class GlobalTransactionTestBase {
   @Test
   public void commit_InsertsOnTwoBranches_ShouldStoreBothRecords() throws TransactionException {
     // Act
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     branch1.insert(prepareInsert(0, 0, 100));
@@ -196,7 +196,7 @@ public abstract class GlobalTransactionTestBase {
     putThenCommit(1, 1, INITIAL_BALANCE);
 
     // Act: each branch reads then updates its own record within the one global transaction.
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     int balance1 = branch1.get(prepareGet(0, 0)).get().getInt(BALANCE);
@@ -217,7 +217,7 @@ public abstract class GlobalTransactionTestBase {
     putThenCommit(1, 1, INITIAL_BALANCE);
 
     // Act
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     branch1.delete(prepareDelete(0, 0));
@@ -239,7 +239,7 @@ public abstract class GlobalTransactionTestBase {
     // Act: each branch reads then stages an update on its own record; then an independent
     // transaction commits a change to branch1's record after it was read, creating a write-write
     // conflict that must abort the global transaction at commit time.
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     int balance1 = branch1.get(prepareGet(0, 0)).get().getInt(BALANCE);
@@ -247,7 +247,7 @@ public abstract class GlobalTransactionTestBase {
     branch1.put(preparePut(0, 0, balance1 + 100));
     branch2.put(preparePut(1, 1, balance2 + 200));
 
-    GlobalTransaction interfering = manager1.beginGlobal();
+    GlobalTransaction interfering = manager1.begin();
     BranchTransaction interferingBranch = manager1.beginBranch(interfering.getId());
     int interferingBalance = interferingBranch.get(prepareGet(0, 0)).get().getInt(BALANCE);
     interferingBranch.put(preparePut(0, 0, interferingBalance + 1));
@@ -265,7 +265,7 @@ public abstract class GlobalTransactionTestBase {
   public void rollback_PutsOnTwoBranches_ShouldNotPersistEitherRecord()
       throws TransactionException {
     // Act
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     branch1.put(preparePut(0, 0, 100));
@@ -280,7 +280,7 @@ public abstract class GlobalTransactionTestBase {
   @Test
   public void abort_PutsOnTwoBranches_ShouldNotPersistEitherRecord() throws TransactionException {
     // Act
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     branch1.put(preparePut(0, 0, 100));
@@ -293,14 +293,14 @@ public abstract class GlobalTransactionTestBase {
   }
 
   @Test
-  public void beginGlobalReadOnly_GetsOnTwoBranches_ShouldReturnBothRecords()
+  public void beginReadOnly_GetsOnTwoBranches_ShouldReturnBothRecords()
       throws TransactionException {
     // Arrange
     putThenCommit(0, 0, 100);
     putThenCommit(1, 1, 200);
 
     // Act
-    GlobalTransaction global = manager1.beginGlobalReadOnly();
+    GlobalTransaction global = manager1.beginReadOnly();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
     Optional<Result> result1 = branch1.get(prepareGet(0, 0));
@@ -318,7 +318,7 @@ public abstract class GlobalTransactionTestBase {
   public void beginBranch_ForTwoBranches_ShouldReturnBranchesKeyedByGlobalTransactionId()
       throws TransactionException {
     // Act
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch1 = manager1.beginBranch(global.getId());
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
 
@@ -329,14 +329,14 @@ public abstract class GlobalTransactionTestBase {
   }
 
   protected void putThenCommit(int id, int type, int balance) throws TransactionException {
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch = manager1.beginBranch(global.getId());
     branch.put(preparePut(id, type, balance));
     global.commit();
   }
 
   protected Optional<Result> get(int id, int type) throws TransactionException {
-    GlobalTransaction global = manager1.beginGlobal();
+    GlobalTransaction global = manager1.begin();
     BranchTransaction branch = manager1.beginBranch(global.getId());
     Optional<Result> result = branch.get(prepareGet(id, type));
     global.commit();
