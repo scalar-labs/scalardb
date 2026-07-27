@@ -264,7 +264,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public Buildable disableImplicitPreRead() {
@@ -272,7 +276,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public Buildable enableImplicitPreRead() {
@@ -280,7 +288,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public Buildable implicitPreReadEnabled(boolean implicitPreReadEnabled) {
@@ -292,7 +304,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public Buildable disableInsertMode() {
@@ -300,7 +316,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public Buildable enableInsertMode() {
@@ -308,7 +328,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public Buildable insertModeEnabled(boolean insertModeEnabled) {
@@ -554,7 +578,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public BuildableFromExisting disableImplicitPreRead() {
@@ -562,7 +590,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public BuildableFromExisting enableImplicitPreRead() {
@@ -570,7 +602,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public BuildableFromExisting implicitPreReadEnabled(boolean implicitPreReadEnabled) {
@@ -578,7 +614,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public BuildableFromExisting disableInsertMode() {
@@ -586,7 +626,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public BuildableFromExisting enableInsertMode() {
@@ -594,7 +638,11 @@ public class PutBuilder {
       return this;
     }
 
-    /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+    /**
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
+     */
     @Deprecated
     @Override
     public BuildableFromExisting insertModeEnabled(boolean insertModeEnabled) {
