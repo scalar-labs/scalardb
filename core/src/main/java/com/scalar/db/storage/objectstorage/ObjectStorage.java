@@ -53,7 +53,8 @@ public class ObjectStorage extends AbstractDistributedStorage {
     this.collationComparator = CollationComparator.from(databaseConfig);
     selectStatementHandler =
         new SelectStatementHandler(wrapper, metadataManager, collationComparator);
-    mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager);
+    mutateStatementHandler =
+        new MutateStatementHandler(wrapper, metadataManager, collationComparator);
     logger.info("ObjectStorage object is created properly");
   }
 

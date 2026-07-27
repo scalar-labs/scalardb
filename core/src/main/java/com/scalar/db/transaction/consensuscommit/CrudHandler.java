@@ -71,9 +71,9 @@ public class CrudHandler {
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
-    this.mutationConditionsValidator = new MutationConditionsValidator();
-    this.parallelExecutor = checkNotNull(parallelExecutor);
     this.collationComparator = checkNotNull(collationComparator);
+    this.mutationConditionsValidator = new MutationConditionsValidator(collationComparator);
+    this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
   @VisibleForTesting
