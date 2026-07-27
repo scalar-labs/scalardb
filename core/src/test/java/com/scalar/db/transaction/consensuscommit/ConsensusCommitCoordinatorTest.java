@@ -54,6 +54,9 @@ class ConsensusCommitCoordinatorTest {
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     when(config.isCoordinatorGroupCommitEnabled()).thenReturn(false);
+    // Opt in to write-set logging by default so the write-set assertions below see the encoded
+    // WriteSet; the opted-out (production default) path has its own tests.
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(true);
     // The handler generates the committedAt and returns it (in production it stamps the COMMITTED
     // row with it); the orchestrator drives commitRecords with that returned value.
     when(coordinatorCommitHandler.commitState(anyString(), any())).thenReturn(ANY_COMMITTED_AT);
@@ -261,8 +264,7 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_NoWrites_WithWriteOmission_ShouldSkipCommitStateValidateAndCommitRecords()
       throws Exception {
-    // Arrange — coordinator-write omission on read-only is enabled (the production default), and
-    // the
+    // Arrange — coordinator-write omission on read-only is enabled (production default). The
     // participant has no writes and requires no validation (prepareRecords returns an empty write
     // set with isValidationRequired() == false).
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
@@ -322,11 +324,19 @@ class ConsensusCommitCoordinatorTest {
         .validateRecords("tx-1");
 
     // Act Assert — PREPARED records exist (hasWrites is true), so the ABORTED state row is written
-    // for lazy recovery even though the omission is enabled, and the records are rolled back.
+    // for lazy recovery even though the omission is enabled, now carrying the keys-only write set
+    // (validate-phase aborts have the complete aggregate), and the records are rolled back.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(ValidationConflictException.class);
-    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
+    verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
+    WriteSet writeSet = captor.getValue();
+    assertThat(writeSet.getEntryGroupsList()).hasSize(1);
+    EntryGroup group = writeSet.getEntryGroups(0);
+    assertThat(group.getEntriesList()).hasSize(1);
+    assertThat(group.getEntries(0).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     verify(participant).rollbackRecords("tx-1");
   }
 
@@ -373,10 +383,18 @@ class ConsensusCommitCoordinatorTest {
 
     // Act Assert — the exception is rethrown as-is, and PREPARED records exist (hasWrites is
     // true), so the ABORTED state row is written for lazy recovery even though the omission is
-    // enabled; the records are rolled back.
+    // enabled, now carrying the keys-only write set (validate-phase aborts have the complete
+    // aggregate); the records are rolled back.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(TransactionNotFoundException.class);
-    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
+    verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
+    WriteSet writeSet = captor.getValue();
+    assertThat(writeSet.getEntryGroupsList()).hasSize(1);
+    EntryGroup group = writeSet.getEntryGroups(0);
+    assertThat(group.getEntriesList()).hasSize(1);
+    assertThat(group.getEntries(0).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     verify(participant).rollbackRecords("tx-1");
   }
 
@@ -735,11 +753,17 @@ class ConsensusCommitCoordinatorTest {
         .when(p1)
         .validateRecords("tx-1");
 
-    // Act Assert — the validate conflict surfaces as a retriable CommitConflictException.
+    // Act Assert — the validate conflict surfaces as a retriable CommitConflictException. The
+    // ABORTED row is written (omission disabled) and now carries the keys-only write set (empty
+    // here, since the transaction is write-less), mirroring the commit path.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(ValidationConflictException.class);
-    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
+    verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
+    // A non-null but empty write set (no entry groups), not null — the write-less validate-phase
+    // abort proves the transaction touched no records, mirroring the write-less commit path.
+    assertThat(captor.getValue().getEntryGroupsList()).isEmpty();
     verify(p1).rollbackRecords("tx-1");
   }
 
@@ -778,12 +802,17 @@ class ConsensusCommitCoordinatorTest {
     doThrow(new ValidationException("validation failed", "tx-1")).when(p1).validateRecords("tx-1");
 
     // Act Assert — a non-conflict validate failure surfaces as a non-retriable CommitException, and
-    // the abort path still runs.
+    // the abort path still runs, writing the ABORTED row with the keys-only write set (empty here,
+    // since the transaction is write-less).
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitException.class)
         .isNotInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(ValidationException.class);
-    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
+    verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
+    // A non-null but empty write set (no entry groups), not null — the write-less validate-phase
+    // abort proves the transaction touched no records, mirroring the write-less commit path.
+    assertThat(captor.getValue().getEntryGroupsList()).isEmpty();
     verify(p1).rollbackRecords("tx-1");
   }
 
@@ -821,8 +850,8 @@ class ConsensusCommitCoordinatorTest {
   void commit_TwoParticipants_WhenCommitRecordsThrowsOnFirst_ShouldStillCommitSecond()
       throws Exception {
     // Arrange — both participants write (so commitRecords is driven on each) and commit
-    // successfully
-    // through prepare/commitState; the first participant's best-effort commitRecords then fails.
+    // successfully through prepare/commitState; the first participant's best-effort commitRecords
+    // then fails.
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
     Participant p1 = registeredWritingParticipant("tx-1", "participant-1");
     Participant p2 = registeredWritingParticipant("tx-1", "participant-2");
@@ -1081,9 +1110,8 @@ class ConsensusCommitCoordinatorTest {
       commit_TwoParticipantsWithWrites_WithWriteOmission_ShouldEncodeWriteSetGroupedByParticipantId()
           throws Exception {
     // Arrange — coordinator-write omission on read-only is enabled, but both participants return a
-    // non-empty write set (hasWrites=true), so the COMMITTED state IS written and the
-    // per-participant
-    // write sets are aggregated and stamped with the owning participant id.
+    // non-empty write set (hasWrites=true), so the COMMITTED state IS written and the write sets
+    // are aggregated per participant and stamped with the owning participant id.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
@@ -1122,6 +1150,61 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
+  void commit_TwoParticipantsWithWrites_WhenValidateFails_ShouldWriteAbortedWithAggregatedWriteSet()
+      throws Exception {
+    // Arrange — two writing participants that both require validation; the second fails validation,
+    // driving the validate-phase abort. By then every prepareRecords has returned, so the
+    // aggregated write set is complete — the same map the commit path would persist.
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant p1 =
+        registeredParticipant(
+            "tx-1",
+            "participant-1",
+            preparation(
+                Arrays.asList(
+                    writeSetEntry(WriteSetEntry.Type.WRITE, Key.ofInt("pk", 1), Optional.empty()),
+                    writeSetEntry(WriteSetEntry.Type.DELETE, Key.ofInt("pk", 2), Optional.empty())),
+                /* validationRequired= */ true));
+    Participant p2 =
+        registeredParticipant(
+            "tx-1",
+            "participant-2",
+            preparation(
+                Arrays.asList(
+                    writeSetEntry(WriteSetEntry.Type.WRITE, Key.ofInt("pk", 3), Optional.empty())),
+                /* validationRequired= */ true));
+    doThrow(new ValidationConflictException("validation conflict", "tx-1"))
+        .when(p2)
+        .validateRecords("tx-1");
+
+    // Act Assert — the ABORTED row carries the same participant-grouped, keys-only write set the
+    // commit path encodes (one EntryGroup per participant in registration order), so active
+    // recovery can find the touched records.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(ValidationConflictException.class);
+    ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
+    verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
+    WriteSet writeSet = captor.getValue();
+    assertThat(writeSet.getEntryGroupsList()).hasSize(2);
+
+    EntryGroup group1 = writeSet.getEntryGroups(0);
+    assertThat(group1.getEntriesList()).hasSize(2);
+    assertThat(group1.getEntries(0).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group1.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
+    assertThat(group1.getEntries(1).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group1.getEntries(1).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_DELETE);
+
+    EntryGroup group2 = writeSet.getEntryGroups(1);
+    assertThat(group2.getEntriesList()).hasSize(1);
+    assertThat(group2.getEntries(0).getParticipantId()).isEqualTo("participant-2");
+    assertThat(group2.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
+
+    verify(p1).rollbackRecords("tx-1");
+    verify(p2).rollbackRecords("tx-1");
+  }
+
+  @Test
   void commit_WithWrites_WithWriteOmission_WhenPrepareFails_ShouldWriteAbortedState()
       throws Exception {
     // Arrange — write omission enabled, the first participant prepares a non-empty write set and
@@ -1152,6 +1235,51 @@ class ConsensusCommitCoordinatorTest {
     verify(coordinatorCommitHandler).abortState("tx-1", null);
     verify(p1).rollbackRecords("tx-1");
     verify(p2).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void commit_WhenWriteSetLoggingDisabled_ShouldSkipEncodingAndPassNullWriteSet() throws Exception {
+    // Arrange — write-set logging is opted out (the production default), so the tx_write_set
+    // Coordinator column is not part of the schema and no WriteSet may be persisted.
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(false);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipantWithWrites(
+            "tx-1",
+            "participant-1",
+            writeSetEntry(WriteSetEntry.Type.WRITE, Key.ofInt("pk", 1), Optional.empty()));
+
+    // Act
+    consensusCommitCoordinator.commit("tx-1");
+
+    // Assert — the COMMITTED state row is still written (the transaction has writes) but carries no
+    // write set, and the records are committed as usual.
+    verify(coordinatorCommitHandler).commitState("tx-1", null);
+    verify(participant).commitRecords(eq("tx-1"), anyLong());
+  }
+
+  @Test
+  void commit_WhenValidateFailsAndWriteSetLoggingDisabled_ShouldSkipEncodingAndPassNullWriteSet()
+      throws Exception {
+    // Arrange — write-set logging is opted out; the participant produced writes and requires
+    // validation, and validation fails, driving the validate-phase abort.
+    when(config.isCoordinatorWriteSetLoggingEnabled()).thenReturn(false);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), true));
+    doThrow(new ValidationConflictException("validation conflict", "tx-1"))
+        .when(participant)
+        .validateRecords("tx-1");
+
+    // Act Assert — the ABORTED row is still written for lazy recovery (PREPARED records exist) but
+    // carries no write set, unlike the same abort with logging opted in.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(ValidationConflictException.class);
+    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    verify(participant).rollbackRecords("tx-1");
   }
 
   private Participant registeredParticipant(String transactionId) throws Exception {
@@ -1249,8 +1377,7 @@ class ConsensusCommitCoordinatorTest {
   }
 
   // Registers a participant whose prepareRecords returns the given (non-empty) write set, so
-  // commit()
-  // exercises the hasWrites=true aggregation/encoding path.
+  // commit() exercises the hasWrites=true aggregation/encoding path.
   private Participant registeredParticipantWithWrites(
       String transactionId, String participantId, WriteSetEntry... entries) throws Exception {
     Participant participant = mock(Participant.class);
@@ -1265,8 +1392,7 @@ class ConsensusCommitCoordinatorTest {
   }
 
   // A minimal WriteSetEntry stub sufficient for encoding (includeColumns=false, so getColumns is
-  // not
-  // read). The namespace/table are stubbed non-null because the encoder sets them on the proto.
+  // not read). The namespace/table are stubbed non-null because the encoder sets them on the proto.
   private static WriteSetEntry writeSetEntry(
       WriteSetEntry.Type type, Key partitionKey, Optional<Key> clusteringKey) {
     WriteSetEntry entry = mock(WriteSetEntry.class);

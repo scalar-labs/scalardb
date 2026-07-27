@@ -62,6 +62,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   private final DistributedStorage storage;
   private final CoordinatorCommitHandler coordinatorCommitHandler;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  private final boolean coordinatorWriteSetLoggingEnabled;
 
   private final ConcurrentMap<String, CoordinatorContext> contexts = new ConcurrentHashMap<>();
 
@@ -74,6 +75,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         new CoordinatorCommitHandler(new CoordinatorStateAccessor(storage, config));
     this.coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    this.coordinatorWriteSetLoggingEnabled = config.isCoordinatorWriteSetLoggingEnabled();
   }
 
   @VisibleForTesting
@@ -85,6 +87,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     this.coordinatorCommitHandler = checkNotNull(coordinatorCommitHandler);
     this.coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    this.coordinatorWriteSetLoggingEnabled = config.isCoordinatorWriteSetLoggingEnabled();
   }
 
   // TODO: Remove this guard once group commit is supported on the new Coordinator (see the class
@@ -237,7 +240,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
           // abort on the snapshot it owns). The failure is reported as a commit-level exception,
           // mirroring the prepare phase: a conflict as CommitConflictException, anything else as
           // CommitException.
-          abortAndRollbackRecords(transactionId, !hasWrites, participants);
+          abortAndRollbackRecords(transactionId, !hasWrites, writeSetsByParticipant, participants);
           if (e instanceof ValidationConflictException) {
             throw new CommitConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
           }
@@ -245,7 +248,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
         } catch (TransactionNotFoundException e) {
           // A participant no longer knows this transaction while validating. As above, hasWrites
           // is authoritative at this point.
-          abortAndRollbackRecords(transactionId, !hasWrites, participants);
+          abortAndRollbackRecords(transactionId, !hasWrites, writeSetsByParticipant, participants);
           throw e;
         }
 
@@ -361,12 +364,21 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
   // For a transaction NOT known write-less, the ABORTED row is written unconditionally: records
   // may be left PREPARED, and writing ABORTED lets lazy recovery abort them on the next read
   // instead of leaving them locked until the transaction lifetime expires.
+  //
+  // writeSetsByParticipant is the aggregated per-participant write set (keys only) to persist on
+  // the ABORTED row, or null to persist none. The validate-phase abort paths call this form with
+  // the complete aggregate — by then every prepareRecords has returned, so it is the same map the
+  // commit path persists — mirroring CommitHandler, which persists the keys-only write set on its
+  // own abort path. The prepare-phase paths use the overload below, which persists none.
   private void abortAndRollbackRecords(
-      String transactionId, boolean knownWriteLess, List<Participant> participants)
+      String transactionId,
+      boolean knownWriteLess,
+      @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant,
+      List<Participant> participants)
       throws UnknownTransactionStatusException {
     if (isCoordinatorStateWriteRequired(!knownWriteLess)) {
       try {
-        abortState(transactionId);
+        abortState(transactionId, writeSetsByParticipant);
       } catch (UnknownTransactionStatusException e) {
         // The ABORTED-state write's outcome is unknown: the records stay PREPARED for lazy
         // recovery (mirroring CommitHandler, records are not rolled back on an unknown abort). The
@@ -381,6 +393,16 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     for (Participant participant : participants) {
       bestEffortRollbackRecords(participant, transactionId);
     }
+  }
+
+  // Prepare-phase form: persists no write set on the ABORTED row. A participant may have thrown
+  // before returning its entries from prepareRecords, leaving the aggregate incomplete, and a
+  // partial write set would be worse than none.
+  private void abortAndRollbackRecords(
+      String transactionId, boolean knownWriteLess, List<Participant> participants)
+      throws UnknownTransactionStatusException {
+    abortAndRollbackRecords(
+        transactionId, knownWriteLess, /* writeSetsByParticipant= */ null, participants);
   }
 
   // The single policy behind both Coordinator state gates: the row (COMMITTED on the
@@ -455,19 +477,51 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommit.Coordinator {
     return context;
   }
 
-  // Encodes the per-participant write sets and writes the COMMITTED state row via the
-  // Coordinator-side handler, which generates the committedAt and returns it so the records are
-  // committed with the same timestamp.
+  // Writes the COMMITTED state row via the Coordinator-side handler, persisting the write set
+  // encoded from writeSetsByParticipant (keys only), or none when null — the same null tolerance
+  // as abortState, matching the handler's @Nullable contract. The handler generates the
+  // committedAt and returns it so the records are committed with the same timestamp.
   private long commitState(
-      String transactionId, Map<String, List<WriteSetEntry>> writeSetsByParticipant)
+      String transactionId, @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant)
       throws CommitConflictException, UnknownTransactionStatusException {
-    WriteSet writeSet = WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant, false);
+    WriteSet writeSet =
+        writeSetsByParticipant == null
+            ? null
+            : encodeWriteSetIfLoggingEnabled(writeSetsByParticipant);
     return coordinatorCommitHandler.commitState(transactionId, writeSet);
   }
 
-  // Writes the ABORTED state row via the Coordinator-side handler. ABORTED rows carry no write set.
-  private void abortState(String transactionId) throws UnknownTransactionStatusException {
-    coordinatorCommitHandler.abortState(transactionId, null);
+  // Writes the ABORTED state row via the Coordinator-side handler, persisting the write set encoded
+  // from writeSetsByParticipant (keys only), or none when null. Mirrors commitState, which likewise
+  // takes the aggregated map and encodes it here. See abortAndRollbackRecords for when a
+  // write set is supplied.
+  private void abortState(
+      String transactionId, @Nullable Map<String, List<WriteSetEntry>> writeSetsByParticipant)
+      throws UnknownTransactionStatusException {
+    WriteSet writeSet =
+        writeSetsByParticipant == null
+            ? null
+            : encodeWriteSetIfLoggingEnabled(writeSetsByParticipant);
+    coordinatorCommitHandler.abortState(transactionId, writeSet);
+  }
+
+  // Keys only (includeColumns=false), matching the KEYS_ONLY detail requested at prepareRecords:
+  // the Coordinator persists which records the transaction touched, not their column values.
+  //
+  // The tx_write_set column is part of the Coordinator schema only when the opt-in
+  // `coordinator.write_set_logging.enabled` config is on. When it is off, skip encoding entirely so
+  // no WriteSet is persisted (the column is not part of the schema in that case). Mirrors
+  // CommitHandler's gate of the same name.
+  //
+  // This gate is branch-3-only: master has no coordinator.write_set_logging.enabled config and
+  // always creates the tx_write_set column, so master encodes unconditionally. Keep the gate when
+  // porting master changes to this file.
+  @Nullable
+  private WriteSet encodeWriteSetIfLoggingEnabled(
+      Map<String, List<WriteSetEntry>> writeSetsByParticipant) {
+    return coordinatorWriteSetLoggingEnabled
+        ? WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant, false)
+        : null;
   }
 
   private void releaseResources(String transactionId) {
