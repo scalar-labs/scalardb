@@ -55,8 +55,12 @@ itself on the JVM:
 
 - object-storage scan sort and range filtering;
 - ScalarDB's own in-memory cross-partition / conjunction range filtering (`>`, `>=`, `<`,
-  `<=`); and
-- the Consensus Commit snapshot's scan-after-write range-membership check.
+  `<=`);
+- the Consensus Commit snapshot's scan-after-write range-membership check; and
+- in-memory conditional-mutation range predicates (`putIf`/`deleteIf`/`updateIf` with `>`,
+  `>=`, `<`, `<=` on a text column) that ScalarDB evaluates itself — under Consensus Commit and
+  for object storage. (`EQ`/`NE`/`IS_NULL` conditions stay byte-exact; and conditional mutations
+  that other backends push down to storage are evaluated by the backend's own collation.)
 
 It does **not** affect:
 
