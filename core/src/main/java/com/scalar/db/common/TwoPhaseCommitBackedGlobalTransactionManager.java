@@ -33,8 +33,11 @@ import javax.annotation.concurrent.ThreadSafe;
  * establishes its local context.
  *
  * <p>A single in-process participant is wired in, so a global transaction has at most one
- * meaningful branch (joining is idempotent per participant ID). The participant may be {@code null}
- * (coordinator-only), in which case {@code beginBranch} is unsupported.
+ * meaningful branch (joining is idempotent per participant ID). Calling {@code beginBranch} again
+ * for the same transaction returns a new handle fronting that same participant context — the {@link
+ * BranchTransaction#end()} bookkeeping is per handle — so begin each branch once and drive it
+ * through that one handle. The participant may be {@code null} (coordinator-only), in which case
+ * {@code beginBranch} is unsupported.
  */
 @ThreadSafe
 public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTransactionManager {
