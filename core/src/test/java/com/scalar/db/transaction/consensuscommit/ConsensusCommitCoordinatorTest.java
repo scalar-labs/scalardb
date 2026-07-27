@@ -283,7 +283,7 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void commit_NoWrites_WithWriteOmission_WhenValidateFails_ShouldStillWriteAbortedAndRollback()
+  void commit_NoWrites_WithWriteOmission_WhenValidateFails_ShouldRollBackWithoutWritingAborted()
       throws Exception {
     // Arrange — omission enabled, no writes, but the participant requires validation and validation
     // fails.
@@ -296,13 +296,177 @@ class ConsensusCommitCoordinatorTest {
         .when(participant)
         .validateRecords("tx-1");
 
-    // Act Assert — the validate conflict surfaces as a retriable CommitConflictException. The abort
-    // path always writes ABORTED even though no writes were observed: a prepare/validate failure
-    // can leave records PREPARED that hasWrites did not capture, so the write-omission is not
-    // applied here (it only applies on the commit-success path). Records are also rolled back.
+    // Act Assert — the validate conflict surfaces as a retriable CommitConflictException. By the
+    // validate phase every prepareRecords has returned, so hasWrites authoritatively proves the
+    // transaction write-less: no PREPARED record exists anywhere, and the ABORTED state row is
+    // omitted (it would never be consulted). Records are still rolled back to release the
+    // participants' local resources.
     assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
         .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(ValidationConflictException.class);
+    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+    verify(participant).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void commit_WithWrites_WithWriteOmission_WhenValidateFails_ShouldWriteAbortedAndRollback()
+      throws Exception {
+    // Arrange — omission enabled, but the participant produced writes and validation fails.
+    when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), true));
+    doThrow(new ValidationConflictException("validation conflict", "tx-1"))
+        .when(participant)
+        .validateRecords("tx-1");
+
+    // Act Assert — PREPARED records exist (hasWrites is true), so the ABORTED state row is written
+    // for lazy recovery even though the omission is enabled, and the records are rolled back.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(ValidationConflictException.class);
+    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    verify(participant).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void
+      commit_NoWrites_WithWriteOmission_WhenValidateThrowsTransactionNotFound_ShouldRollBackWithoutWritingAborted()
+          throws Exception {
+    // Arrange — omission enabled, no writes, validation required, but the participant no longer
+    // knows the transaction at validate time (e.g. its context expired between prepare and
+    // validate).
+    when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(Collections.emptyList(), true));
+    doThrow(new TransactionNotFoundException("transaction not found", "tx-1"))
+        .when(participant)
+        .validateRecords("tx-1");
+
+    // Act Assert — the exception is rethrown as-is (the facade maps it to a retriable conflict),
+    // NOT wrapped in a CommitException. Every prepareRecords has returned, so hasWrites
+    // authoritatively proves the transaction write-less and the ABORTED state row is omitted;
+    // records are still rolled back to release the participants' local resources.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(TransactionNotFoundException.class);
+    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+    verify(participant).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void
+      commit_WithWrites_WithWriteOmission_WhenValidateThrowsTransactionNotFound_ShouldWriteAbortedAndRollback()
+          throws Exception {
+    // Arrange — omission enabled, but the participant produced writes and no longer knows the
+    // transaction at validate time.
+    when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant =
+        registeredParticipant("tx-1", "participant-1", preparation(writeSet(), true));
+    doThrow(new TransactionNotFoundException("transaction not found", "tx-1"))
+        .when(participant)
+        .validateRecords("tx-1");
+
+    // Act Assert — the exception is rethrown as-is, and PREPARED records exist (hasWrites is
+    // true), so the ABORTED state row is written for lazy recovery even though the omission is
+    // enabled; the records are rolled back.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(TransactionNotFoundException.class);
+    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    verify(participant).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void commit_NotReadOnly_WithWriteOmission_WhenPrepareFails_ShouldWriteAbortedAndRollback()
+      throws Exception {
+    // Arrange — omission enabled and no writes were observed, but the failure happens during the
+    // prepare phase of a non-read-only transaction.
+    when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
+    Participant participant = registeredParticipant("tx-1");
+    doThrow(new PreparationConflictException("conflict", "tx-1"))
+        .when(participant)
+        .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
+
+    // Act Assert — mid-prepare, hasWrites is not trustworthy (the throwing participant never
+    // returned its write set and may have left records PREPARED), so the ABORTED state row is
+    // still written despite the omission being enabled and no writes having been observed.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(PreparationConflictException.class);
+    verify(coordinatorCommitHandler).abortState("tx-1", null);
+    verify(participant).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void commit_ReadOnly_WithWriteOmission_WhenPrepareFails_ShouldRollBackWithoutWritingAborted()
+      throws Exception {
+    // Arrange — omission enabled and the transaction is read-only, so even a part-way prepare
+    // failure cannot have left PREPARED records anywhere (participants reject mutations on a
+    // read-only transaction).
+    when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
+    Participant participant = registeredParticipant("tx-1");
+    doThrow(new PreparationConflictException("conflict", "tx-1"))
+        .when(participant)
+        .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
+
+    // Act Assert — the prepare conflict still surfaces as a retriable CommitConflictException, but
+    // no ABORTED state row is written (the static readOnly flag proves the transaction
+    // write-less); the participants are still rolled back to release their local resources.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(PreparationConflictException.class);
+    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+    verify(participant).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void
+      commit_ReadOnly_WithWriteOmission_WhenPrepareThrowsTransactionNotFound_ShouldRollBackWithoutWritingAborted()
+          throws Exception {
+    // Arrange — omission enabled and the transaction is read-only, but the participant no longer
+    // knows the transaction while preparing (e.g. its context expired).
+    when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
+    consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
+    Participant participant = registeredParticipant("tx-1");
+    doThrow(new TransactionNotFoundException("transaction not found", "tx-1"))
+        .when(participant)
+        .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
+
+    // Act Assert — the exception is rethrown as-is (the facade maps it to a retriable conflict),
+    // NOT wrapped in a CommitException. The static readOnly flag proves the transaction
+    // write-less, so no ABORTED state row is written; the participants are still rolled back to
+    // release their local resources.
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(TransactionNotFoundException.class);
+    verify(coordinatorCommitHandler, never()).abortState(anyString(), any());
+    verify(participant).rollbackRecords("tx-1");
+  }
+
+  @Test
+  void commit_ReadOnly_WithoutWriteOmission_WhenPrepareFails_ShouldStillWriteAborted()
+      throws Exception {
+    // Arrange — read-only, but omission disabled (the setUp default): the legacy behavior where
+    // every terminated transaction leaves a Coordinator state row is preserved, mirroring the
+    // commit-success path's gate.
+    consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap(), null);
+    Participant participant = registeredParticipant("tx-1");
+    doThrow(new PreparationConflictException("conflict", "tx-1"))
+        .when(participant)
+        .prepareRecords(eq("tx-1"), anyLong(), eq(WriteSetDetailLevel.KEYS_ONLY));
+
+    // Act Assert
+    assertThatThrownBy(() -> consensusCommitCoordinator.commit("tx-1"))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(PreparationConflictException.class);
     verify(coordinatorCommitHandler).abortState("tx-1", null);
     verify(participant).rollbackRecords("tx-1");
   }
@@ -784,8 +948,8 @@ class ConsensusCommitCoordinatorTest {
   @Test
   void commit_WithWrites_WithWriteOmission_WhenPrepareFails_ShouldWriteAbortedState()
       throws Exception {
-    // Arrange — write omission enabled, the first participant prepares a non-empty write set
-    // (hasWrites becomes true) and the second participant then fails to prepare.
+    // Arrange — write omission enabled, the first participant prepares a non-empty write set and
+    // the second participant then fails to prepare, leaving p1's records PREPARED.
     when(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).thenReturn(true);
     consensusCommitCoordinator = new ConsensusCommitCoordinator(coordinatorCommitHandler, config);
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap(), null);
@@ -804,9 +968,11 @@ class ConsensusCommitCoordinatorTest {
         .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(PreparationConflictException.class);
 
-    // ... and because hasWrites is true (p1 prepared a non-empty write set before p2 failed), the
-    // ABORTED state row IS written — unlike the write-less case
-    // (commit_NoWrites_WithWriteOmission_WhenValidateFails) where it is omitted.
+    // ... and the ABORTED state row IS written: on a prepare-phase failure hasWrites is not
+    // trustworthy, so only the static readOnly flag can justify the omission, and this
+    // transaction is not read-only — unlike
+    // commit_ReadOnly_WithWriteOmission_WhenPrepareFails_ShouldRollBackWithoutWritingAborted,
+    // where the row is omitted. Both participants are rolled back, undoing p1's PREPARED records.
     verify(coordinatorCommitHandler).abortState("tx-1", null);
     verify(p1).rollbackRecords("tx-1");
     verify(p2).rollbackRecords("tx-1");
