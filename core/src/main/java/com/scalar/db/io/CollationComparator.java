@@ -88,7 +88,7 @@ public final class CollationComparator {
   private static Comparator<String> icuTextComparator(DatabaseConfig config) {
     Collator collator = buildIcuCollator(config);
     config
-        .getCollationStrength()
+        .getCollationIcuStrength()
         .ifPresent(strength -> collator.setStrength(toIcuStrength(strength)));
 
     // Freeze so the collator is immutable and safe for concurrent compare: an unfrozen ICU
@@ -102,13 +102,13 @@ public final class CollationComparator {
     // is configured. Custom tailoring rules, when present, extend that base rather than replacing
     // it
     // so they fine-tune ordering beyond the locale (and strength), not instead of it.
-    Optional<String> localeName = config.getCollationLocale();
+    Optional<String> localeName = config.getCollationIcuLocale();
     Collator base =
         localeName.isPresent()
             ? buildValidatedLocaleCollator(localeName.get())
             : Collator.getInstance(ULocale.ROOT);
 
-    Optional<String> rules = config.getCollationRules();
+    Optional<String> rules = config.getCollationIcuRules();
     if (!rules.isPresent()) {
       return base;
     }

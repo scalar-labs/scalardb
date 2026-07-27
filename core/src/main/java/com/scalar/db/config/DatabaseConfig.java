@@ -46,9 +46,9 @@ public class DatabaseConfig {
   private String systemNamespaceName;
   private int scanFetchSize;
   @Nullable private Collation collation;
-  @Nullable private String collationLocale;
-  @Nullable private CollationStrength collationStrength;
-  @Nullable private String collationRules;
+  @Nullable private String collationIcuLocale;
+  @Nullable private CollationStrength collationIcuStrength;
+  @Nullable private String collationIcuRules;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -75,9 +75,9 @@ public class DatabaseConfig {
   public static final String SYSTEM_NAMESPACE_NAME = PREFIX + "system_namespace_name";
   public static final String SCAN_FETCH_SIZE = PREFIX + "scan_fetch_size";
   public static final String COLLATION = PREFIX + "collation";
-  public static final String COLLATION_LOCALE = PREFIX + "collation.locale";
-  public static final String COLLATION_STRENGTH = PREFIX + "collation.strength";
-  public static final String COLLATION_RULES = PREFIX + "collation.rules";
+  public static final String COLLATION_ICU_LOCALE = PREFIX + "collation.icu.locale";
+  public static final String COLLATION_ICU_STRENGTH = PREFIX + "collation.icu.strength";
+  public static final String COLLATION_ICU_RULES = PREFIX + "collation.icu.rules";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final int DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS = 10000;
@@ -153,13 +153,13 @@ public class DatabaseConfig {
     String collationValue = getString(getProperties(), COLLATION, null);
     collation =
         collationValue == null ? null : Collation.valueOf(collationValue.toUpperCase(Locale.ROOT));
-    collationLocale = getString(getProperties(), COLLATION_LOCALE, null);
-    String collationStrengthValue = getString(getProperties(), COLLATION_STRENGTH, null);
-    collationStrength =
-        collationStrengthValue == null
+    collationIcuLocale = getString(getProperties(), COLLATION_ICU_LOCALE, null);
+    String collationIcuStrengthValue = getString(getProperties(), COLLATION_ICU_STRENGTH, null);
+    collationIcuStrength =
+        collationIcuStrengthValue == null
             ? null
-            : CollationStrength.valueOf(collationStrengthValue.toUpperCase(Locale.ROOT));
-    collationRules = getString(getProperties(), COLLATION_RULES, null);
+            : CollationStrength.valueOf(collationIcuStrengthValue.toUpperCase(Locale.ROOT));
+    collationIcuRules = getString(getProperties(), COLLATION_ICU_RULES, null);
   }
 
   public List<String> getContactPoints() {
@@ -234,16 +234,16 @@ public class DatabaseConfig {
     return Optional.ofNullable(collation);
   }
 
-  public Optional<String> getCollationLocale() {
-    return Optional.ofNullable(collationLocale);
+  public Optional<String> getCollationIcuLocale() {
+    return Optional.ofNullable(collationIcuLocale);
   }
 
-  public Optional<CollationStrength> getCollationStrength() {
-    return Optional.ofNullable(collationStrength);
+  public Optional<CollationStrength> getCollationIcuStrength() {
+    return Optional.ofNullable(collationIcuStrength);
   }
 
-  public Optional<String> getCollationRules() {
-    return Optional.ofNullable(collationRules);
+  public Optional<String> getCollationIcuRules() {
+    return Optional.ofNullable(collationIcuRules);
   }
 
   public static String getTransactionManager(Properties properties) {

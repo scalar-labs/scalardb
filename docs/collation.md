@@ -20,9 +20,9 @@ its current comparison behavior and upgrading has no behavioral impact.
 | Property | Description |
 |---|---|
 | `scalar.db.collation` | Collation mode: `BINARY` or `ICU`. When absent, ScalarDB uses its current comparison behavior (Java UTF-16 code-unit order). |
-| `scalar.db.collation.locale` | *(ICU only)* Locale that selects the collation rules (for example `en`, `en_US`, `ja`). When absent, ICU's root locale is used. |
-| `scalar.db.collation.strength` | *(ICU only)* One of `PRIMARY`, `SECONDARY`, `TERTIARY`, `QUATERNARY`, `IDENTICAL`. Controls how much detail ordering distinguishes: `PRIMARY` is case- and accent-insensitive; `SECONDARY` adds accent sensitivity; `TERTIARY` adds case sensitivity. When absent, ICU's default strength applies. |
-| `scalar.db.collation.rules` | *(ICU only)* An optional custom ICU tailoring-rule string that fine-tunes ordering *on top of* the configured `locale` (its rules extend the locale's collation, or the root collation when no locale is set) and `strength`. A malformed rule string is rejected at startup. |
+| `scalar.db.collation.icu.locale` | *(ICU only)* Locale that selects the collation rules (for example `en`, `en_US`, `ja`). When absent, ICU's root locale is used. |
+| `scalar.db.collation.icu.strength` | *(ICU only)* One of `PRIMARY`, `SECONDARY`, `TERTIARY`, `QUATERNARY`, `IDENTICAL`. Controls how much detail ordering distinguishes: `PRIMARY` is case- and accent-insensitive; `SECONDARY` adds accent sensitivity; `TERTIARY` adds case sensitivity. When absent, ICU's default strength applies. |
+| `scalar.db.collation.icu.rules` | *(ICU only)* An optional custom ICU tailoring-rule string that fine-tunes ordering *on top of* the configured `locale` (its rules extend the locale's collation, or the root collation when no locale is set) and `strength`. A malformed rule string is rejected at startup. |
 
 ### Values
 
@@ -39,8 +39,8 @@ its current comparison behavior and upgrading has no behavioral impact.
 ```properties
 # Align with a case-insensitive MySQL 8 collation
 scalar.db.collation=ICU
-scalar.db.collation.locale=en_US
-scalar.db.collation.strength=PRIMARY
+scalar.db.collation.icu.locale=en_US
+scalar.db.collation.icu.strength=PRIMARY
 ```
 
 ```properties
@@ -107,9 +107,9 @@ the storage is the operator's responsibility.
   ones). A downstream application pinning a different ICU4J major version can hit Gradle
   conflict resolution, and ICU version differences carry collation-table changes.
 
-- **An unrecognized `scalar.db.collation.locale` is rejected at startup.** Like an invalid
-  `scalar.db.collation`, `scalar.db.collation.strength`, or a malformed
-  `scalar.db.collation.rules`, a locale ICU has no collation data for fails fast with an
+- **An unrecognized `scalar.db.collation.icu.locale` is rejected at startup.** Like an invalid
+  `scalar.db.collation`, `scalar.db.collation.icu.strength`, or a malformed
+  `scalar.db.collation.icu.rules`, a locale ICU has no collation data for fails fast with an
   `IllegalArgumentException` rather than silently falling back to root-collation ordering.
   Configure a valid ICU locale (for example `en`, `en_US`, `ja`). Note that a recognized language
   with an unknown region (for example `en_XX`) is accepted and uses the language's collation.

@@ -689,7 +689,7 @@ public class ScalarDbUtilsTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     props.setProperty(DatabaseConfig.COLLATION, "ICU");
-    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, "PRIMARY");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
     return CollationComparator.from(new DatabaseConfig(props)).get();
   }
 

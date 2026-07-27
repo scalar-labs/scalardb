@@ -131,7 +131,7 @@ public class FilterableScannerTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     props.setProperty(DatabaseConfig.COLLATION, "ICU");
-    props.setProperty(DatabaseConfig.COLLATION_STRENGTH, "PRIMARY");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
     CollationComparator comparator = CollationComparator.from(new DatabaseConfig(props)).get();
 
     Scanner textScanner = mock(Scanner.class);
