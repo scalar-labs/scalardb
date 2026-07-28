@@ -31,7 +31,7 @@ subprojects {
         jooqVersion = '3.14.16'
         awssdkVersion = '2.31.3'
         commonsDbcp2Version = '2.13.0'
-        postgresqlDriverVersion = '42.7.7'
+        postgresqlDriverVersion = '42.7.13'
         oracleDriverVersion = '23.8.0.25.04'
         sqlserverDriverVersion = '12.8.2.jre8'
         sqliteDriverVersion = '3.50.1.0'
@@ -66,8 +66,10 @@ subprojects {
     configurations.all {
         resolutionStrategy {
             force "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+            force "io.netty:netty-codec-dns:${nettyVersion}"
             force "io.netty:netty-codec-http:${nettyVersion}"
             force "io.netty:netty-codec-http2:${nettyVersion}"
+            force "io.netty:netty-resolver-dns:${nettyVersion}"
         }
     }
 
