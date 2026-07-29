@@ -462,7 +462,7 @@ public enum CoreError implements ScalarDbError {
       "0077",
       "The specified consistency level is not supported. Consistency level: %s",
       "",
-      "Use a supported consistency level (SEQUENTIAL, EVENTUAL, LINEARIZABLE, or BOUNDED_STALENESS)."),
+      "Use 'STRONG' or 'BOUNDED_STALENESS'; Cosmos DB in ScalarDB does not support other consistency levels."),
   DYNAMO_ENCODER_0X00_BYTES_NOT_ACCEPTED_IN_BLOB_VALUES_IN_DESC_ORDER(
       Category.USER_ERROR,
       "0078",
