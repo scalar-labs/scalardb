@@ -53,6 +53,13 @@ import javax.annotation.Nullable;
  *   // or coordinator.rollback(tx);
  * </pre>
  *
+ * <p>Every transaction begun with {@link #begin} must be terminated with either {@link #commit} or
+ * {@link #rollback}. This holds on every path out of the flow above, including a failed {@link
+ * #joinParticipant}: the failure does not terminate the transaction — the Coordinator's context and
+ * any already-joined participants stay alive — so a caller that gives up must still roll it back.
+ * An unterminated transaction leaves the Coordinator's per-transaction state in place until the
+ * implementation's own reaping reclaims it, if it has any.
+ *
  * <p>Lazy recovery on the participant side accesses the Coordinator table directly, not through
  * these primitives.
  *
@@ -154,7 +161,7 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    *     outcome is indeterminate—the transaction may or may not have been committed. Do not blindly
    *     retry or roll back; determine the outcome (for example, by checking the coordinator state,
    *     which lazy recovery also relies on) before deciding how to proceed
-   * @throws TransactionNotFoundException if no transaction with this ID is registered with this
+   * @throws TransactionNotFoundException if no transaction with this ID is known to this
    *     Coordinator (never begun, or already finished by a prior commit/rollback), or if a joined
    *     participant no longer knows the transaction while preparing or validating (its local
    *     context is gone, e.g. it expired). You can retry the transaction from the beginning
@@ -194,10 +201,18 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    * <p>An unknown transaction ID (never begun, or already finished) is a no-op. A decorator may
    * treat this as a terminal step, releasing any per-transaction resources it holds.
    *
-   * <p>Because it only discards in-memory state — with no I/O and no transport hop (unlike {@link
-   * TwoPhaseCommitParticipant#releaseTransactionContext}, which a remote participant may fail or
-   * answer on its not-found channel) — this operation cannot fail and declares no checked
-   * exception.
+   * <p>Not part of the normal caller lifecycle, which is {@link #begin} then {@link #commit} or
+   * {@link #rollback}. This terminal is driven in-process by whoever owns this Coordinator's
+   * per-transaction state — typically a context reaper co-located with it — and is not invoked
+   * across a transport boundary.
+   *
+   * <p>Implementations must therefore make it a pure in-memory discard that does not fail; that is
+   * why it declares no checked exception. An implementation fronting a remote Coordinator should
+   * reclaim the remote side's state with that side's own expiration-based reaping rather than
+   * turning this call into a wire operation. This is the one asymmetry with {@link
+   * TwoPhaseCommitParticipant#releaseTransactionContext}, which the Coordinator drives on
+   * participants that may be remote and which may therefore fail or answer on its not-found
+   * channel.
    *
    * @param transactionId the canonical transaction ID returned by {@link #begin}
    */

@@ -365,9 +365,10 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     // delegates straight to the wrapped coordinator, and only a completed release guarantees the
     // wrapped coordinator rejects that join instead of accepting it onto a context this reap
     // is destroying. releaseTransactionContext is a pure in-memory reap that no-ops on an
-    // unknown transaction and does not throw — trusted like the removal below — so it is not
-    // guarded per entry; any unexpected failure is caught by sweepSafely and retried on the next
-    // pass.
+    // unknown transaction and does not fail — trusted like the removal below — so it is not
+    // guarded per entry. If an implementation broke that contract, the throw would abort the whole
+    // pass, leaving the entries after this one for the next one; sweepSafely keeps the schedule
+    // alive and logs the failure.
     super.releaseTransactionContext(transactionId);
     registry.remove(transactionId);
   }
