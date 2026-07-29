@@ -36,7 +36,7 @@ public final class CosmosUtils {
     if (consistencyLevel != ConsistencyLevel.STRONG
         && consistencyLevel != ConsistencyLevel.BOUNDED_STALENESS) {
       throw new IllegalArgumentException(
-          CoreError.COSMOS_INVALID_CONSISTENCY_LEVEL.buildMessage(consistencyLevel));
+          CoreError.INVALID_CONSISTENCY_LEVEL.buildMessage(consistencyLevel));
     }
 
     return consistencyLevel;
