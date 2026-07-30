@@ -830,8 +830,8 @@ public class Put extends Mutation {
    * Consensus Commit.
    *
    * @return whether implicit pre-read is enabled for this Put
-   * @deprecated As of release 3.15.0. Will be removed in release 4.0.0. Use {@link
-   *     ConsensusCommitOperationAttributes#isImplicitPreReadEnabled(Put)} instead
+   * @deprecated As of release 3.15.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details with no external need to introspect them.
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -844,8 +844,8 @@ public class Put extends Mutation {
    * Commit.
    *
    * @return whether the insert mode is enabled for this Put
-   * @deprecated As of release 3.15.0. Will be removed in release 4.0.0. Use {@link
-   *     ConsensusCommitOperationAttributes#isInsertModeEnabled(Put)} instead
+   * @deprecated As of release 3.15.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details with no external need to introspect them.
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
