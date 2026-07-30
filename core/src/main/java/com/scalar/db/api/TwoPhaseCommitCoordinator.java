@@ -46,8 +46,8 @@ import javax.annotation.Nullable;
  *
  * <pre>
  *   String tx = coordinator.begin(null, readOnly, attrs);
- *   coordinator.joinParticipant(tx, participant1);
- *   coordinator.joinParticipant(tx, participant2);
+ *   coordinator.enlist(tx, participant1);
+ *   coordinator.enlist(tx, participant2);
  *   // ... application CRUD against each participant via its CRUD methods ...
  *   coordinator.commit(tx);
  *   // or coordinator.rollback(tx);
@@ -55,7 +55,7 @@ import javax.annotation.Nullable;
  *
  * <p>Every transaction begun with {@link #begin} must be terminated with either {@link #commit} or
  * {@link #rollback}. This holds on every path out of the flow above, including a failed {@link
- * #joinParticipant}: the failure does not terminate the transaction — the Coordinator's context and
+ * #enlist}: the failure does not terminate the transaction — the Coordinator's context and
  * any already-joined participants stay alive — so a caller that gives up must still roll it back.
  * An unterminated transaction leaves the Coordinator's per-transaction state in place until the
  * implementation's own reaping reclaims it, if it has any.
@@ -87,7 +87,7 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    * will not write.
    *
    * <p>The transaction begins with no participants; join them afterward via {@link
-   * #joinParticipant}.
+   * #enlist}.
    *
    * @param transactionId the caller-supplied transaction ID, or {@code null} to have the
    *     implementation generate one
@@ -125,7 +125,7 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    * @throws TransactionException if joining the participant fails due to transient or nontransient
    *     faults
    */
-  void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  void enlist(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionNotFoundException, TransactionException;
 
   /**

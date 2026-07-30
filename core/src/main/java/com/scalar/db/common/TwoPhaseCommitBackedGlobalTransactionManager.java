@@ -77,11 +77,11 @@ public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTrans
           CoreError.COORDINATOR_ONLY_GLOBAL_TRANSACTION_MANAGER_BRANCH_NOT_SUPPORTED
               .buildMessage());
     }
-    // Join the in-process participant to the global transaction. joinParticipant establishes the
+    // Join the in-process participant to the global transaction. enlist establishes the
     // participant's local context, forwarding the readOnly flag and the transaction-scoped
     // attributes supplied at begin. The per-branch attributes passed here are propagated
     // client-side into each CRUD operation by AttributePropagatingBranchTransaction.
-    coordinator.joinParticipant(transactionId, participant);
+    coordinator.enlist(transactionId, participant);
     BranchTransaction branch =
         new TwoPhaseCommitBackedBranchTransaction(participant, transactionId);
     return attributes.isEmpty()

@@ -37,9 +37,9 @@ class DecoratedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_ShouldDelegate() throws Exception {
-    coordinator.joinParticipant(TX, participant);
-    verify(delegate).joinParticipant(TX, participant);
+  void enlist_ShouldDelegate() throws Exception {
+    coordinator.enlist(TX, participant);
+    verify(delegate).enlist(TX, participant);
   }
 
   @Test

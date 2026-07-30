@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Each transaction is tracked from {@link #begin} until its terminal step ({@link #commit} /
  * {@link #rollback} / {@link #releaseTransactionContext}), with a per-transaction expiration time
- * that {@code begin} and {@link #joinParticipant} push {@code expirationTimeMillis} out. The
+ * that {@code begin} and {@link #enlist} push {@code expirationTimeMillis} out. The
  * coordinator observes only those two calls — the CRUD a transaction issues goes directly to its
  * participants — so an elapsed expiration time alone cannot tell an abandoned transaction from a
  * healthy long-running one. A background sweep therefore probes the joined participants of every
@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>One boundary of that semantics: a transaction with no joined participants yet (begun but not
  * joined to anything) has nothing to probe, so its expiration time is authoritative and the reap
- * rests on the wall clock alone. {@link #joinParticipant} publishes the participant into the
+ * rests on the wall clock alone. {@link #enlist} publishes the participant into the
  * tracked entry <em>before</em> delegating the join, so this fast path fires only when no join has
  * reached that point — never while a join is in flight, whose participant is already visible to
  * probe (the delegated join can hold the wrapped coordinator's per-context monitor across remote
@@ -93,7 +93,7 @@ import org.slf4j.LoggerFactory;
  * own per-transaction work, including {@code releaseTransactionContext} concurrently with any other
  * method for the same transaction ID (for example, by synchronizing every per-transaction method on
  * a per-context monitor) — which makes the sweep's {@code releaseTransactionContext} safe against
- * an in-flight {@code commit}/{@code rollback}. Second, the sweep and {@link #joinParticipant}
+ * an in-flight {@code commit}/{@code rollback}. Second, the sweep and {@link #enlist}
  * shake hands on the tracked entry's monitor: a join pushes the expiration time out under the
  * monitor <em>before</em> delegating to the wrapped coordinator, and the sweep re-checks under the
  * same monitor that the expiration time has not moved before releasing and removing. A reap
@@ -213,7 +213,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   @Override
-  public void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  public void enlist(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
     // get() marks the entry as recently used, so an actively-joining transaction is
     // preferentially retained under cap pressure.
@@ -223,7 +223,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
       // the wrapped context is released, so the delegated join is rejected), or a cap eviction
       // is releasing it right now (the join may slip through, but the transaction is doomed
       // regardless). Delegate for the authoritative answer; there is nothing worth tracking.
-      super.joinParticipant(transactionId, participant);
+      super.enlist(transactionId, participant);
       return;
     }
     TrackedTransaction tracked = current.get();
@@ -240,7 +240,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     // unreachable one pins the entry, the fail-open retention used everywhere else.
     tracked.updateExpirationTime(nextExpirationTimeMillis());
     tracked.addParticipant(participant);
-    super.joinParticipant(transactionId, participant);
+    super.enlist(transactionId, participant);
   }
 
   @Override
@@ -361,7 +361,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
         "The transaction is expired and {}; releasing the context. Transaction ID: {}",
         reason,
         transactionId);
-    // Release before removing: a racing joinParticipant that finds the entry already gone
+    // Release before removing: a racing enlist that finds the entry already gone
     // delegates straight to the wrapped coordinator, and only a completed release guarantees the
     // wrapped coordinator rejects that join instead of accepting it onto a context this reap
     // is destroying. releaseTransactionContext is a pure in-memory reap that no-ops on an
@@ -427,13 +427,13 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     private final String transactionId;
 
     // Keyed by TwoPhaseCommitParticipant#getId (first-wins, mirroring the wrapped coordinator's
-    // idempotent join). Written by begin/joinParticipant threads and read by the sweeper, hence
+    // idempotent join). Written by begin/enlist threads and read by the sweeper, hence
     // concurrent.
     private final ConcurrentMap<String, TwoPhaseCommitParticipant> participants =
         new ConcurrentHashMap<>();
 
     // The absolute wall-clock time at which the transaction becomes a probe candidate. Pushed out
-    // by begin/joinParticipant and by a sweep that found (or failed to rule out) a participant
+    // by begin/enlist and by a sweep that found (or failed to rule out) a participant
     // still holding the transaction. Written under the entry monitor (the join-vs-reap
     // handshake, see the class Javadoc); volatile so the sweep's cheap pre-check can read it
     // without the monitor.

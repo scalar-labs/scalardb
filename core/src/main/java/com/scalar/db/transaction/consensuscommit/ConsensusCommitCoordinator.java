@@ -110,7 +110,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
   }
 
   @Override
-  public void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  public void enlist(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
     CoordinatorContext context = getContext(transactionId);
     synchronized (context) {

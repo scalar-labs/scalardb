@@ -98,17 +98,17 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_UnknownTransaction_ShouldThrowTransactionNotFoundException() {
+  void enlist_UnknownTransaction_ShouldThrowTransactionNotFoundException() {
     // Act Assert
     assertThatThrownBy(
             () ->
-                consensusCommitCoordinator.joinParticipant(
+                consensusCommitCoordinator.enlist(
                     "unknown", mock(TwoPhaseCommitParticipant.class)))
         .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
-  void joinParticipant_ShouldInvokeJoinAndTrackParticipant() throws Exception {
+  void enlist_ShouldInvokeJoinAndTrackParticipant() throws Exception {
     // Arrange
     consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap());
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
@@ -118,7 +118,7 @@ class ConsensusCommitCoordinatorTest {
         .thenReturn(preparation(writeSet(), true));
 
     // Act
-    consensusCommitCoordinator.joinParticipant("tx-1", participant);
+    consensusCommitCoordinator.enlist("tx-1", participant);
 
     // Assert — join is invoked with the begin-time readOnly flag and attributes ...
     verify(participant).join("tx-1", true, Collections.emptyMap());
@@ -130,7 +130,7 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_WhenJoinThrows_ShouldNotTrackParticipant() throws Exception {
+  void enlist_WhenJoinThrows_ShouldNotTrackParticipant() throws Exception {
     // Arrange
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
@@ -139,7 +139,7 @@ class ConsensusCommitCoordinatorTest {
         .join("tx-1", false, Collections.emptyMap());
 
     // Act
-    assertThatThrownBy(() -> consensusCommitCoordinator.joinParticipant("tx-1", participant))
+    assertThatThrownBy(() -> consensusCommitCoordinator.enlist("tx-1", participant))
         .isInstanceOf(TransactionException.class);
 
     // Assert — a failed join leaves the participant untracked, so rollback never touches it.
@@ -148,7 +148,7 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_AfterBegin_ShouldJoinOnParticipantAndTrackIt() throws Exception {
+  void enlist_AfterBegin_ShouldJoinOnParticipantAndTrackIt() throws Exception {
     // Arrange
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
     when(participant.getId()).thenReturn("participant-1");
@@ -156,7 +156,7 @@ class ConsensusCommitCoordinatorTest {
 
     // Act
     consensusCommitCoordinator.begin("tx-1", true, Collections.emptyMap());
-    consensusCommitCoordinator.joinParticipant("tx-1", participant);
+    consensusCommitCoordinator.enlist("tx-1", participant);
 
     // Assert — join is invoked on the participant with the begin-time readOnly flag and attributes
     // ...
@@ -539,13 +539,13 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_AfterCommit_ShouldThrowTransactionNotFoundException() throws Exception {
+  void enlist_AfterCommit_ShouldThrowTransactionNotFoundException() throws Exception {
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     consensusCommitCoordinator.commit("tx-1");
 
     assertThatThrownBy(
             () ->
-                consensusCommitCoordinator.joinParticipant(
+                consensusCommitCoordinator.enlist(
                     "tx-1", mock(TwoPhaseCommitParticipant.class)))
         .isInstanceOf(TransactionNotFoundException.class);
   }
@@ -1065,7 +1065,7 @@ class ConsensusCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_WhenDuplicateParticipantId_ShouldBeNoOp() throws Exception {
+  void enlist_WhenDuplicateParticipantId_ShouldBeNoOp() throws Exception {
     // Arrange — one participant with a given ID is already joined.
     consensusCommitCoordinator.begin("tx-1", false, Collections.emptyMap());
     TwoPhaseCommitParticipant original = joinedParticipant("tx-1", "participant-1");
@@ -1073,7 +1073,7 @@ class ConsensusCommitCoordinatorTest {
     when(duplicate.getId()).thenReturn("participant-1");
 
     // Act — joining a second participant that returns the same getId() is a no-op.
-    consensusCommitCoordinator.joinParticipant("tx-1", duplicate);
+    consensusCommitCoordinator.enlist("tx-1", duplicate);
 
     // Assert — the duplicate is never joined, and only the original participant is tracked (a
     // subsequent commit drives the original, not the duplicate).
@@ -1232,7 +1232,7 @@ class ConsensusCommitCoordinatorTest {
     TwoPhaseCommitParticipant participant = mock(TwoPhaseCommitParticipant.class);
     when(participant.getId()).thenReturn(participantId);
     when(participant.prepareRecords(anyString(), anyLong(), any())).thenReturn(preparationResult);
-    consensusCommitCoordinator.joinParticipant(transactionId, participant);
+    consensusCommitCoordinator.enlist(transactionId, participant);
     return participant;
   }
 
@@ -1317,7 +1317,7 @@ class ConsensusCommitCoordinatorTest {
     // aggregates the write set); validation is not required for these encoding-focused tests.
     when(participant.prepareRecords(anyString(), anyLong(), any()))
         .thenReturn(preparation(writeSet, /* validationRequired= */ false));
-    consensusCommitCoordinator.joinParticipant(transactionId, participant);
+    consensusCommitCoordinator.enlist(transactionId, participant);
     return participant;
   }
 

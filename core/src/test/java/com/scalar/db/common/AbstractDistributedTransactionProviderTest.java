@@ -199,7 +199,7 @@ class AbstractDistributedTransactionProviderTest {
     // participant is the one wired in.
     ArgumentCaptor<TwoPhaseCommitParticipant> captor =
         ArgumentCaptor.forClass(TwoPhaseCommitParticipant.class);
-    verify(rawCoordinator).joinParticipant(eq("tx-1"), captor.capture());
+    verify(rawCoordinator).enlist(eq("tx-1"), captor.capture());
     assertThat(captor.getValue())
         .isInstanceOf(ActiveTransactionManagedTwoPhaseCommitParticipant.class);
   }

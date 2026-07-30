@@ -32,7 +32,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * A {@link TwoPhaseCommitParticipant} decorator that propagates the transaction-scoped attributes
  * supplied at {@link #join} into every CRUD operation issued for that transaction.
  *
- * <p>Begin-attributes reach the participant via {@link TwoPhaseCommitCoordinator#joinParticipant} →
+ * <p>Begin-attributes reach the participant via {@link TwoPhaseCommitCoordinator#enlist} →
  * {@code join}; this decorator captures them (keyed by transaction ID) and merges them into each
  * operation before delegating, with an attribute set directly on the operation winning over the
  * transaction-scoped one (see {@link OperationAttributeMerger}). It therefore sits <em>outside</em>

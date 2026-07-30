@@ -89,7 +89,7 @@ public abstract class TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestBa
 
   /**
    * Backing-specific scenario, so it lives here rather than in the shared corpus: the coordinator
-   * observes only begin and joinParticipant — the CRUD a branch issues goes to the participant — so
+   * observes only begin and enlist — the CRUD a branch issues goes to the participant — so
    * a healthy long-running global transaction is silent from the coordinator's point of view for
    * its whole lifetime, and only the expiry-time participant probe keeps it from being reaped as
    * abandoned.
