@@ -145,6 +145,7 @@ public class GlobalTransactionBackedDistributedTransactionManager
   // which this path does not honor (isolation comes from configuration). Delegate to begin.
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0 */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public DistributedTransaction start(Isolation isolation) throws TransactionException {
@@ -152,6 +153,7 @@ public class GlobalTransactionBackedDistributedTransactionManager
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0 */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, Isolation isolation)
@@ -160,6 +162,7 @@ public class GlobalTransactionBackedDistributedTransactionManager
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0 */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
@@ -168,6 +171,7 @@ public class GlobalTransactionBackedDistributedTransactionManager
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0 */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public DistributedTransaction start(SerializableStrategy strategy) throws TransactionException {
@@ -175,6 +179,7 @@ public class GlobalTransactionBackedDistributedTransactionManager
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0 */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public DistributedTransaction start(String txId, SerializableStrategy strategy)
@@ -183,6 +188,7 @@ public class GlobalTransactionBackedDistributedTransactionManager
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0 */
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public DistributedTransaction start(

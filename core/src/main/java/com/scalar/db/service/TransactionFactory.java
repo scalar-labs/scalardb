@@ -54,7 +54,9 @@ public final class TransactionFactory {
    *
    * @return a {@link TwoPhaseCommitTransactionManager} instance. If the transaction manager does
    *     not support the two-phase commit interface, returns {@code null}.
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   @Nullable
   public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
     return ProviderManager.createTwoPhaseCommitTransactionManager(config);
