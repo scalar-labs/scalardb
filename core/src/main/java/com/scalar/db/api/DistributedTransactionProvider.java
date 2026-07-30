@@ -48,24 +48,24 @@ public interface DistributedTransactionProvider {
   TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(DatabaseConfig config);
 
   /**
-   * Creates an instance of {@link TwoPhaseCommit.Coordinator} for the new multi-participant
+   * Creates an instance of {@link TwoPhaseCommitCoordinator} for the new multi-participant
    * two-phase commit interface.
    *
    * @param config a database config
-   * @return an instance of {@link TwoPhaseCommit.Coordinator}
+   * @return an instance of {@link TwoPhaseCommitCoordinator}
    * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
    *     commit interface
    */
-  TwoPhaseCommit.Coordinator createTwoPhaseCommitCoordinator(DatabaseConfig config);
+  TwoPhaseCommitCoordinator createTwoPhaseCommitCoordinator(DatabaseConfig config);
 
   /**
-   * Creates an instance of {@link TwoPhaseCommit.Participant} for the new multi-participant
+   * Creates an instance of {@link TwoPhaseCommitParticipant} for the new multi-participant
    * two-phase commit interface.
    *
    * @param config a database config
-   * @return an instance of {@link TwoPhaseCommit.Participant}
+   * @return an instance of {@link TwoPhaseCommitParticipant}
    * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
    *     commit interface
    */
-  TwoPhaseCommit.Participant createTwoPhaseCommitParticipant(DatabaseConfig config);
+  TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config);
 }

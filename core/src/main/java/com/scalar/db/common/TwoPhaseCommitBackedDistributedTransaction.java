@@ -10,7 +10,8 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionCrudOperable;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -26,8 +27,8 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
- * Adapts a {@link TwoPhaseCommit.Coordinator} + a single in-process {@link
- * TwoPhaseCommit.Participant} to the single-phase {@link com.scalar.db.api.DistributedTransaction}
+ * Adapts a {@link TwoPhaseCommitCoordinator} + a single in-process {@link
+ * TwoPhaseCommitParticipant} to the single-phase {@link com.scalar.db.api.DistributedTransaction}
  * API.
  *
  * <p>CRUD is delegated to the participant (keyed by this transaction's canonical ID); {@link
@@ -41,14 +42,14 @@ import javax.annotation.Nullable;
  */
 public class TwoPhaseCommitBackedDistributedTransaction extends AbstractDistributedTransaction {
 
-  private final TwoPhaseCommit.Coordinator coordinator;
-  @Nullable private final TwoPhaseCommit.Participant participant;
+  private final TwoPhaseCommitCoordinator coordinator;
+  @Nullable private final TwoPhaseCommitParticipant participant;
   private final String transactionId;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseCommitBackedDistributedTransaction(
-      TwoPhaseCommit.Coordinator coordinator,
-      @Nullable TwoPhaseCommit.Participant participant,
+      TwoPhaseCommitCoordinator coordinator,
+      @Nullable TwoPhaseCommitParticipant participant,
       String transactionId) {
     this.coordinator = coordinator;
     this.participant = participant;
@@ -60,7 +61,7 @@ public class TwoPhaseCommitBackedDistributedTransaction extends AbstractDistribu
     return transactionId;
   }
 
-  private TwoPhaseCommit.Participant participant() {
+  private TwoPhaseCommitParticipant participant() {
     if (participant == null) {
       throw new UnsupportedOperationException(getParticipantNotConfiguredMessage());
     }

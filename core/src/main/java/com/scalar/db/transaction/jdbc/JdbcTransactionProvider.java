@@ -2,7 +2,8 @@ package com.scalar.db.transaction.jdbc;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.AbstractDistributedTransactionProvider;
 import com.scalar.db.common.CoreError;
@@ -36,13 +37,13 @@ public class JdbcTransactionProvider extends AbstractDistributedTransactionProvi
   }
 
   @Override
-  public TwoPhaseCommit.Coordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
+  public TwoPhaseCommitCoordinator createRawTwoPhaseCommitCoordinator(DatabaseConfig config) {
     throw new UnsupportedOperationException(
         CoreError.JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
   }
 
   @Override
-  public TwoPhaseCommit.Participant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
+  public TwoPhaseCommitParticipant createRawTwoPhaseCommitParticipant(DatabaseConfig config) {
     throw new UnsupportedOperationException(
         CoreError.JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
   }
