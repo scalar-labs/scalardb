@@ -22,6 +22,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 
+/** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+@Deprecated
 public abstract class DecoratedTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction {
 
   private final TwoPhaseCommitTransaction transaction;
@@ -31,36 +33,26 @@ public abstract class DecoratedTwoPhaseCommitTransaction implements TwoPhaseComm
     this.transaction = transaction;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     transaction.with(namespace, tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public void withNamespace(String namespace) {
     transaction.withNamespace(namespace);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return transaction.getNamespace();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public void withTable(String tableName) {
     transaction.withTable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
-  @Deprecated
   @Override
   public Optional<String> getTable() {
     return transaction.getTable();
@@ -86,15 +78,11 @@ public abstract class DecoratedTwoPhaseCommitTransaction implements TwoPhaseComm
     return transaction.getScanner(scan);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(Put put) throws CrudException {
     transaction.put(put);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
     transaction.put(puts);
@@ -105,8 +93,6 @@ public abstract class DecoratedTwoPhaseCommitTransaction implements TwoPhaseComm
     transaction.delete(delete);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
     transaction.delete(deletes);
