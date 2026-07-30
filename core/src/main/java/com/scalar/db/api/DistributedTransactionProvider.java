@@ -68,4 +68,14 @@ public interface DistributedTransactionProvider {
    *     commit interface
    */
   TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config);
+
+  /**
+   * Creates an instance of {@link GlobalTransactionManager}.
+   *
+   * @param config a database config
+   * @return an instance of {@link GlobalTransactionManager}
+   * @throws UnsupportedOperationException if the transaction manager does not support global
+   *     transactions
+   */
+  GlobalTransactionManager createGlobalTransactionManager(DatabaseConfig config);
 }
