@@ -16,7 +16,8 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.config.DatabaseConfig;
@@ -38,8 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 /**
- * Adapts a {@link TwoPhaseCommit.Coordinator} + a single in-process {@link
- * TwoPhaseCommit.Participant} to the {@link com.scalar.db.api.DistributedTransactionManager} API.
+ * Adapts a {@link TwoPhaseCommitCoordinator} + a single in-process {@link
+ * TwoPhaseCommitParticipant} to the {@link com.scalar.db.api.DistributedTransactionManager} API.
  *
  * <p>Each {@code begin} allocates a transaction via the coordinator, registers the in-process
  * participant, and returns a {@link TwoPhaseCommitBackedDistributedTransaction}. The full two-phase
@@ -47,12 +48,13 @@ import javax.annotation.Nullable;
  * front the new Coordinator/Participant pair for (a) single-cluster clients and (b) running the
  * existing {@code DistributedTransaction} integration-test corpus against the new code path.
  *
- * <p>Implementation-agnostic: it depends only on the public {@link TwoPhaseCommit} and {@link
- * com.scalar.db.api.DistributedTransactionManager} interfaces. The concrete coordinator and
- * participant (e.g., the consensuscommit-backed ones) are injected by the wiring layer.
+ * <p>Implementation-agnostic: it depends only on the public {@link TwoPhaseCommitCoordinator} /
+ * {@link TwoPhaseCommitParticipant} and {@link com.scalar.db.api.DistributedTransactionManager}
+ * interfaces. The concrete coordinator and participant (e.g., the consensuscommit-backed ones) are
+ * injected by the wiring layer.
  *
- * <p>Limitations: the {@link TwoPhaseCommit.Coordinator} interface exposes no by-ID operation on
- * the Coordinator state table, so {@link #getState(String)}, {@link #rollback(String)} (and {@code
+ * <p>Limitations: the {@link TwoPhaseCommitCoordinator} interface exposes no by-ID operation on the
+ * Coordinator state table, so {@link #getState(String)}, {@link #rollback(String)} (and {@code
  * abort(String)}, which delegates to it), {@link #finishTransaction(String)}, {@code
  * recoverRecord}, and {@code resume} are unsupported and throw {@link
  * UnsupportedOperationException}. The deprecated {@code start(...)} overloads ignore the
@@ -62,14 +64,14 @@ import javax.annotation.Nullable;
 public class TwoPhaseCommitBackedDistributedTransactionManager
     extends AbstractDistributedTransactionManager {
 
-  private final TwoPhaseCommit.Coordinator coordinator;
-  @Nullable private final TwoPhaseCommit.Participant participant;
+  private final TwoPhaseCommitCoordinator coordinator;
+  @Nullable private final TwoPhaseCommitParticipant participant;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public TwoPhaseCommitBackedDistributedTransactionManager(
       DatabaseConfig config,
-      TwoPhaseCommit.Coordinator coordinator,
-      @Nullable TwoPhaseCommit.Participant participant) {
+      TwoPhaseCommitCoordinator coordinator,
+      @Nullable TwoPhaseCommitParticipant participant) {
     super(config);
     this.coordinator = coordinator;
     this.participant = participant;
@@ -117,8 +119,8 @@ public class TwoPhaseCommitBackedDistributedTransactionManager
    * @return the transaction instance
    */
   protected DistributedTransaction createTransaction(
-      TwoPhaseCommit.Coordinator coordinator,
-      @Nullable TwoPhaseCommit.Participant participant,
+      TwoPhaseCommitCoordinator coordinator,
+      @Nullable TwoPhaseCommitParticipant participant,
       String canonicalId) {
     return new TwoPhaseCommitBackedDistributedTransaction(coordinator, participant, canonicalId);
   }

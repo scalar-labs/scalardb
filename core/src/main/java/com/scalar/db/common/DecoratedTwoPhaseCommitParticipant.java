@@ -10,7 +10,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionCrudOperable;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CommitException;
@@ -26,18 +26,18 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * A {@link TwoPhaseCommit.Participant} that forwards every method to a wrapped participant.
+ * A {@link TwoPhaseCommitParticipant} that forwards every method to a wrapped participant.
  *
  * <p>Base class for participant decorators: subclasses override only the methods they need and
- * inherit plain delegation for the rest. It is the id-based {@link TwoPhaseCommit.Participant}
+ * inherit plain delegation for the rest. It is the id-based {@link TwoPhaseCommitParticipant}
  * counterpart of the manager-API {@link DecoratedDistributedTransactionManager}.
  */
-public abstract class DecoratedTwoPhaseCommitParticipant implements TwoPhaseCommit.Participant {
+public abstract class DecoratedTwoPhaseCommitParticipant implements TwoPhaseCommitParticipant {
 
-  private final TwoPhaseCommit.Participant participant;
+  private final TwoPhaseCommitParticipant participant;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  protected DecoratedTwoPhaseCommitParticipant(TwoPhaseCommit.Participant participant) {
+  protected DecoratedTwoPhaseCommitParticipant(TwoPhaseCommitParticipant participant) {
     this.participant = participant;
   }
 
@@ -121,8 +121,10 @@ public abstract class DecoratedTwoPhaseCommitParticipant implements TwoPhaseComm
   }
 
   @Override
-  public TwoPhaseCommit.PreparationResult prepareRecords(
-      String transactionId, long preparedAt, TwoPhaseCommit.WriteSetDetailLevel detailLevel)
+  public TwoPhaseCommitParticipant.PreparationResult prepareRecords(
+      String transactionId,
+      long preparedAt,
+      TwoPhaseCommitParticipant.WriteSetDetailLevel detailLevel)
       throws PreparationException, TransactionNotFoundException {
     return participant.prepareRecords(transactionId, preparedAt, detailLevel);
   }

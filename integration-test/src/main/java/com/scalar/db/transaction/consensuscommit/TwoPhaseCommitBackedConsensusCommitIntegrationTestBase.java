@@ -7,10 +7,10 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
- * Runs the ConsensusCommit distributed-transaction integration-test corpus against the new {@link
- * com.scalar.db.api.TwoPhaseCommit} Coordinator / Participant roles, driven through the
- * single-phase {@link com.scalar.db.common.TwoPhaseCommitBackedDistributedTransactionManager}
- * facade.
+ * Runs the ConsensusCommit distributed-transaction integration-test corpus against the {@link
+ * com.scalar.db.api.TwoPhaseCommitCoordinator} / {@link
+ * com.scalar.db.api.TwoPhaseCommitParticipant} roles, driven through the single-phase {@link
+ * com.scalar.db.common.TwoPhaseCommitBackedDistributedTransactionManager} facade.
  *
  * <p>It reuses the entire {@link ConsensusCommitIntegrationTestBase} setup (coordinator tables,
  * truncation helpers, CC-specific public tests) and only swaps the transaction manager: {@code
