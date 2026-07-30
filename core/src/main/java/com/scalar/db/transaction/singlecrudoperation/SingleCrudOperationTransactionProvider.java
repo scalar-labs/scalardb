@@ -3,6 +3,7 @@ package com.scalar.db.transaction.singlecrudoperation;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
+import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
@@ -44,5 +45,12 @@ public class SingleCrudOperationTransactionProvider implements DistributedTransa
   public TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config) {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public GlobalTransactionManager createGlobalTransactionManager(DatabaseConfig config) {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_GLOBAL_TRANSACTION_NOT_SUPPORTED
+            .buildMessage());
   }
 }

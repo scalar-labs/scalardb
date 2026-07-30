@@ -53,11 +53,11 @@ import org.slf4j.LoggerFactory;
  * transaction-lifetime bound: a context lives exactly as long as some participant holds the
  * transaction, or its absence cannot be confirmed. Fail-open probing keeps a context alive with no
  * time limit, and each such retention logs a WARN, so a persistent probe failure is loudly visible.
- * During a total outage of a participant cluster no new transactions can join it, so the affected
- * entries are bounded to the in-flight snapshot at outage time; every cycle re-probes, so they are
- * reaped as soon as probes are answered again; and the registry cap stays the hard memory bound. A
- * participant cluster that is <em>permanently</em> unreachable would keep its snapshot probing
- * forever, cleared only when the coordinator process is restarted.
+ * During a total outage of a participant no new transactions can join it, so the affected entries
+ * are bounded to the in-flight snapshot at outage time; every cycle re-probes, so they are reaped
+ * as soon as probes are answered again; and the registry cap stays the hard memory bound. A
+ * participant that is <em>permanently</em> unreachable would keep its snapshot probing forever,
+ * cleared only when the coordinator process is restarted.
  *
  * <p>One boundary of that semantics: a transaction with no joined participants yet (begun but not
  * joined to anything) has nothing to probe, so its expiration time is authoritative and the reap
@@ -91,16 +91,16 @@ import org.slf4j.LoggerFactory;
  * <p>Thread safety: the {@link ThreadSafe} guarantee relies on two mechanisms. First, the wrapped
  * coordinator honors the {@link TwoPhaseCommitCoordinator} concurrency contract — it serializes its
  * own per-transaction work, including {@code releaseTransactionContext} concurrently with any other
- * method for the same transaction ID (e.g. {@code ConsensusCommitCoordinator} synchronizes every
- * per-transaction method on a per-context monitor) — which makes the sweep's {@code
- * releaseTransactionContext} safe against an in-flight {@code commit}/{@code rollback}. Second, the
- * sweep and {@link #joinParticipant} shake hands on the tracked entry's monitor: a join pushes the
- * expiration time out under the monitor <em>before</em> delegating to the wrapped coordinator, and
- * the sweep re-checks under the same monitor that the expiration time has not moved before
- * releasing and removing. A reap therefore never overlaps a join that is about to succeed — either
- * the join extends the deadline first and the sweep backs off, or the reap completes first and the
- * delegated join is rejected by the wrapped coordinator, whose context is already released. Probing
- * itself is I/O and runs outside the monitor, so a slow probe never blocks a join.
+ * method for the same transaction ID (for example, by synchronizing every per-transaction method on
+ * a per-context monitor) — which makes the sweep's {@code releaseTransactionContext} safe against
+ * an in-flight {@code commit}/{@code rollback}. Second, the sweep and {@link #joinParticipant}
+ * shake hands on the tracked entry's monitor: a join pushes the expiration time out under the
+ * monitor <em>before</em> delegating to the wrapped coordinator, and the sweep re-checks under the
+ * same monitor that the expiration time has not moved before releasing and removing. A reap
+ * therefore never overlaps a join that is about to succeed — either the join extends the deadline
+ * first and the sweep backs off, or the reap completes first and the delegated join is rejected by
+ * the wrapped coordinator, whose context is already released. Probing itself is I/O and runs
+ * outside the monitor, so a slow probe never blocks a join.
  *
  * <p>A reap whose release lands behind an in-flight terminal step for the same transaction blocks
  * on the wrapped coordinator's serialization — on the sweeper thread, under the entry monitor —
