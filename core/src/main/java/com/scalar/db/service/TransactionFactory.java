@@ -2,7 +2,8 @@ package com.scalar.db.service;
 
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.File;
@@ -61,26 +62,26 @@ public class TransactionFactory {
   }
 
   /**
-   * Returns a {@link TwoPhaseCommit.Coordinator} instance for the new multi-participant two-phase
+   * Returns a {@link TwoPhaseCommitCoordinator} instance for the new multi-participant two-phase
    * commit interface.
    *
-   * @return a {@link TwoPhaseCommit.Coordinator} instance
+   * @return a {@link TwoPhaseCommitCoordinator} instance
    * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
    *     commit interface
    */
-  public TwoPhaseCommit.Coordinator getTwoPhaseCommitCoordinator() {
+  public TwoPhaseCommitCoordinator getTwoPhaseCommitCoordinator() {
     return ProviderManager.createTwoPhaseCommitCoordinator(config);
   }
 
   /**
-   * Returns a {@link TwoPhaseCommit.Participant} instance for the new multi-participant two-phase
+   * Returns a {@link TwoPhaseCommitParticipant} instance for the new multi-participant two-phase
    * commit interface.
    *
-   * @return a {@link TwoPhaseCommit.Participant} instance
+   * @return a {@link TwoPhaseCommitParticipant} instance
    * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
    *     commit interface
    */
-  public TwoPhaseCommit.Participant getTwoPhaseCommitParticipant() {
+  public TwoPhaseCommitParticipant getTwoPhaseCommitParticipant() {
     return ProviderManager.createTwoPhaseCommitParticipant(config);
   }
 
