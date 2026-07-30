@@ -11,6 +11,7 @@ import com.scalar.db.api.BranchTransaction;
 import com.scalar.db.api.GlobalTransaction;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
+import com.scalar.db.exception.transaction.TransactionException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -85,6 +86,17 @@ class TwoPhaseCommitBackedGlobalTransactionManagerTest {
 
     verify(coordinator).joinParticipant(TX_ID, participant);
     assertThat(branch).isInstanceOf(AttributePropagatingBranchTransaction.class);
+  }
+
+  @Test
+  void beginBranch_WhenJoinParticipantFails_ShouldPropagateTransactionException() throws Exception {
+    // A registration failure other than not-found reaches the caller as-is, not masked as
+    // not-found: beginBranch is the surface where non-not-found registration failures propagate.
+    TransactionException exception = new TransactionException("join failed", TX_ID);
+    doThrow(exception).when(coordinator).joinParticipant(TX_ID, participant);
+
+    assertThatThrownBy(() -> manager().beginBranch(TX_ID, Collections.emptyMap()))
+        .isSameAs(exception);
   }
 
   @Test
