@@ -43,8 +43,8 @@ import org.slf4j.LoggerFactory;
  * TwoPhaseConsensusCommit}) can drive individual commit phases without depending on the specialized
  * handlers directly. {@code prepareRecords}, {@code commitRecords}, {@code rollbackRecords}, {@code
  * commitStateWithoutWriteSet}, and {@code abortStateWithoutWriteSet} are thin pass-throughs. {@code
- * commitState} and {@code abortState} are not: they encode the transaction's write set via the
- * orchestrator-owned {@link WriteSetEncoder} before delegating to the Coordinator-side handler.
+ * commitState} and {@code abortState} are not: they encode the transaction's write set via {@link
+ * WriteSetEncoder} before delegating to the Coordinator-side handler.
  */
 @ThreadSafe
 public class CommitHandler {
@@ -52,7 +52,6 @@ public class CommitHandler {
 
   private final CoordinatorCommitHandler coordinatorCommitHandler;
   private final ParticipantCommitHandler participantCommitHandler;
-  protected final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
 
   @LazyInit @Nullable private BeforePreparationHook beforePreparationHook;
@@ -67,7 +66,6 @@ public class CommitHandler {
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean onePhaseCommitEnabled) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
-    this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     this.coordinatorCommitHandler = new CoordinatorCommitHandler(coordinator);
     this.participantCommitHandler =
         new ParticipantCommitHandler(
@@ -85,11 +83,9 @@ public class CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   protected CommitHandler(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
-      WriteSetEncoder writeSetEncoder,
       CoordinatorCommitHandler coordinatorCommitHandler,
       ParticipantCommitHandler participantCommitHandler) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
-    this.writeSetEncoder = checkNotNull(writeSetEncoder);
     this.coordinatorCommitHandler = checkNotNull(coordinatorCommitHandler);
     this.participantCommitHandler = checkNotNull(participantCommitHandler);
   }
@@ -305,7 +301,7 @@ public class CommitHandler {
   public long commitState(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
     return coordinatorCommitHandler.commitState(
-        context.transactionId, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+        context.transactionId, WriteSetEncoder.encodeSingleGroupWriteSet(context));
   }
 
   // 2PC-only. Delegates to commitState(id, null) / abortState(id, null), which the group-commit
@@ -323,7 +319,7 @@ public class CommitHandler {
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
     return coordinatorCommitHandler.abortState(
-        context.transactionId, writeSetEncoder.encodeSingleGroupWriteSet(context, false));
+        context.transactionId, WriteSetEncoder.encodeSingleGroupWriteSet(context));
   }
 
   // 2PC-only; see the null-write-set note on commitStateWithoutWriteSet above.

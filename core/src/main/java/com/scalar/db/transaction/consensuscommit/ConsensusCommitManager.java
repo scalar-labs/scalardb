@@ -633,7 +633,23 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     // composer-level NoMutationException absorption still acts as the safety net for races against
     // concurrent recovery.
     WriteSet writeSet = state.getWriteSet().get();
-    for (EntryGroup entryGroup : writeSet.getEntryGroupsList()) {
+
+    // The writer always sets the payload, so an unset case — or one this binary does not know —
+    // means the row was written by a newer schema version. getEntryGroups() would return an empty
+    // default instance for such a row, which would silently skip recovery and report success, so
+    // fail loudly instead.
+    if (writeSet.getPayloadCase() != WriteSet.PayloadCase.ENTRY_GROUPS) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED.buildMessage(
+              txId,
+              "The write set uses an unsupported payload encoding. Schema version: "
+                  + writeSet.getSchemaVersion()
+                  + ", Payload case: "
+                  + writeSet.getPayloadCase()),
+          txId);
+    }
+
+    for (EntryGroup entryGroup : writeSet.getEntryGroups().getEntryGroupsList()) {
       String expectedTxId =
           entryGroup.hasChildId()
               ? KEY_MANIPULATOR.fullKey(state.getId(), entryGroup.getChildId())

@@ -27,9 +27,7 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import java.util.Arrays;
@@ -312,11 +310,10 @@ class ConsensusCommitCoordinatorTest {
     ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
     verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
     WriteSet writeSet = captor.getValue();
-    assertThat(writeSet.getEntryGroupsList()).hasSize(1);
-    EntryGroup group = writeSet.getEntryGroups(0);
+    assertThat(writeSet.getEntryGroups().getEntryGroupsList()).hasSize(1);
+    EntryGroup group = writeSet.getEntryGroups().getEntryGroups(0);
     assertThat(group.getEntriesList()).hasSize(1);
     assertThat(group.getEntries(0).getParticipantId()).isEqualTo("participant-1");
-    assertThat(group.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     verify(participant).rollbackRecords("tx-1");
   }
 
@@ -370,11 +367,10 @@ class ConsensusCommitCoordinatorTest {
     ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
     verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
     WriteSet writeSet = captor.getValue();
-    assertThat(writeSet.getEntryGroupsList()).hasSize(1);
-    EntryGroup group = writeSet.getEntryGroups(0);
+    assertThat(writeSet.getEntryGroups().getEntryGroupsList()).hasSize(1);
+    EntryGroup group = writeSet.getEntryGroups().getEntryGroups(0);
     assertThat(group.getEntriesList()).hasSize(1);
     assertThat(group.getEntries(0).getParticipantId()).isEqualTo("participant-1");
-    assertThat(group.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     verify(participant).rollbackRecords("tx-1");
   }
 
@@ -745,7 +741,7 @@ class ConsensusCommitCoordinatorTest {
     verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
     // A non-null but empty write set (no entry groups), not null — the write-less validate-phase
     // abort proves the transaction touched no records, mirroring the write-less commit path.
-    assertThat(captor.getValue().getEntryGroupsList()).isEmpty();
+    assertThat(captor.getValue().getEntryGroups().getEntryGroupsList()).isEmpty();
     verify(p1).rollbackRecords("tx-1");
   }
 
@@ -794,7 +790,7 @@ class ConsensusCommitCoordinatorTest {
     verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
     // A non-null but empty write set (no entry groups), not null — the write-less validate-phase
     // abort proves the transaction touched no records, mirroring the write-less commit path.
-    assertThat(captor.getValue().getEntryGroupsList()).isEmpty();
+    assertThat(captor.getValue().getEntryGroups().getEntryGroupsList()).isEmpty();
     verify(p1).rollbackRecords("tx-1");
   }
 
@@ -1116,19 +1112,16 @@ class ConsensusCommitCoordinatorTest {
     ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
     verify(coordinatorCommitHandler).commitState(eq("tx-1"), captor.capture());
     WriteSet writeSet = captor.getValue();
-    assertThat(writeSet.getEntryGroupsList()).hasSize(2);
+    assertThat(writeSet.getEntryGroups().getEntryGroupsList()).hasSize(2);
 
-    EntryGroup group1 = writeSet.getEntryGroups(0);
+    EntryGroup group1 = writeSet.getEntryGroups().getEntryGroups(0);
     assertThat(group1.getEntriesList()).hasSize(2);
     assertThat(group1.getEntries(0).getParticipantId()).isEqualTo("participant-1");
-    assertThat(group1.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     assertThat(group1.getEntries(1).getParticipantId()).isEqualTo("participant-1");
-    assertThat(group1.getEntries(1).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_DELETE);
 
-    EntryGroup group2 = writeSet.getEntryGroups(1);
+    EntryGroup group2 = writeSet.getEntryGroups().getEntryGroups(1);
     assertThat(group2.getEntriesList()).hasSize(1);
     assertThat(group2.getEntries(0).getParticipantId()).isEqualTo("participant-2");
-    assertThat(group2.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
   }
 
   @Test
@@ -1168,19 +1161,16 @@ class ConsensusCommitCoordinatorTest {
     ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
     verify(coordinatorCommitHandler).abortState(eq("tx-1"), captor.capture());
     WriteSet writeSet = captor.getValue();
-    assertThat(writeSet.getEntryGroupsList()).hasSize(2);
+    assertThat(writeSet.getEntryGroups().getEntryGroupsList()).hasSize(2);
 
-    EntryGroup group1 = writeSet.getEntryGroups(0);
+    EntryGroup group1 = writeSet.getEntryGroups().getEntryGroups(0);
     assertThat(group1.getEntriesList()).hasSize(2);
     assertThat(group1.getEntries(0).getParticipantId()).isEqualTo("participant-1");
-    assertThat(group1.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
     assertThat(group1.getEntries(1).getParticipantId()).isEqualTo("participant-1");
-    assertThat(group1.getEntries(1).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_DELETE);
 
-    EntryGroup group2 = writeSet.getEntryGroups(1);
+    EntryGroup group2 = writeSet.getEntryGroups().getEntryGroups(1);
     assertThat(group2.getEntriesList()).hasSize(1);
     assertThat(group2.getEntries(0).getParticipantId()).isEqualTo("participant-2");
-    assertThat(group2.getEntries(0).getEntryType()).isEqualTo(Entry.EntryType.ENTRY_TYPE_WRITE);
 
     verify(p1).rollbackRecords("tx-1");
     verify(p2).rollbackRecords("tx-1");
@@ -1304,11 +1294,6 @@ class ConsensusCommitCoordinatorTest {
           @Override
           public Optional<Key> getClusteringKey() {
             return Optional.empty();
-          }
-
-          @Override
-          public List<Column<?>> getColumns() {
-            return Collections.emptyList();
           }
         });
   }

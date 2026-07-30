@@ -47,7 +47,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     coordinatorCommitHandler = groupCommitCoordinatorHandler;
     return new CommitHandlerWithGroupCommit(
         coordinatorWriteOmissionOnReadOnlyEnabled,
-        writeSetEncoder,
         groupCommitCoordinatorHandler,
         participantCommitHandler);
   }

@@ -482,11 +482,11 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
     coordinatorCommitHandler.abortState(transactionId, writeSet);
   }
 
-  // Keys only (includeColumns=false), matching the KEYS_ONLY detail requested at prepareRecords:
-  // the Coordinator persists which records the transaction touched, not their column values.
+  // Matches the KEYS_ONLY detail requested at prepareRecords: the Coordinator persists which
+  // records the transaction touched, not their column values.
   private static WriteSet encodeKeysOnlyWriteSet(
       Map<String, List<WriteSetEntry>> writeSetsByParticipant) {
-    return WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant, false);
+    return WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant);
   }
 
   private void releaseResources(String transactionId) {

@@ -1849,9 +1849,11 @@ public class ConsensusCommitManagerTest {
   private com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet writeSetWithSinglePutEntry() {
     return com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
         .setSchemaVersion(1)
-        .addEntryGroups(
-            com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
-                .addEntries(putEntry("pk-1")))
+        .setEntryGroups(
+            com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroups.newBuilder()
+                .addEntryGroups(
+                    com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                        .addEntries(putEntry("pk-1"))))
         .build();
   }
 
@@ -1865,8 +1867,6 @@ public class ConsensusCommitManagerTest {
 
   private com.scalar.db.transaction.consensuscommit.proto.v1.Entry putEntry(String pkValue) {
     return com.scalar.db.transaction.consensuscommit.proto.v1.Entry.newBuilder()
-        .setEntryType(
-            com.scalar.db.transaction.consensuscommit.proto.v1.Entry.EntryType.ENTRY_TYPE_WRITE)
         .setNamespaceName(ANY_NAMESPACE)
         .setTableName(ANY_TABLE)
         .setPartitionKey(
@@ -1942,21 +1942,23 @@ public class ConsensusCommitManagerTest {
     com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet writeSet =
         com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
             .setSchemaVersion(1)
-            .addEntryGroups(
-                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
-                    .setChildId("child-1")
-                    .addEntries(putEntry("pk-1a"))
-                    .addEntries(putEntry("pk-1b")))
-            .addEntryGroups(
-                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
-                    .setChildId("child-2")
-                    .addEntries(putEntry("pk-2a"))
-                    .addEntries(putEntry("pk-2b")))
-            .addEntryGroups(
-                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
-                    .setChildId("child-3")
-                    .addEntries(putEntry("pk-3a"))
-                    .addEntries(putEntry("pk-3b")))
+            .setEntryGroups(
+                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroups.newBuilder()
+                    .addEntryGroups(
+                        com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                            .setChildId("child-1")
+                            .addEntries(putEntry("pk-1a"))
+                            .addEntries(putEntry("pk-1b")))
+                    .addEntryGroups(
+                        com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                            .setChildId("child-2")
+                            .addEntries(putEntry("pk-2a"))
+                            .addEntries(putEntry("pk-2b")))
+                    .addEntryGroups(
+                        com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup.newBuilder()
+                            .setChildId("child-3")
+                            .addEntries(putEntry("pk-3a"))
+                            .addEntries(putEntry("pk-3b"))))
             .build();
     String fullChildId2 = keyManipulator.fullKey(parentId, "child-2");
     String fullChildId3 = keyManipulator.fullKey(parentId, "child-3");
@@ -2077,12 +2079,15 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void finishTransaction_ReadOnlyCommit_ShouldSkipRecoveryAndDeleteState() throws Exception {
-    // Arrange — A read-only commit persists a non-null WriteSet with an empty entry_groups list
-    // (when coordinatorWriteOmissionOnReadOnlyEnabled=false). The no-write-set rejection should
-    // not fire, no recovery runs, and the state row is still cleaned up.
+    // Arrange — A read-only commit persists a non-null WriteSet whose payload is an EntryGroups
+    // with an empty values list (when coordinatorWriteOmissionOnReadOnlyEnabled=false). The payload
+    // oneof is set, so the unsupported-payload rejection must not fire either. No recovery runs,
+    // and the state row is still cleaned up.
     com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet emptyWriteSet =
         com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
             .setSchemaVersion(1)
+            .setEntryGroups(
+                com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroups.getDefaultInstance())
             .build();
     State state =
         new State(ANY_TX_ID, emptyWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
@@ -2096,6 +2101,32 @@ public class ConsensusCommitManagerTest {
     verify(storage, never()).get(any(Get.class));
     verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  @Test
+  public void finishTransaction_WriteSetWithUnsetPayload_ShouldThrowWithoutDeletingState()
+      throws Exception {
+    // Arrange — The writer always sets a payload case, so an unset one can only come from a newer
+    // schema version this binary does not know. Recovery must not run and the state row must
+    // survive, so a binary that does understand the row can still recover it.
+    com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet writeSetWithUnsetPayload =
+        com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .build();
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithUnsetPayload,
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+
+    // Act + Assert
+    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
+        .isInstanceOf(TransactionException.class);
+    verify(storage, never()).get(any(Get.class));
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
+    verify(coordinator, never()).deleteState(anyString());
   }
 
   @Test

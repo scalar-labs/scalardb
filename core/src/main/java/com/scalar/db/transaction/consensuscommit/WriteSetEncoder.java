@@ -7,9 +7,7 @@ import com.google.protobuf.ByteString;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
@@ -37,6 +35,7 @@ import com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimestampTZValu
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column.TimestampValue;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroups;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import java.nio.ByteBuffer;
@@ -48,13 +47,11 @@ import javax.annotation.Nullable;
  * Encodes the proto {@link WriteSet} / {@link EntryGroup} payload persisted in the Coordinator
  * table's {@code tx_write_set} column.
  *
- * <p>Primary keys (namespace, table, partition key, optional clustering key) are always recorded.
- * Non-key column values are only included when {@code includeColumns} is true — this is intended
- * for backup/changelog use cases that need the full record content; the default mode keeps the
- * persisted BLOB compact. When {@code includeColumns} is true, transaction-meta columns (e.g.,
- * {@code tx_state}, {@code tx_version}, {@code before_*}) that the snapshot may have injected for
- * ConsensusCommit's own bookkeeping are filtered out so the persisted payload contains only user
- * data.
+ * <p>An {@link Entry} currently records only a record's identity — namespace, table, partition key,
+ * optional clustering key — plus the owning participant on the multi-participant TwoPhaseCommit
+ * path. The written column values are not recorded, and neither is whether the record was put or
+ * deleted (that is recoverable from the record's own {@code tx_state}). The proto's {@code
+ * schema_version} comment states which of those can be added without bumping the version.
  */
 final class WriteSetEncoder {
   /**
@@ -64,102 +61,65 @@ final class WriteSetEncoder {
    */
   private static final int SCHEMA_VERSION = 1;
 
-  private final TransactionTableMetadataManager tableMetadataManager;
-
-  WriteSetEncoder(TransactionTableMetadataManager tableMetadataManager) {
-    this.tableMetadataManager = checkNotNull(tableMetadataManager);
-  }
+  private WriteSetEncoder() {}
 
   /**
    * Encodes a {@link WriteSet} for a single-group transaction (non-group-commit, or a delayed group
    * commit that contains only this transaction).
    *
-   * <p>For a transaction with writes/deletes, the returned WriteSet contains a single populated
-   * {@link EntryGroup}. For a read-only transaction, the returned WriteSet has no EntryGroups
-   * (empty WriteSet) — explicitly recording that the transaction had nothing to write. {@code
+   * <p>For a transaction with writes/deletes, the returned WriteSet carries a single populated
+   * {@link EntryGroup}. For a read-only transaction, it carries an {@link EntryGroups} with an
+   * empty {@code entry_groups} list — the payload oneof is always set, explicitly recording that
+   * the transaction had nothing to write rather than leaving the payload absent. {@code
    * schema_version} is always set so that the persisted BLOB is unambiguously non-null on every
    * storage backend, distinguishing it from a NULL column (which indicates "no info" for
    * lazy-recovery aborts or pre-feature rows).
    *
    * @param context the transaction context
-   * @param includeColumns whether to include non-key column values for {@code Put} entries
    * @return the encoded {@link WriteSet}
    */
-  WriteSet encodeSingleGroupWriteSet(TransactionContext context, boolean includeColumns) {
-    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(SCHEMA_VERSION);
+  static WriteSet encodeSingleGroupWriteSet(TransactionContext context) {
+    EntryGroups.Builder entryGroups = EntryGroups.newBuilder();
     if (context.snapshot.hasWritesOrDeletes()) {
-      builder.addEntryGroups(encodeEntryGroup(context.snapshot, null, includeColumns));
+      entryGroups.addEntryGroups(encodeEntryGroup(context.snapshot, null));
     }
-    return builder.build();
+    return WriteSet.newBuilder()
+        .setSchemaVersion(SCHEMA_VERSION)
+        .setEntryGroups(entryGroups)
+        .build();
   }
 
   /**
    * Encodes an {@link EntryGroup} from the {@link Snapshot}'s write/delete sets.
    *
    * <p>Visible for testing only — production callers go through {@link
-   * #encodeSingleGroupWriteSet(TransactionContext, boolean)}.
+   * #encodeSingleGroupWriteSet(TransactionContext)}.
    *
    * @param snapshot the snapshot of the transaction
    * @param childId the child id within a group commit, or {@code null} for non-group-commit
-   * @param includeColumns whether to include non-key column values for {@code Put} entries; when
-   *     {@code false}, only primary keys are recorded. Transaction-meta columns are always filtered
-   *     out when {@code includeColumns} is true
    * @return the encoded {@link EntryGroup}
    */
   @VisibleForTesting
-  EntryGroup encodeEntryGroup(Snapshot snapshot, @Nullable String childId, boolean includeColumns) {
+  static EntryGroup encodeEntryGroup(Snapshot snapshot, @Nullable String childId) {
     EntryGroup.Builder builder = EntryGroup.newBuilder();
     if (childId != null) {
       builder.setChildId(childId);
     }
     for (Map.Entry<Snapshot.Key, Put> e : snapshot.getWriteSet()) {
-      Put put = e.getValue();
-      TableMetadata tableMetadata = includeColumns ? getTableMetadata(put) : null;
-      builder.addEntries(
-          encodeEntry(put, Entry.EntryType.ENTRY_TYPE_WRITE, includeColumns, tableMetadata));
+      builder.addEntries(encodeEntry(e.getValue()));
     }
     for (Map.Entry<Snapshot.Key, Delete> e : snapshot.getDeleteSet()) {
-      // Delete entries never carry non-key columns, so no meta-column filtering is needed.
-      builder.addEntries(encodeEntry(e.getValue(), Entry.EntryType.ENTRY_TYPE_DELETE, false, null));
+      builder.addEntries(encodeEntry(e.getValue()));
     }
     return builder.build();
   }
 
-  private TableMetadata getTableMetadata(Mutation mutation) {
-    try {
-      return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, mutation)
-          .getTableMetadata();
-    } catch (ExecutionException e) {
-      // Table metadata is expected to be cached by commit time. Surface the unexpected failure
-      // loudly rather than silently emitting an unfiltered payload.
-      throw new AssertionError(
-          "Failed to retrieve transaction table metadata while encoding the write set. Operation: "
-              + mutation,
-          e);
-    }
-  }
-
-  private static Entry encodeEntry(
-      Mutation mutation,
-      Entry.EntryType type,
-      boolean includeColumns,
-      @Nullable TableMetadata tableMetadata) {
-    Entry.Builder builder = Entry.newBuilder().setEntryType(type);
+  private static Entry encodeEntry(Mutation mutation) {
+    Entry.Builder builder = Entry.newBuilder();
     mutation.forNamespace().ifPresent(builder::setNamespaceName);
     mutation.forTable().ifPresent(builder::setTableName);
     builder.setPartitionKey(encodeKey(mutation.getPartitionKey()));
     mutation.getClusteringKey().ifPresent(ck -> builder.setClusteringKey(encodeKey(ck)));
-    if (includeColumns && mutation instanceof Put) {
-      for (Column<?> column : ((Put) mutation).getColumns().values()) {
-        if (tableMetadata != null
-            && ConsensusCommitUtils.isTransactionMetaColumn(column.getName(), tableMetadata)) {
-          // Skip ConsensusCommit-internal columns (tx_state, tx_version, before_*, etc.) that the
-          // snapshot may have injected. Only user columns belong in the persisted write set.
-          continue;
-        }
-        builder.addColumns(encodeColumn(column));
-      }
-    }
     return builder.build();
   }
 
@@ -301,20 +261,13 @@ final class WriteSetEncoder {
    * writes are skipped. {@code child_id} is not used in this path (it is reserved for the existing
    * group-commit grouping).
    *
-   * <p>When {@code includeColumns} is true, each {@code WRITE} entry's non-key columns are encoded
-   * too; when false, only primary keys are persisted (the default commit-state convention). The
-   * supplied {@link TwoPhaseCommitParticipant.WriteSetEntry}s already exclude
-   * ConsensusCommit-internal columns, so no meta-column filtering is needed here.
-   *
    * @param writeSetsByParticipant the write set produced by each participant, keyed by participant
    *     ID
-   * @param includeColumns whether to include non-key column values for {@code WRITE} entries
    * @return the encoded {@link WriteSet}
    */
   static WriteSet encodeFromWriteSetEntries(
-      Map<String, List<TwoPhaseCommitParticipant.WriteSetEntry>> writeSetsByParticipant,
-      boolean includeColumns) {
-    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(SCHEMA_VERSION);
+      Map<String, List<TwoPhaseCommitParticipant.WriteSetEntry>> writeSetsByParticipant) {
+    EntryGroups.Builder entryGroups = EntryGroups.newBuilder();
     for (Map.Entry<String, List<TwoPhaseCommitParticipant.WriteSetEntry>> e :
         writeSetsByParticipant.entrySet()) {
       String participantId = checkNotNull(e.getKey());
@@ -324,33 +277,25 @@ final class WriteSetEncoder {
       }
       EntryGroup.Builder groupBuilder = EntryGroup.newBuilder();
       for (TwoPhaseCommitParticipant.WriteSetEntry entry : entries) {
-        groupBuilder.addEntries(encodeWriteSetEntry(entry, participantId, includeColumns));
+        groupBuilder.addEntries(encodeWriteSetEntry(entry, participantId));
       }
-      builder.addEntryGroups(groupBuilder.build());
+      entryGroups.addEntryGroups(groupBuilder.build());
     }
-    return builder.build();
+    return WriteSet.newBuilder()
+        .setSchemaVersion(SCHEMA_VERSION)
+        .setEntryGroups(entryGroups)
+        .build();
   }
 
   private static Entry encodeWriteSetEntry(
-      TwoPhaseCommitParticipant.WriteSetEntry entry, String participantId, boolean includeColumns) {
+      TwoPhaseCommitParticipant.WriteSetEntry entry, String participantId) {
     Entry.Builder builder =
         Entry.newBuilder()
-            .setEntryType(
-                entry.getType() == TwoPhaseCommitParticipant.WriteSetEntry.Type.WRITE
-                    ? Entry.EntryType.ENTRY_TYPE_WRITE
-                    : Entry.EntryType.ENTRY_TYPE_DELETE)
             .setNamespaceName(entry.getNamespaceName())
             .setTableName(entry.getTableName())
             .setPartitionKey(encodeKey(entry.getPartitionKey()))
             .setParticipantId(participantId);
     entry.getClusteringKey().ifPresent(ck -> builder.setClusteringKey(encodeKey(ck)));
-    if (includeColumns && entry.getType() == TwoPhaseCommitParticipant.WriteSetEntry.Type.WRITE) {
-      // The entry's columns are already free of ConsensusCommit-internal columns (filtered when the
-      // participant built the write set), so encode them as-is.
-      for (Column<?> column : entry.getColumns()) {
-        builder.addColumns(encodeColumn(column));
-      }
-    }
     return builder.build();
   }
 
@@ -369,16 +314,19 @@ final class WriteSetEncoder {
    * @return the merged parent-row {@link WriteSet}
    */
   static WriteSet mergeChildWriteSets(List<ChildWriteSet> children) {
-    WriteSet.Builder builder = WriteSet.newBuilder().setSchemaVersion(SCHEMA_VERSION);
+    EntryGroups.Builder entryGroups = EntryGroups.newBuilder();
     for (ChildWriteSet child : children) {
       if (child.writeSet == null) {
         continue;
       }
-      for (EntryGroup entryGroup : child.writeSet.getEntryGroupsList()) {
-        builder.addEntryGroups(entryGroup.toBuilder().setChildId(child.childId).build());
+      for (EntryGroup entryGroup : child.writeSet.getEntryGroups().getEntryGroupsList()) {
+        entryGroups.addEntryGroups(entryGroup.toBuilder().setChildId(child.childId).build());
       }
     }
-    return builder.build();
+    return WriteSet.newBuilder()
+        .setSchemaVersion(SCHEMA_VERSION)
+        .setEntryGroups(entryGroups)
+        .build();
   }
 
   /**
