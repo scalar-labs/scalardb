@@ -16,16 +16,16 @@ import javax.annotation.Nullable;
  * spanning multiple participants; {@link TwoPhaseCommitParticipant} is the other role.
  *
  * <p>This is an internal interface for components that orchestrate two-phase commit across multiple
- * participants. Application code does not invoke it directly; callers reach it only through the
- * components that drive the protocol on its behalf. Breaking changes can and will be introduced;
- * users should not depend on it. The primitives are designed with the Consensus Commit protocol in
- * mind.
+ * participants. It is not part of the application-facing transaction API: application code should
+ * drive transactions through that API and leave this role to the components that orchestrate the
+ * protocol on its behalf. Breaking changes can and will be introduced; users should not depend on
+ * it. The primitives are designed with the Consensus Commit protocol in mind.
  *
  * <p>The two roles together make up a multi-participant transaction:
  *
  * <ul>
  *   <li>This {@link TwoPhaseCommitCoordinator} drives the protocol. It owns the per-transaction
- *       state (the joined participants, the canonical transaction ID, and any coordinator-side
+ *       state (the enlisted participants, the canonical transaction ID, and any coordinator-side
  *       resources) and orchestrates the prepare/validate/commit/rollback steps across participants.
  *       Writing the durable state record on the Coordinator table is an internal detail of this
  *       role, not a separate method on this interface.
@@ -55,9 +55,9 @@ import javax.annotation.Nullable;
  *
  * <p>Every transaction begun with {@link #begin} must be terminated with either {@link #commit} or
  * {@link #rollback}. This holds on every path out of the flow above, including a failed {@link
- * #enlist}: the failure does not terminate the transaction — the Coordinator's context and
- * any already-joined participants stay alive — so a caller that gives up must still roll it back.
- * An unterminated transaction leaves the Coordinator's per-transaction state in place until the
+ * #enlist}: the failure does not terminate the transaction — the Coordinator's context and any
+ * already-enlisted participants stay alive — so a caller that gives up must still roll it back. An
+ * unterminated transaction leaves the Coordinator's per-transaction state in place until the
  * implementation's own reaping reclaims it, if it has any.
  *
  * <p>Lazy recovery on the participant side accesses the Coordinator table directly, not through
@@ -86,8 +86,7 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    * <p>If {@code readOnly} is {@code true}, the implementation may optimize for a transaction that
    * will not write.
    *
-   * <p>The transaction begins with no participants; join them afterward via {@link
-   * #enlist}.
+   * <p>The transaction begins with no participants; enlist them afterward via {@link #enlist}.
    *
    * @param transactionId the caller-supplied transaction ID, or {@code null} to have the
    *     implementation generate one
@@ -104,9 +103,9 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
       throws TransactionNotFoundException, TransactionException;
 
   /**
-   * Joins a participant to the transaction.
+   * Enlists a participant in the transaction.
    *
-   * <p>Use this to join each participant to the transaction after {@link #begin}.
+   * <p>Use this to enlist each participant in the transaction after {@link #begin}.
    *
    * <p>The Coordinator adds the participant to its per-transaction state and internally invokes
    * {@link TwoPhaseCommitParticipant#join} on it—forwarding the {@code readOnly} flag and {@code
@@ -114,22 +113,22 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    * the transaction. The {@link TwoPhaseCommitParticipant#join} method is not intended to be
    * invoked directly by callers.
    *
-   * <p>Joining is idempotent per participant ID: if a participant with the same {@link
-   * TwoPhaseCommitParticipant#getId()} is already joined to the transaction, this call is a no-op
+   * <p>Enlisting is idempotent per participant ID: if a participant with the same {@link
+   * TwoPhaseCommitParticipant#getId()} is already enlisted in the transaction, this call is a no-op
    * (its {@link TwoPhaseCommitParticipant#join} is not invoked again).
    *
    * @param transactionId the canonical transaction ID returned by {@link #begin}
-   * @param participant the participant to join
-   * @throws TransactionNotFoundException if joining the participant fails due to transient faults.
-   *     You can retry the transaction from the beginning
-   * @throws TransactionException if joining the participant fails due to transient or nontransient
-   *     faults
+   * @param participant the participant to enlist
+   * @throws TransactionNotFoundException if enlisting the participant fails due to transient
+   *     faults. You can retry the transaction from the beginning
+   * @throws TransactionException if enlisting the participant fails due to transient or
+   *     nontransient faults
    */
   void enlist(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionNotFoundException, TransactionException;
 
   /**
-   * Drives the commit protocol across the joined participants.
+   * Drives the commit protocol across the enlisted participants.
    *
    * <p>The flow runs a prepare phase ({@link TwoPhaseCommitParticipant#prepareRecords}), a
    * validation phase ({@link TwoPhaseCommitParticipant#validateRecords}), then—once the outcome is
@@ -140,7 +139,7 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    *
    * <p>The prepare and validate phases are internal to this method, so their failures are not
    * surfaced as {@link PreparationException} or {@link ValidationException}. On such a failure the
-   * Coordinator drives the rollback internally—rolling back the PREPARED records on every joined
+   * Coordinator drives the rollback internally—rolling back the PREPARED records on every enlisted
    * participant, not only the one whose prepare or validate failed—and then reports the outcome as
    * a commit-level exception: a conflict (a retriable failure) as {@link CommitConflictException},
    * any other failure as {@link CommitException}. If the outcome cannot be durably recorded, {@link
@@ -162,19 +161,19 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    *     retry or roll back; determine the outcome (for example, by checking the coordinator state,
    *     which lazy recovery also relies on) before deciding how to proceed
    * @throws TransactionNotFoundException if no transaction with this ID is known to this
-   *     Coordinator (never begun, or already finished by a prior commit/rollback), or if a joined
-   *     participant no longer knows the transaction while preparing or validating (its local
-   *     context is gone, e.g. it expired). You can retry the transaction from the beginning
+   *     Coordinator (never begun, or already finished by a prior commit/rollback), or if an
+   *     enlisted participant no longer knows the transaction while preparing or validating (its
+   *     local context is gone, e.g. it expired). You can retry the transaction from the beginning
    */
   void commit(String transactionId)
       throws CommitConflictException, CommitException, UnknownTransactionStatusException,
           TransactionNotFoundException;
 
   /**
-   * Drives the rollback protocol across the joined participants.
+   * Drives the rollback protocol across the enlisted participants.
    *
    * <p>Drives only the work needed to undo whatever may have been prepared, via {@link
-   * TwoPhaseCommitParticipant#rollbackRecords} on each joined participant.
+   * TwoPhaseCommitParticipant#rollbackRecords} on each enlisted participant.
    *
    * <p>Unlike {@link #commit}, an unknown transaction ID (never begun, or already finished) is a
    * no-op rather than an error: no participants are contacted, and rolling back a transaction the

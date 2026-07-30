@@ -69,7 +69,7 @@ class TwoPhaseCommitBackedGlobalTransactionManagerTest {
   }
 
   @Test
-  void beginBranch_WithEmptyAttributes_ShouldJoinParticipantAndReturnPlainBranchTransaction()
+  void beginBranch_WithEmptyAttributes_ShouldEnlistParticipantAndReturnPlainBranchTransaction()
       throws Exception {
     BranchTransaction branch = manager().beginBranch(TX_ID, Collections.emptyMap());
 
@@ -89,10 +89,10 @@ class TwoPhaseCommitBackedGlobalTransactionManagerTest {
   }
 
   @Test
-  void beginBranch_WhenJoinParticipantFails_ShouldPropagateTransactionException() throws Exception {
+  void beginBranch_WhenEnlistFails_ShouldPropagateTransactionException() throws Exception {
     // A registration failure other than not-found reaches the caller as-is, not masked as
     // not-found: beginBranch is the surface where non-not-found registration failures propagate.
-    TransactionException exception = new TransactionException("join failed", TX_ID);
+    TransactionException exception = new TransactionException("enlist failed", TX_ID);
     doThrow(exception).when(coordinator).enlist(TX_ID, participant);
 
     assertThatThrownBy(() -> manager().beginBranch(TX_ID, Collections.emptyMap()))

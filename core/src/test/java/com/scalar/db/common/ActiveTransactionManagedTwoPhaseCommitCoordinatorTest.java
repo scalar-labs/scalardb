@@ -83,8 +83,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
   @Test
   void sweep_WhenExpiredWithoutParticipants_ShouldReap() throws Exception {
-    // With no participant joined there is nothing to probe: the coordinator's expiration time
-    // is authoritative (e.g. a transaction begun but never joined to any participant).
+    // With no participant enlisted there is nothing to probe: the coordinator's expiration time
+    // is authoritative (e.g. a transaction begun with no participant enlisted).
     coordinator.begin(null, false, Collections.emptyMap());
     forceExpire(TX);
 
@@ -281,8 +281,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void sweep_WhenJoinLandsDuringProbe_ShouldNotReap() throws Exception {
-    // The reap-vs-join race: a join lands while the probe is in flight. It pushes
+  void sweep_WhenEnlistLandsDuringProbe_ShouldNotReap() throws Exception {
+    // The reap-vs-enlist race: an enlist lands while the probe is in flight. It pushes
     // the expiration time out under the entry monitor before delegating, so the reap re-check
     // must back off even though every probed participant answered absent.
     TwoPhaseCommitParticipant late = mock(TwoPhaseCommitParticipant.class);
@@ -305,28 +305,28 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void sweep_WhenFirstJoinOutlivesExpiration_ShouldProbeNotReap() throws Exception {
-    // A first join that outlives the expiration period. The participant has joined - the client
-    // legitimately owns the transaction on it - but the delegated join call has not returned yet,
-    // so the participant would be invisible to the sweep if it were published only after the join.
-    // It is published before the join instead, so the sweep probes the live participant and keeps
-    // the transaction, rather than taking the no-participants fast path and reaping it on the wall
-    // clock alone.
+  void sweep_WhenFirstEnlistOutlivesExpiration_ShouldProbeNotReap() throws Exception {
+    // A first enlist that outlives the expiration period. The participant has joined - the client
+    // legitimately owns the transaction on it - but the delegated enlist call has not returned yet,
+    // so the participant would be invisible to the sweep if it were published only after the
+    // enlist. It is published before the enlist instead, so the sweep probes the live participant
+    // and keeps the transaction, rather than taking the no-participants fast path and reaping it on
+    // the wall clock alone.
     stubHeld(participant, true);
     coordinator.begin(null, false, Collections.emptyMap());
 
-    CountDownLatch joinStarted = new CountDownLatch(1);
-    CountDownLatch releaseJoin = new CountDownLatch(1);
+    CountDownLatch enlistStarted = new CountDownLatch(1);
+    CountDownLatch releaseEnlist = new CountDownLatch(1);
     doAnswer(
             invocation -> {
-              joinStarted.countDown();
-              releaseJoin.await(5, TimeUnit.SECONDS);
+              enlistStarted.countDown();
+              releaseEnlist.await(5, TimeUnit.SECONDS);
               return null;
             })
         .when(delegate)
         .enlist(eq(TX), any());
 
-    Thread joining =
+    Thread enlisting =
         new Thread(
             () -> {
               try {
@@ -335,17 +335,17 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
                 throw new AssertionError(e);
               }
             });
-    joining.start();
+    enlisting.start();
     try {
-      // Inside the join: the participant is already published, but the join has not returned.
-      assertThat(joinStarted.await(5, TimeUnit.SECONDS)).isTrue();
+      // Inside the enlist: the participant is already published, but the enlist has not returned.
+      assertThat(enlistStarted.await(5, TimeUnit.SECONDS)).isTrue();
 
-      // The join outlives the expiration period.
+      // The enlist outlives the expiration period.
       forceExpire(TX);
       coordinator.sweep();
     } finally {
-      releaseJoin.countDown();
-      joining.join(TimeUnit.SECONDS.toMillis(5));
+      releaseEnlist.countDown();
+      enlisting.join(TimeUnit.SECONDS.toMillis(5));
     }
 
     // The sweep probed the live participant and kept the transaction; it did not reap.
@@ -366,7 +366,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
   @Test
   void enlist_ShouldExtendExpiration() throws Exception {
-    // A join is coordinator-observable activity: it pushes the expiration time a full
+    // An enlist is coordinator-observable activity: it pushes the expiration time a full
     // period out, so the next pass must not probe.
     coordinator.begin(null, false, Collections.emptyMap());
     coordinator.enlist(TX, participant);
@@ -383,7 +383,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   @Test
   void enlist_WhenNotTracked_ShouldDelegateWithoutTracking() throws Exception {
     // No tracked entry means the transaction already hit a terminal step or was reaped - the
-    // wrapped coordinator is authoritative and rejects the join (its context is released
+    // wrapped coordinator is authoritative and rejects the enlist (its context is released
     // on those paths). Nothing may be recreated on this path.
     doThrow(new TransactionNotFoundException("no context", TX))
         .when(delegate)
@@ -400,14 +400,13 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void enlist_WhenDelegateThrows_ShouldStillTrackButReapWhenProbeAnswersAbsent()
-      throws Exception {
-    // The participant is published before the join is delegated, so a sweep firing while a slow
-    // join is in flight probes it instead of reaping on the wall clock alone. The consequence is
-    // that a failed join leaves the participant tracked - accepted, and benign: a participant that
-    // never joined answers false to a probe, so the reap still proceeds, and a failed join does not
-    // keep a dead transaction alive forever. (Only an unreachable participant pins the entry, which
-    // is the fail-open retention used everywhere else.)
+  void enlist_WhenDelegateThrows_ShouldStillTrackButReapWhenProbeAnswersAbsent() throws Exception {
+    // The participant is published before the enlist is delegated, so a sweep firing while a slow
+    // enlist is in flight probes it instead of reaping on the wall clock alone. The consequence is
+    // that a failed enlist leaves the participant tracked - accepted, and benign: a participant
+    // that never joined answers false to a probe, so the reap still proceeds, and a failed enlist
+    // does not keep a dead transaction alive forever. (Only an unreachable participant pins the
+    // entry, which is the fail-open retention used everywhere else.)
     coordinator.begin(null, false, Collections.emptyMap());
     doThrow(new TransactionException("boom", TX)).when(delegate).enlist(TX, participant);
 
@@ -430,8 +429,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
   @Test
   void enlist_WithDuplicateParticipantId_ShouldKeepFirstInstance() throws Exception {
-    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent join:
-    // the wrapped side joined the first instance, so that is the instance the probe must use.
+    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent enlist:
+    // the wrapped side enlisted the first instance, so that is the instance the probe must use.
     TwoPhaseCommitParticipant second = mock(TwoPhaseCommitParticipant.class);
     when(second.getId()).thenReturn("participant-1");
     stubHeld(participant, false);

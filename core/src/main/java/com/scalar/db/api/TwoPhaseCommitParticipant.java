@@ -85,8 +85,8 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
   /**
    * Joins an existing transaction, establishing a local context on this participant.
    *
-   * <p>Invoked by {@link TwoPhaseCommitCoordinator#enlist}; not intended to be invoked
-   * directly by other callers. {@code transactionId} must be the canonical ID returned by {@link
+   * <p>Invoked by {@link TwoPhaseCommitCoordinator#enlist}; not intended to be invoked directly by
+   * other callers. {@code transactionId} must be the canonical ID returned by {@link
    * TwoPhaseCommitCoordinator#begin}.
    *
    * <p>If {@code readOnly} is {@code true}, the implementation may skip preparation and commit
