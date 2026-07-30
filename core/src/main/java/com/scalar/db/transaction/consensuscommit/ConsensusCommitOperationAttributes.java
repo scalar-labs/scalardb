@@ -10,11 +10,25 @@ public final class ConsensusCommitOperationAttributes {
 
   private static final String OPERATION_ATTRIBUTE_PREFIX = "cc-";
 
-  /** The operation attribute key for whether implicit pre-read is enabled. */
+  /**
+   * The operation attribute key for whether implicit pre-read is enabled.
+   *
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details with no external need to set or
+   *     introspect them.
+   */
+  @Deprecated
   public static final String IMPLICIT_PRE_READ_ENABLED =
       OPERATION_ATTRIBUTE_PREFIX + "implicit-pre-read-enabled";
 
-  /** The operation attribute key for whether insert mode is enabled. */
+  /**
+   * The operation attribute key for whether insert mode is enabled.
+   *
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details with no external need to set or
+   *     introspect them.
+   */
+  @Deprecated
   public static final String INSERT_MODE_ENABLED =
       OPERATION_ATTRIBUTE_PREFIX + "insert-mode-enabled";
 
@@ -29,7 +43,11 @@ public final class ConsensusCommitOperationAttributes {
    *
    * @param put the original {@code Put} operation
    * @return a new {@code Put} with implicit pre-read enabled
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static Put enableImplicitPreRead(Put put) {
     return Put.newBuilder(put).attribute(IMPLICIT_PRE_READ_ENABLED, "true").build();
   }
@@ -38,7 +56,11 @@ public final class ConsensusCommitOperationAttributes {
    * Enables implicit pre-read in the operation attributes.
    *
    * @param attributes the operation attributes
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static void enableImplicitPreRead(Map<String, String> attributes) {
     attributes.put(IMPLICIT_PRE_READ_ENABLED, "true");
   }
@@ -48,7 +70,11 @@ public final class ConsensusCommitOperationAttributes {
    *
    * @param put the original {@code Put} operation
    * @return a new {@code Put} with implicit pre-read disabled
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static Put disableImplicitPreRead(Put put) {
     return Put.newBuilder(put).clearAttribute(IMPLICIT_PRE_READ_ENABLED).build();
   }
@@ -57,7 +83,11 @@ public final class ConsensusCommitOperationAttributes {
    * Disables implicit pre-read in the operation attributes.
    *
    * @param attributes the operation attributes
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static void disableImplicitPreRead(Map<String, String> attributes) {
     attributes.remove(IMPLICIT_PRE_READ_ENABLED);
   }
@@ -67,7 +97,11 @@ public final class ConsensusCommitOperationAttributes {
    *
    * @param put the original {@code Put} operation
    * @return a new {@code Put} with insert mode enabled
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static Put enableInsertMode(Put put) {
     return Put.newBuilder(put).attribute(INSERT_MODE_ENABLED, "true").build();
   }
@@ -76,7 +110,11 @@ public final class ConsensusCommitOperationAttributes {
    * Enables insert mode in the operation attributes.
    *
    * @param attributes the operation attributes
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static void enableInsertMode(Map<String, String> attributes) {
     attributes.put(INSERT_MODE_ENABLED, "true");
   }
@@ -86,7 +124,11 @@ public final class ConsensusCommitOperationAttributes {
    *
    * @param put the original {@code Put} operation
    * @return a new {@code Put} with insert mode disabled
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static Put disableInsertMode(Put put) {
     return Put.newBuilder(put).clearAttribute(INSERT_MODE_ENABLED).build();
   }
@@ -95,7 +137,11 @@ public final class ConsensusCommitOperationAttributes {
    * Disables insert mode in the operation attributes.
    *
    * @param attributes the operation attributes
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
    */
+  @Deprecated
   public static void disableInsertMode(Map<String, String> attributes) {
     attributes.remove(INSERT_MODE_ENABLED);
   }
@@ -105,7 +151,11 @@ public final class ConsensusCommitOperationAttributes {
    *
    * @param put the {@code Put} operation
    * @return {@code true} if implicit pre-read is enabled, {@code false} otherwise
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details with no external need to set or
+   *     introspect them.
    */
+  @Deprecated
   public static boolean isImplicitPreReadEnabled(Put put) {
     Optional<String> attribute = put.getAttribute(IMPLICIT_PRE_READ_ENABLED);
     return attribute.isPresent() && "true".equalsIgnoreCase(attribute.get());
@@ -116,7 +166,11 @@ public final class ConsensusCommitOperationAttributes {
    *
    * @param put the {@code Put} operation
    * @return {@code true} if insert mode is enabled, {@code false} otherwise
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details with no external need to set or
+   *     introspect them.
    */
+  @Deprecated
   public static boolean isInsertModeEnabled(Put put) {
     Optional<String> attribute = put.getAttribute(INSERT_MODE_ENABLED);
     return attribute.isPresent() && "true".equalsIgnoreCase(attribute.get());
