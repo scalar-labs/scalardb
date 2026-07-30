@@ -47,6 +47,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+@Deprecated
 @ThreadSafe
 public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransactionManager {
 
@@ -345,8 +347,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     };
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     executeTransaction(
@@ -357,8 +357,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
     executeTransaction(
@@ -409,8 +407,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
     executeTransaction(

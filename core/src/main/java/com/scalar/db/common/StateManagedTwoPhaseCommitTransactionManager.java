@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
+/** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+@Deprecated
 @ThreadSafe
 public class StateManagedTwoPhaseCommitTransactionManager
     extends DecoratedTwoPhaseCommitTransactionManager {
@@ -43,7 +45,10 @@ public class StateManagedTwoPhaseCommitTransactionManager
    * This class is to unify the call sequence of the transaction object. It doesn't care about the
    * potential inconsistency between the status field on JVM memory and the underlying persistent
    * layer.
+   *
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   @VisibleForTesting
   static class StateManagedTransaction extends DecoratedTwoPhaseCommitTransaction {
 
@@ -84,16 +89,12 @@ public class StateManagedTwoPhaseCommitTransactionManager
       return super.getScanner(scan);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-    @Deprecated
     @Override
     public void put(Put put) throws CrudException {
       checkIfActive();
       super.put(put);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-    @Deprecated
     @Override
     public void put(List<Put> puts) throws CrudException {
       checkIfActive();
@@ -106,8 +107,6 @@ public class StateManagedTwoPhaseCommitTransactionManager
       super.delete(delete);
     }
 
-    /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-    @Deprecated
     @Override
     public void delete(List<Delete> deletes) throws CrudException {
       checkIfActive();

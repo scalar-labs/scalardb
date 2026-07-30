@@ -33,6 +33,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+@Deprecated
 @NotThreadSafe
 public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private static final Logger logger = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
@@ -99,15 +101,11 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     return crud.getScanner(scan, context);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(Put put) throws CrudException {
     putInternal(put);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
     checkArgument(!puts.isEmpty());
@@ -127,8 +125,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     deleteInternal(delete);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
     checkArgument(!deletes.isEmpty());

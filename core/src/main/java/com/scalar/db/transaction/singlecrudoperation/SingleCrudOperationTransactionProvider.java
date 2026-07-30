@@ -28,6 +28,9 @@ public class SingleCrudOperationTransactionProvider implements DistributedTransa
     return new SingleCrudOperationTransactionAdmin(config);
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Nullable
   @Override
   public TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(

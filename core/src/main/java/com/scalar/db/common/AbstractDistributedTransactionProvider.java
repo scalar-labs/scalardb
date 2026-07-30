@@ -44,6 +44,8 @@ public abstract class AbstractDistributedTransactionProvider
   protected abstract DistributedTransactionManager createRawDistributedTransactionManager(
       DatabaseConfig config);
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Nullable
   @Override
   public final TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
@@ -70,6 +72,8 @@ public abstract class AbstractDistributedTransactionProvider
     return transactionManager;
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Nullable
   protected abstract TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
       DatabaseConfig config);
