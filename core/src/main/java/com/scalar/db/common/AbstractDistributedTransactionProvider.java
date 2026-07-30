@@ -2,6 +2,7 @@ package com.scalar.db.common;
 
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
+import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
@@ -117,4 +118,10 @@ public abstract class AbstractDistributedTransactionProvider
 
   protected abstract TwoPhaseCommitParticipant createRawTwoPhaseCommitParticipant(
       DatabaseConfig config);
+
+  @Override
+  public GlobalTransactionManager createGlobalTransactionManager(DatabaseConfig config) {
+    return new TwoPhaseCommitBackedGlobalTransactionManager(
+        createTwoPhaseCommitCoordinator(config), createTwoPhaseCommitParticipant(config));
+  }
 }
