@@ -29,18 +29,15 @@ public abstract class DecoratedTwoPhaseCommitCoordinator implements TwoPhaseComm
 
   @Override
   public String begin(
-      @Nullable String transactionId,
-      boolean readOnly,
-      Map<String, String> attributes,
-      @Nullable TwoPhaseCommitParticipant participant)
+      @Nullable String transactionId, boolean readOnly, Map<String, String> attributes)
       throws TransactionException {
-    return coordinator.begin(transactionId, readOnly, attributes, participant);
+    return coordinator.begin(transactionId, readOnly, attributes);
   }
 
   @Override
-  public void registerParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  public void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
-    coordinator.registerParticipant(transactionId, participant);
+    coordinator.joinParticipant(transactionId, participant);
   }
 
   @Override
@@ -55,7 +52,7 @@ public abstract class DecoratedTwoPhaseCommitCoordinator implements TwoPhaseComm
   }
 
   @Override
-  public void releaseTransactionContext(String transactionId) throws TransactionException {
+  public void releaseTransactionContext(String transactionId) {
     coordinator.releaseTransactionContext(transactionId);
   }
 

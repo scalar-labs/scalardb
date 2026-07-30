@@ -303,8 +303,7 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
     participant.commitRecords(TX, 1L);
 
     // The captured attributes are dropped at prepareRecords, which always precedes commitRecords,
-    // so
-    // commitRecords itself is pure forwarding with no attribute handling.
+    // so commitRecords itself is pure forwarding with no attribute handling.
     verify(delegate).commitRecords(TX, 1L);
   }
 
@@ -375,8 +374,7 @@ class AttributePropagatingTwoPhaseCommitParticipantTest {
 
     // prepareRecords ends the CRUD phase, so the captured attributes are dropped here. This is the
     // terminal step for a write-less transaction, whose commitRecords the Coordinator skips: a
-    // later
-    // op for the same id merges nothing.
+    // later op for the same id merges nothing.
     participant.get(TX, get());
     ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
     verify(delegate).get(eq(TX), captor.capture());
