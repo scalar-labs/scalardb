@@ -415,12 +415,8 @@ public interface DistributedTransactionManager
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
    *     transaction ID is not found. You can retry the transaction from the beginning
-   * @throws TransactionException if the transaction fails to join due to transient or nontransient
-   *     faults. You can try retrying the transaction from the beginning, but you may not be able to
-   *     join the transaction due to nontransient faults
    */
-  default DistributedTransaction join(String txId)
-      throws TransactionNotFoundException, TransactionException {
+  default DistributedTransaction join(String txId) throws TransactionNotFoundException {
     return resume(txId);
   }
 
