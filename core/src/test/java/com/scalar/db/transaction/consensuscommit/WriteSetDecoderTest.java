@@ -32,7 +32,6 @@ class WriteSetDecoderTest {
 
   private TransactionTableMetadataManager tableMetadataManager;
   private ParallelExecutor parallelExecutor;
-  private WriteSetEncoder writeSetEncoder;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -54,7 +53,6 @@ class WriteSetDecoderTest {
         .thenReturn(transactionTableMetadata);
 
     parallelExecutor = new ParallelExecutor(mock(ConsensusCommitConfig.class));
-    writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
   }
 
   private Snapshot newSnapshot() {
@@ -82,7 +80,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    EntryGroup group = writeSetEncoder.encodeEntryGroup(snapshot, null, false);
+    EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);
     return group.getEntries(0);
   }
 
@@ -184,7 +182,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, false).getEntries(0);
+    Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
     Get get = WriteSetDecoder.toGet(entry);
@@ -210,7 +208,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, false).getEntries(0);
+    Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
     Get get = WriteSetDecoder.toGet(entry);
@@ -247,7 +245,7 @@ class WriteSetDecoderTest {
             .textValue("v", "val")
             .build();
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Entry entry = writeSetEncoder.encodeEntryGroup(snapshot, null, false).getEntries(0);
+    Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
     Get get = WriteSetDecoder.toGet(entry);
@@ -265,7 +263,6 @@ class WriteSetDecoderTest {
     // ScalarDB primary keys are non-nullable.
     Entry entry =
         Entry.newBuilder()
-            .setEntryType(Entry.EntryType.ENTRY_TYPE_WRITE)
             .setNamespaceName(NAMESPACE)
             .setTableName(TABLE)
             .setPartitionKey(
@@ -285,7 +282,6 @@ class WriteSetDecoderTest {
     // Arrange — a proto Entry whose partition key Column has no value oneof set (VALUE_NOT_SET).
     Entry entry =
         Entry.newBuilder()
-            .setEntryType(Entry.EntryType.ENTRY_TYPE_WRITE)
             .setNamespaceName(NAMESPACE)
             .setTableName(TABLE)
             .setPartitionKey(

@@ -44,8 +44,8 @@ import org.slf4j.LoggerFactory;
  * TwoPhaseConsensusCommit}) can drive individual commit phases without depending on the specialized
  * handlers directly. {@code prepareRecords}, {@code commitRecords}, {@code rollbackRecords}, {@code
  * commitStateWithoutWriteSet}, and {@code abortStateWithoutWriteSet} are thin pass-throughs. {@code
- * commitState} and {@code abortState} are not: they encode the transaction's write set via the
- * orchestrator-owned {@link WriteSetEncoder} before delegating to the Coordinator-side handler.
+ * commitState} and {@code abortState} are not: they encode the transaction's write set via {@link
+ * WriteSetEncoder} before delegating to the Coordinator-side handler.
  */
 @ThreadSafe
 public class CommitHandler {
@@ -53,7 +53,6 @@ public class CommitHandler {
 
   private final CoordinatorCommitHandler coordinatorCommitHandler;
   private final ParticipantCommitHandler participantCommitHandler;
-  protected final WriteSetEncoder writeSetEncoder;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
   protected final boolean coordinatorWriteSetLoggingEnabled;
 
@@ -71,7 +70,6 @@ public class CommitHandler {
       boolean onePhaseCommitEnabled) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
     this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
-    this.writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     this.coordinatorCommitHandler = new CoordinatorCommitHandler(coordinator);
     this.participantCommitHandler =
         new ParticipantCommitHandler(
@@ -90,12 +88,10 @@ public class CommitHandler {
   protected CommitHandler(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean coordinatorWriteSetLoggingEnabled,
-      WriteSetEncoder writeSetEncoder,
       CoordinatorCommitHandler coordinatorCommitHandler,
       ParticipantCommitHandler participantCommitHandler) {
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
     this.coordinatorWriteSetLoggingEnabled = coordinatorWriteSetLoggingEnabled;
-    this.writeSetEncoder = checkNotNull(writeSetEncoder);
     this.coordinatorCommitHandler = checkNotNull(coordinatorCommitHandler);
     this.participantCommitHandler = checkNotNull(participantCommitHandler);
   }
@@ -320,7 +316,7 @@ public class CommitHandler {
   @Nullable
   private WriteSet encodeWriteSetIfLoggingEnabled(TransactionContext context) {
     return coordinatorWriteSetLoggingEnabled
-        ? writeSetEncoder.encodeSingleGroupWriteSet(context, false)
+        ? WriteSetEncoder.encodeSingleGroupWriteSet(context)
         : null;
   }
 

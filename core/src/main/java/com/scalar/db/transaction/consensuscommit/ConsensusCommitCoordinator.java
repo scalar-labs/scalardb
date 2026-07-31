@@ -489,8 +489,8 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
     coordinatorCommitHandler.abortState(transactionId, writeSet);
   }
 
-  // Keys only (includeColumns=false), matching the KEYS_ONLY detail requested at prepareRecords:
-  // the Coordinator persists which records the transaction touched, not their column values.
+  // Matches the KEYS_ONLY detail requested at prepareRecords: the Coordinator persists which
+  // records the transaction touched, not their column values.
   //
   // The tx_write_set column is part of the Coordinator schema only when the opt-in
   // `coordinator.write_set_logging.enabled` config is on. When it is off, skip encoding entirely so
@@ -504,7 +504,7 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
   private WriteSet encodeWriteSetIfLoggingEnabled(
       Map<String, List<WriteSetEntry>> writeSetsByParticipant) {
     return coordinatorWriteSetLoggingEnabled
-        ? WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant, false)
+        ? WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant)
         : null;
   }
 

@@ -60,6 +60,7 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroups;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.time.Duration;
@@ -10772,7 +10773,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     WriteSet writeSet = state.get().getWriteSet().get();
     assertThat(writeSet.getSchemaVersion()).isEqualTo(1);
     int totalEntries =
-        writeSet.getEntryGroupsList().stream().mapToInt(g -> g.getEntriesCount()).sum();
+        writeSet.getEntryGroups().getEntryGroupsList().stream()
+            .mapToInt(g -> g.getEntriesCount())
+            .sum();
     assertThat(totalEntries).isEqualTo(2);
   }
 
@@ -11004,10 +11007,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     WriteSet writeSet =
         WriteSet.newBuilder()
             .setSchemaVersion(1)
-            .addEntryGroups(
-                EntryGroup.newBuilder()
-                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0))
-                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 1)))
+            .setEntryGroups(
+                EntryGroups.newBuilder()
+                    .addEntryGroups(
+                        EntryGroup.newBuilder()
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 0))
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 1))))
             .build();
     coordinator.putState(
         new CoordinatorStateAccessor.State(
@@ -11093,14 +11098,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     WriteSet writeSet =
         WriteSet.newBuilder()
             .setSchemaVersion(1)
-            .addEntryGroups(
-                EntryGroup.newBuilder()
-                    .setChildId(ANY_ID_1)
-                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0)))
-            .addEntryGroups(
-                EntryGroup.newBuilder()
-                    .setChildId(ANY_ID_2)
-                    .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 1, 0)))
+            .setEntryGroups(
+                EntryGroups.newBuilder()
+                    .addEntryGroups(
+                        EntryGroup.newBuilder()
+                            .setChildId(ANY_ID_1)
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 0)))
+                    .addEntryGroups(
+                        EntryGroup.newBuilder()
+                            .setChildId(ANY_ID_2)
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 1, 0))))
             .build();
     CoordinatorGroupCommitKeyManipulator km = new CoordinatorGroupCommitKeyManipulator();
     List<String> childIds =
@@ -11195,10 +11202,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     originalStorage.put(put);
   }
 
-  private static Entry intKeyWriteEntry(
+  private static Entry intKeyEntry(
       String namespace, String table, int partitionKeyValue, int clusteringKeyValue) {
     return Entry.newBuilder()
-        .setEntryType(Entry.EntryType.ENTRY_TYPE_WRITE)
         .setNamespaceName(namespace)
         .setTableName(table)
         .setPartitionKey(

@@ -11,7 +11,6 @@ import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import java.util.List;
 import java.util.Map;
@@ -285,12 +284,10 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
    * sets across all participants.
    *
    * <p>{@code detailLevel} controls only how much of each record the returned {@link
-   * WriteSetEntry}s carry (see {@link WriteSetDetailLevel}): under {@link
-   * WriteSetDetailLevel#KEYS_ONLY} every entry's {@link WriteSetEntry#getColumns()} must be empty,
-   * while under {@link WriteSetDetailLevel#FULL} every {@link WriteSetEntry.Type#WRITE} entry
-   * carries the non-key columns it writes. It never changes which entries are returned: the entries
-   * and their keys are identical at either level, so an empty write set means a write-less
-   * participant regardless of the requested detail.
+   * WriteSetEntry}s carry (see {@link WriteSetDetailLevel}). It never changes which entries are
+   * returned: the entries and their keys are identical at every level, so an empty write set means
+   * a write-less participant regardless of the requested detail. {@link
+   * WriteSetDetailLevel#KEYS_ONLY} is currently the only level.
    *
    * @param transactionId the canonical transaction ID
    * @param preparedAt the timestamp written as the {@code prepared_at} column on the PREPARED
@@ -554,17 +551,6 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
      * @return an {@code Optional} containing the clustering key, or empty if the table has none
      */
     Optional<Key> getClusteringKey();
-
-    /**
-     * Returns the non-key columns written by this entry.
-     *
-     * <p>Always empty when {@link #getType} is {@link Type#DELETE}, and always empty — even for
-     * {@link Type#WRITE} — when the Coordinator requested {@link WriteSetDetailLevel#KEYS_ONLY}
-     * from {@link TwoPhaseCommitParticipant#prepareRecords}.
-     *
-     * @return the columns
-     */
-    List<Column<?>> getColumns();
   }
 
   /**
@@ -572,27 +558,22 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
    * TwoPhaseCommitParticipant#prepareRecords} must carry, as requested by the Coordinator.
    *
    * <p>The detail level never affects which entries a write set contains — the entries and their
-   * primary keys are identical at every level; it only controls whether {@link
-   * WriteSetEntry#getColumns()} is populated. {@link WriteSetEntry.Type#DELETE} entries never carry
-   * columns at any level.
+   * primary keys are identical at every level. {@link #KEYS_ONLY} is currently the only level, so
+   * today the request carries no choice; the parameter exists so that a level conveying more of the
+   * record content can be added as a new constant, without changing this method's signature or the
+   * request contract of the transports that carry it.
+   *
+   * <p>What such a level should look like is deliberately left open. A single ordered axis of
+   * record-content detail is one option, but a consumer that needs transaction metadata (a previous
+   * transaction ID, a before image) may want those on separate axes instead. That choice belongs
+   * with the consumer that first needs it.
    */
   enum WriteSetDetailLevel {
     /**
-     * Every entry carries only its primary keys; {@link WriteSetEntry#getColumns()} must be empty.
-     * Sufficient when the Coordinator does not persist column values (for example, when the write
-     * set is recorded for the active-recovery use case), and keeps the prepare result minimal.
+     * Every entry carries only its primary keys. Sufficient when the Coordinator does not persist
+     * column values (for example, when the write set is recorded for the active-recovery use case),
+     * and keeps the prepare result minimal.
      */
-    KEYS_ONLY,
-
-    /**
-     * Every {@link WriteSetEntry.Type#WRITE} entry additionally carries the non-key columns it
-     * writes — the full user-visible record content of the write. Implementation-internal columns
-     * (for example, transaction-metadata columns) are not part of the record content at this
-     * interface and are never included. Note that this is the write's own content, not a full row
-     * image: a partial update carries exactly the columns it sets, not the rest of the row.
-     * Intended for use cases that persist the record content (for example, backup/changelog
-     * capture).
-     */
-    FULL
+    KEYS_ONLY
   }
 }
