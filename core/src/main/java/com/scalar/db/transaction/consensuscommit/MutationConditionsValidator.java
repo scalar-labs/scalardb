@@ -15,6 +15,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -30,14 +31,15 @@ public class MutationConditionsValidator {
 
   private final Optional<CollationComparator> collationComparator;
 
-  /** Creates a validator that keeps natural-order behavior for range operators on TEXT. */
+  /** Creates a validator that keeps natural-order, byte-exact behavior on TEXT. */
   public MutationConditionsValidator() {
     this(Optional.empty());
   }
 
   /**
    * Creates a validator that uses the given collation for range operators (GT/GTE/LT/LTE) on TEXT
-   * columns. Equality and identity operators (EQ/NE/IS_NULL/IS_NOT_NULL) always stay byte-exact.
+   * columns, and for EQ/NE on TEXT when the comparator has nondeterministic equality enabled.
+   * Otherwise EQ/NE stay byte-exact. Identity operators (IS_NULL/IS_NOT_NULL) are always unchanged.
    *
    * @param collationComparator the collation comparator, or {@link Optional#empty()} to keep
    *     natural-order behavior
@@ -152,9 +154,9 @@ public class MutationConditionsValidator {
       case IS_NOT_NULL:
         return !existingRecordColumn.hasNullValue();
       case EQ:
-        return Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) == 0;
+        return equalsForCondition(existingRecordColumn, conditionalExpressionColumn);
       case NE:
-        return Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) != 0;
+        return !equalsForCondition(existingRecordColumn, conditionalExpressionColumn);
         // For 'greater than' and 'less than' types of conditions and when the existing record is
         // null, we consider the condition to be unsatisfied. This mimics the behavior as if
         // the condition was executed by the underlying storage
@@ -173,6 +175,25 @@ public class MutationConditionsValidator {
       default:
         throw new AssertionError();
     }
+  }
+
+  /**
+   * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation. When a collation is
+   * present with nondeterministic equality and the existing column is {@code TEXT}, equality is
+   * decided by the collation (both text values non-null); otherwise it stays byte-exact via natural
+   * ordering.
+   */
+  private boolean equalsForCondition(Column<?> existing, Column<?> conditionValue) {
+    if (collationComparator.isPresent()
+        && collationComparator.get().isNondeterministicEquality()
+        && existing.getDataType() == DataType.TEXT) {
+      String a = existing.getTextValue();
+      String b = conditionValue.getTextValue();
+      if (a != null && b != null) {
+        return collationComparator.get().textEquals(a, b);
+      }
+    }
+    return Ordering.natural().compare(existing, conditionValue) == 0;
   }
 
   private int rangeCompare(Column<?> a, Column<?> b) {
