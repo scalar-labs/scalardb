@@ -319,6 +319,12 @@ final class WriteSetEncoder {
       if (child.writeSet == null) {
         continue;
       }
+      // Every child is encoded in-process by this same encoder, so the payload case is always
+      // ENTRY_GROUPS here. Unlike the reader in ConsensusCommitManager#finishTransaction, this can
+      // never meet a row written by a newer binary; the assertion would only fail if the encoder
+      // itself started emitting a second payload case, and then getEntryGroups would return an
+      // empty default instance and drop that child's entries from the parent row in silence.
+      assert child.writeSet.getPayloadCase() == WriteSet.PayloadCase.ENTRY_GROUPS;
       for (EntryGroup entryGroup : child.writeSet.getEntryGroups().getEntryGroupsList()) {
         entryGroups.addEntryGroups(entryGroup.toBuilder().setChildId(child.childId).build());
       }
