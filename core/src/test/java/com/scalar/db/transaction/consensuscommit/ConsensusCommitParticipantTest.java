@@ -639,7 +639,8 @@ class ConsensusCommitParticipantTest {
     // CrudHandler is mocked, so the snapshot stays empty unless we populate it directly. Reach
     // into the per-tx Snapshot and inject a write + delete, mirroring what the real CrudHandler
     // would do for the insert + delete above. The write additionally carries the "tx_id"
-    // transaction-meta column so the FULL meta-column filtering is observable.
+    // transaction-meta column, so a write whose content would need meta-column filtering still
+    // builds its entry without consulting the table metadata.
     TransactionContext context = getContext(ANY_TX_ID);
     Put put = Put.newBuilder(buildPutFromInsert(insert)).textValue("tx_id", "meta").build();
     context.snapshot.putIntoWriteSet(new Snapshot.Key(put), put);

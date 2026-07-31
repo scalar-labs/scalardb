@@ -398,7 +398,10 @@ class WriteSetEncoderTest {
     // Act
     WriteSet writeSet = WriteSetEncoder.encodeFromWriteSetEntries(writeSetsByParticipant);
 
-    // Assert — two groups in map iteration order (p1, then p2); p1 holds both its entries.
+    // Assert — two groups in map iteration order (p1, then p2); p1 holds both its entries, in the
+    // order they were listed. Each entry's partition key is asserted too: the participant id alone
+    // would not distinguish p1's two entries from each other, so the assertions would hold even if
+    // the encoder emitted one of them twice or swapped them.
     assertThat(writeSet.getSchemaVersion()).isEqualTo(1);
     assertThat(writeSet.getEntryGroups().getEntryGroupsList()).hasSize(2);
 
@@ -409,14 +412,19 @@ class WriteSetEncoderTest {
     assertThat(p1FirstEntry.getParticipantId()).isEqualTo("p1");
     assertThat(p1FirstEntry.getNamespaceName()).isEqualTo(NAMESPACE);
     assertThat(p1FirstEntry.getTableName()).isEqualTo(TABLE);
+    assertThat(p1FirstEntry.getPartitionKey().getColumns(0).getTextValue().getValue())
+        .isEqualTo("a");
     assertThat(p1FirstEntry.hasClusteringKey()).isTrue();
     Entry p1SecondEntry = p1Group.getEntries(1);
     assertThat(p1SecondEntry.getParticipantId()).isEqualTo("p1");
+    assertThat(p1SecondEntry.getPartitionKey().getColumns(0).getTextValue().getValue())
+        .isEqualTo("c");
 
     EntryGroup p2Group = writeSet.getEntryGroups().getEntryGroups(1);
     assertThat(p2Group.getEntriesList()).hasSize(1);
     Entry p2Entry = p2Group.getEntries(0);
     assertThat(p2Entry.getParticipantId()).isEqualTo("p2");
+    assertThat(p2Entry.getPartitionKey().getColumns(0).getTextValue().getValue()).isEqualTo("b");
     assertThat(p2Entry.hasClusteringKey()).isFalse();
   }
 

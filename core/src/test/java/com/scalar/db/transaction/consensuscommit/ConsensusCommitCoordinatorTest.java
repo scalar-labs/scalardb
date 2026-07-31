@@ -1107,8 +1107,10 @@ class ConsensusCommitCoordinatorTest {
     consensusCommitCoordinator.commit("tx-1");
 
     // Assert — the COMMITTED state is written (hasWrites=true overrides write omission) with a
-    // WriteSet that has one EntryGroup per participant, in join order, each entry stamped
-    // with the owning participant id and the right entry type.
+    // WriteSet that has one EntryGroup per participant, in join order, each entry stamped with the
+    // owning participant id. Each entry's partition key is asserted too: the participant id alone
+    // would not distinguish the two entries of participant-1 from each other, so the assertions
+    // would hold even if the encoder emitted one of them twice or swapped them.
     ArgumentCaptor<WriteSet> captor = ArgumentCaptor.forClass(WriteSet.class);
     verify(coordinatorCommitHandler).commitState(eq("tx-1"), captor.capture());
     WriteSet writeSet = captor.getValue();
@@ -1117,11 +1119,17 @@ class ConsensusCommitCoordinatorTest {
     EntryGroup group1 = writeSet.getEntryGroups().getEntryGroups(0);
     assertThat(group1.getEntriesList()).hasSize(2);
     assertThat(group1.getEntries(0).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group1.getEntries(0).getPartitionKey().getColumns(0).getIntValue().getValue())
+        .isEqualTo(1);
     assertThat(group1.getEntries(1).getParticipantId()).isEqualTo("participant-1");
+    assertThat(group1.getEntries(1).getPartitionKey().getColumns(0).getIntValue().getValue())
+        .isEqualTo(2);
 
     EntryGroup group2 = writeSet.getEntryGroups().getEntryGroups(1);
     assertThat(group2.getEntriesList()).hasSize(1);
     assertThat(group2.getEntries(0).getParticipantId()).isEqualTo("participant-2");
+    assertThat(group2.getEntries(0).getPartitionKey().getColumns(0).getIntValue().getValue())
+        .isEqualTo(3);
   }
 
   @Test
@@ -1313,8 +1321,8 @@ class ConsensusCommitCoordinatorTest {
     return participant;
   }
 
-  // A minimal WriteSetEntry stub sufficient for encoding (includeColumns=false, so getColumns is
-  // not read). The namespace/table are stubbed non-null because the encoder sets them on the proto.
+  // A minimal WriteSetEntry stub sufficient for encoding, which records record identities only.
+  // The namespace/table are stubbed non-null because the encoder sets them on the proto.
   private static WriteSetEntry writeSetEntry(
       WriteSetEntry.Type type, Key partitionKey, Optional<Key> clusteringKey) {
     WriteSetEntry entry = mock(WriteSetEntry.class);
