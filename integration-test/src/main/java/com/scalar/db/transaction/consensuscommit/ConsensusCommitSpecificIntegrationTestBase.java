@@ -10757,8 +10757,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 EntryGroups.newBuilder()
                     .addEntryGroups(
                         EntryGroup.newBuilder()
-                            .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0))
-                            .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 1))))
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 0))
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 1))))
             .build();
     coordinator.putState(
         new CoordinatorStateAccessor.State(
@@ -10849,11 +10849,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                     .addEntryGroups(
                         EntryGroup.newBuilder()
                             .setChildId(ANY_ID_1)
-                            .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 0, 0)))
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 0)))
                     .addEntryGroups(
                         EntryGroup.newBuilder()
                             .setChildId(ANY_ID_2)
-                            .addEntries(intKeyWriteEntry(namespace1, TABLE_1, 1, 0))))
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 1, 0))))
             .build();
     CoordinatorGroupCommitKeyManipulator km = new CoordinatorGroupCommitKeyManipulator();
     List<String> childIds =
@@ -10948,7 +10948,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     originalStorage.put(put);
   }
 
-  private static Entry intKeyWriteEntry(
+  private static Entry intKeyEntry(
       String namespace, String table, int partitionKeyValue, int clusteringKeyValue) {
     return Entry.newBuilder()
         .setNamespaceName(namespace)
