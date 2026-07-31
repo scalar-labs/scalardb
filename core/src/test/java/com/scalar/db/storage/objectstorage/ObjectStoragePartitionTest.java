@@ -841,6 +841,146 @@ public class ObjectStoragePartitionTest {
     assertThat(result).isFalse();
   }
 
+  // ---- Collation-aware EQ/NE on TEXT (nondeterministic equality) ----
+
+  private static CollationComparator nondeterministicCaseInsensitiveIcuCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
+    props.setProperty(DatabaseConfig.COLLATION_DETERMINISTIC, "false");
+    return CollationComparator.from(new DatabaseConfig(props)).get();
+  }
+
+  @Test
+  public void
+      areConditionsMet_WithNondeterministicCollationAndEqConditionOnText_ShouldReturnTrueWhereByteExactWould() {
+    // Arrange: actual TEXT "Apple", condition col = "apple". Under nondeterministic
+    // case-insensitive
+    // ICU equality, "Apple" collate-equals "apple" so the condition is met.
+    when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isEqualToText("apple");
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(
+            record,
+            Collections.singletonList(condition),
+            metadata,
+            Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+
+    // Assert
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  public void areConditionsMet_WithoutCollationAndEqConditionOnText_ShouldStayByteExact() {
+    // Arrange: unset collation keeps byte-exact equality: "Apple" != "apple".
+    when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isEqualToText("apple");
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(
+            record, Collections.singletonList(condition), metadata, Optional.empty());
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      areConditionsMet_WithDeterministicCollationAndEqConditionOnText_ShouldStayByteExact() {
+    // Arrange: a deterministic (default) case-insensitive collation keeps EQ byte-exact: "Apple" !=
+    // "apple".
+    when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isEqualToText("apple");
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(
+            record,
+            Collections.singletonList(condition),
+            metadata,
+            Optional.of(caseInsensitiveIcuCollation()));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      areConditionsMet_WithNondeterministicCollationAndNeConditionOnText_ShouldBehaveAsNegationOfEq() {
+    // Arrange: actual TEXT "Apple", condition col != "apple". Under nondeterministic ICU equality
+    // "Apple" collate-equals "apple", so the NE condition is not met (exact negation of EQ).
+    when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isNotEqualToText("apple");
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(
+            record,
+            Collections.singletonList(condition),
+            metadata,
+            Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      areConditionsMet_WithNondeterministicCollationAndEqConditionOnNonText_ShouldStayNatural() {
+    // Arrange: non-TEXT (INT) EQ is unaffected by nondeterministic equality; different values do
+    // not
+    // match.
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
+    ConditionalExpression condition =
+        ConditionBuilder.column(COLUMN_NAME_1).isEqualToInt(INT_VALUE_2);
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(
+            record,
+            Collections.singletonList(condition),
+            metadata,
+            Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
+  @Test
+  public void
+      areConditionsMet_WithNondeterministicCollationAndEqConditionAndNullTextValue_ShouldReturnFalse() {
+    // Arrange: null actual TEXT value with EQ stays byte-exact (no NPE) and returns false.
+    when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
+    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
+    ObjectStorageRecord record = createTextRecordForConditionTest(null);
+    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isEqualToText("apple");
+
+    // Act
+    boolean result =
+        partition.areConditionsMet(
+            record,
+            Collections.singletonList(condition),
+            metadata,
+            Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
   private ObjectStorageRecord createRecordForConditionTest(int value) {
     return ObjectStorageRecord.newBuilder()
         .id(RECORD_ID_1)
