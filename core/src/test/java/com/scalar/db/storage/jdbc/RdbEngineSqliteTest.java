@@ -49,11 +49,11 @@ class RdbEngineSqliteTest {
 
   @Test
   void isDuplicateTableError_False() {
-    //Arrange
+    // Arrange
     SQLException exception = mock(SQLException.class);
 
-    //Act
-    //Assert
+    // Act
+    // Assert
     assertFalse(rdbEngine.isDuplicateTableError(exception));
   }
 
@@ -79,7 +79,7 @@ class RdbEngineSqliteTest {
 
   @Test
   void isDuplicateKeyError_False() {
-    assertFalse(rdbEngine.isDuplicateTableError(causeSyntaxError()));
+    assertFalse(rdbEngine.isDuplicateKeyError(causeSyntaxError()));
   }
 
   @Test
