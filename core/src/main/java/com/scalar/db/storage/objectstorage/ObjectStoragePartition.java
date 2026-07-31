@@ -18,6 +18,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Comparator;
@@ -164,7 +165,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (Ordering.natural().compare(actualColumn, expectedColumn) != 0) {
+          if (!columnEquals(actualColumn, expectedColumn, collationComparator)) {
             return false;
           }
           break;
@@ -172,7 +173,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (Ordering.natural().compare(actualColumn, expectedColumn) == 0) {
+          if (columnEquals(actualColumn, expectedColumn, collationComparator)) {
             return false;
           }
           break;
@@ -225,5 +226,24 @@ public class ObjectStoragePartition {
       }
     }
     return true;
+  }
+
+  /**
+   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns. When nondeterministic
+   * equality is enabled and both columns are {@code TEXT}, equality is decided by the collation;
+   * otherwise it stays byte-exact via natural ordering. Non-{@code TEXT} equality is unaffected.
+   */
+  private static boolean columnEquals(
+      Column<?> actual, Column<?> expected, Optional<CollationComparator> cc) {
+    if (cc.isPresent()
+        && cc.get().isNondeterministicEquality()
+        && actual.getDataType() == DataType.TEXT) {
+      String a = actual.getTextValue();
+      String b = expected.getTextValue();
+      if (a != null && b != null) {
+        return cc.get().textEquals(a, b);
+      }
+    }
+    return Ordering.natural().compare(actual, expected) == 0;
   }
 }
