@@ -159,7 +159,7 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: steps.should-run.outputs.skip == 'false'
 
       # Use the binary emulator instead of Docker image for a slight performance gain
@@ -280,7 +280,7 @@ jobs:
           - default
           - group_commit
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 8
         uses: actions/setup-java@v5

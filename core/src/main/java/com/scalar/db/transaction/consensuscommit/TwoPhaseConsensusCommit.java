@@ -33,6 +33,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+@Deprecated
 @NotThreadSafe
 public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private static final Logger logger = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
@@ -99,15 +101,11 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     return crud.getScanner(scan, context);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(Put put) throws CrudException {
     putInternal(put);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
     checkArgument(!puts.isEmpty());
@@ -127,8 +125,6 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     deleteInternal(delete);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
-  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
     checkArgument(!deletes.isEmpty());
@@ -213,7 +209,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
     }
 
     try {
-      commit.prepareRecords(context);
+      commit.prepareRecords(context, System.currentTimeMillis());
     } finally {
       needRollback = true;
     }
@@ -232,16 +228,26 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
           CoreError.CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE.buildMessage());
     }
 
+    // commitStateWithoutWriteSet writes the COMMITTED coordinator state row and returns the
+    // committedAt it stamped; the committed data records are then stamped with the same value so
+    // the row and the records share a single committedAt.
+    long committedAt;
     try {
-      commit.commitStateWithoutWriteSet(context);
-    } catch (CommitConflictException | UnknownTransactionStatusException e) {
-      // no need to rollback because the transaction has already been rolled back
+      committedAt = commit.commitStateWithoutWriteSet(context);
+    } catch (CommitConflictException e) {
+      // commitStateWithoutWriteSet only reports the conflict; this caller owns the records, so roll
+      // them back here before surfacing it.
+      commit.rollbackRecords(context);
       needRollback = false;
-
+      throw e;
+    } catch (UnknownTransactionStatusException e) {
+      // The coordinator state is unknown, so we must not roll back the records: the transaction may
+      // have committed.
+      needRollback = false;
       throw e;
     }
 
-    commit.commitRecords(context);
+    commit.commitRecords(context, committedAt);
   }
 
   @Override

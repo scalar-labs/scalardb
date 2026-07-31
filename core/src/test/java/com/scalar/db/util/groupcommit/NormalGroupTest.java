@@ -24,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class NormalGroupTest {
-  @Mock private Emittable<String, String, Integer> emitter;
+  @Mock private Emittable<String, String, Integer, Void> emitter;
   private TestableGroupCommitKeyManipulator keyManipulator;
 
   @BeforeEach
@@ -38,7 +38,7 @@ class NormalGroupTest {
   void parentKey_WithKeyManipulator_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
 
     // Act
@@ -50,7 +50,7 @@ class NormalGroupTest {
   void fullKey_WithKeyManipulator_ShouldReturnProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
 
     // Act
@@ -62,10 +62,12 @@ class NormalGroupTest {
   void reserveNewSlot_GivenArbitrarySlot_ShouldStoreIt() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
-    Slot<String, String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
+        new Slot<>("child-key-1", group);
+    Slot<String, String, String, String, String, Integer, Void> slot2 =
+        new Slot<>("child-key-2", group);
 
     assertThat(group.size()).isNull();
     assertThat(group.isSizeFixed()).isFalse();
@@ -82,19 +84,20 @@ class NormalGroupTest {
     assertThat(group.isReady()).isFalse();
   }
 
-  Emittable<String, String, Integer> createEmitter(ThrowableRunnable<Exception> task) {
-    return new Emittable<String, String, Integer>() {
+  Emittable<String, String, Integer, Void> createEmitter(ThrowableRunnable<Exception> task) {
+    return new Emittable<String, String, Integer, Void>() {
       @Override
-      public void emitNormalGroup(String s, List<Integer> values) {
+      public Void emitNormalGroup(String s, List<Integer> values) {
         try {
           task.run();
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
+        return null;
       }
 
       @Override
-      public void emitDelayedGroup(String s, Integer value) {
+      public Void emitDelayedGroup(String s, Integer value) {
         throw new AssertionError();
       }
     };
@@ -107,15 +110,16 @@ class NormalGroupTest {
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
-    Emittable<String, String, Integer> waitableEmitter =
+    Emittable<String, String, Integer, Void> waitableEmitter =
         createEmitter(
             () -> {
               wait.await();
               emitted.set(true);
             });
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, waitableEmitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
+        new Slot<>("child-key-1", group);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot1);
@@ -158,16 +162,18 @@ class NormalGroupTest {
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
-    Emittable<String, String, Integer> waitableEmitter =
+    Emittable<String, String, Integer, Void> waitableEmitter =
         createEmitter(
             () -> {
               wait.await();
               emitted.set(true);
             });
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, waitableEmitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
-    Slot<String, String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
+        new Slot<>("child-key-1", group);
+    Slot<String, String, String, String, String, Integer, Void> slot2 =
+        new Slot<>("child-key-2", group);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot1);
@@ -216,17 +222,20 @@ class NormalGroupTest {
     GroupCommitConfig config = new GroupCommitConfig(2 + 1, 100, 1000, 60000, 20);
     AtomicBoolean emitted = new AtomicBoolean();
     CountDownLatch wait = new CountDownLatch(1);
-    Emittable<String, String, Integer> waitableEmitter =
+    Emittable<String, String, Integer, Void> waitableEmitter =
         createEmitter(
             () -> {
               wait.await();
               emitted.set(true);
             });
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, waitableEmitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
-    Slot<String, String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
-    Slot<String, String, String, String, String, Integer> slot3 = new Slot<>("child-key-3", group);
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
+        new Slot<>("child-key-1", group);
+    Slot<String, String, String, String, String, Integer, Void> slot2 =
+        new Slot<>("child-key-2", group);
+    Slot<String, String, String, String, String, Integer, Void> slot3 =
+        new Slot<>("child-key-3", group);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot1);
@@ -258,7 +267,7 @@ class NormalGroupTest {
     // Assert
 
     // Remove the not-ready slot (slot3).
-    List<Slot<String, String, String, String, String, Integer>> notReadySlots =
+    List<Slot<String, String, String, String, String, Integer, Void>> notReadySlots =
         group.removeNotReadySlots();
     assertThat(notReadySlots).isNotNull().size().isEqualTo(1);
     assertThat(notReadySlots.get(0).isReady()).isFalse();
@@ -283,10 +292,12 @@ class NormalGroupTest {
   void removeNotReadySlots_WhenAllSlotsAreNotReady_ShouldRetainSlots() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
-    Slot<String, String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
+        new Slot<>("child-key-1", group);
+    Slot<String, String, String, String, String, Integer, Void> slot2 =
+        new Slot<>("child-key-2", group);
 
     group.reserveNewSlot(slot1);
     group.reserveNewSlot(slot2);
@@ -302,10 +313,12 @@ class NormalGroupTest {
   void removeSlot_GivenNotReadySlot_ShouldRemoveSlotAndGetDone() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
-    Slot<String, String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
+        new Slot<>("child-key-1", group);
+    Slot<String, String, String, String, String, Integer, Void> slot2 =
+        new Slot<>("child-key-2", group);
 
     group.reserveNewSlot(slot1);
     group.reserveNewSlot(slot2);
@@ -327,10 +340,12 @@ class NormalGroupTest {
   void removeSlot_GivenReadySlot_ShouldDoNothing() throws ExecutionException, InterruptedException {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 = new Slot<>("child-key-1", group);
-    Slot<String, String, String, String, String, Integer> slot2 = new Slot<>("child-key-2", group);
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
+        new Slot<>("child-key-1", group);
+    Slot<String, String, String, String, String, Integer, Void> slot2 =
+        new Slot<>("child-key-2", group);
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     group.reserveNewSlot(slot1);
@@ -370,11 +385,11 @@ class NormalGroupTest {
   void abort_ShouldAbortSlot() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
-    Slot<String, String, String, String, String, Integer> slot1 =
+    Slot<String, String, String, String, String, Integer, Void> slot1 =
         spy(new Slot<>("child-key-1", group));
-    Slot<String, String, String, String, String, Integer> slot2 =
+    Slot<String, String, String, String, String, Integer, Void> slot2 =
         spy(new Slot<>("child-key-2", group));
     group.reserveNewSlot(slot1);
     group.reserveNewSlot(slot2);
@@ -392,7 +407,7 @@ class NormalGroupTest {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
@@ -408,7 +423,7 @@ class NormalGroupTest {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
@@ -424,7 +439,7 @@ class NormalGroupTest {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
     long minOfCurrentTimeMillis = System.currentTimeMillis();
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
     long maxOfCurrentTimeMillis = System.currentTimeMillis();
 
@@ -439,7 +454,7 @@ class NormalGroupTest {
   void updateDelayedSlotMoveTimeoutAtMillis_GivenArbitraryTimeoutValue_ShouldUpdateProperly() {
     // Arrange
     GroupCommitConfig config = new GroupCommitConfig(2, 100, 1000, 60000, 20);
-    NormalGroup<String, String, String, String, String, Integer> group =
+    NormalGroup<String, String, String, String, String, Integer, Void> group =
         new NormalGroup<>(config, emitter, keyManipulator);
 
     // Act

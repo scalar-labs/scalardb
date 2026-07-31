@@ -97,6 +97,14 @@ public class TransactionContext {
             });
   }
 
+  public boolean isCommitRequired() {
+    // commitRecords is required iff this transaction has writes or deletes to commit. In the
+    // TwoPhaseCommit protocol this is the single source the participant uses both to drive the
+    // Coordinator's commit-step skip (via PreparationResult#isCommitRequired) and to decide the
+    // validate-step self-release, so those two stay in lockstep.
+    return snapshot.hasWritesOrDeletes();
+  }
+
   public boolean areAllScannersClosed() {
     return scanners.stream().allMatch(ConsensusCommitScanner::isClosed);
   }

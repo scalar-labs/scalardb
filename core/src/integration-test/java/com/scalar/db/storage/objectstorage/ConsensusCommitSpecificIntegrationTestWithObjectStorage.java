@@ -317,4 +317,26 @@ public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
   @Disabled("Object Storage does not support index-related operations")
   public void
       commit_GetScannerWithScanAllIndexConditionInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException() {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void get_GetWithIndexForTransientDeletedAndPreparedRecords_ShouldResolveToSingleRecord(
+      Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      get_GetWithIndexForTransientDeletedAndPreparedRecordsWhenWriterAborted_ShouldResolveToNoRecord(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void
+      get_GetWithIndexForExistingCommittedRecordAndTransientPreparedRecord_ShouldReturnCommittedRecordInAllIsolations(
+          Isolation isolation) {}
+
+  @Override
+  @Disabled("Object Storage does not support index-related operations")
+  public void get_GetWithIndexMatchingMultipleCommittedRecords_ShouldThrowIllegalArgumentException(
+      Isolation isolation) {}
 }

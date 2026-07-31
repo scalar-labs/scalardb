@@ -136,11 +136,34 @@ public class TransactionResult extends AbstractResult {
     return result.getColumns();
   }
 
+  /**
+   * Returns the ID of the transaction that last wrote this record ({@code tx_id}).
+   *
+   * <p>This is {@code null} when the record has no transaction metadata, i.e. when the record is
+   * deemed as committed (see {@link #isDeemedAsCommitted()} and {@link #getState()}). That happens
+   * when a record imported into a table initially has no transaction metadata. A record written by
+   * a ScalarDB transaction otherwise always carries {@code tx_id} and {@code tx_state} together, so
+   * a non-null {@code tx_id} implies the record is prepared, deleted, or committed by a known
+   * transaction.
+   *
+   * @return the transaction ID that last wrote this record, or {@code null} when the record is
+   *     deemed as committed (no transaction metadata)
+   */
   @Nullable
   public String getId() {
     return getText(Attribute.ID);
   }
 
+  /**
+   * Returns the transaction state ({@code tx_state}) of this record.
+   *
+   * <p>When {@code tx_state} is null, the record is deemed as committed and {@code COMMITTED} is
+   * returned: a record imported into a table initially has no transaction metadata, which is a
+   * legitimate state (see {@link #isCommitted()} and {@link #isDeemedAsCommitted()}).
+   *
+   * @return the transaction state, or {@code COMMITTED} when this record has no transaction
+   *     metadata
+   */
   public TransactionState getState() {
     if (isNull(Attribute.STATE)) {
       // To handle existing databases that do not have transaction metadata, the record is deemed as
@@ -162,10 +185,37 @@ public class TransactionResult extends AbstractResult {
     return getBigInt(Attribute.COMMITTED_AT);
   }
 
+  /**
+   * Returns whether this record is in the committed state.
+   *
+   * <p>This returns {@code true} when the transaction state ({@code tx_state}) is {@code
+   * COMMITTED}. It also returns {@code true} when the record has no transaction metadata (i.e.
+   * {@code tx_state} is null): when a table is imported, its existing records initially have no
+   * transaction metadata. That is a legitimate state and such a record is deemed as committed (see
+   * {@link #getState()}).
+   *
+   * @return {@code true} if this record is committed, including records that are deemed as
+   *     committed
+   */
   public boolean isCommitted() {
     return getState().equals(TransactionState.COMMITTED);
   }
 
+  /**
+   * Returns whether this record is deemed as committed because it carries no transaction metadata.
+   *
+   * <p>When a table is imported, its existing records initially have no transaction metadata. This
+   * is a legitimate state, and such a record is deemed as committed.
+   *
+   * <p>Both this method and {@link #isCommitted()} capture the "deemed as committed" notion of a
+   * record without transaction metadata, but inspect different columns: this method keys off the
+   * absence of the transaction ID ({@code tx_id}), while {@code isCommitted()} keys off the
+   * transaction state ({@code tx_state}, via {@link #getState()}). They agree for a record without
+   * transaction metadata because such a record has both {@code tx_id} and {@code tx_state} absent —
+   * a record written by ScalarDB always carries both together.
+   *
+   * @return {@code true} if this record has no transaction ID and is therefore deemed as committed
+   */
   public boolean isDeemedAsCommitted() {
     return getId() == null;
   }

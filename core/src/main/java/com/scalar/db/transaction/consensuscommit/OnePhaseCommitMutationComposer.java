@@ -23,15 +23,18 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class OnePhaseCommitMutationComposer extends AbstractMutationComposer {
 
+  // One-phase commit is the single-participant fast path, so there is no cross-participant
+  // timestamp to coordinate; the composer generates its own timestamp for both PREPARED_AT and
+  // COMMITTED_AT.
   public OnePhaseCommitMutationComposer(
       String id, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, tableMetadataManager);
+    super(id, System.currentTimeMillis(), tableMetadataManager);
   }
 
   @VisibleForTesting
   OnePhaseCommitMutationComposer(
-      String id, long current, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, current, tableMetadataManager);
+      String id, long timestamp, TransactionTableMetadataManager tableMetadataManager) {
+    super(id, timestamp, tableMetadataManager);
   }
 
   @Override
@@ -66,8 +69,8 @@ public class OnePhaseCommitMutationComposer extends AbstractMutationComposer {
 
     putBuilder.textValue(Attribute.ID, id);
     putBuilder.intValue(Attribute.STATE, TransactionState.COMMITTED.get());
-    putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
-    putBuilder.bigIntValue(Attribute.COMMITTED_AT, current);
+    putBuilder.bigIntValue(Attribute.PREPARED_AT, timestamp);
+    putBuilder.bigIntValue(Attribute.COMMITTED_AT, timestamp);
 
     if (!isInsertModeEnabled(base) && result != null) { // overwrite existing record
       int version = result.getVersion();

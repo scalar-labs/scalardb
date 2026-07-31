@@ -7,14 +7,14 @@ import javax.annotation.concurrent.ThreadSafe;
 
 // A group for a delayed slot. This group contains only a single slot.
 @ThreadSafe
-class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
-    extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> {
+class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
+    extends Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> {
   private final FULL_KEY fullKey;
 
   DelayedGroup(
       GroupCommitConfig config,
       FULL_KEY fullKey,
-      Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter,
+      Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> emitter,
       GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
           keyManipulator) {
     super(emitter, keyManipulator, 1, config.oldGroupAbortTimeoutMillis());
@@ -35,7 +35,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
   // slot. But just in case.
   protected synchronized void delegateEmitTaskToWaiter() {
     assert slots.size() == 1;
-    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot :
+    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot :
         slots.values()) {
       // Pass `emitter` to ask the receiver's thread to emit the value
       slot.delegateTaskToWaiter(
@@ -50,7 +50,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
   @Nullable
   @Override
   protected synchronized FULL_KEY reserveNewSlot(
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot) {
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot) {
     slot.changeParentGroupToDelayedGroup(this);
     FULL_KEY fullKey = super.reserveNewSlot(slot);
     if (fullKey == null) {
@@ -64,7 +64,7 @@ class DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof DelayedGroup)) return false;
-    DelayedGroup<?, ?, ?, ?, ?, ?> that = (DelayedGroup<?, ?, ?, ?, ?, ?>) o;
+    DelayedGroup<?, ?, ?, ?, ?, ?, ?> that = (DelayedGroup<?, ?, ?, ?, ?, ?, ?>) o;
     return Objects.equal(fullKey, that.fullKey);
   }
 

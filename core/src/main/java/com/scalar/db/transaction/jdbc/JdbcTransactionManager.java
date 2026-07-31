@@ -33,6 +33,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcCrudService;
@@ -47,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -435,6 +437,13 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   public boolean finishTransaction(String txId) {
     throw new UnsupportedOperationException(
         CoreError.JDBC_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

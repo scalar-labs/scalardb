@@ -1,0 +1,191 @@
+package com.scalar.db.common;
+
+import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.CrudOperable;
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
+import com.scalar.db.api.Update;
+import com.scalar.db.api.Upsert;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.RollbackException;
+import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import javax.annotation.concurrent.ThreadSafe;
+
+/**
+ * A {@link TwoPhaseCommitParticipant} decorator that propagates the transaction-scoped attributes
+ * supplied at {@link #join} into every CRUD operation issued for that transaction.
+ *
+ * <p>Begin-attributes reach the participant via {@link TwoPhaseCommitCoordinator#joinParticipant} →
+ * {@code join}; this decorator captures them (keyed by transaction ID) and merges them into each
+ * operation before delegating, with an attribute set directly on the operation winning over the
+ * transaction-scoped one (see {@link OperationAttributeMerger}). It therefore sits <em>outside</em>
+ * any decorator that reads operation attributes (e.g. ABAC).
+ *
+ * <p>The captured attributes are needed only while CRUD operations are still issued, so they are
+ * dropped as soon as the CRUD phase ends. {@code prepareRecords} is that boundary: no CRUD is
+ * accepted once a transaction has been prepared. Dropping there rather than at {@code
+ * commitRecords} also covers write-less transactions (including every read-only one), whose {@code
+ * commitRecords} the Coordinator skips. The attributes are also dropped on {@code rollbackRecords}
+ * and {@code releaseTransactionContext} to cover transactions that are rolled back or reaped before
+ * ever preparing.
+ *
+ * <p>The record-level step {@code validateRecords} and non-CRUD methods are forwarded unchanged;
+ * they do not read the transaction-scoped attributes.
+ *
+ * <p>The captured attributes are released only on a step driven through this decorator, so a
+ * transaction abandoned beforehand (e.g. a crashed client that never prepares, rolls back, or is
+ * released) leaks its entry until the JVM exits. Idle expiry clears it only when {@link
+ * ActiveTransactionManagedTwoPhaseCommitParticipant} wraps this decorator and a positive {@code
+ * scalar.db.active_transaction_management.expiration_time_millis} is set (a non-positive value, the
+ * default, disables the reaper). Enable active transaction management with a positive expiration
+ * time whenever this decorator is used.
+ */
+@ThreadSafe
+public class AttributePropagatingTwoPhaseCommitParticipant
+    extends DecoratedTwoPhaseCommitParticipant {
+
+  private final ConcurrentMap<String, Map<String, String>> transactionAttributes =
+      new ConcurrentHashMap<>();
+
+  public AttributePropagatingTwoPhaseCommitParticipant(TwoPhaseCommitParticipant participant) {
+    super(participant);
+  }
+
+  @Override
+  public void join(String transactionId, boolean readOnly, Map<String, String> attributes)
+      throws TransactionException {
+    super.join(transactionId, readOnly, attributes);
+    // Capture only after a successful join so a failed join leaves no stale entry. Skip empty
+    // attributes so there is nothing to merge later.
+    if (!attributes.isEmpty()) {
+      transactionAttributes.put(transactionId, ImmutableMap.copyOf(attributes));
+    }
+  }
+
+  @Override
+  public Optional<Result> get(String transactionId, Get get)
+      throws CrudException, TransactionNotFoundException {
+    return super.get(transactionId, merge(transactionId, get));
+  }
+
+  @Override
+  public List<Result> scan(String transactionId, Scan scan)
+      throws CrudException, TransactionNotFoundException {
+    return super.scan(transactionId, merge(transactionId, scan));
+  }
+
+  @Override
+  public TransactionCrudOperable.Scanner getScanner(String transactionId, Scan scan)
+      throws CrudException, TransactionNotFoundException {
+    return super.getScanner(transactionId, merge(transactionId, scan));
+  }
+
+  /** @deprecated As of release 3.19.0. Will be removed in release 4.0.0. */
+  @Deprecated
+  @Override
+  public void put(String transactionId, Put put)
+      throws CrudException, TransactionNotFoundException {
+    super.put(transactionId, merge(transactionId, put));
+  }
+
+  @Override
+  public void insert(String transactionId, Insert insert)
+      throws CrudException, TransactionNotFoundException {
+    super.insert(transactionId, merge(transactionId, insert));
+  }
+
+  @Override
+  public void upsert(String transactionId, Upsert upsert)
+      throws CrudException, TransactionNotFoundException {
+    super.upsert(transactionId, merge(transactionId, upsert));
+  }
+
+  @Override
+  public void update(String transactionId, Update update)
+      throws CrudException, TransactionNotFoundException {
+    super.update(transactionId, merge(transactionId, update));
+  }
+
+  @Override
+  public void delete(String transactionId, Delete delete)
+      throws CrudException, TransactionNotFoundException {
+    super.delete(transactionId, merge(transactionId, delete));
+  }
+
+  @Override
+  public void mutate(String transactionId, List<? extends Mutation> mutations)
+      throws CrudException, TransactionNotFoundException {
+    super.mutate(
+        transactionId, OperationAttributeMerger.mergeEach(mutations, attributesFor(transactionId)));
+  }
+
+  @Override
+  public List<CrudOperable.BatchResult> batch(
+      String transactionId, List<? extends Operation> operations)
+      throws CrudException, TransactionNotFoundException {
+    return super.batch(
+        transactionId,
+        OperationAttributeMerger.mergeEach(operations, attributesFor(transactionId)));
+  }
+
+  @Override
+  public TwoPhaseCommitParticipant.PreparationResult prepareRecords(
+      String transactionId,
+      long preparedAt,
+      TwoPhaseCommitParticipant.WriteSetDetailLevel detailLevel)
+      throws PreparationException, TransactionNotFoundException {
+    try {
+      return super.prepareRecords(transactionId, preparedAt, detailLevel);
+    } finally {
+      // prepareRecords ends the CRUD phase (no CRUD is accepted once prepared), so the captured
+      // attributes are dropped here. Dropping here rather than at commitRecords also covers
+      // write-less transactions (including every read-only one), whose commitRecords the
+      // Coordinator skips.
+      transactionAttributes.remove(transactionId);
+    }
+  }
+
+  @Override
+  public void rollbackRecords(String transactionId)
+      throws RollbackException, TransactionNotFoundException {
+    try {
+      super.rollbackRecords(transactionId);
+    } finally {
+      transactionAttributes.remove(transactionId);
+    }
+  }
+
+  @Override
+  public void releaseTransactionContext(String transactionId) throws TransactionException {
+    try {
+      super.releaseTransactionContext(transactionId);
+    } finally {
+      transactionAttributes.remove(transactionId);
+    }
+  }
+
+  private <T extends Operation> T merge(String transactionId, T operation) {
+    return OperationAttributeMerger.merge(operation, attributesFor(transactionId));
+  }
+
+  private Map<String, String> attributesFor(String transactionId) {
+    return transactionAttributes.getOrDefault(transactionId, Collections.emptyMap());
+  }
+}

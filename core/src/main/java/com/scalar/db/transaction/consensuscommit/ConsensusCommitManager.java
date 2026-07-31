@@ -6,11 +6,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
@@ -36,12 +38,14 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
+import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
@@ -63,11 +67,11 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
   private final TransactionTableMetadataManager tableMetadataManager;
-  private final Coordinator coordinator;
+  private final CoordinatorStateAccessor coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
-  protected final CommitHandler commit;
+  private final CommitHandler commit;
   private final Isolation isolation;
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
@@ -81,13 +85,13 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.storage = storage;
     this.admin = admin;
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
@@ -121,13 +125,13 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     admin = storageFactory.getStorageAdmin();
 
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
@@ -161,7 +165,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
       DatabaseConfig databaseConfig,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
@@ -571,7 +575,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     } catch (CoordinatorException ignored) {
       // ignored
     }
-    // Either no state exists or the exception is thrown
+
+    // The Coordinator state row is absent (the transaction never existed, or it was finished and
+    // cleaned up) or could not be read. These are indistinguishable here, so report UNKNOWN.
     return TransactionState.UNKNOWN;
   }
 
@@ -579,7 +585,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abortStateForRollback(txId);
+      return commit.forceAbortState(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }
@@ -609,19 +615,6 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     }
 
     State state = stateOpt.get();
-
-    // Only COMMITTED or ABORTED states are expected here. Anything else indicates an internal
-    // invariant violation, not a runtime condition. This is checked before the write-set presence
-    // check so that a persisted non-terminal state (which should never exist) always surfaces as
-    // the invariant violation rather than being misreported as a missing write set.
-    TransactionState txState = state.getState();
-    if (txState != TransactionState.COMMITTED && txState != TransactionState.ABORTED) {
-      throw new AssertionError(
-          "Unexpected non-terminal transaction state at finishTransaction. State: "
-              + txState
-              + ", Transaction ID: "
-              + txId);
-    }
 
     // The transaction did not commit through DistributedTransaction#commit() (e.g., it was
     // terminated via DistributedTransactionManager#rollback()/abort(), aborted by lazy recovery, or
@@ -679,10 +672,12 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       }
     }
 
-    // Delete the state row. state.getId() is the parent ID for group-commit rows because
-    // Coordinator#getState(fullChildId) routes through getStateForGroupCommit() and returns the
-    // parent row, so the delete targets the right row in both single and group cases.
-    // Coordinator#deleteState is unconditional and benign on a concurrent delete.
+    // Perform the Coordinator state cleanup (delete the state row). state.getId() is the key the
+    // row actually lives under: the parent ID for a normal group commit, or the full ID for a
+    // single or delayed commit (CoordinatorStateAccessor#getState routes a full child ID through
+    // getStateForGroupCommit and returns the resolved row). CoordinatorStateAccessor#deleteState
+    // handles full keys internally, so the delete targets the right row in both cases.
+    // CoordinatorStateAccessor#deleteState is unconditional and benign on a concurrent delete.
     try {
       coordinator.deleteState(state.getId());
     } catch (CoordinatorException e) {
@@ -718,9 +713,138 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     return expectedTxId.equals(result.getId());
   }
 
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey)
+      throws TransactionException {
+    checkArgument(!Strings.isNullOrEmpty(namespace));
+    checkArgument(!Strings.isNullOrEmpty(table));
+    checkNotNull(partitionKey);
+
+    // Read the current physical state of the record.
+    Get get = buildRecordGet(namespace, table, partitionKey, clusteringKey);
+    Optional<Result> resultOpt;
+    try {
+      resultOpt = storage.get(get);
+    } catch (ExecutionException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              partitionKey,
+              clusteringKey,
+              e.getMessage()),
+          e,
+          null);
+    }
+
+    // Nothing to recover if the record does not exist or is already committed. isCommitted() also
+    // covers a record with no transaction metadata (tx_state absent), which is deemed as committed.
+    // The record is already resolved in both cases, so report it as recovered.
+    if (!resultOpt.isPresent()) {
+      return true;
+    }
+    TransactionResult txResult = new TransactionResult(resultOpt.get());
+    if (txResult.isCommitted()) {
+      return true;
+    }
+
+    // The record is uncommitted (PREPARED or DELETED). A record written by ScalarDB always carries
+    // both tx_id and tx_state together, so tx_id is non-null here; the isCommitted() check above
+    // already handled the no-metadata case where tx_state — and thus tx_id — is absent.
+    String txId = txResult.getId();
+    assert txId != null;
+
+    Optional<State> stateOpt;
+    try {
+      stateOpt = coordinator.getState(txId);
+    } catch (CoordinatorException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              partitionKey,
+              clusteringKey,
+              e.getMessage()),
+          e,
+          txId);
+    }
+
+    // Recover the single record and report whether it was resolved. The Coordinator state cleanup
+    // is deliberately not performed: the writer may span other records that still need the state
+    // row, and the transaction-wide ABORTED row written for the no-state case keeps those records
+    // consistent via lazy recovery.
+    try {
+      return recoveryExecutor.executeSynchronously(get, txResult, stateOpt);
+    } catch (ExecutionException | CoordinatorException e) {
+      throw new TransactionException(
+          CoreError.CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED.buildMessage(
+              ScalarDbUtils.getFullTableName(namespace, table),
+              partitionKey,
+              clusteringKey,
+              e.getMessage()),
+          e,
+          txId);
+    }
+  }
+
+  private static Get buildRecordGet(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+    // Read all columns (no projections) with linearizable consistency so the before-image and the
+    // transaction metadata needed for recovery are available.
+    GetBuilder.BuildableGetWithPartitionKey builder =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .consistency(Consistency.LINEARIZABLE);
+    if (clusteringKey != null) {
+      builder.clusteringKey(clusteringKey);
+    }
+    return builder.build();
+  }
+
   @VisibleForTesting
   boolean isGroupCommitEnabled() {
     return groupCommitter != null;
+  }
+
+  /**
+   * Returns the {@link DistributedStorage} instance this manager uses.
+   *
+   * <p>This instance is owned by this manager and is closed by {@link #close()}. Subclasses that
+   * reuse it must not close it themselves.
+   *
+   * @return the {@link DistributedStorage} instance this manager uses
+   */
+  protected DistributedStorage getStorage() {
+    return storage;
+  }
+
+  /**
+   * Returns the {@link TransactionTableMetadataManager} instance this manager uses.
+   *
+   * <p>This instance is owned by this manager. It holds no closeable resource, but it caches table
+   * metadata read through the {@link DistributedStorageAdmin} that {@link #close()} closes, so
+   * subclasses must not use it after this manager is closed.
+   *
+   * @return the {@link TransactionTableMetadataManager} instance this manager uses
+   */
+  protected TransactionTableMetadataManager getTableMetadataManager() {
+    return tableMetadataManager;
+  }
+
+  /**
+   * Sets a {@link BeforePreparationHook} that runs before the preparation phase of a two-phase
+   * commit. The hook is not invoked when the one-phase commit optimization is taken; see {@link
+   * BeforePreparationHook} for details.
+   *
+   * <p>Subclasses must call this during construction, before any transaction begins. The hook is
+   * not set atomically with respect to in-flight commits, so setting it later races with them.
+   *
+   * @param beforePreparationHook a {@link BeforePreparationHook} to run before the preparation
+   *     phase of a two-phase commit
+   */
+  protected void setBeforePreparationHook(BeforePreparationHook beforePreparationHook) {
+    commit.setBeforePreparationHook(beforePreparationHook);
   }
 
   @Override

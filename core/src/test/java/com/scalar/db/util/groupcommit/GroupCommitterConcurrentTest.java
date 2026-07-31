@@ -152,8 +152,8 @@ class GroupCommitterConcurrentTest {
     }
 
     // Returns a lambda that will be executed once the group is ready to group-commit.
-    private Emittable<String, String, Value> createEmitter() {
-      return new Emittable<String, String, Value>() {
+    private Emittable<String, String, Value, Void> createEmitter() {
+      return new Emittable<String, String, Value, Void>() {
         private void emit(String ignored, List<Value> values) {
           if (maxEmitDurationInMillis > 0) {
             int waitInMillis = rand.nextInt(maxEmitDurationInMillis);
@@ -177,19 +177,21 @@ class GroupCommitterConcurrentTest {
         }
 
         @Override
-        public void emitNormalGroup(String parentKey, List<Value> values) throws Exception {
+        public Void emitNormalGroup(String parentKey, List<Value> values) throws Exception {
           emit(parentKey, values);
+          return null;
         }
 
         @Override
-        public void emitDelayedGroup(String fullKey, Value value) throws Exception {
+        public Void emitDelayedGroup(String fullKey, Value value) throws Exception {
           emit(fullKey, Collections.singletonList(value));
+          return null;
         }
       };
     }
 
     private Callable<Void> groupCommitterCaller(
-        GroupCommitter<String, String, String, String, String, Value> groupCommitter,
+        GroupCommitter<String, String, String, String, String, Value, Void> groupCommitter,
         String childKey,
         Value value) {
       return () -> {
@@ -231,7 +233,7 @@ class GroupCommitterConcurrentTest {
 
     private void exec(GroupCommitConfig groupCommitConfig)
         throws ExecutionException, InterruptedException, TimeoutException {
-      try (GroupCommitter<String, String, String, String, String, Value> groupCommitter =
+      try (GroupCommitter<String, String, String, String, String, Value, Void> groupCommitter =
           new GroupCommitter<>("test", groupCommitConfig, new MyKeyManipulator())) {
         groupCommitter.setEmitter(createEmitter());
 
@@ -308,7 +310,7 @@ class GroupCommitterConcurrentTest {
     }
 
     private void checkGarbage(
-        GroupCommitter<String, String, String, String, String, Value> groupCommitter) {
+        GroupCommitter<String, String, String, String, String, Value, Void> groupCommitter) {
       boolean noGarbage = false;
       GroupCommitMetrics groupCommitMetrics = null;
       for (int i = 0; i < 60; i++) {

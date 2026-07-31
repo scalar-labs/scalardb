@@ -35,6 +35,8 @@ shadowJar {
         attributes 'Main-Class': 'com.scalar.db.dataloader.cli.DataLoaderCli'
     }
     mergeServiceFiles()
+    // The fat jar contains more than 65535 entries, which requires the zip64 extension
+    zip64 = true
 }
 
 spotless {

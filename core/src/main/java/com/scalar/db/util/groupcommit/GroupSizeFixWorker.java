@@ -8,22 +8,22 @@ import javax.annotation.concurrent.ThreadSafe;
 // DelayedSlotMoveWorker.
 // Ready NormalGroup is passed to GroupCleanupWorker.
 @ThreadSafe
-class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
     extends BackgroundWorker<
-        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>> {
+        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>> {
   private final DelayedSlotMoveWorker<
-          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
       delayedSlotMoveWorker;
   private final GroupCleanupWorker<
-          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+          PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
       groupCleanupWorker;
 
   GroupSizeFixWorker(
       String label,
       long queueCheckIntervalInMillis,
-      DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      DelayedSlotMoveWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
           delayedSlotMoveWorker,
-      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
           groupCleanupWorker) {
     super(
         label + "-group-commit-normal-group-size-fix",
@@ -34,7 +34,8 @@ class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_
   }
 
   private void enqueueItemToNextQueue(
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> normalGroup) {
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
+          normalGroup) {
     if (normalGroup.isReady()) {
       groupCleanupWorker.add(normalGroup);
     } else {
@@ -43,7 +44,7 @@ class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_
   }
 
   @Override
-  BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+  BlockingQueue<NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>>
       createQueue() {
     // Use a normal queue because:
     // - Queued groups are removed once processed, without being re-enqueued
@@ -54,7 +55,8 @@ class GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_
 
   @Override
   boolean processItem(
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> normalGroup) {
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
+          normalGroup) {
     // Size-fix the group if needed.
     if (normalGroup.isSizeFixed()) {
       enqueueItemToNextQueue(normalGroup);

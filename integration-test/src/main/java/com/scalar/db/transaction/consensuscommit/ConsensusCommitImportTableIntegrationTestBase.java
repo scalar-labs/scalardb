@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -74,7 +75,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
-  private Coordinator coordinator;
+  private CoordinatorStateAccessor coordinator;
   private RecoveryHandler recovery;
   private RecoveryExecutor recoveryExecutor;
   @Nullable private CoordinatorGroupCommitter groupCommitter;
@@ -123,11 +124,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   public void setUp() throws Exception {
     dropTables();
     storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CrudHandler crud =
         new CrudHandler(
@@ -278,7 +279,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     if (coordinatorState == null) {
       return;
     }
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, coordinatorState);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, coordinatorState, System.currentTimeMillis());
     coordinator.putState(state);
   }
 
@@ -499,8 +501,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
@@ -548,7 +551,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -588,9 +591,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
@@ -643,9 +646,13 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    // With the default isolation, the read path aborts the expired transaction synchronously (its
+    // ABORTED coordinator state is written) before returning the result, then rolls the record back
+    // in the background. tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test
@@ -687,8 +694,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
@@ -736,7 +744,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -776,9 +784,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
@@ -831,9 +839,13 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    // With the default isolation, the read path aborts the expired transaction synchronously (its
+    // ABORTED coordinator state is written) before returning the result, then rolls the record back
+    // in the background. tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test

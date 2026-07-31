@@ -13,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.Consistency;
 import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -43,8 +44,8 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -54,6 +55,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -64,7 +66,7 @@ public class ConsensusCommitManagerTest {
   @Mock private DistributedStorageAdmin admin;
   @Mock private ConsensusCommitConfig consensusCommitConfig;
   @Mock private DatabaseConfig databaseConfig;
-  @Mock private Coordinator coordinator;
+  @Mock private CoordinatorStateAccessor coordinator;
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CrudHandler crud;
@@ -271,7 +273,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.begin(ANY_TX_ID);
@@ -456,7 +458,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     manager.start(ANY_TX_ID);
@@ -498,7 +500,7 @@ public class ConsensusCommitManagerTest {
   public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
@@ -513,7 +515,7 @@ public class ConsensusCommitManagerTest {
   public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
@@ -525,7 +527,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
@@ -540,7 +542,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
@@ -563,7 +565,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
@@ -577,7 +579,7 @@ public class ConsensusCommitManagerTest {
   public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
 
@@ -592,7 +594,7 @@ public class ConsensusCommitManagerTest {
   public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     // Act Assert
     assertThatThrownBy(() -> manager.join(ANY_TX_ID))
@@ -604,7 +606,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.commit();
@@ -619,7 +621,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
 
@@ -642,7 +644,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1);
+        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
 
     DistributedTransaction transaction = manager.begin(ANY_TX_ID);
     transaction.rollback();
@@ -656,7 +658,8 @@ public class ConsensusCommitManagerTest {
   public void check_StateReturned_ReturnTheState() throws CoordinatorException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(new State(ANY_TX_ID, expected)));
+    when(coordinator.getState(ANY_TX_ID))
+        .thenReturn(Optional.of(new State(ANY_TX_ID, expected, System.currentTimeMillis())));
 
     // Act
     TransactionState actual = manager.getState(ANY_TX_ID);
@@ -695,7 +698,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
+    when(commit.forceAbortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -709,7 +712,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
+    when(commit.forceAbortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -722,8 +725,7 @@ public class ConsensusCommitManagerTest {
   public void rollback_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortStateForRollback(ANY_TX_ID))
-        .thenThrow(UnknownTransactionStatusException.class);
+    when(commit.forceAbortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act
     TransactionState actual = manager.rollback(ANY_TX_ID);
@@ -736,7 +738,7 @@ public class ConsensusCommitManagerTest {
   public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState() throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.ABORTED;
-    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
+    when(commit.forceAbortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -750,7 +752,7 @@ public class ConsensusCommitManagerTest {
       throws TransactionException {
     // Arrange
     TransactionState expected = TransactionState.COMMITTED;
-    when(commit.abortStateForRollback(ANY_TX_ID)).thenReturn(expected);
+    when(commit.forceAbortState(ANY_TX_ID)).thenReturn(expected);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -763,8 +765,7 @@ public class ConsensusCommitManagerTest {
   public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
       throws TransactionException {
     // Arrange
-    when(commit.abortStateForRollback(ANY_TX_ID))
-        .thenThrow(UnknownTransactionStatusException.class);
+    when(commit.forceAbortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
 
     // Act
     TransactionState actual = manager.abort(ANY_TX_ID);
@@ -1884,7 +1885,12 @@ public class ConsensusCommitManagerTest {
   public void finishTransaction_CommittedTransactionWithSinglePut_ShouldRecoverAndDeleteState()
       throws Exception {
     // Arrange
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result record = preparedRecord(ANY_TX_ID);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
@@ -1905,7 +1911,12 @@ public class ConsensusCommitManagerTest {
   public void finishTransaction_AbortedTransactionWithSinglePut_ShouldRecoverAndDeleteState()
       throws Exception {
     // Arrange
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.ABORTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.ABORTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result record = preparedRecord(ANY_TX_ID);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
@@ -1949,7 +1960,8 @@ public class ConsensusCommitManagerTest {
             .build();
     String fullChildId2 = keyManipulator.fullKey(parentId, "child-2");
     String fullChildId3 = keyManipulator.fullKey(parentId, "child-3");
-    State state = new State(parentId, writeSet, TransactionState.COMMITTED);
+    State state =
+        new State(parentId, writeSet, TransactionState.COMMITTED, System.currentTimeMillis());
     when(coordinator.getState(fullChildId1)).thenReturn(Optional.of(state));
     Result r1 = preparedRecord(fullChildId1);
     Result r2 = preparedRecord(fullChildId2);
@@ -1982,7 +1994,7 @@ public class ConsensusCommitManagerTest {
 
     // Assert — the state row is already gone, so finishing is a no-op that reports success.
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator, never()).deleteState(anyString());
   }
 
@@ -1992,7 +2004,7 @@ public class ConsensusCommitManagerTest {
     // Arrange — State whose tx_write_set is NULL (terminated via
     // DistributedTransactionManager#rollback()/abort(), lazy-recovery abort, pre-feature row,
     // etc.).
-    State state = new State(ANY_TX_ID, TransactionState.ABORTED);
+    State state = new State(ANY_TX_ID, TransactionState.ABORTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
 
     // Act
@@ -2001,20 +2013,7 @@ public class ConsensusCommitManagerTest {
     // Assert — the transaction is not applicable (no write set), so the call reports false and
     // leaves the state row for lazy recovery instead of throwing.
     assertThat(finished).isFalse();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
-    verify(coordinator, never()).deleteState(anyString());
-  }
-
-  @Test
-  public void finishTransaction_NonTerminalState_ShouldThrowAssertionError() throws Exception {
-    // Arrange — A persisted State should never be PREPARED. If it is, that's an internal
-    // invariant violation that finishTransaction must surface loudly.
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.PREPARED);
-    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
-
-    // Act + Assert
-    assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
-        .isInstanceOf(AssertionError.class);
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator, never()).deleteState(anyString());
   }
 
@@ -2036,7 +2035,12 @@ public class ConsensusCommitManagerTest {
   public void finishTransaction_StorageGetFails_ShouldThrowTransactionExceptionWithCause()
       throws Exception {
     // Arrange
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     com.scalar.db.exception.storage.ExecutionException cause =
         new com.scalar.db.exception.storage.ExecutionException("storage down");
@@ -2052,7 +2056,12 @@ public class ConsensusCommitManagerTest {
   @Test
   public void finishTransaction_RecordAlreadyGone_ShouldSkipEntryAndDeleteState() throws Exception {
     // Arrange
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
 
@@ -2062,7 +2071,7 @@ public class ConsensusCommitManagerTest {
     // Assert — record was missing, so recovery is not invoked, but the state row is still cleaned
     // up because the transaction itself is terminal.
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2075,7 +2084,8 @@ public class ConsensusCommitManagerTest {
         com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
             .setSchemaVersion(1)
             .build();
-    State state = new State(ANY_TX_ID, emptyWriteSet, TransactionState.COMMITTED);
+    State state =
+        new State(ANY_TX_ID, emptyWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
 
     // Act
@@ -2084,7 +2094,7 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(finished).isTrue();
     verify(storage, never()).get(any(Get.class));
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2093,7 +2103,12 @@ public class ConsensusCommitManagerTest {
       throws Exception {
     // Arrange — Record's tx_state is already COMMITTED (someone else recovered it). The recovery
     // mutation would no-op via NoMutationException, so we filter it out up front.
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result finalizedRecord = mock(Result.class);
     when(finalizedRecord.getText(Attribute.ID)).thenReturn(ANY_TX_ID);
@@ -2106,7 +2121,7 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2116,7 +2131,12 @@ public class ConsensusCommitManagerTest {
     // Arrange — Record's tx_id no longer matches the transaction we are finishing because an
     // unrelated transaction has since overwritten it. Recovery would no-op via NoMutationException
     // on the tx_id mismatch, so we filter it out up front.
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result overwrittenRecord = preparedRecord("some-other-tx-id");
     when(storage.get(any(Get.class))).thenReturn(Optional.of(overwrittenRecord));
@@ -2126,7 +2146,7 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     assertThat(finished).isTrue();
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator).deleteState(ANY_TX_ID);
   }
 
@@ -2135,7 +2155,12 @@ public class ConsensusCommitManagerTest {
       finishTransaction_RecoverFailsWithExecutionException_ShouldThrowTransactionExceptionWithCause()
           throws Exception {
     // Arrange
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result record = preparedRecord(ANY_TX_ID);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
@@ -2157,7 +2182,12 @@ public class ConsensusCommitManagerTest {
       finishTransaction_DeleteStateFailsWithCoordinatorException_ShouldThrowTransactionExceptionWithCause()
           throws Exception {
     // Arrange
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result record = preparedRecord(ANY_TX_ID);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
@@ -2176,7 +2206,12 @@ public class ConsensusCommitManagerTest {
           throws Exception {
     // Arrange — first call fails on storage.get with a transient error; the state row is left
     // intact. Second call sees the state row again and proceeds to completion.
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     com.scalar.db.exception.storage.ExecutionException firstAttemptCause =
         new com.scalar.db.exception.storage.ExecutionException("transient storage hiccup");
@@ -2189,7 +2224,7 @@ public class ConsensusCommitManagerTest {
         .hasCause(firstAttemptCause);
     verify(coordinator, never()).deleteState(anyString());
 
-    // Second call recovers and deletes the state row
+    // Second call recovers and cleans up the state row
     boolean finished = manager.finishTransaction(ANY_TX_ID);
     assertThat(finished).isTrue();
     verify(recoveryExecutor)
@@ -2204,7 +2239,12 @@ public class ConsensusCommitManagerTest {
     // recovery handler rolls them back when the state row is ABORTED, or rolls them forward —
     // composing a Delete — when it is COMMITTED). This test exercises the DELETED-state branch
     // of shouldRecover via the happy COMMITTED-state path.
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.COMMITTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result deletedRecord = mock(Result.class);
     when(deletedRecord.getText(Attribute.ID)).thenReturn(ANY_TX_ID);
@@ -2231,7 +2271,12 @@ public class ConsensusCommitManagerTest {
     // record through to executeSynchronously, where the recovery handler rolls it back to its
     // before-image. This exercises the DELETED-state branch of shouldRecover via the ABORTED-state
     // path.
-    State state = new State(ANY_TX_ID, writeSetWithSinglePutEntry(), TransactionState.ABORTED);
+    State state =
+        new State(
+            ANY_TX_ID,
+            writeSetWithSinglePutEntry(),
+            TransactionState.ABORTED,
+            System.currentTimeMillis());
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
     Result deletedRecord = mock(Result.class);
     when(deletedRecord.getText(Attribute.ID)).thenReturn(ANY_TX_ID);
@@ -2247,5 +2292,268 @@ public class ConsensusCommitManagerTest {
     verify(recoveryExecutor)
         .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(state));
     verify(coordinator).deleteState(ANY_TX_ID);
+  }
+
+  // ------------------------------------------------------------
+  // recoverRecord
+  // ------------------------------------------------------------
+
+  // Key-shape and table-existence validation is delegated to the storage-layer OperationChecker
+  // invoked by storage.get, so it is not re-tested here (covered by OperationChecker's own tests
+  // and the integration tests).
+
+  private Result committedRecord(String txId) {
+    Result record = mock(Result.class);
+    when(record.getText(Attribute.ID)).thenReturn(txId);
+    when(record.isNull(Attribute.STATE)).thenReturn(false);
+    when(record.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    return record;
+  }
+
+  @Test
+  public void recoverRecord_UncommittedRecordGiven_ShouldRecoverWithStateAndReturnTrue()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    State state = new State(ANY_TX_ID, TransactionState.COMMITTED, System.currentTimeMillis());
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    when(recoveryExecutor.executeSynchronously(
+            any(Get.class), any(TransactionResult.class), eq(Optional.of(state))))
+        .thenReturn(true);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator).getState(ANY_TX_ID);
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.of(state)));
+    // recoverRecord must never perform Coordinator state cleanup (delete the state row).
+    verify(coordinator, never()).deleteState(anyString());
+
+    // The Get is built with linearizable consistency and the supplied keys (no projections).
+    ArgumentCaptor<Get> getCaptor = ArgumentCaptor.forClass(Get.class);
+    verify(storage).get(getCaptor.capture());
+    Get get = getCaptor.getValue();
+    assertThat(get.forNamespace()).hasValue(ANY_NAMESPACE);
+    assertThat(get.forTable()).hasValue(ANY_TABLE);
+    assertThat((Object) get.getPartitionKey()).isEqualTo(Key.ofText("pk", "pv"));
+    assertThat(get.getClusteringKey()).hasValue(Key.ofText("ck", "cv"));
+    assertThat(get.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
+    assertThat(get.getProjections()).isEmpty();
+  }
+
+  @Test
+  public void recoverRecord_PartitionKeyOnly_ShouldBuildGetWithoutClusteringKey() throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    State state = new State(ANY_TX_ID, TransactionState.ABORTED, System.currentTimeMillis());
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    when(recoveryExecutor.executeSynchronously(
+            any(Get.class), any(TransactionResult.class), eq(Optional.of(state))))
+        .thenReturn(true);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), null);
+
+    // Assert
+    assertThat(recovered).isTrue();
+    ArgumentCaptor<Get> getCaptor = ArgumentCaptor.forClass(Get.class);
+    verify(storage).get(getCaptor.capture());
+    Get get = getCaptor.getValue();
+    assertThat((Object) get.getPartitionKey()).isEqualTo(Key.ofText("pk", "pv"));
+    assertThat(get.getClusteringKey()).isEmpty();
+    assertThat(get.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
+  }
+
+  @Test
+  public void recoverRecord_StateAbsent_ShouldDelegateWithEmptyStateAndReturnResult()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
+    when(recoveryExecutor.executeSynchronously(
+            any(Get.class), any(TransactionResult.class), eq(Optional.empty())))
+        .thenReturn(true);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.empty()));
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void recoverRecord_RecordAbsent_ShouldReturnTrueWithoutRecovery() throws Exception {
+    // Arrange
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+  }
+
+  @Test
+  public void recoverRecord_AlreadyCommittedRecord_ShouldReturnTrueWithoutRecovery()
+      throws Exception {
+    // Arrange
+    Result record = committedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+  }
+
+  @Test
+  public void recoverRecord_DeemedAsCommittedRecord_ShouldReturnTrueWithoutRecovery()
+      throws Exception {
+    // Arrange — an imported-table row with no transaction metadata (tx_state is null). getState()
+    // deems such a record COMMITTED, so recoverRecord must no-op without consulting the
+    // coordinator.
+    Result record = mock(Result.class);
+    when(record.isNull(Attribute.STATE)).thenReturn(true);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv"));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+  }
+
+  @Test
+  public void recoverRecord_CoordinatorGetStateFails_ShouldThrowTransactionException()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    CoordinatorException toThrow = mock(CoordinatorException.class);
+    when(toThrow.getMessage()).thenReturn("coordinator down");
+    doThrow(toThrow).when(coordinator).getState(ANY_TX_ID);
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void recoverRecord_StorageGetFails_ShouldThrowTransactionException() throws Exception {
+    // Arrange
+    com.scalar.db.exception.storage.ExecutionException cause =
+        new com.scalar.db.exception.storage.ExecutionException("storage down");
+    when(storage.get(any(Get.class))).thenThrow(cause);
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    // The record could not be read, so neither the coordinator nor the recovery executor is
+    // touched.
+    verify(coordinator, never()).getState(anyString());
+    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void recoverRecord_RecoveryExecutorFails_ShouldThrowTransactionException()
+      throws Exception {
+    // Arrange
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    State state = new State(ANY_TX_ID, TransactionState.COMMITTED, System.currentTimeMillis());
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(state));
+    com.scalar.db.exception.storage.ExecutionException cause =
+        new com.scalar.db.exception.storage.ExecutionException("recovery storage down");
+    doThrow(cause)
+        .when(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.of(state)));
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    // recoverRecord must never perform Coordinator state cleanup, even on failure.
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void
+      recoverRecord_RecoveryExecutorThrowsCoordinatorException_ShouldThrowTransactionException()
+          throws Exception {
+    // Arrange — no coordinator state, and the no-state recovery path throws CoordinatorException
+    // (the second arm of recoverRecord's ExecutionException | CoordinatorException multicatch).
+    Result record = preparedRecord(ANY_TX_ID);
+    when(storage.get(any(Get.class))).thenReturn(Optional.of(record));
+    when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
+    CoordinatorException cause = mock(CoordinatorException.class);
+    when(cause.getMessage()).thenReturn("coordinator down");
+    doThrow(cause)
+        .when(recoveryExecutor)
+        .executeSynchronously(any(Get.class), any(TransactionResult.class), eq(Optional.empty()));
+
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                manager.recoverRecord(
+                    ANY_NAMESPACE, ANY_TABLE, Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(TransactionException.class)
+        .hasCause(cause)
+        .hasMessageStartingWith("DB-CORE-30069:");
+    // recoverRecord must never perform Coordinator state cleanup, even on failure.
+    verify(coordinator, never()).deleteState(anyString());
+  }
+
+  @Test
+  public void setBeforePreparationHook_HookGiven_ShouldSetItToCommitHandler() {
+    // Arrange
+    BeforePreparationHook beforePreparationHook = mock(BeforePreparationHook.class);
+
+    // Act
+    manager.setBeforePreparationHook(beforePreparationHook);
+
+    // Assert
+    verify(commit).setBeforePreparationHook(beforePreparationHook);
   }
 }

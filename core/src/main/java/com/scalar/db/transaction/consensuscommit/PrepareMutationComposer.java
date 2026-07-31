@@ -5,7 +5,6 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperation
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getNextTxVersion;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -26,14 +25,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
 
-  public PrepareMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, tableMetadataManager);
-  }
-
-  @VisibleForTesting
-  PrepareMutationComposer(
-      String id, long current, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, current, tableMetadataManager);
+  public PrepareMutationComposer(
+      String id, long timestamp, TransactionTableMetadataManager tableMetadataManager) {
+    super(id, timestamp, tableMetadataManager);
   }
 
   @Override
@@ -62,7 +56,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
 
     putBuilder.textValue(Attribute.ID, id);
     putBuilder.intValue(Attribute.STATE, TransactionState.PREPARED.get());
-    putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
+    putBuilder.bigIntValue(Attribute.PREPARED_AT, timestamp);
 
     if (!isInsertModeEnabled(base) && result != null) { // overwrite existing record
       createBeforeColumns(base, result).forEach(putBuilder::value);
@@ -100,7 +94,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
 
     putBuilder.textValue(Attribute.ID, id);
     putBuilder.intValue(Attribute.STATE, TransactionState.DELETED.get());
-    putBuilder.bigIntValue(Attribute.PREPARED_AT, current);
+    putBuilder.bigIntValue(Attribute.PREPARED_AT, timestamp);
 
     if (result != null) {
       createBeforeColumns(base, result).forEach(putBuilder::value);

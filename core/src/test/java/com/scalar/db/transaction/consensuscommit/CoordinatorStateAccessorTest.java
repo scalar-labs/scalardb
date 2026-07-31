@@ -3,10 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -30,8 +27,8 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.IntColumn;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
@@ -53,21 +50,20 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class CoordinatorTest {
+public class CoordinatorStateAccessorTest {
   private static final String ANY_ID_1 = "anyid1";
   private static final String EMPTY_CHILD_IDS = "";
   private static final long ANY_TIME_1 = 1;
 
   @Mock private DistributedStorage storage;
   @Mock private ConsensusCommitConfig config;
-  private Coordinator coordinator;
-  @Captor private ArgumentCaptor<State> stateArgumentCaptor;
+  private CoordinatorStateAccessor coordinator;
   @Captor private ArgumentCaptor<Get> getArgumentCaptor;
 
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
   }
 
   @Test
@@ -83,7 +79,7 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getState(ANY_ID_1);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(ANY_ID_1);
 
     // Assert
     assertThat(state).isPresent();
@@ -107,9 +103,9 @@ public class CoordinatorTest {
   }
 
   @Test
-  public void getStateByParentId_GroupCommitParentIdGiven_ShouldReturnStateUsingItParent()
+  public void getState_ParentIdGiven_ShouldReadParentRowDirectly()
       throws ExecutionException, CoordinatorException {
-    // Arrange
+    // Arrange — parent IDs are non-full keys, so getState routes through the literal read path.
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -129,7 +125,7 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getStateByParentId(parentId);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(parentId);
 
     // Assert
     assertThat(state).isPresent();
@@ -141,41 +137,13 @@ public class CoordinatorTest {
   }
 
   @Test
-  public void getStateByFullId_GroupCommitFullIdGiven_ShouldReturnStateUsingItParent()
-      throws ExecutionException, CoordinatorException {
-    // Arrange
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
-    String fullId =
-        keyManipulator.fullKey(keyManipulator.generateParentKey(), UUID.randomUUID().toString());
-
-    Result result = mock(Result.class);
-    when(result.getText(Attribute.ID)).thenReturn(fullId);
-    when(result.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
-    when(result.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
-    when(result.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
-    when(result.isNull(Attribute.WRITE_SET)).thenReturn(true);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
-
-    // Act
-    Optional<Coordinator.State> state = coordinator.getStateByFullId(fullId);
-
-    // Assert
-    assertThat(state).isPresent();
-    assertThat(state.get().getId()).isEqualTo(fullId);
-    assertThat(state.get().getChildIds()).isEmpty();
-    assertThat(state.get().getChildIdsAsString()).isEmpty();
-    Assertions.assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
-    assertThat(state.get().getCreatedAt()).isEqualTo(ANY_TIME_1);
-  }
-
-  @Test
   public void putState_StateGiven_ShouldPutWithCorrectValues()
       throws ExecutionException, CoordinatorException {
     // Arrange
-    coordinator = spy(new Coordinator(storage, config));
+    coordinator = spy(new CoordinatorStateAccessor(storage, config));
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     doNothing().when(storage).put(any(Put.class));
 
     // Act
@@ -189,7 +157,8 @@ public class CoordinatorTest {
   public void createPutWith_StateGiven_ShouldCreateWithCorrectValues() throws ExecutionException {
     // Arrange
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     doNothing().when(storage).put(any(Put.class));
 
     // Act
@@ -205,17 +174,18 @@ public class CoordinatorTest {
     assertThat(put.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
     assertThat(put.getCondition()).isPresent();
     assertThat(put.getCondition().get()).isExactlyInstanceOf(PutIfNotExists.class);
-    assertThat(put.forNamespace()).hasValue(Coordinator.NAMESPACE);
-    assertThat(put.forTable()).hasValue(Coordinator.TABLE);
+    assertThat(put.forNamespace()).hasValue(CoordinatorStateAccessor.NAMESPACE);
+    assertThat(put.forTable()).hasValue(CoordinatorStateAccessor.TABLE);
   }
 
   @Test
   public void putState_StateGivenAndExceptionThrownInPut_ShouldThrowCoordinatorException()
       throws ExecutionException {
     // Arrange
-    coordinator = spy(new Coordinator(storage, config));
+    coordinator = spy(new CoordinatorStateAccessor(storage, config));
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     ExecutionException toThrow = mock(ExecutionException.class);
     doThrow(toThrow).when(storage).put(any(Put.class));
 
@@ -231,7 +201,7 @@ public class CoordinatorTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
 
     Result result = mock(Result.class);
     when(result.getText(Attribute.ID)).thenReturn(ANY_ID_1);
@@ -242,13 +212,13 @@ public class CoordinatorTest {
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
 
     // Act
-    Optional<Coordinator.State> state = coordinator.getState(ANY_ID_1);
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(ANY_ID_1);
 
     // Assert
     ArgumentCaptor<Get> captor = ArgumentCaptor.forClass(Get.class);
     verify(storage).get(captor.capture());
     assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
-    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
+    assertThat(captor.getValue().forTable()).hasValue(CoordinatorStateAccessor.TABLE);
 
     assertThat(state).isPresent();
     assertThat(state.get().getId()).isEqualTo(ANY_ID_1);
@@ -263,10 +233,11 @@ public class CoordinatorTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
-    coordinator = spy(new Coordinator(storage, config));
+    coordinator = spy(new CoordinatorStateAccessor(storage, config));
 
     long current = System.currentTimeMillis();
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED, current);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, current);
     doNothing().when(storage).put(any(Put.class));
 
     // Act
@@ -278,7 +249,7 @@ public class CoordinatorTest {
     ArgumentCaptor<Put> captor = ArgumentCaptor.forClass(Put.class);
     verify(storage).put(captor.capture());
     assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
-    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
+    assertThat(captor.getValue().forTable()).hasValue(CoordinatorStateAccessor.TABLE);
   }
 
   // For group commit
@@ -302,7 +273,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdForGroupCommitGivenAndParentIdAndChildIdMatch_ShouldReturnState(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -334,8 +305,8 @@ public class CoordinatorTest {
         .get(coordinator.createGetWith(parentId));
 
     // Act
-    Optional<Coordinator.State> state1 = spiedCoordinator.getState(fullId1);
-    Optional<Coordinator.State> state2 = spiedCoordinator.getState(fullId2);
+    Optional<CoordinatorStateAccessor.State> state1 = spiedCoordinator.getState(fullId1);
+    Optional<CoordinatorStateAccessor.State> state2 = spiedCoordinator.getState(fullId2);
 
     // Assert
     assertThat(state1).isEqualTo(state2);
@@ -359,7 +330,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdForSingleCommitGivenAndFullIdMatches_ShouldReturnState(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -401,7 +372,7 @@ public class CoordinatorTest {
         .get(coordinator.createGetWith(fullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(fullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(fullId);
 
     // Assert
     assertThat(state).isPresent();
@@ -423,7 +394,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdForGroupCommitGivenAndOnlyParentIdMatches_ShouldReturnEmpty(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -456,7 +427,7 @@ public class CoordinatorTest {
     doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(targetFullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(targetFullId);
 
     // Assert
     assertThat(state).isEmpty();
@@ -474,7 +445,7 @@ public class CoordinatorTest {
       getState_TransactionIdForSingleCommitGivenAndOnlyParentIdMatchesButFullIdMatches_ShouldReturnState(
           TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -517,7 +488,7 @@ public class CoordinatorTest {
         .get(coordinator.createGetWith(targetFullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(targetFullId);
 
     // Assert
     assertThat(state).isPresent();
@@ -539,7 +510,7 @@ public class CoordinatorTest {
   public void getState_TransactionIdGivenButNoIdMatches_ShouldReturnEmpty(
       TransactionState transactionState) throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -573,7 +544,7 @@ public class CoordinatorTest {
     doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(targetFullId));
 
     // Act
-    Optional<Coordinator.State> state = spiedCoordinator.getState(targetFullId);
+    Optional<CoordinatorStateAccessor.State> state = spiedCoordinator.getState(targetFullId);
 
     // Assert
     assertThat(state).isEmpty();
@@ -588,7 +559,7 @@ public class CoordinatorTest {
       getState_TransactionIdForGroupCommitGivenAndFullIdMatchesAndExceptionThrownInGet_ShouldThrowCoordinatorException()
           throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -609,7 +580,7 @@ public class CoordinatorTest {
       getState_TransactionIdForGroupCommitGivenAndParentIdMatchesAndExceptionThrownInGet_ShouldThrowCoordinatorException()
           throws ExecutionException, CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -629,179 +600,49 @@ public class CoordinatorTest {
     verify(spiedCoordinator).getStateForGroupCommit(fullId);
   }
 
-  @ParameterizedTest
-  @EnumSource(
-      value = TransactionState.class,
-      names = {"COMMITTED", "ABORTED"})
-  public void putStateForGroupCommit_ParentIdGiven_ShouldPutWithCorrectValues(
-      TransactionState transactionState) throws ExecutionException, CoordinatorException {
-    // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
-    String parentId = keyManipulator.generateParentKey();
-    String childId1 = UUID.randomUUID().toString();
-    String childId2 = UUID.randomUUID().toString();
-    List<String> fullIds =
-        Arrays.asList(
-            keyManipulator.fullKey(parentId, childId1), keyManipulator.fullKey(parentId, childId2));
-    long current = System.currentTimeMillis();
-    doNothing().when(storage).put(any(Put.class));
-
-    // Act
-    spiedCoordinator.putStateForGroupCommit(parentId, fullIds, transactionState, current);
-
-    // Assert
-    verify(spiedCoordinator).createPutWith(stateArgumentCaptor.capture());
-    State state = stateArgumentCaptor.getValue();
-    assertThat(state.getId()).isEqualTo(parentId);
-    assertThat(state.getChildIds()).hasSize(2);
-    assertThat(state.getChildIds().get(0)).isEqualTo(childId1);
-    assertThat(state.getChildIds().get(1)).isEqualTo(childId2);
-    assertThat(state.getChildIdsAsString()).isEqualTo(childId1 + "," + childId2);
-    assertThat(state.getState()).isEqualTo(transactionState);
-    assertThat(state.getCreatedAt()).isEqualTo(current);
-  }
-
-  @ParameterizedTest
-  @EnumSource(
-      value = TransactionState.class,
-      names = {"COMMITTED", "ABORTED"})
-  public void putStateForGroupCommit_FullIdGiven_ShouldThrowAssertionError(
-      TransactionState transactionState) throws ExecutionException {
-    // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
-    String parentId = keyManipulator.generateParentKey();
-    String childId = UUID.randomUUID().toString();
-    String fullId = keyManipulator.fullKey(parentId, childId);
-    List<String> fullIds = Collections.singletonList(fullId);
-    long current = System.currentTimeMillis();
-    doNothing().when(storage).put(any(Put.class));
-
-    // Act
-    // Assert
-    assertThatThrownBy(
-            () ->
-                spiedCoordinator.putStateForGroupCommit(fullId, fullIds, transactionState, current))
-        .isInstanceOf(AssertionError.class);
-  }
-
-  @ParameterizedTest
-  @EnumSource(
-      value = TransactionState.class,
-      names = {"COMMITTED", "ABORTED"})
-  public void
-      putStateForGroupCommit_StateGivenAndExceptionThrownInPut_ShouldThrowCoordinatorException(
-          TransactionState transactionState) throws ExecutionException {
-    // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
-    String parentId = keyManipulator.generateParentKey();
-    String childId1 = UUID.randomUUID().toString();
-    String childId2 = UUID.randomUUID().toString();
-    List<String> fullIds =
-        Arrays.asList(
-            keyManipulator.fullKey(parentId, childId1), keyManipulator.fullKey(parentId, childId2));
-    long current = System.currentTimeMillis();
-    ExecutionException toThrow = mock(ExecutionException.class);
-    doThrow(toThrow).when(storage).put(any(Put.class));
-
-    // Act
-    // Assert
-    assertThatThrownBy(
-            () ->
-                spiedCoordinator.putStateForGroupCommit(
-                    parentId, fullIds, transactionState, current))
-        .isInstanceOf(CoordinatorException.class);
-    verify(spiedCoordinator).createPutWith(stateArgumentCaptor.capture());
-
-    State state = stateArgumentCaptor.getValue();
-    assertThat(state.getId()).isEqualTo(parentId);
-    assertThat(state.getChildIds()).hasSize(2);
-    assertThat(state.getChildIds().get(0)).isEqualTo(childId1);
-    assertThat(state.getChildIds().get(1)).isEqualTo(childId2);
-    assertThat(state.getChildIdsAsString()).isEqualTo(childId1 + "," + childId2);
-    assertThat(state.getState()).isEqualTo(transactionState);
-    assertThat(state.getCreatedAt()).isEqualTo(current);
-  }
-
-  @ParameterizedTest
-  @EnumSource(
-      value = TransactionState.class,
-      names = {"COMMITTED", "ABORTED"})
-  public void
-      putStateForGroupCommit_StateWithChildIdsContainingDelimiterGiven_ShouldThrowIllegalArgumentException(
-          TransactionState transactionState) throws ExecutionException {
-    // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
-    CoordinatorGroupCommitKeyManipulator keyManipulator =
-        new CoordinatorGroupCommitKeyManipulator();
-    String parentId = keyManipulator.generateParentKey();
-    List<String> fullIds =
-        Arrays.asList(
-            keyManipulator.fullKey(parentId, UUID.randomUUID().toString()),
-            keyManipulator.fullKey(parentId, UUID.randomUUID().toString().replaceFirst("-", ",")));
-    long current = System.currentTimeMillis();
-    ExecutionException toThrow = mock(ExecutionException.class);
-    doThrow(toThrow).when(storage).put(any(Put.class));
-
-    // Act
-    // Assert
-    assertThatThrownBy(
-            () ->
-                spiedCoordinator.putStateForGroupCommit(
-                    parentId, fullIds, transactionState, current))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
   @Test
-  void putStateForLazyRecoveryRollback_NormalIdGiven_ShouldCallPutState()
-      throws CoordinatorException {
+  void forceAbort_NormalIdGiven_ShouldCallPutState() throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
 
     // Act
-    spiedCoordinator.putStateForLazyRecoveryRollback(ANY_ID_1);
+    spiedCoordinator.forceAbort(ANY_ID_1);
 
     // Assert
-    verify(spiedCoordinator).putState(new State(ANY_ID_1, TransactionState.ABORTED));
+    verify(spiedCoordinator).putState(argThat(stateMatcher(ANY_ID_1, TransactionState.ABORTED)));
   }
 
   @Test
   void
-      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsNotCommitted_ShouldInsertTwoRecordsWithParentIdAndFullId()
+      forceAbort_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsNotCommitted_ShouldInsertTwoRecordsWithParentIdAndFullId()
           throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
     String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
 
     // Act
-    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+    spiedCoordinator.forceAbort(fullId);
 
     // Assert
     // The parent-ID conflict marker must be written before the full-ID ABORTED record. This way the
     // abort conflicts with, and wins against, an in-flight normal group commit, which writes the
     // COMMITTED state under the parent ID.
     InOrder inOrder = inOrder(spiedCoordinator);
+    inOrder.verify(spiedCoordinator).putState(argThat(parentMarkerMatcher(parentId)));
     inOrder
         .verify(spiedCoordinator)
-        .putStateForGroupCommit(
-            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
   void
-      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsCommitted_ShouldThrowCoordinatorConflictException()
+      forceAbort_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsCommitted_ShouldThrowCoordinatorConflictException()
           throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -809,34 +650,39 @@ public class CoordinatorTest {
 
     doThrow(CoordinatorConflictException.class)
         .when(spiedCoordinator)
-        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+        .putState(
+            argThat(
+                s ->
+                    s != null
+                        && !new CoordinatorGroupCommitKeyManipulator().isFullKey(s.getId())
+                        && s.getChildIds().isEmpty()
+                        && s.getState() == TransactionState.ABORTED));
     doReturn(
             Optional.of(
                 new State(
                     parentId,
                     Collections.singletonList(ANY_ID_1),
+                    null,
                     TransactionState.COMMITTED,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
         .getState(parentId);
 
     // Act
-    assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
+    assertThatThrownBy(() -> spiedCoordinator.forceAbort(fullId))
         .isInstanceOf(CoordinatorConflictException.class);
 
     // Assert
-    verify(spiedCoordinator)
-        .putStateForGroupCommit(
-            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+    verify(spiedCoordinator).putState(argThat(parentMarkerMatcher(parentId)));
+    verify(spiedCoordinator, never())
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
-  void
-      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsAbort_ShouldDoNothing()
-          throws CoordinatorException {
+  void forceAbort_FullIdGivenWhenTransactionIsInGroupCommitWhenGroupCommitIsAbort_ShouldDoNothing()
+      throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -844,25 +690,31 @@ public class CoordinatorTest {
 
     doThrow(CoordinatorConflictException.class)
         .when(spiedCoordinator)
-        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+        .putState(
+            argThat(
+                s ->
+                    s != null
+                        && !new CoordinatorGroupCommitKeyManipulator().isFullKey(s.getId())
+                        && s.getChildIds().isEmpty()
+                        && s.getState() == TransactionState.ABORTED));
     doReturn(
             Optional.of(
                 new State(
                     parentId,
                     Collections.singletonList(ANY_ID_1),
+                    null,
                     TransactionState.ABORTED,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
         .getState(parentId);
 
     // Act
-    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+    spiedCoordinator.forceAbort(fullId);
 
     // Assert
-    verify(spiedCoordinator)
-        .putStateForGroupCommit(
-            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    verify(spiedCoordinator, never()).putState(new State(fullId, TransactionState.ABORTED));
+    verify(spiedCoordinator).putState(argThat(parentMarkerMatcher(parentId)));
+    verify(spiedCoordinator, never())
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @ParameterizedTest
@@ -870,10 +722,10 @@ public class CoordinatorTest {
       value = TransactionState.class,
       names = {"COMMITTED", "ABORTED"})
   void
-      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitFinished_ShouldInsertRecordWithFullId(
+      forceAbort_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitFinished_ShouldInsertRecordWithFullId(
           TransactionState transactionState) throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -881,29 +733,35 @@ public class CoordinatorTest {
 
     doThrow(CoordinatorConflictException.class)
         .when(spiedCoordinator)
-        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+        .putState(
+            argThat(
+                s ->
+                    s != null
+                        && !new CoordinatorGroupCommitKeyManipulator().isFullKey(s.getId())
+                        && s.getChildIds().isEmpty()
+                        && s.getState() == TransactionState.ABORTED));
     doReturn(
             Optional.of(
                 new State(
                     parentId,
                     Collections.singletonList("other-id"),
+                    null,
                     transactionState,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
         .getState(parentId);
 
     // Act
-    spiedCoordinator.putStateForLazyRecoveryRollback(fullId);
+    spiedCoordinator.forceAbort(fullId);
 
     // Assert
     // The parent-ID conflict marker must be written before the full-ID ABORTED record (see
-    // putStateForLazyRecoveryRollback_...WhenGroupCommitIsNotCommitted_... above).
+    // forceAbort_...WhenGroupCommitIsNotCommitted_... above).
     InOrder inOrder = inOrder(spiedCoordinator);
+    inOrder.verify(spiedCoordinator).putState(argThat(parentMarkerMatcher(parentId)));
     inOrder
         .verify(spiedCoordinator)
-        .putStateForGroupCommit(
-            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @ParameterizedTest
@@ -911,10 +769,10 @@ public class CoordinatorTest {
       value = TransactionState.class,
       names = {"COMMITTED", "ABORTED"})
   void
-      putStateForLazyRecoveryRollback_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitAndDelayedGroupCommitFinished_ShouldCoordinatorConflictException(
+      forceAbort_FullIdGivenWhenTransactionIsInDelayedGroupCommitWhenGroupCommitAndDelayedGroupCommitFinished_ShouldCoordinatorConflictException(
           TransactionState transactionState) throws CoordinatorException {
     // Arrange
-    Coordinator spiedCoordinator = spy(coordinator);
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
     CoordinatorGroupCommitKeyManipulator keyManipulator =
         new CoordinatorGroupCommitKeyManipulator();
     String parentId = keyManipulator.generateParentKey();
@@ -922,33 +780,113 @@ public class CoordinatorTest {
 
     doThrow(CoordinatorConflictException.class)
         .when(spiedCoordinator)
-        .putStateForGroupCommit(anyString(), anyList(), any(), anyLong());
+        .putState(
+            argThat(
+                s ->
+                    s != null
+                        && !new CoordinatorGroupCommitKeyManipulator().isFullKey(s.getId())
+                        && s.getChildIds().isEmpty()
+                        && s.getState() == TransactionState.ABORTED));
     doReturn(
             Optional.of(
                 new State(
                     parentId,
                     Collections.singletonList("other-id"),
+                    null,
                     transactionState,
                     System.currentTimeMillis())))
         .when(spiedCoordinator)
         .getState(parentId);
     doThrow(CoordinatorConflictException.class)
         .when(spiedCoordinator)
-        .putState(new State(fullId, TransactionState.ABORTED));
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
 
     // Act
-    assertThatThrownBy(() -> spiedCoordinator.putStateForLazyRecoveryRollback(fullId))
+    assertThatThrownBy(() -> spiedCoordinator.forceAbort(fullId))
         .isInstanceOf(CoordinatorConflictException.class);
 
     // Assert
     // The parent-ID conflict marker must be written before the full-ID ABORTED record (see
-    // putStateForLazyRecoveryRollback_...WhenGroupCommitIsNotCommitted_... above).
+    // forceAbort_...WhenGroupCommitIsNotCommitted_... above).
     InOrder inOrder = inOrder(spiedCoordinator);
+    inOrder.verify(spiedCoordinator).putState(argThat(parentMarkerMatcher(parentId)));
     inOrder
         .verify(spiedCoordinator)
-        .putStateForGroupCommit(
-            eq(parentId), eq(Collections.emptyList()), eq(TransactionState.ABORTED), anyLong());
-    inOrder.verify(spiedCoordinator).putState(new State(fullId, TransactionState.ABORTED));
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
+  }
+
+  @Test
+  void
+      forceAbort_FullIdGivenWhenParentRowAlreadyCleanedUpAndNoFullIdRecord_ShouldInsertRecordWithFullId()
+          throws CoordinatorException {
+    // The parent-id insert conflicts because a finished group-commit row existed, but the
+    // Coordinator state cleanup process removed it before we re-read it. With no full-ID record,
+    // this transaction is genuinely uncommitted (e.g. a delayed group commit that never landed), so
+    // we fall through to insert the full-ID ABORTED record instead of crashing with AssertionError.
+
+    // Arrange
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putState(
+            argThat(
+                s ->
+                    s != null
+                        && !new CoordinatorGroupCommitKeyManipulator().isFullKey(s.getId())
+                        && s.getChildIds().isEmpty()
+                        && s.getState() == TransactionState.ABORTED));
+    doReturn(Optional.empty()).when(spiedCoordinator).getState(parentId);
+
+    // Act
+    spiedCoordinator.forceAbort(fullId);
+
+    // Assert
+    verify(spiedCoordinator).putState(argThat(parentMarkerMatcher(parentId)));
+    verify(spiedCoordinator).putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
+  }
+
+  @Test
+  void
+      forceAbort_FullIdGivenWhenParentRowAlreadyCleanedUpAndTransactionCommittedWithFullId_ShouldThrowCoordinatorConflictException()
+          throws CoordinatorException {
+    // The parent row was cleaned up after our parent-id insert conflicted, but this transaction
+    // actually committed via a full-ID record (a delayed, standalone commit). Falling through to
+    // insert the full-ID ABORTED record conflicts with that committed record, which propagates so
+    // the caller re-reads the committed outcome instead of treating the transaction as aborted.
+
+    // Arrange
+    CoordinatorStateAccessor spiedCoordinator = spy(coordinator);
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullId = keyManipulator.fullKey(parentId, ANY_ID_1);
+
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putState(
+            argThat(
+                s ->
+                    s != null
+                        && !new CoordinatorGroupCommitKeyManipulator().isFullKey(s.getId())
+                        && s.getChildIds().isEmpty()
+                        && s.getState() == TransactionState.ABORTED));
+    doReturn(Optional.empty()).when(spiedCoordinator).getState(parentId);
+    doThrow(CoordinatorConflictException.class)
+        .when(spiedCoordinator)
+        .putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
+
+    // Act
+    assertThatThrownBy(() -> spiedCoordinator.forceAbort(fullId))
+        .isInstanceOf(CoordinatorConflictException.class);
+
+    // Assert
+    verify(spiedCoordinator).putState(argThat(parentMarkerMatcher(parentId)));
+    verify(spiedCoordinator).putState(argThat(stateMatcher(fullId, TransactionState.ABORTED)));
   }
 
   @Test
@@ -973,7 +911,9 @@ public class CoordinatorTest {
             .setSchemaVersion(1)
             .addEntryGroups(EntryGroup.newBuilder().addEntries(writeEntry))
             .build();
-    State state = new State(ANY_ID_1, originalWriteSet, TransactionState.COMMITTED);
+    State state =
+        new State(
+            ANY_ID_1, originalWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
 
     // Serialize via createPutWith
     Put put = coordinator.createPutWith(state);
@@ -1000,7 +940,7 @@ public class CoordinatorTest {
   @Test
   public void state_NullWriteSet_ShouldNotPersistColumn() {
     // Arrange — State with null writeSet (lazy-recovery abort, etc.)
-    State state = new State(ANY_ID_1, TransactionState.ABORTED);
+    State state = new State(ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
 
     // Act
     Put put = coordinator.createPutWith(state);
@@ -1015,7 +955,8 @@ public class CoordinatorTest {
     List<String> childIds = Arrays.asList("child-1", "child-2");
 
     // Act
-    State state = new State(ANY_ID_1, childIds, TransactionState.COMMITTED);
+    State state =
+        new State(ANY_ID_1, childIds, null, TransactionState.COMMITTED, System.currentTimeMillis());
 
     // Assert
     assertThat(state.getId()).isEqualTo(ANY_ID_1);
@@ -1027,11 +968,11 @@ public class CoordinatorTest {
   @Test
   public void state_EmptyWriteSet_ShouldPersistColumnWithNonEmptyBytes()
       throws CoordinatorException {
-    // Arrange — State with an empty (but non-null) WriteSet that explicitly carries
-    // schema_version, mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for
-    // read-only commits.
+    // Arrange — State with an empty (but non-null) WriteSet that explicitly carries schema_version,
+    // mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for read-only commits.
     WriteSet emptyWriteSet = WriteSet.newBuilder().setSchemaVersion(1).build();
-    State state = new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED);
+    State state =
+        new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
 
     // Serialize
     Put put = coordinator.createPutWith(state);
@@ -1079,16 +1020,57 @@ public class CoordinatorTest {
             .setSchemaVersion(1)
             .addEntryGroups(EntryGroup.newBuilder().setChildId("child-1"))
             .build();
-    State stateWithNullWriteSet = new State(ANY_ID_1, TransactionState.COMMITTED);
-    State stateWithWriteSet1 = new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED);
-    State stateWithWriteSet1Again = new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED);
-    State stateWithWriteSet2 = new State(ANY_ID_1, writeSet2, TransactionState.COMMITTED);
+    long createdAt = System.currentTimeMillis();
+    State stateWithNullWriteSet = new State(ANY_ID_1, TransactionState.COMMITTED, createdAt);
+    State stateWithWriteSet1 =
+        new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED, createdAt);
+    State stateWithWriteSet1Again =
+        new State(ANY_ID_1, writeSet1, TransactionState.COMMITTED, createdAt);
+    State stateWithWriteSet2 =
+        new State(ANY_ID_1, writeSet2, TransactionState.COMMITTED, createdAt);
 
     // Assert
     assertThat(stateWithNullWriteSet).isNotEqualTo(stateWithWriteSet1);
     assertThat(stateWithWriteSet1).isNotEqualTo(stateWithWriteSet2);
     assertThat(stateWithWriteSet1).isEqualTo(stateWithWriteSet1Again);
     assertThat(stateWithWriteSet1.hashCode()).isEqualTo(stateWithWriteSet1Again.hashCode());
+  }
+
+  @Test
+  public void state_EqualityWithDifferentCreatedAt_ShouldNotBeEqual() {
+    // Arrange — same id, childIds, writeSet, state but different createdAt
+    State s1 = new State(ANY_ID_1, TransactionState.COMMITTED, 100L);
+    State s2 = new State(ANY_ID_1, TransactionState.COMMITTED, 200L);
+
+    // Assert — createdAt is part of equality
+    assertThat(s1).isNotEqualTo(s2);
+    assertThat(s1.hashCode()).isNotEqualTo(s2.hashCode());
+  }
+
+  @Test
+  public void state_EqualityWithSameCreatedAt_ShouldBeEqual() {
+    // Arrange — same fields including createdAt
+    long createdAt = 12345L;
+    State s1 = new State(ANY_ID_1, TransactionState.COMMITTED, createdAt);
+    State s2 = new State(ANY_ID_1, TransactionState.COMMITTED, createdAt);
+
+    // Assert
+    assertThat(s1).isEqualTo(s2);
+    assertThat(s1.hashCode()).isEqualTo(s2.hashCode());
+  }
+
+  @Test
+  public void newState_ChildIdContainingDelimiterGiven_ShouldThrowIllegalArgumentException() {
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                new CoordinatorStateAccessor.State(
+                    ANY_ID_1,
+                    Collections.singletonList("child" + "," + "id"),
+                    null,
+                    TransactionState.COMMITTED,
+                    ANY_TIME_1))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -1104,8 +1086,8 @@ public class CoordinatorTest {
     ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
     verify(storage).delete(captor.capture());
     Delete delete = captor.getValue();
-    assertThat(delete.forNamespace()).hasValue(Coordinator.NAMESPACE);
-    assertThat(delete.forTable()).hasValue(Coordinator.TABLE);
+    assertThat(delete.forNamespace()).hasValue(CoordinatorStateAccessor.NAMESPACE);
+    assertThat(delete.forTable()).hasValue(CoordinatorStateAccessor.TABLE);
     assertThat(delete.getPartitionKey().getColumnName(0)).isEqualTo(Attribute.ID);
     assertThat(delete.getPartitionKey().getTextValue(0)).isEqualTo(ANY_ID_1);
     assertThat(delete.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
@@ -1117,7 +1099,7 @@ public class CoordinatorTest {
       throws ExecutionException, CoordinatorException {
     // Arrange
     when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     doNothing().when(storage).delete(any(Delete.class));
 
     // Act
@@ -1127,7 +1109,7 @@ public class CoordinatorTest {
     ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
     verify(storage).delete(captor.capture());
     assertThat(captor.getValue().forNamespace()).hasValue("changed_coordinator");
-    assertThat(captor.getValue().forTable()).hasValue(Coordinator.TABLE);
+    assertThat(captor.getValue().forTable()).hasValue(CoordinatorStateAccessor.TABLE);
   }
 
   @Test
@@ -1141,5 +1123,173 @@ public class CoordinatorTest {
     assertThatThrownBy(() -> coordinator.deleteState(ANY_ID_1))
         .isInstanceOf(CoordinatorException.class)
         .hasCauseInstanceOf(ExecutionException.class);
+  }
+
+  @Test
+  public void deleteState_FullKeyGivenAndCommittedInNormalGroup_ShouldDeleteAtParentKey()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+
+    // The transaction was committed in a normal group, so its state lives under the parent key with
+    // the child ID listed in tx_child_ids.
+    Result resultForGroupCommitState = mock(Result.class);
+    when(resultForGroupCommitState.getText(Attribute.ID)).thenReturn(parentId);
+    when(resultForGroupCommitState.getText(Attribute.CHILD_IDS)).thenReturn(childId);
+    when(resultForGroupCommitState.getInt(Attribute.STATE))
+        .thenReturn(TransactionState.COMMITTED.get());
+    when(resultForGroupCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForGroupCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
+    doReturn(Optional.of(resultForGroupCommitState))
+        .when(storage)
+        .get(coordinator.createGetWith(parentId));
+    doNothing().when(storage).delete(any(Delete.class));
+
+    // Act
+    coordinator.deleteState(fullId);
+
+    // Assert — the delete must target the parent key (where the row actually lives), not the full
+    // key the caller passed.
+    ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
+    verify(storage).delete(captor.capture());
+    assertThat(captor.getValue().getPartitionKey().getTextValue(0)).isEqualTo(parentId);
+  }
+
+  @Test
+  public void deleteState_FullKeyGivenAndCommittedAsDelayedGroup_ShouldDeleteAtFullKey()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+
+    // The transaction was delayed-committed (or force-aborted) under its own full key. There is no
+    // row under the parent key, so getState falls back to the full key.
+    Result resultForSingleCommitState = mock(Result.class);
+    when(resultForSingleCommitState.getText(Attribute.ID)).thenReturn(fullId);
+    when(resultForSingleCommitState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(resultForSingleCommitState.getInt(Attribute.STATE))
+        .thenReturn(TransactionState.COMMITTED.get());
+    when(resultForSingleCommitState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(resultForSingleCommitState.isNull(Attribute.WRITE_SET)).thenReturn(true);
+    doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(parentId));
+    doReturn(Optional.of(resultForSingleCommitState))
+        .when(storage)
+        .get(coordinator.createGetWith(fullId));
+    doNothing().when(storage).delete(any(Delete.class));
+
+    // Act
+    coordinator.deleteState(fullId);
+
+    // Assert — the delete must target the full key.
+    ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
+    verify(storage).delete(captor.capture());
+    assertThat(captor.getValue().getPartitionKey().getTextValue(0)).isEqualTo(fullId);
+  }
+
+  @Test
+  public void
+      deleteState_FullKeyGivenAndDelayedCommittedWhileSiblingForceAbortedParentMarkerExists_ShouldDeleteAtFullKey()
+          throws ExecutionException, CoordinatorException {
+    // Scenario: a group {A, B} under parentId. Sibling A was force-aborted by full ID, which writes
+    // a parent-key conflict marker (ABORTED, empty child_ids) plus a full-key ABORTED row for A.
+    // The marker blocks the normal group commit, but B can still be delayed-committed under its own
+    // full key. So both a parent marker row and B's full-key COMMITTED row coexist.
+    //
+    //      id     |  child_ids  |   state    |  write_set
+    // ------------+-------------+------------+------------
+    //  parentId   |     []      |  ABORTED   |    null      <- A's forceAbort parent marker
+    //  fullId (B) |     []      |  COMMITTED |  present      <- B's delayed commit
+    //
+    // finishTransaction(fullId_B) resolves to B's full-key row and deletes it; the parent marker
+    // must not misroute the delete.
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+
+    // Parent marker row written by the sibling's forceAbort: ABORTED with empty child_ids.
+    Result parentMarker = mock(Result.class);
+    when(parentMarker.getText(Attribute.ID)).thenReturn(parentId);
+    when(parentMarker.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(parentMarker.getInt(Attribute.STATE)).thenReturn(TransactionState.ABORTED.get());
+    when(parentMarker.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(parentMarker.isNull(Attribute.WRITE_SET)).thenReturn(true);
+
+    // B's own delayed-commit row under the full key.
+    Result fullKeyState = mock(Result.class);
+    when(fullKeyState.getText(Attribute.ID)).thenReturn(fullId);
+    when(fullKeyState.getText(Attribute.CHILD_IDS)).thenReturn(EMPTY_CHILD_IDS);
+    when(fullKeyState.getInt(Attribute.STATE)).thenReturn(TransactionState.COMMITTED.get());
+    when(fullKeyState.getBigInt(Attribute.CREATED_AT)).thenReturn(ANY_TIME_1);
+    when(fullKeyState.isNull(Attribute.WRITE_SET)).thenReturn(true);
+
+    doReturn(Optional.of(parentMarker)).when(storage).get(coordinator.createGetWith(parentId));
+    doReturn(Optional.of(fullKeyState)).when(storage).get(coordinator.createGetWith(fullId));
+    doNothing().when(storage).delete(any(Delete.class));
+
+    // Act + Assert — getState skips the parent marker (childId not listed) and resolves to the full
+    // key, so the delete must target the full key, not the parent marker.
+    assertThat(coordinator.getState(fullId).map(CoordinatorStateAccessor.State::getId))
+        .hasValue(fullId);
+    coordinator.deleteState(fullId);
+
+    ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
+    verify(storage).delete(captor.capture());
+    assertThat(captor.getValue().getPartitionKey().getTextValue(0)).isEqualTo(fullId);
+  }
+
+  @Test
+  public void deleteState_FullKeyGivenAndNoStateRowExists_ShouldDeleteAtFullKey()
+      throws ExecutionException, CoordinatorException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String childId = UUID.randomUUID().toString();
+    String fullId = keyManipulator.fullKey(parentId, childId);
+
+    // No row exists under either key (e.g. concurrent cleanup already removed it). getState returns
+    // empty, so deleteState falls back to the literal full key and the delete is a benign no-op.
+    doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(parentId));
+    doReturn(Optional.empty()).when(storage).get(coordinator.createGetWith(fullId));
+    doNothing().when(storage).delete(any(Delete.class));
+
+    // Act
+    coordinator.deleteState(fullId);
+
+    // Assert
+    ArgumentCaptor<Delete> captor = ArgumentCaptor.forClass(Delete.class);
+    verify(storage).delete(captor.capture());
+    assertThat(captor.getValue().getPartitionKey().getTextValue(0)).isEqualTo(fullId);
+  }
+
+  /**
+   * Mockito matcher that compares CoordinatorStateAccessor.State by id and TransactionState only —
+   * ignoring createdAt. Used to verify putState calls without relying on the production code's
+   * wall-clock timestamp.
+   */
+  private static org.mockito.ArgumentMatcher<State> stateMatcher(
+      String id, TransactionState state) {
+    return actual -> actual != null && id.equals(actual.getId()) && actual.getState() == state;
+  }
+
+  // The parent-ID conflict marker written by the first step of forceAbort's two-step protocol must
+  // carry empty childIds: a non-empty list would make getState route an unrelated full-key lookup
+  // to this marker via getChildIds().contains(childKey).
+  private static org.mockito.ArgumentMatcher<State> parentMarkerMatcher(String parentId) {
+    return actual ->
+        actual != null
+            && parentId.equals(actual.getId())
+            && actual.getState() == TransactionState.ABORTED
+            && actual.getChildIds().isEmpty();
   }
 }

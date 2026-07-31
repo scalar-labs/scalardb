@@ -1,9 +1,12 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -15,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
@@ -42,6 +46,7 @@ public class RecoveryHandlerTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_ID_1 = "id1";
+  private static final String ANY_ID_2 = "id2";
   private static final long ANY_TIME_1 = 100;
 
   private static final TableMetadata TABLE_METADATA =
@@ -52,7 +57,7 @@ public class RecoveryHandlerTest {
               .build());
 
   @Mock private DistributedStorage storage;
-  @Mock private Coordinator coordinator;
+  @Mock private CoordinatorStateAccessor coordinator;
   @Mock private TransactionTableMetadataManager transactionTableMetadataManager;
   @Mock private TransactionTableMetadata transactionTableMetadata;
   @Mock private Selection selection;
@@ -73,13 +78,24 @@ public class RecoveryHandlerTest {
     when(transactionTableMetadataManager.getTransactionTableMetadata(selection))
         .thenReturn(transactionTableMetadata);
     when(transactionTableMetadata.getTableMetadata()).thenReturn(TABLE_METADATA);
+
+    // By default the re-read in abortIfExpired sees the same record still uncommitted by the
+    // same writer (the no-race case), so the expired-abort tests behave as before. Tests for the
+    // cleanup race override this stub with a committed, absent, or re-prepared record.
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.PREPARED, ANY_ID_1)));
   }
 
   private TransactionResult prepareResult(long preparedAt, TransactionState transactionState) {
+    return prepareResult(preparedAt, transactionState, ANY_ID_1);
+  }
+
+  private TransactionResult prepareResult(
+      long preparedAt, TransactionState transactionState, String id) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
-            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_1))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, id))
             .put(Attribute.PREPARED_AT, BigIntColumn.of(Attribute.PREPARED_AT, preparedAt))
             .put(Attribute.STATE, IntColumn.of(Attribute.STATE, transactionState.get()))
             .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 1))
@@ -96,15 +112,49 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
-    doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+
+    // Act
+    boolean recovered = handler.recover(selection, result, state);
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateCommitted_ShouldRollforwardWithCoordinatorStateCommittedAt()
+          throws CoordinatorException, ExecutionException {
+    // A record committed by recovery must be stamped with the Coordinator state row's committedAt
+    // (createdAt) so it shares the same committedAt as the row, rather than a fresh recovery-time
+    // timestamp. Let the real rollforwardRecord run and assert the Coordinator state's committedAt
+    // is threaded into the CommitMutationComposer, which stamps it onto the record's COMMITTED_AT
+    // (the composer's timestamp -> COMMITTED_AT mapping is covered by CommitMutationComposerTest).
+    // Arrange
+    long committedAt = 1234567890123L;
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, committedAt));
+    CommitMutationComposer composer = mock(CommitMutationComposer.class);
+    doReturn(Collections.emptyList()).when(composer).get();
+    doReturn(composer)
+        .when(handler)
+        .createCommitMutationComposer(eq(selection), eq(result), anyLong());
 
     // Act
     handler.recover(selection, result, state);
 
-    // Assert
-    verify(handler).rollforwardRecord(selection, result);
+    // Assert — the Coordinator state's committedAt (createdAt) is what the commit composer is built
+    // with, i.e. what gets stamped on the rolled-forward record.
+    verify(handler).createCommitMutationComposer(eq(selection), eq(result), eq(committedAt));
   }
 
   @Test
@@ -113,18 +163,22 @@ public class RecoveryHandlerTest {
           throws ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
-    doReturn(composer).when(handler).createCommitMutationComposer(selection, result);
+    doReturn(composer)
+        .when(handler)
+        .createCommitMutationComposer(eq(selection), eq(result), anyLong());
     doThrow(NoMutationException.class).when(storage).mutate(any());
 
     // Act Assert
     assertThatCode(() -> handler.recover(selection, result, state)).doesNotThrowAnyException();
 
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(composer).get();
     verify(storage).mutate(mutations);
   }
@@ -135,19 +189,23 @@ public class RecoveryHandlerTest {
           throws ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.COMMITTED));
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
     CommitMutationComposer composer = mock(CommitMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
-    doReturn(composer).when(handler).createCommitMutationComposer(selection, result);
+    doReturn(composer)
+        .when(handler)
+        .createCommitMutationComposer(eq(selection), eq(result), anyLong());
     doThrow(ExecutionException.class).when(storage).mutate(any());
 
     // Act Assert
     assertThatThrownBy(() -> handler.recover(selection, result, state))
         .isInstanceOf(ExecutionException.class);
 
-    verify(handler).rollforwardRecord(selection, result);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
     verify(composer).get();
     verify(storage).mutate(mutations);
   }
@@ -157,14 +215,17 @@ public class RecoveryHandlerTest {
       throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
-    handler.recover(selection, result, state);
+    boolean recovered = handler.recover(selection, result, state);
 
     // Assert
+    assertThat(recovered).isTrue();
     verify(handler).rollbackRecord(selection, result);
   }
 
@@ -174,8 +235,10 @@ public class RecoveryHandlerTest {
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -197,8 +260,10 @@ public class RecoveryHandlerTest {
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(ANY_TIME_1);
-    Optional<Coordinator.State> state =
-        Optional.of(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
     RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
     List<Mutation> mutations = Collections.singletonList(mock(Mutation.class));
     doReturn(mutations).when(composer).get();
@@ -217,60 +282,126 @@ public class RecoveryHandlerTest {
 
   @Test
   public void
-      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldDoNothing()
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldDoNothingAndReturnFalse()
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result = preparePreparedResult(System.currentTimeMillis());
-    Optional<Coordinator.State> state = Optional.empty();
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
-    handler.recover(selection, result, state);
+    boolean recovered = handler.recover(selection, result, state);
 
-    // Assert
-    verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    // Assert — the writer may still be in flight, so the record is not recovered.
+    assertThat(recovered).isFalse();
+    verify(coordinator, never()).forceAbort(anyString());
     verify(handler, never()).rollbackRecord(selection, result);
   }
 
   @Test
-  public void recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_ShouldAbort()
-      throws CoordinatorException, ExecutionException {
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_ShouldAbortAndReturnTrue()
+          throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
-    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doNothing().when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
     doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
-    handler.recover(selection, result, state);
+    boolean recovered = handler.recover(selection, result, state);
 
     // Assert
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    assertThat(recovered).isTrue();
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler).rollbackRecord(selection, result);
   }
 
   @Test
   public void
-      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_CoordinatorConflictExceptionByCoordinator_ShouldNotThrowAnyException()
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_CoordinatorConflictExceptionByCoordinator_ShouldRollbackToRereadAbortedAndReturnTrue()
           throws CoordinatorException, ExecutionException {
     // Arrange
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
-    doThrow(CoordinatorConflictException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyString());
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
+    // A concurrent actor already aborted the writer; the re-read returns that ABORTED state.
+    when(coordinator.getState(ANY_ID_1))
+        .thenReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(
+                    ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis())));
+    doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
 
     // Act
-    assertThatCode(() -> handler.recover(selection, result, state)).doesNotThrowAnyException();
+    boolean recovered = handler.recover(selection, result, state);
+
+    // Assert — recover guarantees the record is resolved: it is rolled back to match the winner's
+    // ABORTED outcome.
+    assertThat(recovered).isTrue();
+    verify(coordinator).forceAbort(ANY_ID_1);
+    verify(handler).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_RacingCommitWon_ShouldRollforwardToRereadCommittedAndReturnTrue()
+          throws CoordinatorException, ExecutionException {
+    // Arrange
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
+    // A concurrent commit won the race; the re-read sees COMMITTED, which must be reported
+    // instead of a false ABORTED.
+    when(coordinator.getState(ANY_ID_1))
+        .thenReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(
+                    ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis())));
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+
+    // Act
+    boolean recovered = handler.recover(selection, result, state);
+
+    // Assert — recover guarantees the record is resolved: it is rolled forward to match the
+    // winner's COMMITTED outcome.
+    assertThat(recovered).isTrue();
+    verify(coordinator).forceAbort(ANY_ID_1);
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
+    verify(handler, never()).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_CoordinatorConflictExceptionAndRereadEmpty_ShouldReturnTrueWithoutRoll()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — the abort conflicts and the re-read finds no state row: the winner committed and
+    // the Coordinator state cleanup process (finishTransaction) then removed the state row, which
+    // also resolved this record. recover reports the record as recovered and does not touch the
+    // (already consistent) record.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
+    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
+
+    // Act
+    boolean recovered = handler.recover(selection, result, state);
 
     // Assert
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    assertThat(recovered).isTrue();
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler, never()).rollbackRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
   }
 
   @Test
@@ -281,17 +412,370 @@ public class RecoveryHandlerTest {
     TransactionResult result =
         preparePreparedResult(
             System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
-    Optional<Coordinator.State> state = Optional.empty();
-    doThrow(CoordinatorException.class)
-        .when(coordinator)
-        .putStateForLazyRecoveryRollback(anyString());
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doThrow(CoordinatorException.class).when(coordinator).forceAbort(anyString());
 
     // Act
     assertThatThrownBy(() -> handler.recover(selection, result, state))
         .isInstanceOf(CoordinatorException.class);
 
     // Assert
-    verify(coordinator).putStateForLazyRecoveryRollback(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(handler, never()).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_RecordRereadCommitted_ShouldReturnTrueWithoutAborting()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — the writer committed and was finalized, then the Coordinator state cleanup process
+    // removed its state row. The abort-before re-read sees the record already committed, so no
+    // spurious ABORTED state is written and the record is not rolled.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.COMMITTED, ANY_ID_1)));
+
+    // Act
+    boolean recovered = handler.recover(selection, result, state);
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_RecordRereadAbsent_ShouldReturnTrueWithoutAborting()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — the record is gone (a committed delete that was finalized and cleaned up). The
+    // abort-before re-read finds nothing, so no spurious ABORTED state is written.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+
+    // Act
+    boolean recovered = handler.recover(selection, result, state);
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void
+      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndExpired_RecordRereadRePreparedByDifferentTransaction_ShouldReturnTrueWithoutAborting()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — this writer's record was already resolved and a different transaction re-prepared
+    // the record. The abort-before re-read sees a different writer, so this writer's ABORTED state
+    // is not written (it would be a spurious tombstone for an already-resolved transaction).
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.PREPARED, ANY_ID_2)));
+
+    // Act
+    boolean recovered = handler.recover(selection, result, state);
+
+    // Assert
+    assertThat(recovered).isTrue();
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void
+      tryRecover_WhenCoordinatorStateNotExistsAndExpired_RecordRereadCommitted_ShouldNotAbort()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — best-effort path: the writer committed and was cleaned up, so the abort-before
+    // re-read sees the record committed and no spurious ABORTED state is written.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.COMMITTED, ANY_ID_1)));
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void tryRecover_WhenCoordinatorStateNotExistsAndExpired_RecordRereadAbsent_ShouldNotAbort()
+      throws CoordinatorException, ExecutionException {
+    // Arrange — best-effort path: the record is gone (a committed delete that was finalized and
+    // cleaned up), so the abort-before re-read finds nothing and no spurious ABORTED state is
+    // written.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void
+      tryRecover_WhenCoordinatorStateNotExistsAndExpired_RecordRereadRePreparedByDifferentTransaction_ShouldNotAbort()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — best-effort path: this writer's record was already resolved and a different
+    // transaction re-prepared the record, so the abort-before re-read sees a different writer and
+    // no spurious ABORTED state is written.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareResult(ANY_TIME_1, TransactionState.PREPARED, ANY_ID_2)));
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void
+      recover_WhenCoordinatorStateNotExistsAndExpired_ReReadThrowsExecutionException_ShouldPropagateAndNotAbort()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — the abort-before re-read in abortIfExpired fails with an ExecutionException, which
+    // must propagate and prevent any ABORTED state from being written.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class))).thenThrow(ExecutionException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.recover(selection, result, state))
+        .isInstanceOf(ExecutionException.class);
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void
+      tryRecover_WhenCoordinatorStateNotExistsAndExpired_ReReadThrowsExecutionException_ShouldPropagateAndNotAbort()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — best-effort path: the abort-before re-read in abortIfExpired fails with an
+    // ExecutionException, which must propagate and prevent any ABORTED state from being written.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    when(storage.get(any(Get.class))).thenThrow(ExecutionException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.tryRecover(selection, result, state))
+        .isInstanceOf(ExecutionException.class);
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void tryAbortExpiredTransaction_MarkerWritten_ShouldReturnTrue()
+      throws CoordinatorException {
+    // Act
+    boolean aborted = handler.tryAbortExpiredTransaction(ANY_ID_1);
+
+    // Assert
+    assertThat(aborted).isTrue();
+    verify(coordinator).forceAbort(ANY_ID_1);
+  }
+
+  @Test
+  public void tryAbortExpiredTransaction_Conflict_ShouldReturnFalse() throws CoordinatorException {
+    // Arrange
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(ANY_ID_1);
+
+    // Act
+    boolean aborted = handler.tryAbortExpiredTransaction(ANY_ID_1);
+
+    // Assert
+    assertThat(aborted).isFalse();
+    verify(coordinator).forceAbort(ANY_ID_1);
+  }
+
+  @Test
+  public void tryAbortExpiredTransaction_CoordinatorException_ShouldThrow()
+      throws CoordinatorException {
+    // Arrange
+    doThrow(CoordinatorException.class).when(coordinator).forceAbort(ANY_ID_1);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.tryAbortExpiredTransaction(ANY_ID_1))
+        .isInstanceOf(CoordinatorException.class);
+  }
+
+  // ------------------------------------------------------------
+  // recover with a present (non-Optional) state
+  // ------------------------------------------------------------
+
+  @Test
+  public void recover_WithPresentStateCommitted_ShouldRollforwardWithoutCoordinatorAccess()
+      throws CoordinatorException, ExecutionException {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(
+            ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis());
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+
+    // Act
+    handler.recover(selection, result, state);
+
+    // Assert — rolled forward, and the coordinator is never touched.
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
+    verify(coordinator, never()).getState(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
+  }
+
+  @Test
+  public void recover_WithPresentStateAborted_ShouldRollbackWithoutCoordinatorAccess()
+      throws CoordinatorException, ExecutionException {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(
+            ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis());
+    doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+
+    // Act
+    handler.recover(selection, result, state);
+
+    // Assert — rolled back, and the coordinator is never touched.
+    verify(handler).rollbackRecord(selection, result);
+    verify(coordinator, never()).getState(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
+  }
+
+  // ------------------------------------------------------------
+  // tryRecover (best-effort; used by lazy recovery)
+  // ------------------------------------------------------------
+
+  @Test
+  public void tryRecover_WhenCoordinatorStateCommitted_ShouldRollforward()
+      throws CoordinatorException, ExecutionException {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.COMMITTED, System.currentTimeMillis()));
+    doNothing()
+        .when(handler)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert
+    verify(handler).rollforwardRecord(eq(selection), eq(result), anyLong());
+  }
+
+  @Test
+  public void tryRecover_WhenCoordinatorStateAborted_ShouldRollback()
+      throws CoordinatorException, ExecutionException {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    Optional<CoordinatorStateAccessor.State> state =
+        Optional.of(
+            new CoordinatorStateAccessor.State(
+                ANY_ID_1, TransactionState.ABORTED, System.currentTimeMillis()));
+    doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert
+    verify(handler).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void
+      tryRecover_WhenCoordinatorStateNotExistsAndExpired_CoordinatorConflictException_ShouldDeferWithoutRereadingStateOrRollingTheRecord()
+          throws CoordinatorException, ExecutionException {
+    // Arrange — unlike recover, the best-effort tryRecover does NOT resolve the record on conflict;
+    // it leaves it for the winning actor / a subsequent lazy recovery. Because its return value is
+    // discarded, it must not even re-read the coordinator state.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doThrow(CoordinatorConflictException.class).when(coordinator).forceAbort(anyString());
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert — no coordinator re-read and no roll.
+    verify(coordinator).forceAbort(ANY_ID_1);
+    verify(coordinator, never()).getState(anyString());
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+    verify(handler, never()).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void tryRecover_WhenCoordinatorStateNotExistsAndNotExpired_ShouldDoNothing()
+      throws CoordinatorException, ExecutionException {
+    // Arrange — the writer has no coordinator state and has not expired, so it may still be in
+    // flight; best-effort recovery must leave it untouched.
+    TransactionResult result = preparePreparedResult(System.currentTimeMillis());
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(handler, never()).rollforwardRecord(eq(selection), eq(result), anyLong());
+    verify(handler, never()).rollbackRecord(selection, result);
+  }
+
+  @Test
+  public void tryRecover_WhenCoordinatorStateNotExistsAndExpired_ShouldAbortAndRollback()
+      throws CoordinatorException, ExecutionException {
+    // Arrange — the writer has no coordinator state and has expired, so best-effort recovery aborts
+    // it and rolls the record back.
+    TransactionResult result =
+        preparePreparedResult(
+            System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS * 2);
+    Optional<CoordinatorStateAccessor.State> state = Optional.empty();
+    doNothing().when(coordinator).forceAbort(anyString());
+    doNothing().when(handler).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+
+    // Act
+    handler.tryRecover(selection, result, state);
+
+    // Assert
+    verify(coordinator).forceAbort(ANY_ID_1);
+    verify(handler).rollbackRecord(selection, result);
   }
 }

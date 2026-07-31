@@ -74,7 +74,8 @@ public final class ConsensusCommitTestUtils {
 
   public static void addSuffixToCoordinatorNamespace(Properties properties, String suffix) {
     String coordinatorNamespace =
-        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, Coordinator.NAMESPACE);
+        properties.getProperty(
+            ConsensusCommitConfig.COORDINATOR_NAMESPACE, CoordinatorStateAccessor.NAMESPACE);
     properties.setProperty(
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + suffix);
   }

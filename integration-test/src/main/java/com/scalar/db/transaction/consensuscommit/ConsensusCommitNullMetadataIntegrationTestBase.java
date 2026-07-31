@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -73,7 +74,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
-  private Coordinator coordinator;
+  private CoordinatorStateAccessor coordinator;
   private RecoveryHandler recovery;
   private RecoveryExecutor recoveryExecutor;
   @Nullable private CoordinatorGroupCommitter groupCommitter;
@@ -135,11 +136,11 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   public void setUp() throws Exception {
     truncateTables();
     storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CrudHandler crud =
         new CrudHandler(
@@ -276,7 +277,8 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     if (coordinatorState == null) {
       return;
     }
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, coordinatorState);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, coordinatorState, System.currentTimeMillis());
     coordinator.putState(state);
   }
 
@@ -550,8 +552,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
@@ -606,7 +609,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -635,9 +638,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -654,9 +657,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
@@ -690,9 +693,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -718,9 +721,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    // With the default isolation, the read path aborts the expired transaction synchronously (its
+    // ABORTED coordinator state is written) before returning the result, then rolls the record back
+    // in the background. tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test
@@ -776,8 +783,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
@@ -832,7 +840,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -861,9 +869,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -880,9 +888,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
@@ -916,9 +924,9 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     populatePreparedRecordWithNullMetadataAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
+        storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -944,9 +952,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    // With the default isolation, the read path aborts the expired transaction synchronously (its
+    // ABORTED coordinator state is written) before returning the result, then rolls the record back
+    // in the background. tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test

@@ -28,6 +28,16 @@ public class CoreErrorTest {
   }
 
   @Test
+  public void buildCode_ForTransactionNotFound_ShouldBeConcurrencyErrorCode() {
+    // TRANSACTION_NOT_FOUND is intentionally categorized as a CONCURRENCY_ERROR (an expired or
+    // unknown transaction is retriable), not a USER_ERROR. Pin the category and the resulting code
+    // so the intentional recategorization is not silently reverted.
+    Assertions.assertThat(CoreError.TRANSACTION_NOT_FOUND.getCategory())
+        .isEqualTo(Category.CONCURRENCY_ERROR);
+    Assertions.assertThat(CoreError.TRANSACTION_NOT_FOUND.buildCode()).isEqualTo("DB-CORE-20031");
+  }
+
+  @Test
   public void buildMessage_ShouldBuildCorrectMessage() {
     // Arrange
     CoreError error = CoreError.OPERATION_CHECK_ERROR_INDEX_ONLY_SINGLE_COLUMN_INDEX_SUPPORTED;

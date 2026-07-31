@@ -237,13 +237,6 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   TRANSACTION_ALREADY_EXISTS(Category.USER_ERROR, "0047", "The transaction already exists", "", ""),
-  TRANSACTION_NOT_FOUND(
-      Category.USER_ERROR,
-      "0048",
-      "A transaction associated with the specified transaction ID is not found. "
-          + "The transaction might have expired",
-      "",
-      ""),
   SYSTEM_NAMESPACE_SPECIFIED(
       Category.USER_ERROR, "0049", "%s is the system namespace name", "", ""),
   NAMESPACE_ALREADY_EXISTS(
@@ -1089,6 +1082,69 @@ public enum CoreError implements ScalarDbError {
       "Finishing a transaction is not supported in single CRUD operation transactions",
       "",
       ""),
+  JDBC_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0291",
+      "Recovering a record is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0292",
+      "Recovering a record is not supported in single CRUD operation transactions",
+      "",
+      ""),
+  CONSENSUS_COMMIT_PARTICIPANT_ID_IS_REQUIRED(
+      Category.USER_ERROR,
+      "0293",
+      "A participant ID is required for the new TwoPhaseCommitParticipant. "
+          + "Set the property: scalar.db.consensus_commit.participant_id",
+      "",
+      ""),
+  JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0294",
+      "Two-phase commit is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0295",
+      "Two-phase commit is not supported in single CRUD operation transactions",
+      "",
+      ""),
+  CONSENSUS_COMMIT_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0296",
+      "Global transactions are not supported in Consensus Commit transactions",
+      "",
+      ""),
+  JDBC_TRANSACTION_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0297",
+      "Global transactions are not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0298",
+      "Global transactions are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  BRANCH_TRANSACTION_ALREADY_ENDED(
+      Category.USER_ERROR, "0299", "The branch has already been ended. Transaction ID: %s", "", ""),
+  COORDINATOR_ONLY_GLOBAL_TRANSACTION_MANAGER_BRANCH_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0300",
+      "Branches are not supported by this coordinator-only global transaction manager because no participant is configured",
+      "",
+      ""),
+  BRANCH_TRANSACTION_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0301",
+      "Some scanners were not closed. All scanners must be closed before ending the branch. Transaction ID: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1232,6 +1288,19 @@ public enum CoreError implements ScalarDbError {
       Category.CONCURRENCY_ERROR,
       "0029",
       "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_RESOLVING_UNCOMMITTED_RECORD_RETRY_LIMIT_EXCEEDED(
+      Category.CONCURRENCY_ERROR,
+      "0030",
+      "Resolving an uncommitted record exceeded the retry limit during recovery. Transaction ID: %s",
+      "",
+      ""),
+  TRANSACTION_NOT_FOUND(
+      Category.CONCURRENCY_ERROR,
+      "0031",
+      "A transaction associated with the specified transaction ID is not found. "
+          + "The transaction might have expired",
       "",
       ""),
 
@@ -1438,7 +1507,13 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED(
       Category.INTERNAL_ERROR,
       "0068",
-      "Finishing the transaction failed. Transaction ID: %s, Details: %s",
+      "Finishing the transaction failed. Transaction ID: %s; Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED(
+      Category.INTERNAL_ERROR,
+      "0069",
+      "Recovering the record failed. Table: %s; Partition Key: %s; Clustering Key: %s; Details: %s",
       "",
       ""),
 
@@ -1449,12 +1524,6 @@ public enum CoreError implements ScalarDbError {
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0000",
       "Rolling back the transaction failed. Details: %s",
-      "",
-      ""),
-  CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
-      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
-      "0001",
-      "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS(

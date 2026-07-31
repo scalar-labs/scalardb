@@ -5,7 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Properties;
 
@@ -75,8 +75,8 @@ public abstract class AdminTestUtils {
     String coordinatorNamespace =
         new ConsensusCommitConfig(new DatabaseConfig(coordinatorStorageProperties))
             .getCoordinatorNamespace()
-            .orElse(Coordinator.NAMESPACE);
-    String coordinatorTable = Coordinator.TABLE;
+            .orElse(CoordinatorStateAccessor.NAMESPACE);
+    String coordinatorTable = CoordinatorStateAccessor.TABLE;
     if (!tableExists(coordinatorNamespace, coordinatorTable)) {
       return false;
     }
@@ -92,7 +92,7 @@ public abstract class AdminTestUtils {
     if (tableMetadata == null) {
       return false;
     }
-    return tableMetadata.equals(Coordinator.TABLE_METADATA);
+    return tableMetadata.equals(CoordinatorStateAccessor.TABLE_METADATA);
   }
 
   /**

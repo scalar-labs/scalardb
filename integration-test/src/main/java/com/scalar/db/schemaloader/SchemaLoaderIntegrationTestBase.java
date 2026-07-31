@@ -16,7 +16,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -545,7 +545,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     storageAdmin.createNamespace(getCoordinatorNamespaceName(), storageOption());
     storageAdmin.createTable(
         getCoordinatorNamespaceName(),
-        Coordinator.TABLE,
+        CoordinatorStateAccessor.TABLE,
         oldCoordinatorTableMetadata,
         storageOption());
 
@@ -557,8 +557,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(exitCode).isEqualTo(0);
     waitForCreationIfNecessary();
     assertThat(transactionAdmin.coordinatorTablesExist()).isTrue();
-    assertThat(storageAdmin.getTableMetadata(getCoordinatorNamespaceName(), Coordinator.TABLE))
-        .isEqualTo(Coordinator.TABLE_METADATA);
+    assertThat(
+            storageAdmin.getTableMetadata(
+                getCoordinatorNamespaceName(), CoordinatorStateAccessor.TABLE))
+        .isEqualTo(CoordinatorStateAccessor.TABLE_METADATA);
   }
 
   private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {

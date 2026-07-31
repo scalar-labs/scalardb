@@ -7,7 +7,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import com.scalar.db.util.AdminTestUtils;
 import com.scalar.db.util.ThrowableFunction;
 import com.zaxxer.hikari.HikariDataSource;
@@ -44,7 +44,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
       coordinatorNamespace =
           new ConsensusCommitConfig(databaseConfig)
               .getCoordinatorNamespace()
-              .orElse(Coordinator.NAMESPACE);
+              .orElse(CoordinatorStateAccessor.NAMESPACE);
     } else {
       coordinatorNamespace = null;
     }
@@ -139,7 +139,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   public void deleteAllRowsFromCoordinatorTableWithSql() throws ExecutionException {
-    deleteAllRowsWithSql(coordinatorNamespace, Coordinator.TABLE);
+    deleteAllRowsWithSql(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
   }
 
   /**

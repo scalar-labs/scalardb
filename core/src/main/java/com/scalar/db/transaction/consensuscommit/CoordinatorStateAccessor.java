@@ -25,7 +25,6 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.Coord
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -37,8 +36,74 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Manages the Coordinator table, the single source of truth for each transaction's final state
+ * ({@link TransactionState#COMMITTED} or {@link TransactionState#ABORTED}). Every coordinator-state
+ * write in the system funnels through this class, so the conflict-safety of the whole protocol is
+ * decided here. All writes are conditional (put-if-not-exists on the {@code tx_id} partition key),
+ * so two writers targeting the same key race and exactly one wins with a {@link
+ * CoordinatorConflictException}; the loser then reads the persisted state and follows it.
+ *
+ * <h3>Key scheme</h3>
+ *
+ * The {@code tx_id} partition key is either a plain transaction ID or, when coordinator group
+ * commit is enabled, a group-commit key distinguished by {@code KEY_MANIPULATOR.isFullKey(id)}:
+ *
+ * <ul>
+ *   <li><b>parent ID</b> — the key for a <i>normal group</i>: one record under the parent ID lists
+ *       the child IDs of all transactions committed together (written by {@code
+ *       CoordinatorCommitHandlerWithGroupCommit.Emitter#emitNormalGroup} via {@link #putState}).
+ *   <li><b>full ID</b> ({@code parent + child}) — the key for a transaction committed on its own: a
+ *       <i>delayed</i> group commit, or a transaction whose lifecycle abort writes under its own
+ *       full ID.
+ * </ul>
+ *
+ * <h3>Write paths (non-group-commit)</h3>
+ *
+ * When group commit is disabled, every {@code tx_id} is a plain ID and there is only one possible
+ * key per transaction, so a single {@link #putState} is always safe:
+ *
+ * <ul>
+ *   <li>commit / abort during a transaction's own lifecycle — {@code CommitHandler.commitState} /
+ *       {@code abortState} write {@code putState(txId, COMMITTED|ABORTED)}.
+ *   <li>lazy recovery and manager-level rollback/abort by ID — {@link #forceAbort} takes the
+ *       non-full branch and writes {@code putState(txId, ABORTED)}.
+ * </ul>
+ *
+ * <h3>Write paths (group commit)</h3>
+ *
+ * With group commit enabled a transaction may be committed under <i>either</i> key, so an abort
+ * must be careful not to write under a key that does not conflict with the commit:
+ *
+ * <ul>
+ *   <li><b>normal group commit</b> — {@code
+ *       CoordinatorCommitHandlerWithGroupCommit.Emitter#emitNormalGroup} writes {@code COMMITTED}
+ *       under the parent ID via {@link #putState}.
+ *   <li><b>delayed group commit</b> — {@code
+ *       CoordinatorCommitHandlerWithGroupCommit.Emitter#emitDelayedGroup} writes {@code
+ *       putState(fullId, COMMITTED)}.
+ *   <li><b>lifecycle abort</b> ({@link CoordinatorCommitHandlerWithGroupCommit#abortState}) —
+ *       writes {@code putState(fullId, ABORTED)}. Safe because the caller first removes the slot
+ *       from the group committer (so a normal group commit can no longer list this child under the
+ *       parent ID), and against a delayed commit it conflicts on the same full ID.
+ *   <li><b>lazy recovery / manager-level rollback-or-abort by ID</b> — {@link #forceAbort} runs the
+ *       two-step protocol: write the parent-ID conflict marker (empty {@code tx_child_ids}) first,
+ *       then the full-ID {@code ABORTED} record. Needed because the caller does <i>not</i> own the
+ *       slot and cannot remove it, so an in-flight normal group commit could still write {@code
+ *       COMMITTED} under the parent ID. See {@link #forceAbort} for the full case analysis.
+ * </ul>
+ *
+ * <h3>Invariant for a plain single-{@code putState} abort</h3>
+ *
+ * Writing {@code ABORTED} with one {@link #putState} is correct only when no concurrent group
+ * commit can write {@code COMMITTED} under the parent ID for that transaction — i.e. <i>either</i>
+ * the ID is not a group-commit full key (group commit disabled, or the two-phase-commit interface,
+ * which forbids group commit), <i>or</i> the caller has already removed the slot from the group
+ * committer (the lifecycle-abort path above). When neither holds (a manager-level abort/rollback by
+ * ID), the two-step {@link #forceAbort} must be used instead.
+ */
 @ThreadSafe
-public class Coordinator {
+public class CoordinatorStateAccessor {
   public static final String NAMESPACE = "coordinator";
   public static final String TABLE = "state";
   public static final TableMetadata TABLE_METADATA =
@@ -53,7 +118,7 @@ public class Coordinator {
 
   private static final int MAX_RETRY_COUNT = 5;
   private static final long SLEEP_BASE_MILLIS = 50;
-  private static final Logger logger = LoggerFactory.getLogger(Coordinator.class);
+  private static final Logger logger = LoggerFactory.getLogger(CoordinatorStateAccessor.class);
   private static final CoordinatorGroupCommitKeyManipulator KEY_MANIPULATOR =
       new CoordinatorGroupCommitKeyManipulator();
 
@@ -66,13 +131,13 @@ public class Coordinator {
    */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Deprecated
-  public Coordinator(DistributedStorage storage) {
+  public CoordinatorStateAccessor(DistributedStorage storage) {
     this.storage = storage;
     coordinatorNamespace = NAMESPACE;
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
+  public CoordinatorStateAccessor(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
   }
@@ -86,7 +151,7 @@ public class Coordinator {
    * @return the coordinator state
    * @throws CoordinatorException if the coordinator state cannot be retrieved
    */
-  public Optional<Coordinator.State> getState(String id) throws CoordinatorException {
+  public Optional<CoordinatorStateAccessor.State> getState(String id) throws CoordinatorException {
     if (KEY_MANIPULATOR.isFullKey(id)) {
       return getStateForGroupCommit(id);
     }
@@ -104,13 +169,14 @@ public class Coordinator {
    * @throws CoordinatorException if the coordinator state cannot be retrieved
    */
   @VisibleForTesting
-  Optional<Coordinator.State> getStateForGroupCommit(String fullId) throws CoordinatorException {
+  Optional<CoordinatorStateAccessor.State> getStateForGroupCommit(String fullId)
+      throws CoordinatorException {
     // Scan with the parent ID for a normal group that contains multiple transactions.
     Keys<String, String, String> idForGroupCommit = KEY_MANIPULATOR.keysFromFullKey(fullId);
 
     String parentId = idForGroupCommit.parentKey;
     String childId = idForGroupCommit.childKey;
-    Optional<State> state = getStateByParentId(parentId);
+    Optional<State> state = getStateInternal(parentId);
     // The current implementation is optimized for cases where most transactions are
     // group-committed. It first looks up a transaction state using the parent ID with a single read
     // operation. If no matching transaction state is found (i.e., the transaction was delayed and
@@ -127,90 +193,32 @@ public class Coordinator {
       return stateContainingTargetTxId;
     }
 
-    return getStateByFullId(fullId);
+    return getStateInternal(fullId);
   }
 
-  private Optional<Coordinator.State> getStateInternal(String id) throws CoordinatorException {
+  private Optional<CoordinatorStateAccessor.State> getStateInternal(String id)
+      throws CoordinatorException {
     Get get = createGetWith(id);
     return get(get, id);
   }
 
-  /**
-   * Gets the coordinator state by the parent ID for the coordinator group commit. Note: The scope
-   * of this method has public visibility, but is intended for internal use. Also, the method only
-   * calls {@link #getStateInternal(String)} with the parent ID, but it exists as a separate method
-   * for clarifying this specific use case.
-   *
-   * @param parentId the parent ID of the coordinator state for the coordinator group commit
-   * @return the coordinator state
-   * @throws CoordinatorException if the coordinator state cannot be retrieved
-   */
-  public Optional<Coordinator.State> getStateByParentId(String parentId)
-      throws CoordinatorException {
-    return getStateInternal(parentId);
-  }
-
-  /**
-   * Gets the coordinator state by the full ID for the coordinator group commit. Note: The scope of
-   * this method has public visibility, but is intended for internal use. Also, the method only
-   * calls {@link #getStateInternal(String)} with the parent ID, but it exists as a separate method
-   * for clarifying this specific use case.
-   *
-   * @param fullId the parent ID of the coordinator state for the coordinator group commit
-   * @return the coordinator state
-   * @throws CoordinatorException if the coordinator state cannot be retrieved
-   */
-  public Optional<Coordinator.State> getStateByFullId(String fullId) throws CoordinatorException {
-    return getStateInternal(fullId);
-  }
-
-  public void putState(Coordinator.State state) throws CoordinatorException {
+  public void putState(CoordinatorStateAccessor.State state) throws CoordinatorException {
     Put put = createPutWith(state);
     put(put, state.getId());
   }
 
-  void putStateForGroupCommit(
-      String parentId, List<String> fullIds, TransactionState transactionState, long createdAt)
-      throws CoordinatorException {
-    putStateForGroupCommit(parentId, fullIds, null, transactionState, createdAt);
-  }
-
-  void putStateForGroupCommit(
-      String parentId,
-      List<String> fullIds,
-      @Nullable WriteSet writeSet,
-      TransactionState transactionState,
-      long createdAt)
-      throws CoordinatorException {
-
-    if (KEY_MANIPULATOR.isFullKey(parentId)) {
-      throw new AssertionError(
-          "This method is only for normal group commits that use a parent ID as the key");
-    }
-
-    // Put the state that contains a parent ID as the key and multiple child transaction IDs.
-    List<String> childIds = new ArrayList<>(fullIds.size());
-    for (String fullId : fullIds) {
-      Keys<String, String, String> keys = KEY_MANIPULATOR.keysFromFullKey(fullId);
-      childIds.add(keys.childKey);
-    }
-    State state = new State(parentId, childIds, writeSet, transactionState, createdAt);
-
-    Put put = createPutWith(state);
-    put(put, state.getId());
-  }
-
-  public void putStateForLazyRecoveryRollback(String id) throws CoordinatorException {
+  public void forceAbort(String id) throws CoordinatorException {
     if (KEY_MANIPULATOR.isFullKey(id)) {
-      putStateForLazyRecoveryRollbackForGroupCommit(id);
+      forceAbortForGroupCommit(id);
       return;
     }
 
-    putState(new Coordinator.State(id, TransactionState.ABORTED));
+    putState(
+        new CoordinatorStateAccessor.State(
+            id, TransactionState.ABORTED, System.currentTimeMillis()));
   }
 
-  private void putStateForLazyRecoveryRollbackForGroupCommit(String id)
-      throws CoordinatorException {
+  private void forceAbortForGroupCommit(String id) throws CoordinatorException {
     // Lazy recoveries don't know which the transaction that created the PREPARE record is using, a
     // parent ID or a full ID as `tx_id` partition key.
     //
@@ -256,8 +264,7 @@ public class Coordinator {
     // - The original commit with `tx_id: <full tx ID>` succeeds
     // - `lazy-recovery-abort-with-parent-id` succeeds
     // - `lazy-recovery-abort-with-full-id` fails
-    // - The transaction is treated as committed since the commit `tx_id` is the transaction full
-    // ID
+    // - The transaction is treated as committed since the commit `tx_id` is the transaction full ID
     //
     // D. The original commit with `tx_id: <full tx ID>` is in-progress in case #b, and lazy
     // recovery happens first
@@ -271,33 +278,48 @@ public class Coordinator {
     try {
       // This record is to prevent a group commit that has the same parent ID considering case #a
       // regardless if the transaction is actually in a group commit (case #a) or a delayed commit
-      // (case #b).
-      putStateForGroupCommit(
-          keys.parentKey,
-          Collections.emptyList(),
-          TransactionState.ABORTED,
-          System.currentTimeMillis());
+      // (case #b). The parent-id row carries no childIds because lazy recovery has no membership
+      // info to record; it only needs the put-if-not-exists conflict against an in-flight normal
+      // group commit.
+      putState(new State(keys.parentKey, TransactionState.ABORTED, System.currentTimeMillis()));
     } catch (CoordinatorConflictException e) {
       // The group commit finished already, although there may be ongoing delayed groups.
 
       // If the group commit contains the transaction, follow the state.
       // Otherwise, continue to insert a record with the full ID.
+      //
+      // The parent row can also be absent here: the Coordinator state cleanup process removed an
+      // already-finished group-commit row in the small window after our insert conflicted (the row
+      // existed at insert time, which is why the insert conflicted). This is no longer an invariant
+      // violation, so we fall through to insert the full-ID record -- the same path taken when the
+      // parent row is present but does not contain this child. If the transaction actually
+      // committed via a full-ID record (a delayed, standalone commit), that insert conflicts and
+      // the caller re-reads the committed outcome instead of treating the transaction as aborted.
+      // If instead it committed via the parent row (a normal group commit) whose row was then
+      // cleaned up, no full-ID record exists, so the insert succeeds and writes a now-spurious
+      // full-ID ABORTED. This is non-corrupting -- the record was already finalized to its
+      // committed value, so a subsequent rollback is a conditional no-op -- and is the same
+      // accepted residual as the read path's pre-abort/abort cleanup race (the spurious ABORTED is
+      // reclaimed later by the Coordinator state cleanup process). getState for such a finished,
+      // cleaned-up transaction is already documented as indeterminate.
       Optional<State> optState = getState(keys.parentKey);
-      if (!optState.isPresent()) {
-        throw new AssertionError();
-      }
-      State state = optState.get();
-      if (state.getChildIds().contains(keys.childKey)) {
-        if (state.getState() == TransactionState.ABORTED) {
-          return;
-        } else {
-          // Conflicted.
-          throw e;
+      if (optState.isPresent()) {
+        State state = optState.get();
+        if (state.getChildIds().contains(keys.childKey)) {
+          if (state.getState() == TransactionState.ABORTED) {
+            return;
+          } else {
+            // Conflicted.
+            throw e;
+          }
         }
       }
     }
+
     // This record is to intend the transaction is aborted.
-    putState(new Coordinator.State(id, TransactionState.ABORTED));
+    putState(
+        new CoordinatorStateAccessor.State(
+            id, TransactionState.ABORTED, System.currentTimeMillis()));
   }
 
   @VisibleForTesting
@@ -310,7 +332,8 @@ public class Coordinator {
         .build();
   }
 
-  private Optional<Coordinator.State> get(Get get, String id) throws CoordinatorException {
+  private Optional<CoordinatorStateAccessor.State> get(Get get, String id)
+      throws CoordinatorException {
     int counter = 0;
     Exception exception = null;
     while (true) {
@@ -344,7 +367,7 @@ public class Coordinator {
   }
 
   @VisibleForTesting
-  Put createPutWith(Coordinator.State state) {
+  Put createPutWith(CoordinatorStateAccessor.State state) {
     String childIds = state.getChildIdsAsString();
     PutBuilder.Buildable builder =
         Put.newBuilder()
@@ -397,21 +420,40 @@ public class Coordinator {
   }
 
   /**
-   * Deletes the coordinator state row for the given transaction id. The delete is unconditional —
-   * if the row was already removed (e.g., by a concurrent {@code finishTransaction} call), this is
-   * a benign no-op at the storage layer and no exception is propagated. Storage errors surface as
-   * {@link CoordinatorException}; the caller (typically {@code finishTransaction}) is itself a
-   * retryable API, so no internal retry is performed here.
+   * Deletes the coordinator state row for the given transaction id.
+   *
+   * <p>If {@code id} is a group-commit full key, the actual row may live under the parent key (when
+   * the transaction was committed in a normal group) or under the full key (when it was
+   * delayed-committed or had been forced-aborted under the full key). To stay symmetric with {@link
+   * #getState(String)}, this method internally resolves the row location: when {@code id} is a full
+   * key, it looks up the actual row via {@code getState} and deletes whichever key {@link
+   * State#getId} returns. Non-full ids are deleted at their literal partition key.
+   *
+   * <p>The delete is unconditional — if the row is already gone (concurrent cleanup, no row ever
+   * existed) this is a benign no-op at the storage layer and no exception is propagated. Storage
+   * errors surface as {@link CoordinatorException}; the caller is itself a retryable API, so no
+   * internal retry is performed here.
    *
    * @param id the transaction id whose state row should be deleted
    * @throws CoordinatorException if the storage layer fails to delete the row
    */
   public void deleteState(String id) throws CoordinatorException {
+    String actualKey;
+    if (KEY_MANIPULATOR.isFullKey(id)) {
+      // For a full key, resolve to whichever row actually holds this transaction's state. When the
+      // tx was committed in a normal group, state.getId() is the parent key; when delayed or
+      // forced-aborted under the full key, it is the full key. If no row exists, fall through and
+      // attempt the literal delete (which is a no-op against storage).
+      Optional<State> state = getState(id);
+      actualKey = state.map(State::getId).orElse(id);
+    } else {
+      actualKey = id;
+    }
     Delete delete =
         Delete.newBuilder()
             .namespace(coordinatorNamespace)
             .table(TABLE)
-            .partitionKey(Key.ofText(Attribute.ID, id))
+            .partitionKey(Key.ofText(Attribute.ID, actualKey))
             .consistency(Consistency.LINEARIZABLE)
             .build();
     try {
@@ -450,29 +492,16 @@ public class Coordinator {
       createdAt = result.getBigInt(Attribute.CREATED_AT);
     }
 
-    public State(String id, TransactionState state) {
-      this(id, state, System.currentTimeMillis());
-    }
-
-    public State(String id, List<String> childIds, TransactionState state) {
-      this(id, childIds, null, state, System.currentTimeMillis());
-    }
-
-    public State(String id, @Nullable WriteSet writeSet, TransactionState state) {
-      this(id, EMPTY_CHILD_IDS, writeSet, state, System.currentTimeMillis());
-    }
-
-    @VisibleForTesting
-    State(String id, TransactionState state, long createdAt) {
+    public State(String id, TransactionState state, long createdAt) {
       this(id, EMPTY_CHILD_IDS, null, state, createdAt);
     }
 
-    @VisibleForTesting
-    State(String id, List<String> childIds, TransactionState state, long createdAt) {
-      this(id, childIds, null, state, createdAt);
+    public State(String id, @Nullable WriteSet writeSet, TransactionState state, long createdAt) {
+      this(id, EMPTY_CHILD_IDS, writeSet, state, createdAt);
     }
 
-    private State(
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
+    public State(
         String id,
         List<String> childIds,
         @Nullable WriteSet writeSet,
@@ -545,17 +574,16 @@ public class Coordinator {
         return false;
       }
       State other = (State) o;
-      // NOTICE: createdAt is not taken into account
       return Objects.equals(id, other.id)
           && Objects.equals(childIds, other.childIds)
           && Objects.equals(writeSet, other.writeSet)
-          && state == other.state;
+          && state == other.state
+          && createdAt == other.createdAt;
     }
 
     @Override
     public int hashCode() {
-      // NOTICE: createdAt is not taken into account
-      return Objects.hash(id, childIds, writeSet, state);
+      return Objects.hash(id, childIds, writeSet, state, createdAt);
     }
 
     @Nullable
