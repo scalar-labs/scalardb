@@ -121,6 +121,14 @@ on keys (which would require collation-aware physical keying, key normalization,
 story) is a **reserved future phase**, deliberately not built here because it would change key
 identity across the snapshot, deduplication, and storage keying.
 
+A concrete consequence of that boundary: a Consensus Commit scan-after-write conflict whose
+overlap depends on a collation-matching **partition or clustering key** — for example a blind
+insert to key `'Apple'` followed by a scan of key `'apple'` under a case-insensitive collation —
+is **not** detected in this version, because partition/clustering keys are still compared
+byte-exact. Only conflicts that depend on a **non-key predicate column** (a `WHERE`/conditional
+`=` on a value column) are collation-aware. Detecting key-collision conflicts is part of the
+reserved key-uniqueness phase.
+
 Backend equality match has the same best-effort caveats as ordering (see below and
 [Storage collation compatibility](collation-storage-compatibility.md)).
 
