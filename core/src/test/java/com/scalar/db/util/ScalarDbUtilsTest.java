@@ -693,6 +693,146 @@ public class ScalarDbUtilsTest {
     return CollationComparator.from(new DatabaseConfig(props)).get();
   }
 
+  private static CollationComparator icuPrimaryNondeterministicComparator() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
+    props.setProperty(DatabaseConfig.COLLATION_DETERMINISTIC, "false");
+    return CollationComparator.from(new DatabaseConfig(props)).get();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_EqOnTextColumnWithNondeterministicCollation_ShouldMatchCaseDifferingValue() {
+    // Arrange
+    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
+    CollationComparator nondeterministic = icuPrimaryNondeterministicComparator();
+    CollationComparator deterministic = icuPrimaryComparator();
+
+    // Act
+    // Under a nondeterministic case-insensitive ICU PRIMARY collation, 'Apple' = 'apple' (AE1).
+    boolean matchedWithNondeterministic =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(
+            columns, eqConjunctions, Optional.of(nondeterministic));
+    // A deterministic comparator keeps EQ byte-exact, so 'Apple' != 'apple'.
+    boolean matchedWithDeterministic =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(
+            columns, eqConjunctions, Optional.of(deterministic));
+    // No comparator: byte-exact, so 'Apple' != 'apple'.
+    boolean matchedWithoutCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, Optional.empty());
+
+    // Assert
+    assertThat(matchedWithNondeterministic).isTrue();
+    assertThat(matchedWithDeterministic).isFalse();
+    assertThat(matchedWithoutCollation).isFalse();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_NeOnTextColumnWithNondeterministicCollation_ShouldBeExactNegationOfEq() {
+    // Arrange
+    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> neConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isNotEqualToText("apple")));
+    CollationComparator nondeterministic = icuPrimaryNondeterministicComparator();
+
+    // Act
+    // NE is the exact negation of the collation-aware EQ: 'Apple' = 'apple', so 'Apple' != 'apple'
+    // is false.
+    boolean neMatchedWithNondeterministic =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(
+            columns, neConjunctions, Optional.of(nondeterministic));
+    // No comparator: byte-exact, so 'Apple' != 'apple' is true.
+    boolean neMatchedWithoutCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, Optional.empty());
+
+    // Assert
+    assertThat(neMatchedWithNondeterministic).isFalse();
+    assertThat(neMatchedWithoutCollation).isTrue();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_NonTextEqWithNondeterministicCollation_ShouldStayByteExact() {
+    // Arrange: the flag governs TEXT equality only; INT EQ is unaffected.
+    Map<String, Column<?>> matchingColumns = ImmutableMap.of("col", IntColumn.of("col", 5));
+    Map<String, Column<?>> nonMatchingColumns = ImmutableMap.of("col", IntColumn.of("col", 6));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToInt(5)));
+    CollationComparator nondeterministic = icuPrimaryNondeterministicComparator();
+
+    // Act Assert
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                matchingColumns, eqConjunctions, Optional.of(nondeterministic)))
+        .isTrue();
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nonMatchingColumns, eqConjunctions, Optional.of(nondeterministic)))
+        .isFalse();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_IsNullAndLikeWithNondeterministicCollation_ShouldBeUnaffected() {
+    // Arrange
+    CollationComparator nondeterministic = icuPrimaryNondeterministicComparator();
+
+    // IS_NULL: a null TEXT column matches an IS_NULL condition; equality flag must not change this.
+    Map<String, Column<?>> nullColumns = ImmutableMap.of("col", TextColumn.ofNull("col"));
+    Set<Conjunction> isNullConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isNullText()));
+
+    // LIKE stays case-sensitive regardless of the collation flag: 'Apple' does not match 'a%'.
+    Map<String, Column<?>> textColumns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> likeConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isLikeText("a%")));
+
+    // Act Assert
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, isNullConjunctions, Optional.of(nondeterministic)))
+        .isTrue();
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                textColumns, likeConjunctions, Optional.of(nondeterministic)))
+        .isEqualTo(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                textColumns, likeConjunctions, Optional.empty()));
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                textColumns, likeConjunctions, Optional.of(nondeterministic)))
+        .isFalse();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_NullTextValueWithEqAndNondeterministicCollation_ShouldStayByteExactWithoutNpe() {
+    // Arrange: a null column value with an '=' condition must stay byte-exact (no NPE), because
+    // collation equality applies only to two non-null text values.
+    Map<String, Column<?>> nullColumns = ImmutableMap.of("col", TextColumn.ofNull("col"));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
+    CollationComparator nondeterministic = icuPrimaryNondeterministicComparator();
+
+    // Act Assert
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, eqConjunctions, Optional.of(nondeterministic)))
+        .isEqualTo(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, eqConjunctions, Optional.empty()));
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, eqConjunctions, Optional.of(nondeterministic)))
+        .isFalse();
+  }
+
   @Test
   public void
       columnsMatchAnyOfConjunctions_RangeOnTextColumnWithCaseInsensitiveCollation_ShouldMatchCaseDifferingValue() {
