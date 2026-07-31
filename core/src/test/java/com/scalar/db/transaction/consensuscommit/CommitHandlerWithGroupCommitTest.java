@@ -48,7 +48,6 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
     return new CommitHandlerWithGroupCommit(
         coordinatorWriteOmissionOnReadOnlyEnabled,
         /* coordinatorWriteSetLoggingEnabled= */ true,
-        writeSetEncoder,
         groupCommitCoordinatorHandler,
         participantCommitHandler);
   }

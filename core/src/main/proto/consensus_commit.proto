@@ -150,17 +150,23 @@ message Key {
 //
 // Records the set of records a transaction wrote on commit/abort.
 //
-// For non-group-commit transactions that performed at least one write or delete, the WriteSet
+// An Entry currently identifies a record and, on the multi-participant TwoPhaseCommit path, names
+// the participant that wrote it. It records neither the written column values nor whether the
+// record was put or deleted: the former has no consumer yet, and the latter is recoverable from
+// the record's own `tx_state`. See `schema_version` for which of those can be added without
+// bumping the version.
+//
+// For non-group-commit transactions that performed at least one write or delete, the payload
 // contains exactly one EntryGroup (with no `child_id`). For group-commit transactions, the
 // parent state row carries one EntryGroup per child that performed writes; read-only children
-// are omitted entirely from `entry_groups`.
+// are omitted entirely.
 //
-// A WriteSet with an empty `entry_groups` list is meaningful: it represents a read-only commit
-// (or a group commit in which every child was read-only). The reader treats it as "the
-// transaction had no writes" and is distinct from the absent-column case (NULL bytes), which
-// represents "no information" — a row written before this feature, by the lazy-recovery abort
-// path, or on a deployment where the feature is disabled. The reader falls back to per-record
-// lazy recovery when the column is NULL.
+// A WriteSet whose payload is an `EntryGroups` with an empty `entry_groups` list is meaningful: it
+// represents a read-only commit (or a group commit in which every child was read-only). The
+// reader treats it as "the transaction had no writes" and is distinct from the absent-column case
+// (NULL bytes), which represents "no information" — a row written before this feature, by the
+// lazy-recovery abort path, or on a deployment where the feature is disabled. The reader falls
+// back to per-record lazy recovery when the column is NULL.
 message WriteSet {
   // Schema version of this WriteSet. Currently 1.
   //
@@ -172,14 +178,51 @@ message WriteSet {
   // The writer always sets this field to a non-zero value so that the persisted BLOB is
   // unambiguously non-empty on every storage backend. This guarantees the wire-level
   // distinction between "empty WriteSet (no writes recorded)" and "no WriteSet column written".
+  //
+  // This is not an inventory of the fields a row carries. It is bumped only for a change a reader
+  // cannot detect from the payload itself, so adding a field that carries its own presence — an
+  // `optional` scalar, a message field, or a new `payload` case — leaves it untouched: a reader
+  // that does not know the field ignores it, and one that does can tell whether the writer set it.
+  // A plain enum works too, but by convention rather than by presence: give it an `UNSPECIFIED`
+  // zero value that readers treat as "not supplied". On the wire an explicit zero and an absent
+  // field are identical, so the sentinel value is what carries the meaning, not presence. The set
+  // of fields present in a version-1 row may therefore grow over time, and readers must not assume
+  // otherwise.
+  //
+  // A field with no presence is the exception, because "written empty" and "never written" are
+  // identical on the wire. `repeated` fields are the practical case: recording the written column
+  // values on an Entry needs either a bump here or a companion field marking that the writer
+  // recorded them. Until one of those exists, no row carries column values, and a reader may treat
+  // their absence as definitive.
   int32 schema_version = 1;
 
+  // The entry groups this WriteSet carries, in one of the supported payload encodings.
+  //
+  // The writer always sets a case here, even for a read-only commit — which is encoded as an
+  // `EntryGroups` with an empty `entry_groups` list, never as an unset payload. A reader that finds
+  // the payload unset, or finds a case it does not know, is looking at a WriteSet written by a
+  // newer writer; it must not read that as "no entry groups".
+  //
+  // A future schema version can add a compressed encoding as an additional case here, which keeps
+  // `schema_version` free for genuinely incompatible shape changes. `EntryGroups` is a named
+  // message precisely so that such a case can carry a well-typed serialized payload.
+  oneof payload {
+    EntryGroups entry_groups = 2;
+  }
+}
+
+// The entry groups of a WriteSet.
+//
+// A wrapper around the repeated field, so that the payload can be carried as a `oneof` case (a
+// `oneof` cannot hold a repeated field directly) and so that a future compressed encoding has a
+// well-defined message type to serialize.
+message EntryGroups {
   // One EntryGroup per writing transaction within the Coordinator state row. For non-group-
   // commit, this list contains exactly one element when the transaction performed at least one
   // write or delete (and is empty otherwise, e.g., for a read-only commit). For group commit, it
   // contains one element per child that wrote at least one record; read-only children are
   // omitted.
-  repeated EntryGroup entry_groups = 2;
+  repeated EntryGroup entry_groups = 1;
 }
 
 // A group of write entries belonging to a single transaction.
@@ -197,26 +240,19 @@ message EntryGroup {
   //      partition key in this case.
   optional string child_id = 1;
 
-  // The records the transaction wrote, in writer-determined order. The current writer emits
-  // WRITE entries (puts) before DELETE entries (deletes); readers must not rely on this order
-  // beyond what the EntryType field signals.
+  // The records the transaction wrote, in writer-determined order. The current writer emits the
+  // puts before the deletes, but readers must not rely on that: at this schema version an Entry
+  // does not say which of the two it was, so the order carries no meaning.
   repeated Entry entries = 2;
 }
 
-// A single record write performed by a transaction. Captures the storage-layer mutation that
-// the transaction applied (or attempted to apply) to a user table.
+// A single record write performed by a transaction. Identifies a record the transaction wrote or
+// deleted in a user table.
+//
+// An Entry currently carries only the record's identity. Whether the record was put or deleted is
+// recoverable from the record's own `tx_state`, and the written column values are not recorded at
+// all. Both may be added later; see `WriteSet.schema_version` for what that costs.
 message Entry {
-  // The kind of record write.
-  enum EntryType {
-    ENTRY_TYPE_UNSPECIFIED = 0;
-
-    // The transaction wrote the record (storage-layer Put).
-    ENTRY_TYPE_WRITE = 1;
-
-    // The transaction deleted the record (storage-layer Delete).
-    ENTRY_TYPE_DELETE = 2;
-  }
-
   // The stable logical identifier of the participant that produced this entry.
   //
   // Unset for entries produced by the existing single-participant `ConsensusCommit` path (the
@@ -226,24 +262,15 @@ message Entry {
   // and is unique within the Coordinator deployment.
   optional string participant_id = 1;
 
-  // The entry type (write or delete) of this record.
-  EntryType entry_type = 2;
-
   // The namespace name of the user table the record belongs to.
-  string namespace_name = 3;
+  string namespace_name = 2;
 
   // The table name of the user table the record belongs to.
-  string table_name = 4;
+  string table_name = 3;
 
   // The partition key of the record. Always present.
-  Key partition_key = 5;
+  Key partition_key = 4;
 
   // The clustering key of the record. Absent when the user table has no clustering key.
-  optional Key clustering_key = 6;
-
-  // The non-key columns of the record. Only populated when `entry_type` is
-  // `ENTRY_TYPE_WRITE`, and even then it is not always populated — the writer may persist just
-  // the primary keys (e.g., the active-recovery use case) and leave this field empty.
-  // `ENTRY_TYPE_DELETE` entries always leave this field empty.
-  repeated Column columns = 7;
+  optional Key clustering_key = 5;
 }

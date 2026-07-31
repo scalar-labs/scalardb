@@ -50,7 +50,6 @@ public class CommitHandlerTest {
 
   @Mock protected ParticipantCommitHandler participantCommitHandler;
   @Mock protected CoordinatorCommitHandler coordinatorCommitHandler;
-  @Mock protected WriteSetEncoder writeSetEncoder;
   @Mock protected BeforePreparationHook beforePreparationHook;
   @Mock protected Future<Void> beforePreparationHookFuture;
 
@@ -82,7 +81,6 @@ public class CommitHandlerTest {
     return new CommitHandler(
         coordinatorWriteOmissionOnReadOnlyEnabled,
         coordinatorWriteSetLoggingEnabled,
-        writeSetEncoder,
         coordinatorCommitHandler,
         participantCommitHandler);
   }
@@ -722,18 +720,16 @@ public class CommitHandlerTest {
   @Test
   public void commitState_ShouldPassSnapshotEncodedWriteSetToCoordinatorHandler() throws Exception {
     // Pins the orchestrator -> coordinator wiring: the WriteSet the orchestrator encodes from the
-    // snapshot (via the orchestrator-owned WriteSetEncoder) is the one passed to commitState. A
-    // regression that dropped the encoder call or passed a different/null WriteSet would fail here.
+    // snapshot (via WriteSetEncoder) is the one passed to commitState. A regression that dropped
+    // the encoder call or passed a different/null WriteSet would fail here.
     Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
-    WriteSet encoded = WriteSet.newBuilder().setSchemaVersion(1).build();
-    doReturn(encoded).when(writeSetEncoder).encodeSingleGroupWriteSet(context, false);
+    WriteSet expected = WriteSetEncoder.encodeSingleGroupWriteSet(context);
 
     handler.commitState(context);
 
-    verify(writeSetEncoder).encodeSingleGroupWriteSet(context, false);
-    verifyCommitStateDelegatedWithWriteSet(context, encoded);
+    verifyCommitStateDelegatedWithWriteSet(context, expected);
   }
 
   @Test
@@ -742,13 +738,11 @@ public class CommitHandlerTest {
     Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
         createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
-    WriteSet encoded = WriteSet.newBuilder().setSchemaVersion(1).build();
-    doReturn(encoded).when(writeSetEncoder).encodeSingleGroupWriteSet(context, false);
+    WriteSet expected = WriteSetEncoder.encodeSingleGroupWriteSet(context);
 
     handler.abortState(context);
 
-    verify(writeSetEncoder).encodeSingleGroupWriteSet(context, false);
-    verify(coordinatorCommitHandler).abortState(eq(context.transactionId), eq(encoded));
+    verify(coordinatorCommitHandler).abortState(eq(context.transactionId), eq(expected));
   }
 
   @Test
@@ -766,7 +760,6 @@ public class CommitHandlerTest {
 
     handlerWithoutLogging.commitState(context);
 
-    verify(writeSetEncoder, never()).encodeSingleGroupWriteSet(any(), eq(false));
     verify(coordinatorCommitHandler).commitState(context.transactionId, null);
   }
 
@@ -784,7 +777,6 @@ public class CommitHandlerTest {
 
     handlerWithoutLogging.abortState(context);
 
-    verify(writeSetEncoder, never()).encodeSingleGroupWriteSet(any(), eq(false));
     verify(coordinatorCommitHandler).abortState(context.transactionId, null);
   }
 

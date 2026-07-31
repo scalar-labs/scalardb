@@ -31,9 +31,9 @@ import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
  *
  * <p>Currently used only for primary-key columns (partition and clustering keys), which are
  * non-nullable by ScalarDB's API contract. The decoder throws {@link AssertionError} on a missing
- * value to surface that invariant violation. If a future change uses this decoder for non-key
- * columns (e.g., a backup-window use case with {@code includeColumns=true}), those branches must
- * become recoverable or the call site must filter null-valued Columns first.
+ * value to surface that invariant violation. A schema version that records non-key columns (e.g.,
+ * for a backup/changelog use case) would decode nullable values here, so those branches must become
+ * recoverable — or the call site must filter null-valued Columns first — before that happens.
  */
 final class WriteSetDecoder {
   private WriteSetDecoder() {}

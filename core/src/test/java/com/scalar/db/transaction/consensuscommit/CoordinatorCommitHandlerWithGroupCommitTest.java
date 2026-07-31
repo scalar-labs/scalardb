@@ -58,7 +58,6 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   private final CoordinatorGroupCommitKeyManipulator keyManipulator =
       new CoordinatorGroupCommitKeyManipulator();
   // Builds the pre-encoded write sets the tests feed to the handler.
-  private WriteSetEncoder writeSetEncoder;
   private String fullId;
   private CoordinatorGroupCommitter groupCommitter;
   private CoordinatorCommitHandlerWithGroupCommit handler;
@@ -66,7 +65,6 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   @BeforeEach
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    writeSetEncoder = new WriteSetEncoder(tableMetadataManager);
     groupCommitter =
         spy(new CoordinatorGroupCommitter(new GroupCommitConfig(4, 100, 500, 60000, 10)));
     // The handler's constructor wires the Emitter into the groupCommitter via setEmitter(); the
@@ -116,14 +114,14 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   private CoordinatorGroupCommitValue valueWithWrite(String id) throws CrudException {
     Snapshot snapshot = prepareSnapshotWithWrite(id);
     WriteSet writeSet =
-        writeSetEncoder.encodeSingleGroupWriteSet(createContext(id, snapshot, true), false);
+        WriteSetEncoder.encodeSingleGroupWriteSet(createContext(id, snapshot, true));
     return new CoordinatorGroupCommitValue(id, writeSet);
   }
 
   private CoordinatorGroupCommitValue valueReadOnly(String id) {
     Snapshot snapshot = prepareEmptySnapshot(id);
     WriteSet writeSet =
-        writeSetEncoder.encodeSingleGroupWriteSet(createContext(id, snapshot, true), false);
+        WriteSetEncoder.encodeSingleGroupWriteSet(createContext(id, snapshot, true));
     return new CoordinatorGroupCommitValue(id, writeSet);
   }
 
@@ -135,8 +133,8 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     // Arrange
     long emitCommittedAt = 1234567890123L;
     WriteSet writeSet =
-        writeSetEncoder.encodeSingleGroupWriteSet(
-            createContext(fullId, prepareSnapshotWithWrite(fullId), true), false);
+        WriteSetEncoder.encodeSingleGroupWriteSet(
+            createContext(fullId, prepareSnapshotWithWrite(fullId), true));
     // groupCommitter is a spy, so stub with doReturn to avoid invoking the real ready().
     doReturn(emitCommittedAt)
         .when(groupCommitter)
@@ -286,11 +284,11 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     assertThat(capturedState.getWriteSet()).isPresent();
     WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).hasSize(2);
-    assertThat(captured.getEntryGroups(0).getChildId()).isEqualTo("child-1");
-    assertThat(captured.getEntryGroups(0).getEntriesList()).isNotEmpty();
-    assertThat(captured.getEntryGroups(1).getChildId()).isEqualTo("child-2");
-    assertThat(captured.getEntryGroups(1).getEntriesList()).isNotEmpty();
+    assertThat(captured.getEntryGroups().getEntryGroupsList()).hasSize(2);
+    assertThat(captured.getEntryGroups().getEntryGroups(0).getChildId()).isEqualTo("child-1");
+    assertThat(captured.getEntryGroups().getEntryGroups(0).getEntriesList()).isNotEmpty();
+    assertThat(captured.getEntryGroups().getEntryGroups(1).getChildId()).isEqualTo("child-2");
+    assertThat(captured.getEntryGroups().getEntryGroups(1).getEntriesList()).isNotEmpty();
   }
 
   @Test
@@ -322,8 +320,8 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     assertThat(capturedState.getWriteSet()).isPresent();
 
     WriteSet captured = capturedState.getWriteSet().get();
-    assertThat(captured.getEntryGroupsList()).hasSize(1);
-    assertThat(captured.getEntryGroups(0).getChildId()).isEqualTo("writing");
+    assertThat(captured.getEntryGroups().getEntryGroupsList()).hasSize(1);
+    assertThat(captured.getEntryGroups().getEntryGroups(0).getChildId()).isEqualTo("writing");
   }
 
   @Test
@@ -350,7 +348,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
     WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).isEmpty();
+    assertThat(captured.getEntryGroups().getEntryGroupsList()).isEmpty();
   }
 
   @Test
@@ -400,11 +398,11 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
     WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).hasSize(1);
+    assertThat(captured.getEntryGroups().getEntryGroupsList()).hasSize(1);
     // Delayed group commit emits a single EntryGroup with child_id unset, distinguishing it from
     // a normal group commit row where each EntryGroup carries the child id.
-    assertThat(captured.getEntryGroups(0).hasChildId()).isFalse();
-    assertThat(captured.getEntryGroups(0).getEntriesList()).isNotEmpty();
+    assertThat(captured.getEntryGroups().getEntryGroups(0).hasChildId()).isFalse();
+    assertThat(captured.getEntryGroups().getEntryGroups(0).getEntriesList()).isNotEmpty();
   }
 
   @Test
@@ -434,7 +432,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
 
     WriteSet captured = capturedState.getWriteSet().get();
     assertThat(captured.getSchemaVersion()).isEqualTo(1);
-    assertThat(captured.getEntryGroupsList()).isEmpty();
+    assertThat(captured.getEntryGroups().getEntryGroupsList()).isEmpty();
   }
 
   @Test

@@ -36,7 +36,6 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       boolean onePhaseCommitEnabled,
       CoordinatorGroupCommitter groupCommitter) {
     this(
-        tableMetadataManager,
         coordinatorWriteOmissionOnReadOnlyEnabled,
         coordinatorWriteSetLoggingEnabled,
         new ParticipantCommitHandler(
@@ -52,7 +51,6 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   // Second-stage delegating constructor that builds the two specialized handlers before handing
   // them to the package-private constructor.
   private CommitHandlerWithGroupCommit(
-      TransactionTableMetadataManager tableMetadataManager,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean coordinatorWriteSetLoggingEnabled,
       ParticipantCommitHandler participantCommitHandler,
@@ -61,7 +59,6 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
     this(
         coordinatorWriteOmissionOnReadOnlyEnabled,
         coordinatorWriteSetLoggingEnabled,
-        new WriteSetEncoder(tableMetadataManager),
         new CoordinatorCommitHandlerWithGroupCommit(
             coordinator, groupCommitter, coordinatorWriteSetLoggingEnabled),
         participantCommitHandler);
@@ -73,13 +70,11 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   CommitHandlerWithGroupCommit(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean coordinatorWriteSetLoggingEnabled,
-      WriteSetEncoder writeSetEncoder,
       CoordinatorCommitHandlerWithGroupCommit coordinatorHandler,
       ParticipantCommitHandler participantCommitHandler) {
     super(
         coordinatorWriteOmissionOnReadOnlyEnabled,
         coordinatorWriteSetLoggingEnabled,
-        writeSetEncoder,
         coordinatorHandler,
         participantCommitHandler);
     this.coordinatorHandler = coordinatorHandler;
