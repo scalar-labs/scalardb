@@ -113,4 +113,21 @@ public class TextColumnTest {
     assertThat(column.compareTo(TextColumn.of("col", "aa"))).isGreaterThan(0);
     assertThat(column.compareTo(TextColumn.ofNull("col"))).isGreaterThan(0);
   }
+
+  @Test
+  public void equals_CollateEqualButByteDifferentValuesGiven_ShouldReturnFalse() {
+    // Boundary proof (U5, Covers R5): 'Apple' and 'apple' collate-equal under a case-insensitive
+    // collation but differ in bytes. TextColumn identity stays byte-exact regardless of the
+    // collation setting, so the two columns are NOT equal. equals()/hashCode() are unchanged from
+    // today's byte-exact behavior -- no relationship between the two byte-different columns'
+    // hashCodes is asserted; only the equal-object hashCode consistency contract is checked.
+    // Arrange
+    TextColumn upper = TextColumn.of("col", "Apple");
+    TextColumn lower = TextColumn.of("col", "apple");
+
+    // Act Assert
+    assertThat(upper).isNotEqualTo(lower);
+    assertThat(upper).isEqualTo(TextColumn.of("col", "Apple"));
+    assertThat(upper.hashCode()).isEqualTo(TextColumn.of("col", "Apple").hashCode());
+  }
 }
