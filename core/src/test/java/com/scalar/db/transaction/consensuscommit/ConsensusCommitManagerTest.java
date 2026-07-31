@@ -2104,11 +2104,12 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void finishTransaction_WriteSetWithUnsetPayload_ShouldThrowWithoutDeletingState()
+  public void finishTransaction_WriteSetWithUnsetPayload_ShouldFailAssertionWithoutDeletingState()
       throws Exception {
-    // Arrange — The writer always sets a payload case, so an unset one can only come from a newer
-    // schema version this binary does not know. Recovery must not run and the state row must
-    // survive, so a binary that does understand the row can still recover it.
+    // Arrange — The encoder always sets a payload case, so an unset one is unreachable by
+    // construction and is guarded by an assertion. What matters is that recovery does not run and
+    // the state row survives, rather than the loop silently treating the row as having no entry
+    // groups and deleting the state row anyway.
     com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet writeSetWithUnsetPayload =
         com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet.newBuilder()
             .setSchemaVersion(1)
@@ -2123,7 +2124,7 @@ public class ConsensusCommitManagerTest {
 
     // Act + Assert
     assertThatThrownBy(() -> manager.finishTransaction(ANY_TX_ID))
-        .isInstanceOf(TransactionException.class);
+        .isInstanceOf(AssertionError.class);
     verify(storage, never()).get(any(Get.class));
     verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(State.class));
     verify(coordinator, never()).deleteState(anyString());

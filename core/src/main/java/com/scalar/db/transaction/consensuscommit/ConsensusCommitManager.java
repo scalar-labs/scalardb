@@ -634,20 +634,17 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     // concurrent recovery.
     WriteSet writeSet = state.getWriteSet().get();
 
-    // The writer always sets the payload, so an unset case — or one this binary does not know —
-    // means the row was written by a newer schema version. getEntryGroups() would return an empty
-    // default instance for such a row, which would silently skip recovery and report success, so
-    // fail loudly instead.
-    if (writeSet.getPayloadCase() != WriteSet.PayloadCase.ENTRY_GROUPS) {
-      throw new TransactionException(
-          CoreError.CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED.buildMessage(
-              txId,
-              "The write set uses an unsupported payload encoding. Schema version: "
-                  + writeSet.getSchemaVersion()
-                  + ", Payload case: "
-                  + writeSet.getPayloadCase()),
-          txId);
-    }
+    // Holds by construction today: ENTRY_GROUPS is the payload oneof's only case, and the encoder
+    // always sets it — a read-only commit is encoded as an empty EntryGroups, never as an unset
+    // payload. It stops holding the moment a second case (e.g., the compressed encoding the oneof
+    // was introduced for) ships, because such a row parses here with the case unset: getEntryGroups
+    // then returns an empty default instance, the loop below does nothing, and the Coordinator
+    // state row is deleted anyway — leaving the still-PREPARED records of a committed transaction
+    // to be rolled back by lazy recovery. Note that adding a payload case does not bump
+    // schema_version (see the proto), so a version check would not catch this either. Whoever adds
+    // that case must replace this assertion with a recoverable error: reading a row written by a
+    // newer binary is an operational situation, not a bug.
+    assert writeSet.getPayloadCase() == WriteSet.PayloadCase.ENTRY_GROUPS;
 
     for (EntryGroup entryGroup : writeSet.getEntryGroups().getEntryGroupsList()) {
       String expectedTxId =
