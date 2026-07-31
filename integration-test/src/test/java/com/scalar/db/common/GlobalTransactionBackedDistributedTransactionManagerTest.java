@@ -58,7 +58,7 @@ class GlobalTransactionBackedDistributedTransactionManagerTest {
     // Assert — the transaction is begun, then the configured participant is registered afterward
     // (the facade owns begin-then-register and its cleanup-on-failure).
     verify(coordinator).begin(any(), eq(false), anyMap());
-    verify(coordinator).joinParticipant(any(), eq(participant));
+    verify(coordinator).enlist(any(), eq(participant));
     assertThat(transaction.getId()).isEqualTo(CANONICAL_ID);
   }
 
@@ -66,7 +66,7 @@ class GlobalTransactionBackedDistributedTransactionManagerTest {
   void beginReadOnly_ShouldBeginReadOnlyViaCoordinatorWithParticipant() throws Exception {
     manager.beginReadOnly();
     verify(coordinator).begin(any(), eq(true), anyMap());
-    verify(coordinator).joinParticipant(any(), eq(participant));
+    verify(coordinator).enlist(any(), eq(participant));
   }
 
   @Test
@@ -120,7 +120,7 @@ class GlobalTransactionBackedDistributedTransactionManagerTest {
     // Assert — an all-Selection batch begins the transaction read-only, mirroring
     // ConsensusCommitManager.
     verify(coordinator).begin(any(), eq(true), anyMap());
-    verify(coordinator).joinParticipant(any(), eq(participant));
+    verify(coordinator).enlist(any(), eq(participant));
   }
 
   @Test
@@ -140,7 +140,7 @@ class GlobalTransactionBackedDistributedTransactionManagerTest {
 
     // Assert — a write-bearing batch begins a writable transaction.
     verify(coordinator).begin(any(), eq(false), anyMap());
-    verify(coordinator).joinParticipant(any(), eq(participant));
+    verify(coordinator).enlist(any(), eq(participant));
   }
 
   @Test

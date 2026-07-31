@@ -72,7 +72,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   @Test
   void sweep_WhenTransactionNotExpired_ShouldNotProbeOrReap() throws Exception {
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
 
     coordinator.sweep();
 
@@ -83,8 +83,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
 
   @Test
   void sweep_WhenExpiredWithoutParticipants_ShouldReap() throws Exception {
-    // With no participant joined there is nothing to probe: the coordinator's expiration time
-    // is authoritative (e.g. a transaction begun but never joined to any participant).
+    // With no participant enlisted there is nothing to probe: the coordinator's expiration time
+    // is authoritative (e.g. a transaction begun with no participant enlisted).
     coordinator.begin(null, false, Collections.emptyMap());
     forceExpire(TX);
 
@@ -101,7 +101,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // reports the transaction gone may the reap happen.
     stubHeld(participant, true);
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
 
     forceExpire(TX);
     coordinator.sweep();
@@ -136,7 +136,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
             delegate, spiedRegistry, EXPIRATION_MILLIS);
     stubHeld(participant, true);
     kept.begin(null, false, Collections.emptyMap());
-    kept.joinParticipant(TX, participant);
+    kept.enlist(TX, participant);
     spiedRegistry.get(TX).get().updateExpirationTime(0);
 
     kept.sweep();
@@ -153,8 +153,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     stubHeld(gone, false);
     stubHeld(participant, true);
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
-    coordinator.joinParticipant(TX, gone);
+    coordinator.enlist(TX, participant);
+    coordinator.enlist(TX, gone);
     forceExpire(TX);
 
     coordinator.sweep();
@@ -171,7 +171,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     when(participant.hasTransactionContext(TX))
         .thenThrow(new TransactionException("unreachable", TX));
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     coordinator.sweep();
@@ -187,12 +187,12 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // probed and reaped.
     when(participant.hasTransactionContext(TX)).thenThrow(new RuntimeException("boom"));
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     TwoPhaseCommitParticipant otherParticipant = mock(TwoPhaseCommitParticipant.class);
     when(otherParticipant.getId()).thenReturn("participant-2");
     when(delegate.begin(eq("tx-2"), eq(false), any())).thenReturn("tx-2");
     coordinator.begin("tx-2", false, Collections.emptyMap());
-    coordinator.joinParticipant("tx-2", otherParticipant);
+    coordinator.enlist("tx-2", otherParticipant);
     forceExpire(TX);
     forceExpire("tx-2");
 
@@ -211,7 +211,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // one to log it and retry on the next interval.
     when(participant.hasTransactionContext(TX)).thenThrow(new LinkageError("boom"));
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     assertThatThrownBy(coordinator::sweep).isInstanceOf(LinkageError.class);
@@ -228,7 +228,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     // next interval's retry. Narrowing its catch to Exception would break exactly this.
     when(participant.hasTransactionContext(TX)).thenThrow(new LinkageError("boom"));
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     assertThatCode(coordinator::sweepSafely).doesNotThrowAnyException();
@@ -251,7 +251,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     when(participant.hasTransactionContext(TX))
         .thenThrow(new TransactionNotFoundException("no context on this node", TX));
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     coordinator.sweep();
@@ -270,8 +270,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
         .thenThrow(new TransactionNotFoundException("no context on this node", TX));
     stubHeld(participant, true);
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
-    coordinator.joinParticipant(TX, gone);
+    coordinator.enlist(TX, participant);
+    coordinator.enlist(TX, gone);
     forceExpire(TX);
 
     coordinator.sweep();
@@ -281,8 +281,8 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void sweep_WhenJoinLandsDuringProbe_ShouldNotReap() throws Exception {
-    // The reap-vs-join race: a join lands while the probe is in flight. It pushes
+  void sweep_WhenEnlistLandsDuringProbe_ShouldNotReap() throws Exception {
+    // The reap-vs-enlist race: an enlist lands while the probe is in flight. It pushes
     // the expiration time out under the entry monitor before delegating, so the reap re-check
     // must back off even though every probed participant answered absent.
     TwoPhaseCommitParticipant late = mock(TwoPhaseCommitParticipant.class);
@@ -290,11 +290,11 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
     when(participant.hasTransactionContext(TX))
         .thenAnswer(
             invocation -> {
-              coordinator.joinParticipant(TX, late);
+              coordinator.enlist(TX, late);
               return false;
             });
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     coordinator.sweep();
@@ -305,47 +305,47 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void sweep_WhenFirstJoinOutlivesExpiration_ShouldProbeNotReap() throws Exception {
-    // A first join that outlives the expiration period. The participant has joined - the client
-    // legitimately owns the transaction on it - but the delegated join call has not returned yet,
-    // so the participant would be invisible to the sweep if it were published only after the join.
-    // It is published before the join instead, so the sweep probes the live participant and keeps
-    // the transaction, rather than taking the no-participants fast path and reaping it on the wall
-    // clock alone.
+  void sweep_WhenFirstEnlistOutlivesExpiration_ShouldProbeNotReap() throws Exception {
+    // A first enlist that outlives the expiration period. The participant has joined - the client
+    // legitimately owns the transaction on it - but the delegated enlist call has not returned yet,
+    // so the participant would be invisible to the sweep if it were published only after the
+    // enlist. It is published before the enlist instead, so the sweep probes the live participant
+    // and keeps the transaction, rather than taking the no-participants fast path and reaping it on
+    // the wall clock alone.
     stubHeld(participant, true);
     coordinator.begin(null, false, Collections.emptyMap());
 
-    CountDownLatch joinStarted = new CountDownLatch(1);
-    CountDownLatch releaseJoin = new CountDownLatch(1);
+    CountDownLatch enlistStarted = new CountDownLatch(1);
+    CountDownLatch releaseEnlist = new CountDownLatch(1);
     doAnswer(
             invocation -> {
-              joinStarted.countDown();
-              releaseJoin.await(5, TimeUnit.SECONDS);
+              enlistStarted.countDown();
+              releaseEnlist.await(5, TimeUnit.SECONDS);
               return null;
             })
         .when(delegate)
-        .joinParticipant(eq(TX), any());
+        .enlist(eq(TX), any());
 
-    Thread joining =
+    Thread enlisting =
         new Thread(
             () -> {
               try {
-                coordinator.joinParticipant(TX, participant);
+                coordinator.enlist(TX, participant);
               } catch (TransactionException e) {
                 throw new AssertionError(e);
               }
             });
-    joining.start();
+    enlisting.start();
     try {
-      // Inside the join: the participant is already published, but the join has not returned.
-      assertThat(joinStarted.await(5, TimeUnit.SECONDS)).isTrue();
+      // Inside the enlist: the participant is already published, but the enlist has not returned.
+      assertThat(enlistStarted.await(5, TimeUnit.SECONDS)).isTrue();
 
-      // The join outlives the expiration period.
+      // The enlist outlives the expiration period.
       forceExpire(TX);
       coordinator.sweep();
     } finally {
-      releaseJoin.countDown();
-      joining.join(TimeUnit.SECONDS.toMillis(5));
+      releaseEnlist.countDown();
+      enlisting.join(TimeUnit.SECONDS.toMillis(5));
     }
 
     // The sweep probed the live participant and kept the transaction; it did not reap.
@@ -355,24 +355,24 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_ShouldDelegateAndTrackParticipant() throws Exception {
+  void enlist_ShouldDelegateAndTrackParticipant() throws Exception {
     coordinator.begin(null, false, Collections.emptyMap());
 
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
 
-    verify(delegate).joinParticipant(TX, participant);
+    verify(delegate).enlist(TX, participant);
     assertThat(registry.get(TX).get().hasParticipant("participant-1")).isTrue();
   }
 
   @Test
-  void joinParticipant_ShouldExtendExpiration() throws Exception {
-    // A join is coordinator-observable activity: it pushes the expiration time a full
+  void enlist_ShouldExtendExpiration() throws Exception {
+    // An enlist is coordinator-observable activity: it pushes the expiration time a full
     // period out, so the next pass must not probe.
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     coordinator.sweep();
 
     verify(participant, never()).hasTransactionContext(any());
@@ -381,38 +381,37 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_WhenNotTracked_ShouldDelegateWithoutTracking() throws Exception {
+  void enlist_WhenNotTracked_ShouldDelegateWithoutTracking() throws Exception {
     // No tracked entry means the transaction already hit a terminal step or was reaped - the
-    // wrapped coordinator is authoritative and rejects the join (its context is released
+    // wrapped coordinator is authoritative and rejects the enlist (its context is released
     // on those paths). Nothing may be recreated on this path.
     doThrow(new TransactionNotFoundException("no context", TX))
         .when(delegate)
-        .joinParticipant(TX, participant);
+        .enlist(TX, participant);
 
     try {
-      coordinator.joinParticipant(TX, participant);
+      coordinator.enlist(TX, participant);
     } catch (TransactionNotFoundException ignored) {
       // expected
     }
 
-    verify(delegate).joinParticipant(TX, participant);
+    verify(delegate).enlist(TX, participant);
     assertThat(registry.get(TX)).isEmpty();
   }
 
   @Test
-  void joinParticipant_WhenDelegateThrows_ShouldStillTrackButReapWhenProbeAnswersAbsent()
-      throws Exception {
-    // The participant is published before the join is delegated, so a sweep firing while a slow
-    // join is in flight probes it instead of reaping on the wall clock alone. The consequence is
-    // that a failed join leaves the participant tracked - accepted, and benign: a participant that
-    // never joined answers false to a probe, so the reap still proceeds, and a failed join does not
-    // keep a dead transaction alive forever. (Only an unreachable participant pins the entry, which
-    // is the fail-open retention used everywhere else.)
+  void enlist_WhenDelegateThrows_ShouldStillTrackButReapWhenProbeAnswersAbsent() throws Exception {
+    // The participant is published before the enlist is delegated, so a sweep firing while a slow
+    // enlist is in flight probes it instead of reaping on the wall clock alone. The consequence is
+    // that a failed enlist leaves the participant tracked - accepted, and benign: a participant
+    // that never joined answers false to a probe, so the reap still proceeds, and a failed enlist
+    // does not keep a dead transaction alive forever. (Only an unreachable participant pins the
+    // entry, which is the fail-open retention used everywhere else.)
     coordinator.begin(null, false, Collections.emptyMap());
-    doThrow(new TransactionException("boom", TX)).when(delegate).joinParticipant(TX, participant);
+    doThrow(new TransactionException("boom", TX)).when(delegate).enlist(TX, participant);
 
     try {
-      coordinator.joinParticipant(TX, participant);
+      coordinator.enlist(TX, participant);
     } catch (TransactionException ignored) {
       // expected
     }
@@ -429,16 +428,16 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void joinParticipant_WithDuplicateParticipantId_ShouldKeepFirstInstance() throws Exception {
-    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent join:
-    // the wrapped side joined the first instance, so that is the instance the probe must use.
+  void enlist_WithDuplicateParticipantId_ShouldKeepFirstInstance() throws Exception {
+    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent enlist:
+    // the wrapped side enlisted the first instance, so that is the instance the probe must use.
     TwoPhaseCommitParticipant second = mock(TwoPhaseCommitParticipant.class);
     when(second.getId()).thenReturn("participant-1");
     stubHeld(participant, false);
     coordinator.begin(null, false, Collections.emptyMap());
 
-    coordinator.joinParticipant(TX, participant);
-    coordinator.joinParticipant(TX, second);
+    coordinator.enlist(TX, participant);
+    coordinator.enlist(TX, second);
 
     forceExpire(TX);
     coordinator.sweep();
@@ -536,7 +535,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   void sweep_AfterClose_ShouldNotProbeOrRelease() throws Exception {
     stubHeld(participant, true);
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     coordinator.close();
@@ -561,7 +560,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
               return false;
             });
     coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.joinParticipant(TX, participant);
+    coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     coordinator.sweep();
@@ -580,7 +579,7 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
             delegate, /* expirationTimeMillis= */ 100, /* maxActiveTransactions= */ -1);
     try {
       scheduled.begin(null, false, Collections.emptyMap());
-      scheduled.joinParticipant(TX, participant);
+      scheduled.enlist(TX, participant);
       verify(delegate, timeout(10000)).releaseTransactionContext(TX);
     } finally {
       scheduled.close();
@@ -607,9 +606,9 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
             localDelegate, /* expirationTimeMillis= */ -1, /* maxActiveTransactions= */ 1);
     try {
       capped.begin("tx-a", false, Collections.emptyMap());
-      capped.joinParticipant("tx-a", participant);
+      capped.enlist("tx-a", participant);
       capped.begin("tx-b", false, Collections.emptyMap());
-      capped.joinParticipant("tx-b", participant);
+      capped.enlist("tx-b", participant);
 
       // Caffeine decides size-based eviction during maintenance, and maintenance is re-triggered
       // by cache writes; two racing writes can leave the cache over capacity but quiescent, with

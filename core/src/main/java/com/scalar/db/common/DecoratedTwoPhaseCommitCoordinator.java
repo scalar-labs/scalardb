@@ -35,9 +35,9 @@ public abstract class DecoratedTwoPhaseCommitCoordinator implements TwoPhaseComm
   }
 
   @Override
-  public void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  public void enlist(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
-    coordinator.joinParticipant(transactionId, participant);
+    coordinator.enlist(transactionId, participant);
   }
 
   @Override
