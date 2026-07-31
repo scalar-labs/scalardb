@@ -32,6 +32,7 @@ import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
 import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroups;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Key;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import java.util.Arrays;
@@ -895,7 +896,6 @@ public class CoordinatorStateAccessorTest {
     // Arrange — build a State that carries a populated WriteSet.
     Entry writeEntry =
         Entry.newBuilder()
-            .setEntryType(Entry.EntryType.ENTRY_TYPE_WRITE)
             .setNamespaceName("ns")
             .setTableName("tbl")
             .setPartitionKey(
@@ -909,7 +909,9 @@ public class CoordinatorStateAccessorTest {
     WriteSet originalWriteSet =
         WriteSet.newBuilder()
             .setSchemaVersion(1)
-            .addEntryGroups(EntryGroup.newBuilder().addEntries(writeEntry))
+            .setEntryGroups(
+                EntryGroups.newBuilder()
+                    .addEntryGroups(EntryGroup.newBuilder().addEntries(writeEntry)))
             .build();
     State state =
         new State(
@@ -968,9 +970,14 @@ public class CoordinatorStateAccessorTest {
   @Test
   public void state_EmptyWriteSet_ShouldPersistColumnWithNonEmptyBytes()
       throws CoordinatorException {
-    // Arrange — State with an empty (but non-null) WriteSet that explicitly carries schema_version,
-    // mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for read-only commits.
-    WriteSet emptyWriteSet = WriteSet.newBuilder().setSchemaVersion(1).build();
+    // Arrange — State with a WriteSet that carries schema_version and an explicitly-set but empty
+    // EntryGroups payload, mirroring what WriteSetEncoder#encodeSingleGroupWriteSet emits for
+    // read-only commits.
+    WriteSet emptyWriteSet =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .setEntryGroups(EntryGroups.getDefaultInstance())
+            .build();
     State state =
         new State(ANY_ID_1, emptyWriteSet, TransactionState.COMMITTED, System.currentTimeMillis());
 
@@ -989,10 +996,14 @@ public class CoordinatorStateAccessorTest {
     when(result.getBlobAsBytes(Attribute.WRITE_SET)).thenReturn(serializedBytes);
     State parsedState = new State(result);
 
-    // Assert — empty WriteSet survives the round trip and is distinguishable from null.
+    // Assert — empty WriteSet survives the round trip and is distinguishable from null. The payload
+    // case survives too: it must read back as ENTRY_GROUPS, not PAYLOAD_NOT_SET, or the recovery
+    // path would reject this row as one written by a newer schema version.
     assertThat(parsedState.getWriteSet()).isPresent();
     assertThat(parsedState.getWriteSet().get().getSchemaVersion()).isEqualTo(1);
-    assertThat(parsedState.getWriteSet().get().getEntryGroupsList()).isEmpty();
+    assertThat(parsedState.getWriteSet().get().getPayloadCase())
+        .isEqualTo(WriteSet.PayloadCase.ENTRY_GROUPS);
+    assertThat(parsedState.getWriteSet().get().getEntryGroups().getEntryGroupsList()).isEmpty();
   }
 
   @Test
@@ -1018,7 +1029,9 @@ public class CoordinatorStateAccessorTest {
     WriteSet writeSet2 =
         WriteSet.newBuilder()
             .setSchemaVersion(1)
-            .addEntryGroups(EntryGroup.newBuilder().setChildId("child-1"))
+            .setEntryGroups(
+                EntryGroups.newBuilder()
+                    .addEntryGroups(EntryGroup.newBuilder().setChildId("child-1")))
             .build();
     long createdAt = System.currentTimeMillis();
     State stateWithNullWriteSet = new State(ANY_ID_1, TransactionState.COMMITTED, createdAt);

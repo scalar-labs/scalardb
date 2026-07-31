@@ -633,7 +633,20 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     // composer-level NoMutationException absorption still acts as the safety net for races against
     // concurrent recovery.
     WriteSet writeSet = state.getWriteSet().get();
-    for (EntryGroup entryGroup : writeSet.getEntryGroupsList()) {
+
+    // Holds by construction today: ENTRY_GROUPS is the payload oneof's only case, and the encoder
+    // always sets it — a read-only commit is encoded as an empty EntryGroups, never as an unset
+    // payload. It stops holding the moment a second case (e.g., the compressed encoding the oneof
+    // was introduced for) ships, because such a row parses here with the case unset: getEntryGroups
+    // then returns an empty default instance, the loop below does nothing, and the Coordinator
+    // state row is deleted anyway — leaving the still-PREPARED records of a committed transaction
+    // to be rolled back by lazy recovery. Note that adding a payload case does not bump
+    // schema_version (see the proto), so a version check would not catch this either. Whoever adds
+    // that case must replace this assertion with a recoverable error: reading a row written by a
+    // newer binary is an operational situation, not a bug.
+    assert writeSet.getPayloadCase() == WriteSet.PayloadCase.ENTRY_GROUPS;
+
+    for (EntryGroup entryGroup : writeSet.getEntryGroups().getEntryGroupsList()) {
       String expectedTxId =
           entryGroup.hasChildId()
               ? KEY_MANIPULATOR.fullKey(state.getId(), entryGroup.getChildId())

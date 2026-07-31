@@ -14,7 +14,6 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
@@ -35,12 +34,10 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -575,48 +572,34 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
 
   private List<TwoPhaseCommitParticipant.WriteSetEntry> buildWriteSetEntries(
       TransactionContext context, TwoPhaseCommitParticipant.WriteSetDetailLevel detailLevel) {
+    // KEYS_ONLY is the only level this participant knows how to build. A level added later must
+    // fail here rather than be served silently as KEYS_ONLY, which would ship the Coordinator a
+    // write set quietly poorer than the one it requested.
+    if (detailLevel != TwoPhaseCommitParticipant.WriteSetDetailLevel.KEYS_ONLY) {
+      throw new AssertionError("Unknown write-set detail: " + detailLevel);
+    }
     Snapshot snapshot = context.snapshot;
     List<TwoPhaseCommitParticipant.WriteSetEntry> entries = new ArrayList<>();
     // Returns empty iff !snapshot.hasWritesOrDeletes(), so the write set shipped to the Coordinator
     // is empty exactly for a write-less participant, regardless of detailLevel (which controls only
-    // whether WRITE entries carry non-key columns, never which entries exist). The Coordinator
-    // gates writing the COMMITTED state row on this write set being non-empty, which must agree
-    // with isCommitRequired and the validate-step self-release (all derived from
+    // how much of each record an entry carries, never which entries exist). The Coordinator gates
+    // writing the COMMITTED state row on this write set being non-empty, which must agree with
+    // isCommitRequired and the validate-step self-release (all derived from
     // context.isCommitRequired()); preserve this empty-iff-write-less guarantee if this method ever
     // starts filtering entries.
     if (!snapshot.hasWritesOrDeletes()) {
       return entries;
     }
+    // KEYS_ONLY is the only detail level, so every entry carries just its primary keys.
     for (Map.Entry<Snapshot.Key, Put> e : snapshot.getWriteSet()) {
       Put put = e.getValue();
-      List<Column<?>> columns;
-      switch (detailLevel) {
-        case KEYS_ONLY:
-          // KEYS_ONLY entries must carry no non-key columns. Skipping the column pass also skips
-          // the table-metadata lookup, which is needed only to filter transaction-meta columns.
-          columns = Collections.emptyList();
-          break;
-        case FULL:
-          TableMetadata metadata = getTableMetadataForMutation(put);
-          List<Column<?>> filteredColumns = new ArrayList<>();
-          for (Column<?> column : put.getColumns().values()) {
-            if (!ConsensusCommitUtils.isTransactionMetaColumn(column.getName(), metadata)) {
-              filteredColumns.add(column);
-            }
-          }
-          columns = Collections.unmodifiableList(filteredColumns);
-          break;
-        default:
-          throw new AssertionError("Unknown write-set detail: " + detailLevel);
-      }
       entries.add(
           new WriteSetEntryImpl(
               TwoPhaseCommitParticipant.WriteSetEntry.Type.WRITE,
               put.forNamespace().get(),
               put.forTable().get(),
               put.getPartitionKey(),
-              put.getClusteringKey(),
-              columns));
+              put.getClusteringKey()));
     }
     for (Map.Entry<Snapshot.Key, Delete> e : snapshot.getDeleteSet()) {
       Delete delete = e.getValue();
@@ -626,23 +609,9 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
               delete.forNamespace().get(),
               delete.forTable().get(),
               delete.getPartitionKey(),
-              delete.getClusteringKey(),
-              Collections.emptyList()));
+              delete.getClusteringKey()));
     }
     return entries;
-  }
-
-  private TableMetadata getTableMetadataForMutation(Mutation mutation) {
-    try {
-      return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, mutation)
-          .getTableMetadata();
-    } catch (ExecutionException e) {
-      throw new AssertionError(
-          "Failed to retrieve transaction table metadata while building write set entries."
-              + " Operation: "
-              + mutation,
-          e);
-    }
   }
 
   @Override
@@ -690,21 +659,18 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     private final String tableName;
     private final Key partitionKey;
     private final Optional<Key> clusteringKey;
-    private final List<Column<?>> columns;
 
     WriteSetEntryImpl(
         Type type,
         String namespaceName,
         String tableName,
         Key partitionKey,
-        Optional<Key> clusteringKey,
-        List<Column<?>> columns) {
+        Optional<Key> clusteringKey) {
       this.type = type;
       this.namespaceName = namespaceName;
       this.tableName = tableName;
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
-      this.columns = columns;
     }
 
     @Override
@@ -730,11 +696,6 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     @Override
     public Optional<Key> getClusteringKey() {
       return clusteringKey;
-    }
-
-    @Override
-    public List<Column<?>> getColumns() {
-      return columns;
     }
   }
 

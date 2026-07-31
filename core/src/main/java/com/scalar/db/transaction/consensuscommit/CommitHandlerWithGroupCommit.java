@@ -35,7 +35,6 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       boolean onePhaseCommitEnabled,
       CoordinatorGroupCommitter groupCommitter) {
     this(
-        tableMetadataManager,
         coordinatorWriteOmissionOnReadOnlyEnabled,
         new ParticipantCommitHandler(
             storage,
@@ -50,14 +49,12 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   // Second-stage delegating constructor that builds the two specialized handlers before handing
   // them to the package-private constructor.
   private CommitHandlerWithGroupCommit(
-      TransactionTableMetadataManager tableMetadataManager,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       ParticipantCommitHandler participantCommitHandler,
       CoordinatorStateAccessor coordinator,
       CoordinatorGroupCommitter groupCommitter) {
     this(
         coordinatorWriteOmissionOnReadOnlyEnabled,
-        new WriteSetEncoder(tableMetadataManager),
         new CoordinatorCommitHandlerWithGroupCommit(coordinator, groupCommitter),
         participantCommitHandler);
   }
@@ -67,14 +64,9 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   CommitHandlerWithGroupCommit(
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
-      WriteSetEncoder writeSetEncoder,
       CoordinatorCommitHandlerWithGroupCommit coordinatorHandler,
       ParticipantCommitHandler participantCommitHandler) {
-    super(
-        coordinatorWriteOmissionOnReadOnlyEnabled,
-        writeSetEncoder,
-        coordinatorHandler,
-        participantCommitHandler);
+    super(coordinatorWriteOmissionOnReadOnlyEnabled, coordinatorHandler, participantCommitHandler);
     this.coordinatorHandler = coordinatorHandler;
   }
 

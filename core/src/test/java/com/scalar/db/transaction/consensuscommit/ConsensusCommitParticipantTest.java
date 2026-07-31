@@ -33,7 +33,6 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
-import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -575,7 +574,7 @@ class ConsensusCommitParticipantTest {
   void prepareRecords_WithWriteAndDelete_ShouldReturnEntriesStampedWithParticipantId()
       throws Exception {
     TwoPhaseCommitParticipant.PreparationResult result =
-        prepareRecordsWithWriteAndDelete(TwoPhaseCommitParticipant.WriteSetDetailLevel.FULL);
+        prepareRecordsWithWriteAndDelete(TwoPhaseCommitParticipant.WriteSetDetailLevel.KEYS_ONLY);
     // Has writes -> commit required; parity with !getWriteSet().isEmpty().
     assertThat(result.isCommitRequired()).isTrue();
     List<TwoPhaseCommitParticipant.WriteSetEntry> entries = result.getWriteSet();
@@ -595,31 +594,9 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
-  void prepareRecords_Full_ShouldCarryUserColumnsAndExcludeTransactionMetaColumns()
-      throws Exception {
-    TwoPhaseCommitParticipant.PreparationResult result =
-        prepareRecordsWithWriteAndDelete(TwoPhaseCommitParticipant.WriteSetDetailLevel.FULL);
-    List<TwoPhaseCommitParticipant.WriteSetEntry> entries = result.getWriteSet();
-    assertThat(entries).hasSize(2);
-    for (TwoPhaseCommitParticipant.WriteSetEntry entry : entries) {
-      if (entry.getType() == TwoPhaseCommitParticipant.WriteSetEntry.Type.WRITE) {
-        // The injected Put carries the user column "v" plus the ConsensusCommit-internal "tx_id";
-        // only the user column may appear in the write set.
-        assertThat(entry.getColumns()).extracting(Column::getName).containsExactly("v");
-      } else {
-        // DELETE entries never carry columns.
-        assertThat(entry.getColumns()).isEmpty();
-      }
-    }
-  }
-
-  @Test
-  void prepareRecords_KeysOnly_ShouldReturnSameEntriesWithoutColumns() throws Exception {
+  void prepareRecords_KeysOnly_ShouldReturnEntriesCarryingOnlyPrimaryKeys() throws Exception {
     TwoPhaseCommitParticipant.PreparationResult result =
         prepareRecordsWithWriteAndDelete(TwoPhaseCommitParticipant.WriteSetDetailLevel.KEYS_ONLY);
-    // KEYS_ONLY never changes which entries are returned — only their column payload: same entry
-    // count and keys as FULL, but every getColumns() is empty (the must-not-carry-columns
-    // contract).
     List<TwoPhaseCommitParticipant.WriteSetEntry> entries = result.getWriteSet();
     assertThat(entries).hasSize(2);
     assertThat(entries)
@@ -627,14 +604,10 @@ class ConsensusCommitParticipantTest {
         .containsExactlyInAnyOrder(
             TwoPhaseCommitParticipant.WriteSetEntry.Type.WRITE,
             TwoPhaseCommitParticipant.WriteSetEntry.Type.DELETE);
-    assertThat(entries)
-        .allSatisfy(
-            e -> {
-              assertThat(e.getPartitionKey().getColumns()).isNotEmpty();
-              assertThat(e.getColumns()).isEmpty();
-            });
-    // Skipping the column pass must also skip the table-metadata lookup (needed only to filter
-    // transaction-meta columns), so a KEYS_ONLY prepare cannot fail on metadata retrieval.
+    assertThat(entries).allSatisfy(e -> assertThat(e.getPartitionKey().getColumns()).isNotEmpty());
+    // Building keys-only entries must not require table metadata (which was needed only to filter
+    // transaction-meta columns out of the record content), so a prepare cannot fail on metadata
+    // retrieval.
     verify(tableMetadataManager, never()).getTransactionTableMetadata(any());
   }
 
@@ -666,7 +639,8 @@ class ConsensusCommitParticipantTest {
     // CrudHandler is mocked, so the snapshot stays empty unless we populate it directly. Reach
     // into the per-tx Snapshot and inject a write + delete, mirroring what the real CrudHandler
     // would do for the insert + delete above. The write additionally carries the "tx_id"
-    // transaction-meta column so the FULL meta-column filtering is observable.
+    // transaction-meta column, so a write whose content would need meta-column filtering still
+    // builds its entry without consulting the table metadata.
     TransactionContext context = getContext(ANY_TX_ID);
     Put put = Put.newBuilder(buildPutFromInsert(insert)).textValue("tx_id", "meta").build();
     context.snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
