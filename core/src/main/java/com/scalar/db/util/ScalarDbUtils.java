@@ -374,10 +374,13 @@ public final class ScalarDbUtils {
    *
    * <p>When a {@link CollationComparator} is present, the range operators ({@code GT}, {@code GTE},
    * {@code LT}, {@code LTE}) on {@code TEXT} columns are evaluated with the configured collation
-   * ordering. All other operators ({@code EQ}, {@code NE}, {@code IS_NULL}, {@code IS_NOT_NULL},
-   * {@code LIKE}, {@code NOT_LIKE}) stay byte-exact, since the collation governs ordering only, not
-   * equality. When the comparator is absent, the behavior is identical to ScalarDB's current
-   * natural-order comparison.
+   * ordering. When the comparator is also nondeterministic ({@link
+   * CollationComparator#isNondeterministicEquality()}), the equality operators ({@code EQ}, {@code
+   * NE}) on non-null {@code TEXT} values are evaluated with the configured collation as well; a
+   * {@code null} text value on either side keeps byte-exact equality. All remaining operators
+   * ({@code IS_NULL}, {@code IS_NOT_NULL}, {@code LIKE}, {@code NOT_LIKE}) stay byte-exact. When
+   * the comparator is absent, or present but deterministic, {@code EQ}/{@code NE} stay byte-exact
+   * and the behavior is identical to ScalarDB's current natural-order comparison.
    *
    * @param columns the columns of a record keyed by column name
    * @param conjunctions the conjunctions to evaluate
@@ -414,9 +417,11 @@ public final class ScalarDbUtils {
     assert column.getClass() == condition.getColumn().getClass();
     switch (condition.getOperator()) {
       case EQ:
+        return matchesEquality(column, condition, collationComparator);
       case IS_NULL:
         return column.equals(condition.getColumn());
       case NE:
+        return !matchesEquality(column, condition, collationComparator);
       case IS_NOT_NULL:
         return !column.equals(condition.getColumn());
       case GT:
@@ -434,6 +439,22 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError("Unknown operator: " + condition.getOperator());
     }
+  }
+
+  private static <T> boolean matchesEquality(
+      Column<T> column, ConditionalExpression condition, Optional<CollationComparator> cc) {
+    if (cc.isPresent()
+        && cc.get().isNondeterministicEquality()
+        && column.getDataType() == DataType.TEXT) {
+      String a = column.getTextValue();
+      String b = condition.getColumn().getTextValue();
+      // Collation equality applies only to two non-null text values; null-handling stays
+      // byte-exact.
+      if (a != null && b != null) {
+        return cc.get().textEquals(a, b);
+      }
+    }
+    return column.equals(condition.getColumn());
   }
 
   @SuppressWarnings("unchecked")
