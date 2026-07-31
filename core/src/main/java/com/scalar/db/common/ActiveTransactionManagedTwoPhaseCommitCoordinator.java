@@ -28,12 +28,12 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Each transaction is tracked from {@link #begin} until its terminal step ({@link #commit} /
  * {@link #rollback} / {@link #releaseTransactionContext}), with a per-transaction expiration time
- * that {@code begin} and {@link #joinParticipant} push {@code expirationTimeMillis} out. The
- * coordinator observes only those two calls — the CRUD a transaction issues goes directly to its
- * participants — so an elapsed expiration time alone cannot tell an abandoned transaction from a
- * healthy long-running one. A background sweep therefore probes the joined participants of every
- * expired transaction ({@link TwoPhaseCommitParticipant#hasTransactionContext}) — in place, while
- * the transaction stays tracked:
+ * that {@code begin} and {@link #enlist} push {@code expirationTimeMillis} out. The coordinator
+ * observes only those two calls — the CRUD a transaction issues goes directly to its participants —
+ * so an elapsed expiration time alone cannot tell an abandoned transaction from a healthy
+ * long-running one. A background sweep therefore probes the enlisted participants of every expired
+ * transaction ({@link TwoPhaseCommitParticipant#hasTransactionContext}) — in place, while the
+ * transaction stays tracked:
  *
  * <ul>
  *   <li>If any participant still holds the transaction — or cannot be probed — the expiration time
@@ -53,23 +53,23 @@ import org.slf4j.LoggerFactory;
  * transaction-lifetime bound: a context lives exactly as long as some participant holds the
  * transaction, or its absence cannot be confirmed. Fail-open probing keeps a context alive with no
  * time limit, and each such retention logs a WARN, so a persistent probe failure is loudly visible.
- * During a total outage of a participant no new transactions can join it, so the affected entries
+ * During a total outage of a participant no new transactions can enlist it, so the affected entries
  * are bounded to the in-flight snapshot at outage time; every cycle re-probes, so they are reaped
  * as soon as probes are answered again; and the registry cap stays the hard memory bound. A
  * participant that is <em>permanently</em> unreachable would keep its snapshot probing forever,
  * cleared only when the coordinator process is restarted.
  *
- * <p>One boundary of that semantics: a transaction with no joined participants yet (begun but not
- * joined to anything) has nothing to probe, so its expiration time is authoritative and the reap
- * rests on the wall clock alone. {@link #joinParticipant} publishes the participant into the
- * tracked entry <em>before</em> delegating the join, so this fast path fires only when no join has
- * reached that point — never while a join is in flight, whose participant is already visible to
- * probe (the delegated join can hold the wrapped coordinator's per-context monitor across remote
- * I/O and outlast a period, so it must not be reapable on the wall clock alone). Probe-before-reap
- * is what makes the sweep tolerant of clock jumps everywhere else; in the begin-to-first-join
- * window a forward jump exceeding one period can reap a healthy just-begun transaction, whose next
- * step then fails with the same retriable {@link TransactionNotFoundException} — accepted, as the
- * window is brief and a monotonic-clock scheme was judged not worth the complexity.
+ * <p>One boundary of that semantics: a transaction with no enlisted participants yet (begun, with
+ * nothing enlisted) has nothing to probe, so its expiration time is authoritative and the reap
+ * rests on the wall clock alone. {@link #enlist} publishes the participant into the tracked entry
+ * <em>before</em> delegating the enlist, so this fast path fires only when no enlist has reached
+ * that point — never while an enlist is in flight, whose participant is already visible to probe
+ * (the delegated enlist can hold the wrapped coordinator's per-context monitor across remote I/O
+ * and outlast a period, so it must not be reapable on the wall clock alone). Probe-before-reap is
+ * what makes the sweep tolerant of clock jumps everywhere else; in the begin-to-first-enlist window
+ * a forward jump exceeding one period can reap a healthy just-begun transaction, whose next step
+ * then fails with the same retriable {@link TransactionNotFoundException} — accepted, as the window
+ * is brief and a monotonic-clock scheme was judged not worth the complexity.
  *
  * <p>The sweep runs every second (or every {@code expirationTimeMillis}, if that is shorter). A
  * pass only reads each entry's expiration time, and a kept transaction is re-probed only after
@@ -93,14 +93,14 @@ import org.slf4j.LoggerFactory;
  * own per-transaction work, including {@code releaseTransactionContext} concurrently with any other
  * method for the same transaction ID (for example, by synchronizing every per-transaction method on
  * a per-context monitor) — which makes the sweep's {@code releaseTransactionContext} safe against
- * an in-flight {@code commit}/{@code rollback}. Second, the sweep and {@link #joinParticipant}
- * shake hands on the tracked entry's monitor: a join pushes the expiration time out under the
- * monitor <em>before</em> delegating to the wrapped coordinator, and the sweep re-checks under the
- * same monitor that the expiration time has not moved before releasing and removing. A reap
- * therefore never overlaps a join that is about to succeed — either the join extends the deadline
- * first and the sweep backs off, or the reap completes first and the delegated join is rejected by
- * the wrapped coordinator, whose context is already released. Probing itself is I/O and runs
- * outside the monitor, so a slow probe never blocks a join.
+ * an in-flight {@code commit}/{@code rollback}. Second, the sweep and {@link #enlist} shake hands
+ * on the tracked entry's monitor: an enlist pushes the expiration time out under the monitor
+ * <em>before</em> delegating to the wrapped coordinator, and the sweep re-checks under the same
+ * monitor that the expiration time has not moved before releasing and removing. A reap therefore
+ * never overlaps an enlist that is about to succeed — either the enlist extends the deadline first
+ * and the sweep backs off, or the reap completes first and the delegated enlist is rejected by the
+ * wrapped coordinator, whose context is already released. Probing itself is I/O and runs outside
+ * the monitor, so a slow probe never blocks an enlist.
  *
  * <p>A reap whose release lands behind an in-flight terminal step for the same transaction blocks
  * on the wrapped coordinator's serialization — on the sweeper thread, under the entry monitor —
@@ -193,7 +193,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     return Executors.newSingleThreadScheduledExecutor(threadFactory);
   }
 
-  // The one rule for how far every deadline reaches - initial tracking, a join, and a kept-alive
+  // The one rule for how far every deadline reaches - initial tracking, an enlist, and a kept-alive
   // verdict all push the expiration time one period out from now.
   private long nextExpirationTimeMillis() {
     return System.currentTimeMillis() + expirationTimeMillis;
@@ -213,34 +213,34 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   @Override
-  public void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  public void enlist(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
-    // get() marks the entry as recently used, so an actively-joining transaction is
+    // get() marks the entry as recently used, so an actively-enlisting transaction is
     // preferentially retained under cap pressure.
     Optional<TrackedTransaction> current = registry.get(transactionId);
     if (!current.isPresent()) {
       // Not tracked: a terminal step or a reap already deregistered the transaction (either way
-      // the wrapped context is released, so the delegated join is rejected), or a cap eviction
-      // is releasing it right now (the join may slip through, but the transaction is doomed
+      // the wrapped context is released, so the delegated enlist is rejected), or a cap eviction
+      // is releasing it right now (the enlist may slip through, but the transaction is doomed
       // regardless). Delegate for the authoritative answer; there is nothing worth tracking.
-      super.joinParticipant(transactionId, participant);
+      super.enlist(transactionId, participant);
       return;
     }
     TrackedTransaction tracked = current.get();
     // Push the expiration time out and publish the participant BEFORE delegating (see the class
     // Javadoc). The sweep re-checks the expiration time under the entry monitor before reaping, so
-    // a reap never overlaps a join that is about to succeed; and publishing the participant first
-    // means a sweep firing while the (potentially remote, potentially slow) join is in flight
-    // probes it instead of taking the no-participants fast path and reaping on the wall clock
-    // alone.
-    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent join:
-    // instances joined under the same participant ID front the same stores, so they are
-    // interchangeable for probing. A failed join leaves the participant tracked, which is benign: a
-    // participant that never joined answers false to a probe, so the reap still proceeds; only an
+    // a reap never overlaps an enlist that is about to succeed; and publishing the participant
+    // first means a sweep firing while the (potentially remote, potentially slow) enlist is in
+    // flight probes it instead of taking the no-participants fast path and reaping on the wall
+    // clock alone.
+    // First-wins per participant ID, mirroring the wrapped coordinator's idempotent enlist:
+    // instances enlisted under the same participant ID front the same stores, so they are
+    // interchangeable for probing. A failed enlist leaves the participant tracked, which is benign:
+    // a participant that never joined answers false to a probe, so the reap still proceeds; only an
     // unreachable one pins the entry, the fail-open retention used everywhere else.
     tracked.updateExpirationTime(nextExpirationTimeMillis());
     tracked.addParticipant(participant);
-    super.joinParticipant(transactionId, participant);
+    super.enlist(transactionId, participant);
   }
 
   @Override
@@ -325,13 +325,13 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
       String transactionId, TrackedTransaction tracked, long observedExpirationTimeMillis) {
     if (tracked.participants.isEmpty()) {
       // Nothing to probe: the coordinator is the only observation point, so its expiration time
-      // is authoritative (e.g. a transaction begun but never joined to any participant).
+      // is authoritative (e.g. a transaction begun with no participant enlisted).
       tracked.reapUnlessExtended(
-          observedExpirationTimeMillis, () -> reap(transactionId, "has no joined participants"));
+          observedExpirationTimeMillis, () -> reap(transactionId, "has no enlisted participants"));
       return;
     }
     // Probing is (potentially remote) I/O, so it runs outside the entry monitor: a slow probe
-    // never blocks a join.
+    // never blocks an enlist.
     String aliveReason = probe(transactionId, tracked);
     if (closed) {
       // close() may have run while the probe was in flight - the per-entry check in sweep()
@@ -361,9 +361,9 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
         "The transaction is expired and {}; releasing the context. Transaction ID: {}",
         reason,
         transactionId);
-    // Release before removing: a racing joinParticipant that finds the entry already gone
+    // Release before removing: a racing enlist that finds the entry already gone
     // delegates straight to the wrapped coordinator, and only a completed release guarantees the
-    // wrapped coordinator rejects that join instead of accepting it onto a context this reap
+    // wrapped coordinator rejects that enlist instead of accepting it onto a context this reap
     // is destroying. releaseTransactionContext is a pure in-memory reap that no-ops on an
     // unknown transaction and does not fail — trusted like the removal below — so it is not
     // guarded per entry. If an implementation broke that contract, the throw would abort the whole
@@ -374,7 +374,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   /**
-   * Probes every joined participant and returns why the transaction counts as alive, or {@code
+   * Probes every enlisted participant and returns why the transaction counts as alive, or {@code
    * null} if every participant definitely no longer holds it. Any single positive answer is
    * conclusive. A {@link TransactionNotFoundException} is a definitive "no context" (the probe
    * contract's alternative carrier of {@code false}); any other failure is mapped per participant
@@ -427,14 +427,14 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
     private final String transactionId;
 
     // Keyed by TwoPhaseCommitParticipant#getId (first-wins, mirroring the wrapped coordinator's
-    // idempotent join). Written by begin/joinParticipant threads and read by the sweeper, hence
+    // idempotent enlist). Written by begin/enlist threads and read by the sweeper, hence
     // concurrent.
     private final ConcurrentMap<String, TwoPhaseCommitParticipant> participants =
         new ConcurrentHashMap<>();
 
     // The absolute wall-clock time at which the transaction becomes a probe candidate. Pushed out
-    // by begin/joinParticipant and by a sweep that found (or failed to rule out) a participant
-    // still holding the transaction. Written under the entry monitor (the join-vs-reap
+    // by begin/enlist and by a sweep that found (or failed to rule out) a participant
+    // still holding the transaction. Written under the entry monitor (the enlist-vs-reap
     // handshake, see the class Javadoc); volatile so the sweep's cheap pre-check can read it
     // without the monitor.
     private volatile long expirationTimeMillis;
@@ -450,14 +450,14 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
 
     /**
      * Runs {@code reap} under the entry monitor, unless the expiration time has moved since the
-     * sweep observed it — the sweep's side of the join-vs-reap handshake (see the class Javadoc):
-     * {@link #updateExpirationTime} takes the same monitor, so a join either extends the expiration
-     * time first (and the reap backs off here) or blocks until the reap — including the release it
-     * performs — has completed.
+     * sweep observed it — the sweep's side of the enlist-vs-reap handshake (see the class Javadoc):
+     * {@link #updateExpirationTime} takes the same monitor, so an enlist either extends the
+     * expiration time first (and the reap backs off here) or blocks until the reap — including the
+     * release it performs — has completed.
      */
     synchronized void reapUnlessExtended(long observedExpirationTimeMillis, Runnable reap) {
       if (expirationTimeMillis != observedExpirationTimeMillis) {
-        // The expiration time moved while the sweep was deciding: a join pushed it out
+        // The expiration time moved while the sweep was deciding: an enlist pushed it out
         // under this monitor before delegating, so the transaction just proved itself alive.
         return;
       }

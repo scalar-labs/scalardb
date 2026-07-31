@@ -185,7 +185,7 @@ class AbstractDistributedTransactionProviderTest {
     when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
     when(config.getActiveTransactionManagementMaxActiveTransactions()).thenReturn(100);
     when(rawCoordinator.begin(any(), anyBoolean(), anyMap())).thenReturn("tx-1");
-    // The coordinator tracks joined participants keyed by participant ID.
+    // The coordinator tracks enlisted participants keyed by participant ID.
     when(rawParticipant.getId()).thenReturn("participant-1");
 
     GlobalTransactionManager manager = provider.createGlobalTransactionManager(config);
@@ -199,7 +199,7 @@ class AbstractDistributedTransactionProviderTest {
     // participant is the one wired in.
     ArgumentCaptor<TwoPhaseCommitParticipant> captor =
         ArgumentCaptor.forClass(TwoPhaseCommitParticipant.class);
-    verify(rawCoordinator).joinParticipant(eq("tx-1"), captor.capture());
+    verify(rawCoordinator).enlist(eq("tx-1"), captor.capture());
     assertThat(captor.getValue())
         .isInstanceOf(ActiveTransactionManagedTwoPhaseCommitParticipant.class);
   }
