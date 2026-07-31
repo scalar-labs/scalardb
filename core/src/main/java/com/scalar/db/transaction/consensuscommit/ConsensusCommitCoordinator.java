@@ -40,11 +40,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Consensus-commit-backed {@link TwoPhaseCommitCoordinator} implementation.
  *
- * <p>Drives the two-phase commit protocol across the participants that joined a transaction
+ * <p>Drives the two-phase commit protocol across the participants enlisted in a transaction
  * (prepare -&gt; validate -&gt; write COMMITTED state -&gt; commit records, with the abort/rollback
  * path on failure) and holds the per-transaction state in an in-memory map keyed by canonical
- * transaction ID. Each entry records the joined participants and the read-only flag and attributes
- * passed at {@code begin}. The map is cleaned up after every {@code commit} or {@code rollback}.
+ * transaction ID. Each entry records the enlisted participants and the read-only flag and
+ * attributes passed at {@code begin}. The map is cleaned up after every {@code commit} or {@code
+ * rollback}.
  *
  * <p>TODO: support group commit on the new Coordinator. The {@code WriteSet} persistence proto's
  * {@code child_id} (group-commit dimension) and {@code participant_id} (two-phase-commit dimension)
@@ -110,22 +111,22 @@ public class ConsensusCommitCoordinator implements TwoPhaseCommitCoordinator {
   }
 
   @Override
-  public void joinParticipant(String transactionId, TwoPhaseCommitParticipant participant)
+  public void enlist(String transactionId, TwoPhaseCommitParticipant participant)
       throws TransactionException {
     CoordinatorContext context = getContext(transactionId);
     synchronized (context) {
       context.checkActive();
-      // Joining is idempotent per participant ID: if a participant with the same getId() is
-      // already joined, this is a no-op (the participant is not joined again). commit() keys
-      // each participant's write set by getId(), so joining the same ID twice would otherwise
+      // Enlisting is idempotent per participant ID: if a participant with the same getId() is
+      // already enlisted, this is a no-op (the participant is not enlisted again). commit() keys
+      // each participant's write set by getId(), so enlisting the same ID twice would otherwise
       // merge into one EntryGroup and misattribute the persisted records.
-      for (TwoPhaseCommitParticipant joined : context.participants) {
-        if (joined.getId().equals(participant.getId())) {
+      for (TwoPhaseCommitParticipant enlisted : context.participants) {
+        if (enlisted.getId().equals(participant.getId())) {
           return;
         }
       }
       // Invoke TwoPhaseCommitParticipant.join first; only on success do we add the participant to
-      // the list so subsequent commit/rollback drives only successfully-joined participants.
+      // the list so subsequent commit/rollback drives only successfully-enlisted participants.
       participant.join(transactionId, context.readOnly, context.attributes);
       context.participants.add(participant);
     }

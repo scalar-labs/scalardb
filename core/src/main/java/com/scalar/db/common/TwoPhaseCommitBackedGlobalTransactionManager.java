@@ -21,7 +21,7 @@ import javax.annotation.concurrent.ThreadSafe;
  *   <li>{@code begin} allocates a new distributed transaction via the coordinator and returns a
  *       {@link TwoPhaseCommitBackedGlobalTransaction} — the overall handle used to drive
  *       commit/rollback. The transaction begins with no participants.
- *   <li>{@code beginBranch} joins the in-process participant to the transaction for the given
+ *   <li>{@code beginBranch} enlists the in-process participant in the transaction for the given
  *       global transaction ID and returns a {@link TwoPhaseCommitBackedBranchTransaction} — the
  *       CRUD handle for that branch.
  * </ul>
@@ -33,7 +33,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * establishes its local context.
  *
  * <p>A single in-process participant is wired in, so a global transaction has at most one
- * meaningful branch (joining is idempotent per participant ID). Calling {@code beginBranch} again
+ * meaningful branch (enlisting is idempotent per participant ID). Calling {@code beginBranch} again
  * for the same transaction returns a new handle fronting that same participant context — the {@link
  * BranchTransaction#end()} bookkeeping is per handle — so begin each branch once and drive it
  * through that one handle. The participant may be {@code null} (coordinator-only), in which case
@@ -77,11 +77,11 @@ public class TwoPhaseCommitBackedGlobalTransactionManager implements GlobalTrans
           CoreError.COORDINATOR_ONLY_GLOBAL_TRANSACTION_MANAGER_BRANCH_NOT_SUPPORTED
               .buildMessage());
     }
-    // Join the in-process participant to the global transaction. joinParticipant establishes the
+    // Enlist the in-process participant in the global transaction. enlist establishes the
     // participant's local context, forwarding the readOnly flag and the transaction-scoped
     // attributes supplied at begin. The per-branch attributes passed here are propagated
     // client-side into each CRUD operation by AttributePropagatingBranchTransaction.
-    coordinator.joinParticipant(transactionId, participant);
+    coordinator.enlist(transactionId, participant);
     BranchTransaction branch =
         new TwoPhaseCommitBackedBranchTransaction(participant, transactionId);
     return attributes.isEmpty()
