@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.6.0
         with:
           java-version: 8
           distribution: temurin
@@ -154,7 +154,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.6.0
         with:
           java-version: 8
           distribution: temurin
@@ -301,14 +301,14 @@ jobs:
         run: ${{ env.SETUP_CMD }}
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.6.0
         with:
           java-version: 8
           distribution: temurin
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         id: setup-int-test-jdk
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.6.0
         # On Linux runner, skip if Oracle JDK is specified
         # On Windows runner, skip if Oracle JDK 8 or 11 is specified
         if: ${{ (runner.os == 'Linux' && env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle') || (runner.os == 'Windows' && !(env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (env.INT_TEST_JAVA_RUNTIME_VERSION == '8' || env.INT_TEST_JAVA_RUNTIME_VERSION == '11')))  }}
