@@ -49,7 +49,6 @@ public class DatabaseConfig {
   @Nullable private String collationIcuLocale;
   @Nullable private CollationStrength collationIcuStrength;
   @Nullable private String collationIcuRules;
-  private boolean collationDeterministic;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -79,7 +78,6 @@ public class DatabaseConfig {
   public static final String COLLATION_ICU_LOCALE = PREFIX + "collation.icu.locale";
   public static final String COLLATION_ICU_STRENGTH = PREFIX + "collation.icu.strength";
   public static final String COLLATION_ICU_RULES = PREFIX + "collation.icu.rules";
-  public static final String COLLATION_DETERMINISTIC = PREFIX + "collation.deterministic";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
   public static final int DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS = 10000;
@@ -162,7 +160,6 @@ public class DatabaseConfig {
             ? null
             : CollationStrength.valueOf(collationIcuStrengthValue.toUpperCase(Locale.ROOT));
     collationIcuRules = getString(getProperties(), COLLATION_ICU_RULES, null);
-    collationDeterministic = getBoolean(getProperties(), COLLATION_DETERMINISTIC, true);
   }
 
   public List<String> getContactPoints() {
@@ -247,10 +244,6 @@ public class DatabaseConfig {
 
   public Optional<String> getCollationIcuRules() {
     return Optional.ofNullable(collationIcuRules);
-  }
-
-  public boolean isCollationDeterministic() {
-    return collationDeterministic;
   }
 
   public static String getTransactionManager(Properties properties) {

@@ -54,40 +54,10 @@ public class CollationComparatorTest {
     assertThat(comparator).isEmpty();
   }
 
-  @Test
-  public void from_WhenCollationUnsetAndDeterministicFalse_ShouldStillReturnEmpty() {
-    // Arrange: the deterministic flag is irrelevant when no collation is configured.
-    DatabaseConfig config = config(props(DatabaseConfig.COLLATION_DETERMINISTIC, "false"));
-
-    // Act
-    Optional<CollationComparator> comparator = CollationComparator.from(config);
-
-    // Assert
-    assertThat(comparator).isEmpty();
-  }
-
-  // ---- Nondeterministic (collation-aware) equality ----
+  // ---- Collation-aware equality (textEquals follows the collation) ----
 
   @Test
-  public void isNondeterministicEquality_WhenIcuAndDeterministicFalse_ShouldBeTrueAndTextEquals() {
-    // Arrange
-    CollationComparator comparator =
-        CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY",
-                        DatabaseConfig.COLLATION_DETERMINISTIC, "false")))
-            .get();
-
-    // Act Assert
-    assertThat(comparator.isNondeterministicEquality()).isTrue();
-    assertThat(comparator.textEquals("Apple", "apple")).isTrue();
-    assertThat(comparator.textEquals("apple", "banana")).isFalse();
-  }
-
-  @Test
-  public void isNondeterministicEquality_WhenIcuAndDeterministicDefault_ShouldBeFalse() {
+  public void textEquals_WhenIcuCaseInsensitive_ShouldFollowCollation() {
     // Arrange
     CollationComparator comparator =
         CollationComparator.from(
@@ -97,39 +67,18 @@ public class CollationComparatorTest {
                         DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")))
             .get();
 
-    // Act Assert
-    assertThat(comparator.isNondeterministicEquality()).isFalse();
+    // Act Assert: equality follows the collation whenever one is configured (no flag).
+    assertThat(comparator.textEquals("Apple", "apple")).isTrue();
+    assertThat(comparator.textEquals("apple", "banana")).isFalse();
   }
 
   @Test
-  public void isNondeterministicEquality_WhenIcuAndDeterministicTrue_ShouldBeFalse() {
-    // Arrange
+  public void textEquals_WhenBinary_ShouldBeByteExact() {
+    // Arrange (Covers KTD2/AE2): BINARY collation equality is byte-exact.
     CollationComparator comparator =
-        CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_DETERMINISTIC, "true")))
-            .get();
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY"))).get();
 
     // Act Assert
-    assertThat(comparator.isNondeterministicEquality()).isFalse();
-  }
-
-  @Test
-  public void textEquals_WhenBinaryAndDeterministicFalse_ShouldBeByteExactNoOp() {
-    // Arrange (Covers KTD5): BINARY nondeterministic equality is a byte-exact no-op.
-    CollationComparator comparator =
-        CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "BINARY",
-                        DatabaseConfig.COLLATION_DETERMINISTIC, "false")))
-            .get();
-
-    // Act Assert
-    assertThat(comparator.isNondeterministicEquality()).isTrue();
-    // Byte-exact: differing case is not equal for BINARY even with nondeterministic equality on.
     assertThat(comparator.textEquals("Apple", "apple")).isFalse();
     assertThat(comparator.textEquals("apple", "apple")).isTrue();
   }
