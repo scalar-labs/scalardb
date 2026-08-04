@@ -385,34 +385,7 @@ public class MutationConditionsValidatorTest {
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
-  @Test
-  public void
-      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndEqOnText_ShouldStayByteExact() {
-    // Arrange: EQ stays byte-exact under a deterministic case-insensitive collation: existing "B"
-    // is
-    // not equal to "b".
-    MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
-    prepareExistingTextColumn("B");
-    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("b"));
-
-    // Act Assert
-    Assertions.assertThatThrownBy(
-            () ->
-                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
-        .isInstanceOf(UnsatisfiedConditionException.class);
-  }
-
-  // ---- Collation-aware EQ/NE on TEXT (nondeterministic equality) ----
-
-  private static CollationComparator nondeterministicCaseInsensitiveIcuCollation() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    props.setProperty(DatabaseConfig.COLLATION, "ICU");
-    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
-    props.setProperty(DatabaseConfig.COLLATION_DETERMINISTIC, "false");
-    return CollationComparator.from(new DatabaseConfig(props)).get();
-  }
+  // ---- Collation-aware EQ/NE on TEXT (equality follows the collation) ----
 
   private Delete deleteIfExpression(ConditionalExpression expression) {
     Delete delete = mock(Delete.class);
@@ -423,11 +396,11 @@ public class MutationConditionsValidatorTest {
 
   @Test
   public void
-      validateConditionIsSatisfied_WithNondeterministicCollationAndEqOnText_ShouldNotThrowWhereByteExactWould() {
-    // Arrange: existing TEXT value "Apple", condition col = "apple". Under a nondeterministic
-    // case-insensitive ICU collation these collate-equal, so the condition is satisfied.
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndEqOnText_ShouldNotThrowWhereByteExactWould() {
+    // Arrange: existing TEXT value "Apple", condition col = "apple". Under a case-insensitive ICU
+    // collation these collate-equal, so the condition is satisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
     prepareExistingTextColumn("Apple");
     Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
 
@@ -436,23 +409,6 @@ public class MutationConditionsValidatorTest {
             () ->
                 collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
         .doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      validateConditionIsSatisfied_WithDeterministicCollationAndEqOnText_ShouldThrowUnsatisfiedConditionException() {
-    // Arrange: a deterministic (byte-exact) case-insensitive collation keeps EQ byte-exact:
-    // existing "Apple" is not equal to "apple".
-    MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
-    prepareExistingTextColumn("Apple");
-    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
-
-    // Act Assert
-    Assertions.assertThatThrownBy(
-            () ->
-                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
-        .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
   @Test
@@ -472,11 +428,11 @@ public class MutationConditionsValidatorTest {
 
   @Test
   public void
-      validateConditionIsSatisfied_WithNondeterministicCollationAndNeOnText_ShouldBehaveAsNegationOfEq() {
-    // Arrange: existing TEXT value "Apple", condition col != "apple". Under a nondeterministic
-    // case-insensitive ICU collation these collate-equal, so the NE guard is unsatisfied.
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndNeOnText_ShouldBehaveAsNegationOfEq() {
+    // Arrange: existing TEXT value "Apple", condition col != "apple". Under a case-insensitive ICU
+    // collation these collate-equal, so the NE guard is unsatisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
     prepareExistingTextColumn("Apple");
     Delete delete = deleteIfExpression(ConditionBuilder.column(C1).isNotEqualToText("apple"));
 
@@ -489,12 +445,10 @@ public class MutationConditionsValidatorTest {
   }
 
   @Test
-  public void
-      validateConditionIsSatisfied_WithNondeterministicCollationAndEqOnNonText_ShouldStayByteExact() {
-    // Arrange: non-TEXT EQ is unaffected by nondeterministic collation. existing INT 5 = 5 is
-    // satisfied.
+  public void validateConditionIsSatisfied_WithCollationAndEqOnNonText_ShouldStayByteExact() {
+    // Arrange: non-TEXT EQ is unaffected by the collation. existing INT 5 = 5 is satisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
     when(existingRecord.getColumns())
         .thenReturn(ImmutableMap.of(C1, com.scalar.db.io.IntColumn.of(C1, 5)));
     Put putSatisfied = putIfExpression(ConditionBuilder.column(C1).isEqualToInt(5));
@@ -515,12 +469,11 @@ public class MutationConditionsValidatorTest {
 
   @Test
   public void
-      validateConditionIsSatisfied_WithNondeterministicCollationAndEqOnNullExistingText_ShouldStayByteExactWithoutNpe() {
+      validateConditionIsSatisfied_WithCollationAndEqOnNullExistingText_ShouldStayByteExactWithoutNpe() {
     // Arrange: a null existing TEXT value with a `= 'apple'` condition stays byte-exact
-    // (unsatisfied)
-    // and must not throw NPE under a nondeterministic collation.
+    // (unsatisfied) and must not throw NPE under a collation.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
     when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, TextColumn.ofNull(C1)));
     Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
 

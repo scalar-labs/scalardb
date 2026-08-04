@@ -373,14 +373,14 @@ public final class ScalarDbUtils {
    * Returns whether the given columns match any of the given conjunctions.
    *
    * <p>When a {@link CollationComparator} is present, the range operators ({@code GT}, {@code GTE},
-   * {@code LT}, {@code LTE}) on {@code TEXT} columns are evaluated with the configured collation
-   * ordering. When the comparator is also nondeterministic ({@link
-   * CollationComparator#isNondeterministicEquality()}), the equality operators ({@code EQ}, {@code
-   * NE}) on non-null {@code TEXT} values are evaluated with the configured collation as well; a
-   * {@code null} text value on either side keeps byte-exact equality. All remaining operators
-   * ({@code IS_NULL}, {@code IS_NOT_NULL}, {@code LIKE}, {@code NOT_LIKE}) stay byte-exact. When
-   * the comparator is absent, or present but deterministic, {@code EQ}/{@code NE} stay byte-exact
-   * and the behavior is identical to ScalarDB's current natural-order comparison.
+   * {@code LT}, {@code LTE}) and the equality operators ({@code EQ}, {@code NE}) on non-null {@code
+   * TEXT} values are evaluated with the configured collation. For {@link
+   * com.scalar.db.io.Collation#BINARY} collation equality is byte-exact; for {@link
+   * com.scalar.db.io.Collation#ICU} it follows the collation (case-/accent-insensitive per
+   * strength/rules). A {@code null} text value on either side keeps byte-exact equality. All
+   * remaining operators ({@code IS_NULL}, {@code IS_NOT_NULL}, {@code LIKE}, {@code NOT_LIKE}) stay
+   * byte-exact. When the comparator is absent, {@code EQ}/{@code NE} stay byte-exact and the
+   * behavior is identical to ScalarDB's current natural-order comparison.
    *
    * @param columns the columns of a record keyed by column name
    * @param conjunctions the conjunctions to evaluate
@@ -443,9 +443,7 @@ public final class ScalarDbUtils {
 
   private static <T> boolean matchesEquality(
       Column<T> column, ConditionalExpression condition, Optional<CollationComparator> cc) {
-    if (cc.isPresent()
-        && cc.get().isNondeterministicEquality()
-        && column.getDataType() == DataType.TEXT) {
+    if (cc.isPresent() && column.getDataType() == DataType.TEXT) {
       String a = column.getTextValue();
       String b = condition.getColumn().getTextValue();
       // Collation equality applies only to two non-null text values; null-handling stays

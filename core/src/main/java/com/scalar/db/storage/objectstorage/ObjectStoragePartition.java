@@ -229,15 +229,14 @@ public class ObjectStoragePartition {
   }
 
   /**
-   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns. When nondeterministic
-   * equality is enabled and both columns are {@code TEXT}, equality is decided by the collation;
-   * otherwise it stays byte-exact via natural ordering. Non-{@code TEXT} equality is unaffected.
+   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns. When a collation is
+   * present and both columns are {@code TEXT}, equality is decided by the collation: byte-exact for
+   * {@code BINARY}, collation-aware for {@code ICU}. Otherwise it stays byte-exact via natural
+   * ordering. Non-{@code TEXT} equality is unaffected.
    */
   private static boolean columnEquals(
       Column<?> actual, Column<?> expected, Optional<CollationComparator> cc) {
-    if (cc.isPresent()
-        && cc.get().isNondeterministicEquality()
-        && actual.getDataType() == DataType.TEXT) {
+    if (cc.isPresent() && actual.getDataType() == DataType.TEXT) {
       String a = actual.getTextValue();
       String b = expected.getTextValue();
       if (a != null && b != null) {

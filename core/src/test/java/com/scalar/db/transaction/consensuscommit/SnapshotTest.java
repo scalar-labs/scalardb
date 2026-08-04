@@ -2765,15 +2765,6 @@ public class SnapshotTest {
     return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY")).get();
   }
 
-  private static CollationComparator nondeterministicCaseInsensitiveIcuCollation() {
-    return CollationComparator.from(
-            collationConfig(
-                DatabaseConfig.COLLATION, "ICU",
-                DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY",
-                DatabaseConfig.COLLATION_DETERMINISTIC, "false"))
-        .get();
-  }
-
   @Test
   public void
       verifyNoOverlap_ScanWithRangeAndCaseInsensitiveCollationGivenAndCaseDifferingWrittenKeyInRange_ShouldThrowException()
@@ -2884,30 +2875,6 @@ public class SnapshotTest {
     results.put(keyUpper, prepareResult(ANY_ID, ANY_TEXT_1, "Apple"));
     assertThat(results.containsKey(keyUpper)).isTrue();
     assertThat(results.containsKey(keyLower)).isFalse();
-  }
-
-  @Test
-  public void
-      verifyNoOverlap_EqualityConjunctionUnderCaseInsensitiveCollation_ShouldStayByteExactAndNotThrow()
-          throws CrudException {
-    // Arrange (documented KTD3 bound): overlap that depends only on an equality conjunction stays
-    // byte-exact, so a case-only-differing value is NOT detected as overlapping even under a
-    // case-insensitive collation. This is intended, not a regression.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
-    // preparePut sets ANY_NAME_3 = ANY_TEXT_3 ("text3").
-    Put put = preparePut(ANY_TEXT_1, ANY_TEXT_2);
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Scan scan =
-        Scan.newBuilder(prepareCrossPartitionScan())
-            .clearConditions()
-            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("TEXT3"))
-            .build();
-
-    // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
-
-    // Assert
-    assertThat(thrown).doesNotThrowAnyException();
   }
 
   @Test
@@ -3046,13 +3013,14 @@ public class SnapshotTest {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  // Site: areConjunctionsOverlapped. EQ conjunction stays byte-exact even under collation.
+  // Site: areConjunctionsOverlapped. EQ conjunction is collation-aware under a case-insensitive
+  // collation.
   @Test
   public void
-      verifyNoOverlap_PlainScanEqualityConjunctionUnderCaseInsensitiveCollation_ShouldStayByteExactAndNotThrow()
+      verifyNoOverlap_PlainScanEqualityConjunctionUnderCaseInsensitiveCollation_ShouldThrowException()
           throws CrudException {
-    // Arrange: a case-only-differing value must NOT match an "=" conjunction, proving the equality
-    // bound is preserved after threading the collation comparator.
+    // Arrange: a case-only-differing buffered write name3="B" now matches an "=" conjunction on "b"
+    // under a case-insensitive collation, so the scan-after-write overlap is detected.
     snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
     Put put = preparePutWithName3("B");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
@@ -3068,7 +3036,7 @@ public class SnapshotTest {
     Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
 
     // Assert
-    assertThat(thrown).doesNotThrowAnyException();
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   // Site: mergeResult (merged-result read path).
@@ -3120,13 +3088,13 @@ public class SnapshotTest {
     assertThat(actual).isEmpty();
   }
 
-  // Site: mergeResult. EQ conjunction stays byte-exact even under collation.
+  // Site: mergeResult. EQ conjunction is collation-aware under a case-insensitive collation.
   @Test
   public void
-      getResult_MergedResultEqualityConjunctionUnderCaseInsensitiveCollation_ShouldStayByteExact()
+      getResult_MergedResultEqualityConjunctionUnderCaseInsensitiveCollation_ShouldMatchUnderCollation()
           throws CrudException {
-    // Arrange: name3="B" against an "=" conjunction on "b" must NOT match under a case-insensitive
-    // collation, so the merged result is filtered out (equality stays byte-exact).
+    // Arrange: name3="B" against an "=" conjunction on "b" now matches under a case-insensitive
+    // collation, so the merged (write-over-read) result is returned rather than filtered out.
     snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
     Put put = preparePutWithName3("B");
     Get get =
@@ -3141,7 +3109,7 @@ public class SnapshotTest {
     Optional<TransactionResult> actual = snapshot.getResult(key, get);
 
     // Assert
-    assertThat(actual).isEmpty();
+    assertThat(actual).isPresent();
   }
 
   // Site: validateGetResult (Get validation in toSerializable).
@@ -3247,23 +3215,23 @@ public class SnapshotTest {
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
   }
 
-  // ---- U5 boundary proof: identity byte-exact while predicate EQ is collation-aware ----
+  // ---- Boundary proof: identity byte-exact while predicate EQ is collation-aware ----
   //
-  // Under a NONDETERMINISTIC case-insensitive ICU collation
-  // (scalar.db.collation=ICU, .icu.strength=PRIMARY, .deterministic=false) the in-memory EQ/NE
-  // predicate evaluation is collation-aware, but Snapshot.Key/Key identity and the snapshot map
-  // keying stay byte-exact. These tests prove both halves of the v1 boundary (R5, KTD4, AE3/AE4)
-  // and require NO production change.
+  // Under a case-insensitive ICU collation (scalar.db.collation=ICU, .icu.strength=PRIMARY) the
+  // in-memory EQ/NE predicate evaluation is collation-aware, but Snapshot.Key/Key identity and the
+  // snapshot map keying stay byte-exact. Collation-aware key identity/uniqueness is the deferred
+  // increment B. These tests prove both halves of the current boundary (AE4 for identity, the
+  // scan-after-write equality overlap for predicates).
 
   // (a) Identity preserved (Covers AE4): collate-equal but byte-different keys stay DISTINCT in
   // the identity-keyed writeSet/readSet and under results.containsKey, even though predicate
   // equality is now collation-aware.
   @Test
   public void
-      putIntoWriteSetAndReadSet_CollateEqualByteDifferentKeysUnderNondeterministicIcu_ShouldRemainDistinct()
+      putIntoWriteSetAndReadSet_CollateEqualByteDifferentKeysUnderCaseInsensitiveIcu_ShouldRemainDistinct()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
     Put putUpper = preparePut(ANY_TEXT_1, "Apple");
     Put putLower = preparePut(ANY_TEXT_1, "apple");
     Snapshot.Key keyUpper = new Snapshot.Key(putUpper);
@@ -3296,13 +3264,13 @@ public class SnapshotTest {
   // is byte-exact-false for the case-differing pending write.
   @Test
   public void
-      verifyNoOverlap_EqualityConjunctionMatchingOnlyUnderNondeterministicIcu_ShouldThrowException()
+      verifyNoOverlap_EqualityConjunctionMatchingOnlyUnderCaseInsensitiveIcu_ShouldThrowException()
           throws CrudException {
     // Arrange: a buffered write with name3="Apple" and a scan whose WHERE conjunction is
     // name3 = "apple". The byte-exact containsKey fast-path finds no overlap, but the now
     // collation-aware conjunction check is the authority and detects it, so scan-after-write is
     // prohibited.
-    snapshot = prepareSnapshot(Optional.of(nondeterministicCaseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
     Put put = preparePutWithName3("Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -3320,9 +3288,9 @@ public class SnapshotTest {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  // (d) Equality-conjunction scan-after-write now caught under nondeterministic ICU; unset
-  // reproduces prior byte-exact behavior (Covers AE3) -- the equality analog of the shipped range
-  // fix. The positive case is (c) above; here are the negative controls.
+  // (d) Equality-conjunction scan-after-write now caught under a case-insensitive ICU collation;
+  // unset reproduces prior byte-exact behavior (Covers AE3) -- the equality analog of the shipped
+  // range fix. The positive case is (c) above; here is the negative control.
   @Test
   public void
       verifyNoOverlap_EqualityConjunctionScanAfterWriteUnderCollationUnset_ShouldReproduceByteExactBehavior()
@@ -3330,31 +3298,6 @@ public class SnapshotTest {
     // Arrange (Covers AE3): with the collation unset, name3="Apple" does not byte-exact-match the
     // conjunction name3 = "apple", so there is no overlap -- the current release behavior.
     snapshot = prepareSnapshot(Optional.empty());
-    Put put = preparePutWithName3("Apple");
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    Scan scan =
-        Scan.newBuilder()
-            .namespace(ANY_NAMESPACE_NAME)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("apple"))
-            .build();
-
-    // Act
-    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
-
-    // Assert
-    assertThat(thrown).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
-      verifyNoOverlap_EqualityConjunctionScanAfterWriteUnderDeterministicIcu_ShouldStayByteExactAndNotThrow()
-          throws CrudException {
-    // Arrange (Covers AE3): a deterministic ICU collation (the default) keeps EQ byte-exact, so the
-    // case-differing write is not detected as overlapping. Only nondeterministic equality flips it,
-    // isolating the flag as the sole trigger.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
     Put put = preparePutWithName3("Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
