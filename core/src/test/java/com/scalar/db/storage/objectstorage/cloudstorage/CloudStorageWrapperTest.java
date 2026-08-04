@@ -371,8 +371,8 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    // iterateAll() returns all blobs across pages
-    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2, blob3));
+    // Two linked pages, so iterateAll() has to follow the cursor to reach blob3.
+    Page<Blob> page = pagesOf(Arrays.asList(blob1, blob2), Collections.singletonList(blob3));
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
 
     StorageBatch batch = mock(StorageBatch.class);
@@ -387,6 +387,10 @@ public class CloudStorageWrapperTest {
     // Assert
     verify(storage).batch();
     verify(batch).submit();
+    // Every blob is deleted, including the one only reachable via the second page.
+    verify(batch).delete(BlobId.of(BUCKET, objectKey1));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey2));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey3));
   }
 
   @Test
@@ -440,5 +444,16 @@ public class CloudStorageWrapperTest {
    */
   private static Page<Blob> pageOf(Iterable<Blob> blobs) {
     return new PageImpl<>(null, null, blobs);
+  }
+
+  /**
+   * Returns the first of two linked {@link Page}s, so that {@link Page#iterateAll()} only reaches
+   * {@code secondPageBlobs} by following the next-page cursor. The fetcher is a lambda rather than
+   * a named class on purpose: a lambda compiles to no class file, so it avoids the JUnit discovery
+   * problem described on {@link #pageOf(Iterable)}.
+   */
+  private static Page<Blob> pagesOf(Iterable<Blob> firstPageBlobs, Iterable<Blob> secondPageBlobs) {
+    Page<Blob> secondPage = pageOf(secondPageBlobs);
+    return new PageImpl<>(() -> secondPage, "next-page-cursor", firstPageBlobs);
   }
 }
