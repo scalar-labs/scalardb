@@ -37,9 +37,10 @@ public class MutationConditionsValidator {
   }
 
   /**
-   * Creates a validator that uses the given collation for range operators (GT/GTE/LT/LTE) on TEXT
-   * columns, and for EQ/NE on TEXT when the comparator has nondeterministic equality enabled.
-   * Otherwise EQ/NE stay byte-exact. Identity operators (IS_NULL/IS_NOT_NULL) are always unchanged.
+   * Creates a validator that uses the given collation for range operators (GT/GTE/LT/LTE) and for
+   * EQ/NE on TEXT columns. Collation equality is byte-exact for BINARY and collation-aware for ICU.
+   * When no collation is present EQ/NE stay byte-exact. Identity operators (IS_NULL/IS_NOT_NULL)
+   * are always unchanged.
    *
    * @param collationComparator the collation comparator, or {@link Optional#empty()} to keep
    *     natural-order behavior
@@ -179,14 +180,13 @@ public class MutationConditionsValidator {
 
   /**
    * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation. When a collation is
-   * present with nondeterministic equality and the existing column is {@code TEXT}, equality is
-   * decided by the collation (both text values non-null); otherwise it stays byte-exact via natural
-   * ordering.
+   * present and the existing column is {@code TEXT}, equality is decided by the collation (both
+   * text values non-null): byte-exact for {@link com.scalar.db.io.Collation#BINARY},
+   * collation-aware for {@link com.scalar.db.io.Collation#ICU}. Otherwise it stays byte-exact via
+   * natural ordering.
    */
   private boolean equalsForCondition(Column<?> existing, Column<?> conditionValue) {
-    if (collationComparator.isPresent()
-        && collationComparator.get().isNondeterministicEquality()
-        && existing.getDataType() == DataType.TEXT) {
+    if (collationComparator.isPresent() && existing.getDataType() == DataType.TEXT) {
       String a = existing.getTextValue();
       String b = conditionValue.getTextValue();
       if (a != null && b != null) {
