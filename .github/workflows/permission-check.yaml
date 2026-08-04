@@ -19,13 +19,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up JDK ${{ env.JAVA_VERSION }} (${{ env.JAVA_VENDOR }})
-        uses: actions/setup-java@v5.6.0
+        uses: actions/setup-java@v5.7.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_VENDOR }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v6.2.0
 
       - name: Execute Gradle 'integrationTestDynamoPermission' task
         run: ./gradlew integrationTestDynamoPermission -Dscalardb.dynamo.emulator_used=false -Dscalardb.dynamo.region=ap-northeast-1 -Dscalardb.dynamo.access_key_id=${{ env.DYNAMO_ACCESS_KEY_ID }} -Dscalardb.dynamo.secret_access_key=${{ env.DYNAMO_SECRET_ACCESS_KEY }}
