@@ -693,6 +693,36 @@ public class ScalarDbUtilsTest {
     return CollationComparator.from(new DatabaseConfig(props)).get();
   }
 
+  private static CollationComparator binaryComparator() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    props.setProperty(DatabaseConfig.COLLATION, "BINARY");
+    return CollationComparator.from(new DatabaseConfig(props)).get();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_EqAndNeOnTextColumnWithBinaryCollation_ShouldStayByteExact() {
+    // Arrange: a present BINARY comparator keeps EQ/NE byte-exact at this site: 'Apple' != 'apple'.
+    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
+    Set<Conjunction> neConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isNotEqualToText("apple")));
+    CollationComparator binary = binaryComparator();
+
+    // Act
+    boolean eqMatched =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, Optional.of(binary));
+    boolean neMatched =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, Optional.of(binary));
+
+    // Assert
+    assertThat(eqMatched).isFalse();
+    assertThat(neMatched).isTrue();
+  }
+
   @Test
   public void
       columnsMatchAnyOfConjunctions_EqOnTextColumnWithCaseInsensitiveIcu_ShouldMatchCaseDifferingValue() {

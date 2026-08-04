@@ -81,6 +81,13 @@ public class CollationComparatorTest {
     // Act Assert
     assertThat(comparator.textEquals("Apple", "apple")).isFalse();
     assertThat(comparator.textEquals("apple", "apple")).isTrue();
+    // For well-formed strings, byte-exact equality agrees with String equality across non-ASCII
+    // and supplementary-plane (4-byte UTF-8) text, so it matches ScalarDB's unset byte-exact
+    // behavior there too.
+    assertThat(comparator.textEquals("café", "café")).isTrue();
+    assertThat(comparator.textEquals("café", "cafe")).isFalse();
+    assertThat(comparator.textEquals("😀", "😀")).isTrue();
+    assertThat(comparator.textEquals("😀", "😁")).isFalse();
   }
 
   // ---- BINARY happy path ----

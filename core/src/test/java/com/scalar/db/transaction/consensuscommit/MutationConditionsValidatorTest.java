@@ -341,6 +341,30 @@ public class MutationConditionsValidatorTest {
     return CollationComparator.from(new DatabaseConfig(props)).get();
   }
 
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.COLLATION, "BINARY");
+    return CollationComparator.from(new DatabaseConfig(props)).get();
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithBinaryCollationAndEqOnText_ShouldStayByteExactAndThrow() {
+    // Arrange: a present BINARY collation keeps EQ byte-exact: existing "Apple" != "apple", so the
+    // putIf condition is unsatisfied.
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(Optional.of(binaryCollation()));
+    prepareExistingTextColumn("Apple");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
   private void prepareExistingTextColumn(String value) {
     when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, TextColumn.of(C1, value)));
   }
