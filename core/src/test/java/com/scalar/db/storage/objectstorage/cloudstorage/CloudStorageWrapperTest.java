@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.api.gax.paging.Page;
+import com.google.cloud.PageImpl;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -115,10 +116,8 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2, blob3));
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     // Act
     Set<String> result = wrapper.getKeys(ANY_PREFIX);
@@ -130,10 +129,8 @@ public class CloudStorageWrapperTest {
   @Test
   public void getKeys_NoObjectsWithPrefix_ShouldReturnEmptySet() throws Exception {
     // Arrange
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Collections.emptyList());
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Collections.emptyList());
 
     // Act
     Set<String> result = wrapper.getKeys(ANY_PREFIX);
@@ -342,10 +339,8 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2, blob3));
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -376,11 +371,9 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    // Mock with iterateAll() that returns all blobs across pages
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    // iterateAll() returns all blobs across pages
+    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2, blob3));
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -399,10 +392,8 @@ public class CloudStorageWrapperTest {
   @Test
   public void deleteByPrefix_NoObjectsWithPrefix_ShouldDoNothing() throws Exception {
     // Arrange
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Collections.emptyList());
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Collections.emptyList());
 
     // Act
     wrapper.deleteByPrefix(ANY_PREFIX);
@@ -431,5 +422,23 @@ public class CloudStorageWrapperTest {
 
     // Assert
     verify(storage).close();
+  }
+
+  /**
+   * Returns a single terminal {@link Page} holding {@code blobs}. {@link CloudStorageWrapper} only
+   * calls {@link Page#iterateAll()}, which on a page with no next-page cursor yields exactly these
+   * values without consulting the (unused) fetcher.
+   *
+   * <p>A real {@link PageImpl} is used rather than a Mockito mock or a hand-written {@code Page}
+   * implementation, because under Java 8 neither works. {@code Page} is annotated with JSpecify's
+   * {@code @NullMarked}, whose {@code @Target} lists {@code ElementType.MODULE} — an enum constant
+   * added in Java 9 — so reading its annotations through Java 8 reflection throws {@code
+   * ArrayStoreException: EnumConstantNotPresentExceptionProxy}. That breaks Mockito, which copies
+   * the mocked type's annotations onto the generated mock, and it equally breaks any test-source
+   * implementation of {@code Page}, because JUnit walks the supertypes of every class in the test
+   * source set during discovery. Instantiating an existing implementation avoids both.
+   */
+  private static Page<Blob> pageOf(Iterable<Blob> blobs) {
+    return new PageImpl<>(null, null, blobs);
   }
 }
