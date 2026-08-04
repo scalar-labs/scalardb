@@ -3039,6 +3039,31 @@ public class SnapshotTest {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
+  // Site: areConjunctionsOverlapped via a cross-partition scan. EQ conjunction is collation-aware
+  // under a case-insensitive collation.
+  @Test
+  public void
+      verifyNoOverlap_CrossPartitionScanEqualityConjunctionUnderCaseInsensitiveCollation_ShouldThrowException()
+          throws CrudException {
+    // Arrange: preparePut sets ANY_NAME_3 = ANY_TEXT_3 ("text3"); a cross-partition scan whose
+    // conjunction is name3 = "TEXT3" now overlaps the buffered write under a case-insensitive
+    // collation, so scan-after-write is detected.
+    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    Put put = preparePut(ANY_TEXT_1, ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    Scan scan =
+        Scan.newBuilder(prepareCrossPartitionScan())
+            .clearConditions()
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("TEXT3"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
   // Site: mergeResult (merged-result read path).
   @Test
   public void
