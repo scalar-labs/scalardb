@@ -200,7 +200,7 @@ jobs:
 
       - name: Set up JDK 8
         if: steps.should-run.outputs.skip == 'false'
-        uses: actions/setup-java@v5.6.0
+        uses: actions/setup-java@v5.7.0
         with:
           java-version: 8
           distribution: temurin
@@ -208,7 +208,7 @@ jobs:
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         id: setup-int-test-jdk
         if: ${{ steps.should-run.outputs.skip == 'false' && env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle' }}
-        uses: actions/setup-java@v5.6.0
+        uses: actions/setup-java@v5.7.0
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
@@ -222,7 +222,7 @@ jobs:
 
       - name: Setup Gradle
         if: steps.should-run.outputs.skip == 'false'
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v6.2.0
 
       - name: Run integration test
         if: steps.should-run.outputs.skip == 'false'
@@ -283,13 +283,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v5.6.0
+        uses: actions/setup-java@v5.7.0
         with:
           java-version: 8
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v6.2.0
 
       - name: Download all ${{ matrix.flavor }} test results
         uses: actions/download-artifact@v8
