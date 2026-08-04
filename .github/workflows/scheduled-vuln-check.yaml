@@ -15,14 +15,6 @@ jobs:
     secrets:
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
 
-  call-vuln-check-for-v3_15:
-    uses: ./.github/workflows/vuln-check.yaml
-    with:
-      target-ref: v3.15
-      find-latest-release: true
-    secrets:
-      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
-
   call-vuln-check-for-v3_16:
     uses: ./.github/workflows/vuln-check.yaml
     with:
@@ -43,6 +35,14 @@ jobs:
     uses: ./.github/workflows/vuln-check.yaml
     with:
       target-ref: v3.18
+      find-latest-release: true
+    secrets:
+      SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
+
+  call-vuln-check-for-v3_19:
+    uses: ./.github/workflows/vuln-check.yaml
+    with:
+      target-ref: v3.19
       find-latest-release: true
     secrets:
       SLACK_SECURITY_WEBHOOK_URL: ${{ secrets.SLACK_SECURITY_WEBHOOK_URL }}
