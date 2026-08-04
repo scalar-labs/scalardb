@@ -95,9 +95,9 @@ match is therefore only reliably available through `BINARY` against a byte-order
 - **PAD SPACE / trailing spaces.** Legacy `utf8mb4_bin` (MySQL/MariaDB) is PAD SPACE and TiDB's default
   `utf8mb4_bin` trims trailing spaces before comparison; ScalarDB `BINARY` does neither. These match
   except when values differ only by trailing spaces.
-- **Predicate equality, not key uniqueness.** `scalar.db.collation.deterministic=false` makes
-  ScalarDB's own in-memory `=`/`!=` collation-aware (same best-effort/version caveats as the ordering
-  match in this matrix — `BINARY` is a no-op, `ICU` is best-effort). It does **not** make key identity
+- **Predicate equality, not key uniqueness.** A configured `scalar.db.collation` makes ScalarDB's
+  own in-memory `=`/`!=` collation-aware (same best-effort/version caveats as the ordering match in
+  this matrix — `BINARY` is byte-exact, `ICU` is best-effort). It does **not** make key identity
   or physical/PK keying collation-aware, so it does not match a backend's *uniqueness* on keys: two
   collate-equal but byte-different keys remain distinct stored rows. Key-level uniqueness matching is a
   deferred, separate design item.

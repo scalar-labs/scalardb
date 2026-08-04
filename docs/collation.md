@@ -19,8 +19,7 @@ its current comparison behavior and upgrading has no behavioral impact.
 
 | Property | Description |
 |---|---|
-| `scalar.db.collation` | Collation mode: `BINARY` or `ICU`. When absent, ScalarDB uses its current comparison behavior (Java UTF-16 code-unit order). |
-| `scalar.db.collation.deterministic` | Whether the collation governs **ordering only** (`true`, the default) or also **equality** (`false`). When `false` and a collation is set, ScalarDB's own in-memory `=`/`!=` on text becomes collation-aware (see "Collation-aware equality" below). Modeled on PostgreSQL's deterministic vs. nondeterministic collations. |
+| `scalar.db.collation` | Collation mode: `BINARY` or `ICU`. When absent, ScalarDB uses its current comparison behavior (Java UTF-16 code-unit order). Governs both **ordering** and **equality** (see "Collation-aware equality" below). |
 | `scalar.db.collation.icu.locale` | *(ICU only)* Locale that selects the collation rules (for example `en`, `en_US`, `ja`). When absent, ICU's root locale is used. |
 | `scalar.db.collation.icu.strength` | *(ICU only)* One of `PRIMARY`, `SECONDARY`, `TERTIARY`, `QUATERNARY`, `IDENTICAL`. Controls how much detail ordering distinguishes: `PRIMARY` is case- and accent-insensitive; `SECONDARY` adds accent sensitivity; `TERTIARY` adds case sensitivity. When absent, ICU's default strength applies. |
 | `scalar.db.collation.icu.rules` | *(ICU only)* An optional custom ICU tailoring-rule string that fine-tunes ordering *on top of* the configured `locale` (its rules extend the locale's collation, or the root collation when no locale is set) and `strength`. A malformed rule string is rejected at startup. |
@@ -51,21 +50,21 @@ scalar.db.collation=BINARY
 
 ## Scope — what the setting governs
 
-`scalar.db.collation` governs **ordering only**, and only the comparisons ScalarDB performs
-itself on the JVM:
+`scalar.db.collation` governs both **ordering** and **equality**, and only the comparisons
+ScalarDB performs itself on the JVM:
 
 - object-storage scan sort and range filtering;
-- ScalarDB's own in-memory cross-partition / conjunction range filtering (`>`, `>=`, `<`,
-  `<=`);
-- the Consensus Commit snapshot's scan-after-write range-membership check; and
-- in-memory conditional-mutation range predicates (`putIf`/`deleteIf`/`updateIf` with `>`,
-  `>=`, `<`, `<=` on a text column) that ScalarDB evaluates itself — under Consensus Commit and
-  for object storage. (Conditional mutations that other backends push down to storage are
-  evaluated by the backend's own collation.)
+- ScalarDB's own in-memory cross-partition / conjunction range **and** equality filtering (`>`,
+  `>=`, `<`, `<=`, `=`, `!=`);
+- the Consensus Commit snapshot's scan-after-write range- **and** equality-membership check; and
+- in-memory conditional-mutation range and equality predicates (`putIf`/`deleteIf`/`updateIf`
+  with `>`, `>=`, `<`, `<=`, `=`, `!=` on a text column) that ScalarDB evaluates itself — under
+  Consensus Commit and for object storage. (Conditional mutations that other backends push down
+  to storage are evaluated by the backend's own collation.)
 
-With `scalar.db.collation.deterministic=false` the same sites additionally evaluate `=`/`!=` on
-text by the collation (see "Collation-aware equality" below). `IS_NULL`/`IS_NOT_NULL`/`LIKE` and
-null-text comparisons always stay byte-exact.
+Equality follows the collation whenever one is set (see "Collation-aware equality" below):
+byte-exact for `BINARY`, collation-aware for `ICU`. `IS_NULL`/`IS_NOT_NULL`/`LIKE` and null-text
+comparisons always stay byte-exact.
 
 It does **not** affect:
 
@@ -75,10 +74,9 @@ It does **not** affect:
   charset clauses in DDL; the storage's collation stays the source of truth.
 - **Key identity** — `Key`/`Column` `equals()`/`hashCode()`, snapshot map keying, deduplication
   keying, read/write-set membership, and delete-set overlap stay byte-exact **regardless of the
-  setting**, including under `scalar.db.collation.deterministic=false`. Collation-aware equality
-  changes only *predicate/read* `=`/`!=` evaluation, never key identity — treating distinct keys
-  as one is a transaction-correctness hazard reserved for a later phase (see "Collation-aware
-  equality").
+  setting**. Collation-aware equality changes only *predicate/read* `=`/`!=` evaluation, never key
+  identity — treating distinct keys as one is a transaction-correctness change reserved for a later
+  phase (see "Collation-aware equality").
 
 ## Storage recommendation (guidance only)
 
@@ -95,31 +93,37 @@ See [Storage collation compatibility](collation-storage-compatibility.md) for a 
 breakdown of which collations each supported backend offers and whether `BINARY` or `ICU` can
 match them (including why the bundled ICU version bounds how closely `ICU` mode can align).
 
-## Collation-aware equality (`scalar.db.collation.deterministic=false`)
+## Collation-aware equality
 
-By default (`deterministic=true`) the collation governs **ordering only**; `=`/`!=` stay
-byte-exact. Set `scalar.db.collation.deterministic=false` (with a collation configured) to also
-make ScalarDB's own in-memory **equality** collation-aware, so that where ScalarDB evaluates
-equality itself it agrees with a case-/accent-insensitive backend collation. This is modeled on
-PostgreSQL's deterministic vs. nondeterministic collations.
+The configured collation governs ScalarDB's own in-memory **equality** (`=`/`!=`) as well as its
+ordering — the collation flavor *is* the determinism, matching how MySQL, MariaDB, SQL Server, and
+Oracle collations behave (a case-/accent-insensitive collation makes `=`, `WHERE`, and uniqueness
+insensitive as one unit). There is no separate toggle: whenever a collation is set, equality
+follows it. This differs from PostgreSQL's ability to decouple the two with a *deterministic*
+collation flag, which ScalarDB intentionally does not replicate — to get case-sensitive equality,
+configure a case-sensitive collation.
 
-When enabled, the collation governs `=`/`!=` on text at the paths ScalarDB evaluates itself:
-in-memory conjunction/scan filtering, conditional-mutation `EQ`/`NE` (`putIf`/`deleteIf`/`updateIf`,
-under Consensus Commit and object storage), and the Consensus Commit snapshot's equality-based
-overlap check — so a `WHERE textcol = 'apple'` predicate matches a stored `'Apple'`, and an
-`=`-predicate scan-after-write now detects a case-differing pending write (the equality analog of
-the range behavior). `IS_NULL`/`IS_NOT_NULL`, `LIKE`, non-text equality, and null-text comparisons
-stay byte-exact. For `BINARY` this is a **no-op** (byte equality already equals string equality);
-it only meaningfully changes `ICU` case-/accent-insensitive equality.
+The collation governs `=`/`!=` on text at the paths ScalarDB evaluates itself: in-memory
+conjunction/scan filtering, conditional-mutation `EQ`/`NE` (`putIf`/`deleteIf`/`updateIf`, under
+Consensus Commit and object storage), and the Consensus Commit snapshot's equality-based overlap
+check — so with a case-insensitive `ICU` collation a `WHERE textcol = 'apple'` predicate matches a
+stored `'Apple'`, and an `=`-predicate scan-after-write detects a case-differing pending write (the
+equality analog of the range behavior). `IS_NULL`/`IS_NOT_NULL`, `LIKE`, non-text equality, and
+null-text comparisons always stay byte-exact.
+
+- **`BINARY`** — equality is byte-exact (`'Apple' != 'apple'`), identical to ScalarDB's current
+  behavior.
+- **`ICU`** — equality follows the collation: at a case-/accent-insensitive strength `'Apple'`
+  equals `'apple'`; at a case-sensitive strength it distinguishes them.
 
 **What it does *not* change (the identity boundary):** `Key`/`Column` `equals()`/`hashCode()`,
 the snapshot map keying (`readSet`/`writeSet`/`deleteSet`), deduplication keying, and physical
 storage record keying stay **byte-exact**. Two values that collate-equal but differ in bytes (for
 example `'Apple'` and `'apple'`) remain **distinct keys and distinct stored rows**. So this version
 matches **predicate/read equality**, not key-level uniqueness — matching the backend's *uniqueness*
-on keys (which would require collation-aware physical keying, key normalization, and a migration
-story) is a **reserved future phase**, deliberately not built here because it would change key
-identity across the snapshot, deduplication, and storage keying.
+on keys (which would require collation-aware key identity across the snapshot, deduplication, and
+mutation grouping, and a stricter backend invariant) is a **reserved future phase**, deliberately
+not built here.
 
 A concrete consequence of that boundary: a Consensus Commit scan-after-write conflict whose
 overlap depends on a collation-matching **partition or clustering key** — for example a blind
@@ -127,7 +131,7 @@ insert to key `'Apple'` followed by a scan of key `'apple'` under a case-insensi
 is **not** detected in this version, because partition/clustering keys are still compared
 byte-exact. Only conflicts that depend on a **non-key predicate column** (a `WHERE`/conditional
 `=` on a value column) are collation-aware. Detecting key-collision conflicts is part of the
-reserved key-uniqueness phase.
+reserved key-identity phase.
 
 Backend equality match has the same best-effort caveats as ordering (see below and
 [Storage collation compatibility](collation-storage-compatibility.md)).
