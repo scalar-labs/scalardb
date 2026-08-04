@@ -46,14 +46,12 @@ public final class CollationComparator {
   private final Comparator<String> textComparator;
   private final Comparator<Column<?>> columnComparator;
   private final Comparator<Key> keyComparator;
-  private final boolean nondeterministicEquality;
 
-  private CollationComparator(Comparator<String> textComparator, boolean nondeterministicEquality) {
+  private CollationComparator(Comparator<String> textComparator) {
     this.textComparator = textComparator;
     Comparator<String> nullsFirstText = Comparator.nullsFirst(textComparator);
     this.columnComparator = buildColumnComparator(nullsFirstText);
     this.keyComparator = buildKeyComparator(this.columnComparator);
-    this.nondeterministicEquality = nondeterministicEquality;
   }
 
   /**
@@ -70,16 +68,11 @@ public final class CollationComparator {
     if (!collation.isPresent()) {
       return Optional.empty();
     }
-    // A collation is present (a comparator is being built), so nondeterministic equality is on
-    // exactly when the operator opted out of deterministic (byte-exact) equality.
-    boolean nondeterministicEquality = !config.isCollationDeterministic();
     switch (collation.get()) {
       case BINARY:
-        return Optional.of(
-            new CollationComparator(binaryTextComparator(), nondeterministicEquality));
+        return Optional.of(new CollationComparator(binaryTextComparator()));
       case ICU:
-        return Optional.of(
-            new CollationComparator(icuTextComparator(config), nondeterministicEquality));
+        return Optional.of(new CollationComparator(icuTextComparator(config)));
       default:
         throw new AssertionError("Unknown collation: " + collation.get());
     }
@@ -212,22 +205,6 @@ public final class CollationComparator {
    */
   public Comparator<Key> keyComparator() {
     return keyComparator;
-  }
-
-  /**
-   * Returns whether this comparator governs in-memory {@code =}/{@code !=} equality on {@code TEXT}
-   * by the collation, rather than keeping it byte-exact. It is {@code true} only when a collation
-   * is configured and {@code scalar.db.collation.deterministic} is {@code false}.
-   *
-   * <p>For {@link Collation#BINARY} this is effectively a no-op: {@link #textEquals(String,
-   * String)} is byte-exact regardless, because {@code compare == 0} iff the UTF-8 bytes are equal
-   * iff the strings are {@code equals()}-equal.
-   *
-   * @return {@code true} when equality is collation-aware (nondeterministic), {@code false} when it
-   *     stays byte-exact
-   */
-  public boolean isNondeterministicEquality() {
-    return nondeterministicEquality;
   }
 
   /**

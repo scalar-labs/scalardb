@@ -620,45 +620,4 @@ public class DatabaseConfigTest {
     assertThat(config.getCollationIcuLocale()).hasValue("en-US");
     assertThat(config.getCollationIcuStrength()).hasValue(CollationStrength.PRIMARY);
   }
-
-  @Test
-  public void constructor_PropertiesWithoutCollationDeterministicGiven_ShouldDefaultToTrue() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-
-    // Act
-    DatabaseConfig config = new DatabaseConfig(props);
-
-    // Assert
-    assertThat(config.isCollationDeterministic()).isTrue();
-  }
-
-  @Test
-  public void constructor_PropertiesWithCollationDeterministicFalseGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.COLLATION_DETERMINISTIC, "false");
-
-    // Act
-    DatabaseConfig config = new DatabaseConfig(props);
-
-    // Assert
-    assertThat(config.isCollationDeterministic()).isFalse();
-  }
-
-  @Test
-  public void constructor_PropertiesWithCollationDeterministicTrueGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.COLLATION_DETERMINISTIC, "true");
-
-    // Act
-    DatabaseConfig config = new DatabaseConfig(props);
-
-    // Assert
-    assertThat(config.isCollationDeterministic()).isTrue();
-  }
 }
