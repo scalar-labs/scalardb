@@ -354,6 +354,9 @@ public class CloudStorageWrapperTest {
     // Assert
     verify(storage).batch();
     verify(batch).submit();
+    verify(batch).delete(BlobId.of(BUCKET, objectKey1));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey2));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey3));
   }
 
   @Test
@@ -448,9 +451,10 @@ public class CloudStorageWrapperTest {
 
   /**
    * Returns the first of two linked {@link Page}s, so that {@link Page#iterateAll()} only reaches
-   * {@code secondPageBlobs} by following the next-page cursor. The fetcher is a lambda rather than
-   * a named class on purpose: a lambda compiles to no class file, so it avoids the JUnit discovery
-   * problem described on {@link #pageOf(Iterable)}.
+   * {@code secondPageBlobs} by following the next-page cursor. The fetcher is a lambda so that the
+   * test source set gains no new type: {@code NextPageFetcher} is not {@code @NullMarked} today,
+   * but a lambda keeps this helper immune by construction if it ever becomes so — see the JUnit
+   * discovery problem described on {@link #pageOf(Iterable)}.
    */
   private static Page<Blob> pagesOf(Iterable<Blob> firstPageBlobs, Iterable<Blob> secondPageBlobs) {
     Page<Blob> secondPage = pageOf(secondPageBlobs);
