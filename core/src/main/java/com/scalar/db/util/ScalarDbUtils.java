@@ -433,16 +433,32 @@ public final class ScalarDbUtils {
 
   private static <T> boolean matchesEquality(
       Column<T> column, ConditionalExpression condition, CollationComparator cc) {
-    if (column.getDataType() == DataType.TEXT) {
+    return columnEquals(column, condition.getColumn(), cc);
+  }
+
+  /**
+   * Returns whether the two columns are equal under the configured collation: TEXT columns with two
+   * non-null values use the collation's equality (byte-exact for {@code BINARY}, collation-aware
+   * for {@code ICU}); everything else — non-TEXT columns and null text — stays byte-exact via
+   * {@link Column#equals}.
+   *
+   * @param column a column
+   * @param other the column to compare against
+   * @param collationComparator the collation comparator
+   * @return {@code true} when the columns are equal under the collation
+   */
+  public static boolean columnEquals(
+      Column<?> column, Column<?> other, CollationComparator collationComparator) {
+    if (column.getDataType() == DataType.TEXT && other.getDataType() == DataType.TEXT) {
       String a = column.getTextValue();
-      String b = condition.getColumn().getTextValue();
+      String b = other.getTextValue();
       // Collation equality applies only to two non-null text values; null-handling stays
       // byte-exact.
       if (a != null && b != null) {
-        return cc.textEquals(a, b);
+        return collationComparator.textEquals(a, b) && column.getName().equals(other.getName());
       }
     }
-    return column.equals(condition.getColumn());
+    return column.equals(other);
   }
 
   @SuppressWarnings("unchecked")

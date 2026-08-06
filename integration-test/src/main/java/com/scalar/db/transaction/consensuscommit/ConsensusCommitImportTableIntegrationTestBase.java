@@ -159,7 +159,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private CommitHandler createCommitHandler(
       TransactionTableMetadataManager tableMetadataManager,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
-    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    MutationsGrouper mutationsGrouper =
+        new MutationsGrouper(
+            new StorageInfoProvider(admin), CollationComparator.from(databaseConfig));
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,

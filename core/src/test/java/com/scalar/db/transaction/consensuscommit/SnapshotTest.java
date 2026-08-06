@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -3344,5 +3345,431 @@ public class SnapshotTest {
 
     // Assert
     assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  // ---- Shared helpers for the collation-canonical identity tests below ----
+
+  /** A Put with the given clustering-key spelling and ANY_NAME_3 value (other columns omitted). */
+  private Put preparePutWithClusteringKeyAndName3(
+      String clusteringKeyColumnValue, String name3Value) {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .clusteringKey(Key.ofText(ANY_NAME_2, clusteringKeyColumnValue))
+        .textValue(ANY_NAME_3, name3Value)
+        .build();
+  }
+
+  /**
+   * A storage-returned row, as a CI backend would echo it: clustering key in its STORED spelling.
+   */
+  private TransactionResult prepareResultWithClusteringKeyAndName3(
+      String txId, String clusteringKeyColumnValue, String name3Value) {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, clusteringKeyColumnValue))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, name3Value))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, txId))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
+  }
+
+  // ---- Collation-canonical key identity — overlap value sites (B-U4) ----
+  //
+  // The scan-after-write guard compares VALUES with the collation, not just keys: the
+  // ScanWithIndex overlap compares the buffered put's index column against the scanned index
+  // value via ScalarDbUtils.columnEquals, and the plain-Scan overlap compares partition keys via
+  // the collation key comparator. Under ICU, collate-equal spellings are one physical
+  // partition/index value on an aligned backend; under BINARY, identity stays byte-exact.
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithIndexAndCollateEqualIndexValueUnderCaseInsensitiveIcu_ShouldThrowException()
+          throws CrudException {
+    // Arrange: a buffered put whose index column (ANY_NAME_4) holds the stored spelling 'Apple'
+    // overlaps a ScanWithIndex on 'apple' under a case-insensitive collation.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_4, "Apple")
+            .build();
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_4, "apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithIndexAndCollateEqualIndexValueUnderBinaryCollation_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange: under BINARY, 'Apple' is byte-different from the scanned index value 'apple', so
+    // there is no overlap -- the current release behavior.
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_4, "Apple")
+            .build();
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_4, "apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanOfCollateEqualPartitionKeyUnderCaseInsensitiveIcu_ShouldThrowException()
+          throws CrudException {
+    // Arrange: a buffered put in partition 'apple' (TEXT partition key ANY_NAME_1) overlaps a
+    // whole-partition scan of 'Apple' under a case-insensitive collation: they are the same
+    // physical partition on an aligned backend.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePut("apple", ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, "Apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanOfCollateEqualPartitionKeyUnderBinaryCollation_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange: under BINARY, 'apple' and 'Apple' are distinct partitions, so the scan does not
+    // overlap the buffered put -- the current release behavior.
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePut("apple", ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, "Apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  // ---- Collation-canonical key identity — cross-provenance lifecycle (B-U3) ----
+  //
+  // A snapshot entry can be keyed under the request-typed spelling ('apple') or the
+  // storage-returned spelling ('Apple') of the same physical row. Under ICU both spellings are
+  // ONE logical key, so every lifecycle transition (write -> delete, delete -> write, own-write
+  // re-scan at validation, get-set skip, merged read with conjunctions) must join across
+  // provenances.
+
+  @Test
+  public void
+      toSerializable_OwnWriteRescannedUnderStoredSpellingUnderCaseInsensitiveIcu_ShouldBeClassifiedAsOwnUpdate()
+          throws ExecutionException, CrudException {
+    // Arrange: the original scan saw the committed row under its stored spelling 'Apple'; the
+    // transaction then updated it via its own spelling 'apple'. At validation, the re-scan
+    // returns the PREPARED record with this transaction's id under the stored spelling 'Apple'.
+    // The own-update classification (originalResultEntry.getKey().equals(key)) must join the
+    // provenances, so no anti-dependency is reported.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+    TransactionResult originalResult = prepareResult(ANY_ID + "x", ANY_TEXT_1, "Apple");
+    Snapshot.Key originalKey =
+        new Snapshot.Key(scan, originalResult, TABLE_METADATA, caseInsensitiveIcuCollation());
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(Collections.singletonMap(originalKey, originalResult)));
+    Put put = preparePut(ANY_TEXT_1, "apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult latestOwnResult = prepareResult(ANY_ID, ANY_TEXT_1, "Apple");
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(latestOwnResult)).thenReturn(Optional.empty());
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanForStorage);
+  }
+
+  @Test
+  public void
+      toSerializable_GetWithCollateEqualBufferedWriteUnderCaseInsensitiveIcu_ShouldSkipGetValidation()
+          throws ExecutionException, CrudException {
+    // Arrange: a cached Get keyed under the storage spelling 'Apple' has a buffered write under
+    // the request spelling 'apple'. The writeSet.containsKey guard in toSerializable joins the
+    // collate-equal key, so the Get is skipped and no storage read is issued for it.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, "Apple"))
+            .build();
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID + "x", ANY_TEXT_1, "Apple")));
+    Put put = preparePut(ANY_TEXT_1, "apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage, never()).get(any());
+  }
+
+  @Test
+  public void
+      putIntoDeleteSet_DeleteWithCollateEqualKeyGivenAfterPutUnderCaseInsensitiveIcu_ShouldSupersedeWrite()
+          throws CrudException {
+    // Arrange: write via 'apple', then delete via the collate-equal spelling 'Apple'.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePut(ANY_TEXT_1, "apple");
+    Snapshot.Key putKey = new Snapshot.Key(put, caseInsensitiveIcuCollation());
+    snapshot.putIntoWriteSet(putKey, put);
+    Delete delete = prepareDelete(ANY_TEXT_1, "Apple");
+    Snapshot.Key deleteKey = new Snapshot.Key(delete, caseInsensitiveIcuCollation());
+
+    // Act
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+
+    // Assert: the merged write is removed and exactly one deleteSet entry lands, reachable via
+    // either spelling.
+    assertThat(writeSet).isEmpty();
+    assertThat(deleteSet).hasSize(1);
+    assertThat(deleteSet.get(deleteKey)).isEqualTo(delete);
+    assertThat(snapshot.containsKeyInDeleteSet(putKey)).isTrue();
+    assertThat(snapshot.containsKeyInWriteSet(putKey)).isFalse();
+  }
+
+  @Test
+  public void
+      putIntoWriteSet_PutWithCollateEqualKeyGivenAfterDeleteUnderCaseInsensitiveIcu_ShouldMoveToWriteSetWithNullColumns()
+          throws CrudException {
+    // Arrange: delete via 'apple', then write via the collate-equal spelling 'Apple' with only
+    // ANY_NAME_3 specified.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Delete delete = prepareDelete(ANY_TEXT_1, "apple");
+    Snapshot.Key deleteKey = new Snapshot.Key(delete, caseInsensitiveIcuCollation());
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+    Put put = preparePutWithClusteringKeyAndName3("Apple", ANY_TEXT_3);
+    Snapshot.Key putKey = new Snapshot.Key(put, caseInsensitiveIcuCollation());
+
+    // Act
+    snapshot.putIntoWriteSet(putKey, put);
+
+    // Assert: the delete is re-enabled into the write path: the deleteSet entry is removed, and
+    // the moved put fills unspecified non-key columns with null, disables insert mode, and
+    // enables implicit pre-read (Snapshot.putIntoWriteSet's delete-transition branch).
+    assertThat(deleteSet).isEmpty();
+    assertThat(writeSet).hasSize(1);
+    assertThat(writeSet).containsKey(deleteKey);
+    Put actualPut = writeSet.get(putKey);
+    assertThat(actualPut.getColumns().get(ANY_NAME_3))
+        .isEqualTo(TextColumn.of(ANY_NAME_3, ANY_TEXT_3));
+    assertThat(actualPut.getColumns().get(ANY_NAME_4)).isEqualTo(TextColumn.ofNull(ANY_NAME_4));
+    assertThat(ConsensusCommitOperationAttributes.isInsertModeEnabled(actualPut)).isFalse();
+    assertThat(ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(actualPut)).isTrue();
+  }
+
+  @Test
+  public void
+      getResult_GetUnderStoredSpellingWithConjunctionMatchingMergedOwnWriteUnderCaseInsensitiveIcu_ShouldReturnMergedResult()
+          throws CrudException {
+    // Arrange: the Get is keyed under the storage spelling 'Apple' and carries a conjunction
+    // name3 = 'b'; the buffered own write (under 'apple') sets name3 = 'B'. The collate-equal key
+    // joins the write, and the conjunction matches the MERGED result under the collation.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithClusteringKeyAndName3("apple", "B");
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, "Apple"))
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("b"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get, caseInsensitiveIcuCollation());
+    snapshot.putIntoGetSet(
+        get, Optional.of(prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "zzz")));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert: the merged own-write is returned (name3 reflects the write, not the stale read).
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getText(ANY_NAME_3)).isEqualTo("B");
+  }
+
+  // ---- Collation-canonical key identity — acceptance scenarios (MySQL-verified) ----
+  //
+  // Acceptance tests of increment B (collation-canonical snapshot key identity). They assert the
+  // CORRECT collation-aware key-identity behavior (origin plan R4/R6), i.e. the behavior MySQL
+  // itself exhibits with a case-insensitive collation (verified empirically: write 'apple' /
+  // read 'Apple' sees the row; two case-variant writes converge on one row). Each test covers a
+  // Consensus Commit defect that existed while key identity was byte-exact under a
+  // case-insensitive ICU collation against a CI-collated backend; the canonical snapshot key
+  // turned them green.
+
+  // Gap 1 — SILENT STALE READ (read-your-own-writes miss). MySQL (verified): INSERT 'banana'
+  // then SELECT WHERE ck='Banana' inside one transaction returns the own write. Byte-exact key
+  // identity buffered the write under the request bytes ('apple'); a read keyed by the
+  // storage-returned bytes ('Apple') missed the writeSet in mergeResult and returned the STALE
+  // storage row with no error.
+  @Test
+  public void readYourOwnWrite_CollateEqualKeyFromStorage_ShouldSeeOwnBufferedWrite()
+      throws CrudException {
+    // Arrange: the storage row is keyed 'Apple' (storage-returned provenance); the transaction
+    // wrote via the spelling it typed: 'apple'.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Snapshot.Key storageKey =
+        new Snapshot.Key(
+            preparePutWithClusteringKeyAndName3("Apple", "ignored"), caseInsensitiveIcuCollation());
+    snapshot.putIntoReadSet(
+        storageKey,
+        Optional.of(prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "stale")));
+    Put ownWrite = preparePutWithClusteringKeyAndName3("apple", "updated");
+    snapshot.putIntoWriteSet(new Snapshot.Key(ownWrite, caseInsensitiveIcuCollation()), ownWrite);
+
+    // Act: read the row via its storage-returned key (what a scan hands back).
+    Optional<TransactionResult> result = snapshot.getResult(storageKey);
+
+    // Assert (CORRECT behavior, R4): the merged result reflects the transaction's own write.
+    assertThat(result).isPresent();
+    assertThat(result.get().getText(ANY_NAME_3))
+        .as("read-your-own-writes must reflect the buffered write, as the CI backend would")
+        .isEqualTo("updated");
+  }
+
+  // Gap 2 — SPURIOUS ABORT AT PREPARE (before-image join miss). At prepare time, Snapshot.to()
+  // joins each writeSet key against the readSet to fetch the before image. A byte-exact miss
+  // handed the composer a null result, flipping PrepareMutationComposer into the putIfNotExists
+  // insert branch — which the CI backend's uniqueness then rejects: a valid read-modify-write
+  // aborted every time.
+  @Test
+  public void prepare_CollateEqualReadAndWriteKeys_ComposerShouldReceiveBeforeImage()
+      throws ExecutionException, CrudException {
+    // Arrange: read populated the readSet under the storage bytes; the app updated via its own
+    // spelling.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    TransactionResult beforeImage =
+        prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "old");
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(
+            preparePutWithClusteringKeyAndName3("Apple", "ignored"), caseInsensitiveIcuCollation()),
+        Optional.of(beforeImage));
+    Put ownWrite = preparePutWithClusteringKeyAndName3("apple", "new");
+    snapshot.putIntoWriteSet(new Snapshot.Key(ownWrite, caseInsensitiveIcuCollation()), ownWrite);
+
+    // Act
+    snapshot.to(prepareComposer);
+
+    // Assert (CORRECT behavior, R4): the composer receives the before image (update branch),
+    // not null (insert branch -> putIfNotExists -> spurious PreparationConflictException).
+    verify(prepareComposer).add(ownWrite, beforeImage);
+  }
+
+  // Gap 3 — WRITE-WRITE SPLIT (one physical row, two mutations). MySQL (verified): INSERT
+  // 'banana' then UPDATE WHERE ck='BANANA' converge on ONE row. Byte-exact key identity produced
+  // TWO writeSet entries for the collate-equal puts (containsKey miss skipped the merge), i.e.
+  // two prepared mutations against one physical row — the second one conflicts with the first at
+  // prepare.
+  @Test
+  public void writeSet_TwoCollateEqualPuts_ShouldMergeIntoOneLogicalEntry() throws CrudException {
+    // Arrange + Act
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put first = preparePutWithClusteringKeyAndName3("banana", "v1");
+    Put second = preparePutWithClusteringKeyAndName3("BANANA", "v2");
+    snapshot.putIntoWriteSet(new Snapshot.Key(first, caseInsensitiveIcuCollation()), first);
+    snapshot.putIntoWriteSet(new Snapshot.Key(second, caseInsensitiveIcuCollation()), second);
+
+    // Assert (CORRECT behavior, R4): one logical key -> one merged writeSet entry, exactly as
+    // the CI backend holds one row.
+    assertThat(writeSet)
+        .as("collate-equal puts must merge into one logical write, as the CI backend holds one row")
+        .hasSize(1);
+  }
+
+  // Gap 4 — MISSED SCAN-AFTER-WRITE GUARD (silent inconsistent scan). verifyNoOverlap's
+  // deleteSet branch relies solely on results.containsKey. The scan results are keyed by
+  // storage-returned bytes; the deleteSet by request bytes. The byte-exact miss skipped the
+  // SCANNING_ALREADY_WRITTEN protection, so the scan silently returned a view contradicting the
+  // transaction's own pending delete.
+  @Test
+  public void verifyNoOverlap_ScanSeesRowDeletedUnderCollateEqualKey_ShouldThrow() {
+    // Arrange: the transaction deleted the row via its own spelling ('apple'); the scan then
+    // returns the same physical row under its stored bytes ('Apple').
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Delete ownDelete = prepareDelete(ANY_TEXT_1, "apple");
+    snapshot.putIntoDeleteSet(
+        new Snapshot.Key(ownDelete, caseInsensitiveIcuCollation()), ownDelete);
+    LinkedHashMap<Snapshot.Key, TransactionResult> scanResults = new LinkedHashMap<>();
+    scanResults.put(
+        new Snapshot.Key(
+            preparePutWithClusteringKeyAndName3("Apple", "ignored"), caseInsensitiveIcuCollation()),
+        prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "v"));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, scanResults));
+
+    // Assert (CORRECT behavior, R4/R6): scanning data the transaction already deleted must be
+    // detected as an overlap, not silently returned.
+    assertThat(thrown)
+        .as("scan-after-delete on a collate-equal key must be detected as an overlap")
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

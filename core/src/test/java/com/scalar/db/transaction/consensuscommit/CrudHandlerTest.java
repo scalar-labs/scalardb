@@ -3786,6 +3786,122 @@ public class CrudHandlerTest {
     assertThat(result.get()).isEqualTo(recoveredResult);
   }
 
+  // ---- Index-key match follows the collation (increment B, B-U4) ----
+  //
+  // resultMatchesIndexKey compares the queried index value against the storage column via
+  // ScalarDbUtils.columnEquals: collation-aware for TEXT under ICU, byte-exact under BINARY. On a
+  // CI-collated backend, storage returns the STORED spelling of the index value ('Apple') for a
+  // query typed as 'apple'; byte-exact comparison silently filtered such rows out.
+
+  @Test
+  void
+      read_GetWithIndexAndRolledBackRecordWithCollateEqualIndexKeyUnderCaseInsensitiveIcu_ShouldReturnResult()
+          throws Exception {
+    // Arrange: an ICU (case-insensitive) handler; the Get queries index value 'apple' but the
+    // storage row holds the stored spelling 'Apple'.
+    handler =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            caseInsensitiveIcuCollation());
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, "apple"))
+            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage returns an uncommitted (PREPARED) record whose index column holds 'Apple'
+    TransactionResult preparedResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.PREPARED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
+
+    // After rollback, the recovered result still holds the stored spelling 'Apple'
+    TransactionResult recoveredResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.COMMITTED);
+    Snapshot.Key key =
+        new Snapshot.Key(
+            getWithIndex, preparedResult, TABLE_METADATA, caseInsensitiveIcuCollation());
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(getWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert: 'Apple' collates-equal to the queried 'apple', so the row is ACCEPTED (no
+    // indexKeyFilteredOut path) and the result is returned and cached.
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(recoveredResult);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(recoveredResult));
+  }
+
+  @Test
+  void
+      read_GetWithIndexAndRolledBackRecordWithCollateEqualIndexKeyUnderBinary_ShouldFilterOutResult()
+          throws Exception {
+    // Arrange: same spellings under the default BINARY comparator ('apple' vs 'Apple' are
+    // byte-different), so the post-rollback index-key filter must still REJECT the row -- the
+    // current release behavior.
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, "apple"))
+            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage returns an uncommitted (PREPARED) record whose index column holds 'Apple'
+    TransactionResult preparedResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.PREPARED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
+
+    // After rollback, the recovered result still holds 'Apple'
+    TransactionResult recoveredResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.COMMITTED);
+    Snapshot.Key key =
+        new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA, binaryCollation());
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(getWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert: byte-exact identity rejects the case-differing row (indexKeyFilteredOut), and
+    // nothing may be cached as absent for this key because the record still exists.
+    assertThat(result).isEmpty();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
+  }
+
   @Test
   void read_GetWithIndexMatchingDeletedAndPreparedRecords_ShouldResolveToSingleRecord()
       throws Exception {
@@ -4128,6 +4244,11 @@ public class CrudHandlerTest {
   }
 
   private TransactionResult prepareResultWithIndexColumnValue(String indexColumnValue) {
+    return prepareResultWithIndexColumnValue(indexColumnValue, TransactionState.COMMITTED);
+  }
+
+  private TransactionResult prepareResultWithIndexColumnValue(
+      String indexColumnValue, TransactionState state) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
@@ -4135,7 +4256,7 @@ public class CrudHandlerTest {
             .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, indexColumnValue))
             .put(ANY_NAME_4, IntColumn.of(ANY_NAME_4, ANY_INT_1))
             .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
-            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, state.get()))
             .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 2))
             .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
             .put(
@@ -4180,6 +4301,14 @@ public class CrudHandlerTest {
   private static CollationComparator binaryCollation() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new DatabaseConfig(props));
+  }
+
+  private static CollationComparator caseInsensitiveIcuCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
     return CollationComparator.from(new DatabaseConfig(props));
   }
 }

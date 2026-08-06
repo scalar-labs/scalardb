@@ -208,7 +208,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   // `groupCommitter` must be set before calling this method.
   private CommitHandler createCommitHandler(
       ConsensusCommitConfig config, StorageInfoProvider storageInfoProvider) {
-    MutationsGrouper mutationsGrouper = new MutationsGrouper(storageInfoProvider);
+    MutationsGrouper mutationsGrouper =
+        new MutationsGrouper(storageInfoProvider, collationComparator);
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
           storage,

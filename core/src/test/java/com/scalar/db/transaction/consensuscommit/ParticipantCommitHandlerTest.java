@@ -76,7 +76,7 @@ class ParticipantCommitHandlerTest {
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     parallelExecutor = new ParallelExecutor(config);
-    mutationsGrouper = spy(new MutationsGrouper(storageInfoProvider));
+    mutationsGrouper = spy(new MutationsGrouper(storageInfoProvider, binaryCollation()));
     handler = newHandler(/* onePhaseCommitEnabled= */ false);
 
     when(storageInfoProvider.getStorageInfo(ANY_NAMESPACE_NAME))

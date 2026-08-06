@@ -453,7 +453,8 @@ public class Snapshot {
       Column<?> indexColumn = scanWithIndex.getPartitionKey().getColumns().get(0);
       String indexColumnName = indexColumn.getName();
       if (columns.containsKey(indexColumnName)
-          && columns.get(indexColumnName).equals(indexColumn)) {
+          && ScalarDbUtils.columnEquals(
+              columns.get(indexColumnName), indexColumn, collationComparator)) {
         return true;
       }
     }
@@ -505,7 +506,12 @@ public class Snapshot {
       Put put = entry.getValue();
       if (!put.forNamespace().equals(scan.forNamespace())
           || !put.forTable().equals(scan.forTable())
-          || !put.getPartitionKey().equals(scan.getPartitionKey())) {
+          // Collation-aware: collate-equal partition keys are the same physical partition on an
+          // aligned backend, so the scan-after-write range logic must apply to them.
+          || collationComparator
+                  .keyComparator()
+                  .compare(put.getPartitionKey(), scan.getPartitionKey())
+              != 0) {
         continue;
       }
 
@@ -1083,6 +1089,21 @@ public class Snapshot {
       addCanonicalColumns(components, partitionKey, comparator);
       components.add(CLUSTERING_KEY_BOUNDARY);
       clusteringKey.ifPresent(key -> addCanonicalColumns(components, key, comparator));
+      return components;
+    }
+
+    /**
+     * Returns an identity object for the given storage key under the collation: the key itself when
+     * identity is byte-exact ({@code BINARY}), or its canonical component list under {@code ICU} so
+     * collate-equal keys share one identity. Used by {@link MutationsGrouper} so mutation grouping
+     * follows the same identity as the snapshot maps.
+     */
+    static Object canonicalKeyIdentityOf(com.scalar.db.io.Key key, CollationComparator comparator) {
+      if (!comparator.hasCanonicalTextForm()) {
+        return key;
+      }
+      List<Object> components = new ArrayList<>();
+      addCanonicalColumns(components, key, comparator);
       return components;
     }
 

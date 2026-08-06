@@ -11596,7 +11596,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       TransactionTableMetadataManager tableMetadataManager,
       @Nullable CoordinatorGroupCommitter groupCommitter,
       boolean onePhaseCommitEnabled) {
-    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    MutationsGrouper mutationsGrouper =
+        new MutationsGrouper(
+            new StorageInfoProvider(admin), CollationComparator.from(databaseConfig));
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
