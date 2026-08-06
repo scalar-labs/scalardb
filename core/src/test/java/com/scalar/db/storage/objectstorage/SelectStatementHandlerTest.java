@@ -53,7 +53,7 @@ public class SelectStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(wrapper, metadataManager, Optional.empty());
+    handler = new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
@@ -463,11 +463,11 @@ public class SelectStatementHandlerTest {
     return new DatabaseConfig(props);
   }
 
-  private Optional<CollationComparator> binaryCollation() {
+  private CollationComparator binaryCollation() {
     return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY"));
   }
 
-  private Optional<CollationComparator> icuPrimaryCollation() {
+  private CollationComparator icuPrimaryCollation() {
     return CollationComparator.from(
         collationConfig(
             DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY"));
@@ -522,20 +522,21 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
-  public void handle_ScanUnderUnsetCollation_ShouldReturnNaturalOrder() throws Exception {
-    // Arrange (Covers AE3: unset collation preserves natural UTF-16 order.)
+  public void handle_ScanUnderUnsetCollation_ShouldReturnBinaryOrder() throws Exception {
+    // Arrange (Covers AE3: an unset collation defaults to BINARY, i.e. UTF-8 byte order.)
     when(metadata.getColumnNames())
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
     stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
 
     SelectStatementHandler unsetHandler =
-        new SelectStatementHandler(wrapper, metadataManager, Optional.empty());
+        new SelectStatementHandler(
+            wrapper, metadataManager, CollationComparator.from(collationConfig()));
 
     // Act
     List<String> order = scanClusteringTexts(unsetHandler, prepareScan());
 
     // Assert
-    // Natural Java String order is UTF-16 code-unit order == byte order for these ASCII values:
+    // BINARY (UTF-8 byte) order == natural UTF-16 order for these ASCII values:
     // uppercase before lowercase.
     assertThat(order).containsExactly("Banana", "Date", "apple", "cherry");
   }

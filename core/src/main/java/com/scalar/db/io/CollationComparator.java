@@ -23,8 +23,6 @@ import javax.annotation.concurrent.ThreadSafe;
  * build on {@link #textComparator()} through {@link #columnComparator()} and {@link
  * #keyComparator()}.
  *
- * <p>It governs ordering only. Equality and identity comparisons are unchanged and stay byte-exact.
- *
  * <ul>
  *   <li>{@link Collation#BINARY} orders text by unsigned UTF-8 byte sequence, using Guava's {@link
  *       UnsignedBytes#lexicographicalComparator()} over {@link
@@ -36,8 +34,8 @@ import javax.annotation.concurrent.ThreadSafe;
  *       construction time so it is immutable and safe for concurrent {@code compare} calls.
  * </ul>
  *
- * <p>When {@code scalar.db.collation} is unset, {@link #from(DatabaseConfig)} returns {@link
- * Optional#empty()} so callers keep ScalarDB's current natural-order behavior.
+ * <p>A comparator always exists: when {@code scalar.db.collation} is unset, the configuration
+ * defaults to {@link Collation#BINARY}, so {@link #from(DatabaseConfig)} never returns absent.
  */
 @Immutable
 @ThreadSafe
@@ -58,23 +56,20 @@ public final class CollationComparator {
    * Creates a {@code CollationComparator} from the given configuration.
    *
    * @param config the database configuration
-   * @return an {@code Optional} holding the comparator when {@code scalar.db.collation} is set, or
-   *     {@link Optional#empty()} when it is unset (callers keep current natural-order behavior)
+   * @return the comparator for the configured collation ({@link Collation#BINARY} when {@code
+   *     scalar.db.collation} is unset)
    * @throws IllegalArgumentException if an ICU custom tailoring-rule string is malformed or the
    *     configured ICU locale is not recognized
    */
-  public static Optional<CollationComparator> from(DatabaseConfig config) {
-    Optional<Collation> collation = config.getCollation();
-    if (!collation.isPresent()) {
-      return Optional.empty();
-    }
-    switch (collation.get()) {
+  public static CollationComparator from(DatabaseConfig config) {
+    Collation collation = config.getCollation();
+    switch (collation) {
       case BINARY:
-        return Optional.of(new CollationComparator(binaryTextComparator()));
+        return new CollationComparator(binaryTextComparator());
       case ICU:
-        return Optional.of(new CollationComparator(icuTextComparator(config)));
+        return new CollationComparator(icuTextComparator(config));
       default:
-        throw new AssertionError("Unknown collation: " + collation.get());
+        throw new AssertionError("Unknown collation: " + collation);
     }
   }
 

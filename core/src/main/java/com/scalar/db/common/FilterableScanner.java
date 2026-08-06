@@ -23,15 +23,11 @@ public class FilterableScanner extends AbstractScanner {
   private final Scanner scanner;
   private final List<String> projections;
   private final Set<Conjunction> conjunctions;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
   @Nullable private Integer left = null;
 
-  public FilterableScanner(Selection selection, Scanner scanner) {
-    this(selection, scanner, Optional.empty());
-  }
-
   public FilterableScanner(
-      Selection selection, Scanner scanner, Optional<CollationComparator> collationComparator) {
+      Selection selection, Scanner scanner, CollationComparator collationComparator) {
     this.scanner = scanner;
     this.projections = selection.getProjections();
     this.conjunctions = selection.getConjunctions();

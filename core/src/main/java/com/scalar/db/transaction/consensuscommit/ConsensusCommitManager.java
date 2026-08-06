@@ -77,7 +77,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject

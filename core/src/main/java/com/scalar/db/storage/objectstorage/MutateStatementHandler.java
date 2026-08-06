@@ -11,17 +11,16 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.CollationComparator;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class MutateStatementHandler extends StatementHandler {
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   public MutateStatementHandler(
       ObjectStorageWrapper wrapper,
       TableMetadataManager metadataManager,
-      Optional<CollationComparator> collationComparator) {
+      CollationComparator collationComparator) {
     super(wrapper, metadataManager);
     this.collationComparator = collationComparator;
   }

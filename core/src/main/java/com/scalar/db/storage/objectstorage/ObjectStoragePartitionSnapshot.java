@@ -68,13 +68,13 @@ public class ObjectStoragePartitionSnapshot {
   }
 
   public void applyPut(
-      Put put, TableMetadata tableMetadata, Optional<CollationComparator> collationComparator)
+      Put put, TableMetadata tableMetadata, CollationComparator collationComparator)
       throws NoMutationException {
     partition.applyPut(put, tableMetadata, collationComparator);
   }
 
   public void applyDelete(
-      Delete delete, TableMetadata tableMetadata, Optional<CollationComparator> collationComparator)
+      Delete delete, TableMetadata tableMetadata, CollationComparator collationComparator)
       throws NoMutationException {
     partition.applyDelete(delete, tableMetadata, collationComparator);
   }

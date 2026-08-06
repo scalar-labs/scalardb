@@ -43,6 +43,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
@@ -85,7 +86,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
   private final CrudHandler crud;
   private final ParticipantCommitHandler commit;
   private final ConsensusCommitOperationChecker operationChecker;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   private final ConcurrentMap<String, ParticipantContext> contexts = new ConcurrentHashMap<>();
 
@@ -150,7 +151,10 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.operationChecker = checkNotNull(operationChecker);
-    this.collationComparator = Optional.empty();
+    // Tests do not carry a DatabaseConfig here; use the default (BINARY) collation comparator.
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    this.collationComparator = CollationComparator.from(new DatabaseConfig(properties));
   }
 
   private static String resolveParticipantId(ConsensusCommitConfig config) {

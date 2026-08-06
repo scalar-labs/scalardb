@@ -51,7 +51,7 @@ public class Dynamo extends AbstractDistributedStorage {
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
   private final DynamoOperationChecker operationChecker;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   @Inject
   public Dynamo(DatabaseConfig databaseConfig) {

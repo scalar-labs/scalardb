@@ -26,12 +26,12 @@ import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   public SelectStatementHandler(
       ObjectStorageWrapper wrapper,
       TableMetadataManager metadataManager,
-      Optional<CollationComparator> collationComparator) {
+      CollationComparator collationComparator) {
     super(wrapper, metadataManager);
     this.collationComparator = collationComparator;
   }
@@ -204,8 +204,7 @@ public class SelectStatementHandler extends StatementHandler {
       boolean isStart,
       boolean isInclusive,
       TableMetadata metadata) {
-    Comparator<Column<?>> perColumn =
-        ClusteringKeyComparator.resolveColumnComparator(collationComparator);
+    Comparator<Column<?>> perColumn = collationComparator.columnComparator();
     for (Column<?> column : clusteringKey.getColumns()) {
       Scan.Ordering.Order order = metadata.getClusteringOrder(column.getName());
       if (clusteringKey.getColumns().indexOf(column) == clusteringKey.size() - 1) {

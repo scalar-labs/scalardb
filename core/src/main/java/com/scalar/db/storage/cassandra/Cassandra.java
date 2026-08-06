@@ -45,7 +45,7 @@ public class Cassandra extends AbstractDistributedStorage {
   private final ClusterManager clusterManager;
   private final TableMetadataManager metadataManager;
   private final OperationChecker operationChecker;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   @Inject
   public Cassandra(DatabaseConfig config) {

@@ -59,12 +59,11 @@ public class Snapshot {
   private final ParallelExecutor parallelExecutor;
 
   // The collation comparator governing clustering-key range-membership ordering in the
-  // scan-after-write validation. Empty means ScalarDB's current natural-order behavior. It governs
-  // ordering only; key identity and map keying stay byte-exact.
-  private final Optional<CollationComparator> collationComparator;
+  // scan-after-write validation. It governs ordering only; key identity and map keying stay
+  // byte-exact.
+  private final CollationComparator collationComparator;
 
-  // The resolved clustering-key comparator: collation-aware when a collation is configured,
-  // otherwise the natural Key.compareTo (preserving current behavior).
+  // The clustering-key comparator derived from the collation comparator.
   private final Comparator<com.scalar.db.io.Key> clusteringKeyComparator;
 
   // The read set stores information about the records that are read in this transaction. This is
@@ -93,12 +92,12 @@ public class Snapshot {
       String id,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      Optional<CollationComparator> collationComparator) {
+      CollationComparator collationComparator) {
     this.id = id;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.collationComparator = collationComparator;
-    this.clusteringKeyComparator = resolveClusteringKeyComparator(this.collationComparator);
+    this.clusteringKeyComparator = collationComparator.keyComparator();
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -112,7 +111,7 @@ public class Snapshot {
       String id,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
-      Optional<CollationComparator> collationComparator,
+      CollationComparator collationComparator,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
       ConcurrentMap<Get, Optional<TransactionResult>> getSet,
       Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet,
@@ -123,23 +122,13 @@ public class Snapshot {
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.collationComparator = collationComparator;
-    this.clusteringKeyComparator = resolveClusteringKeyComparator(this.collationComparator);
+    this.clusteringKeyComparator = collationComparator.keyComparator();
     this.readSet = readSet;
     this.getSet = getSet;
     this.scanSet = scanSet;
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
     this.scannerSet = scannerSet;
-  }
-
-  // Resolves the clustering-key range-membership comparator: collation-aware when configured,
-  // otherwise the natural Key.compareTo, which preserves ScalarDB's current behavior when the
-  // collation setting is unset.
-  private static Comparator<com.scalar.db.io.Key> resolveClusteringKeyComparator(
-      Optional<CollationComparator> collationComparator) {
-    return collationComparator
-        .map(CollationComparator::keyComparator)
-        .orElseGet(() -> Comparator.naturalOrder());
   }
 
   // Although this class is not thread-safe, this method is actually thread-safe because the readSet

@@ -55,7 +55,7 @@ public class MutationConditionsValidatorTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    validator = new MutationConditionsValidator();
+    validator = new MutationConditionsValidator(binaryCollation());
   }
 
   @Test
@@ -338,14 +338,14 @@ public class MutationConditionsValidatorTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.COLLATION, "ICU");
     props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
-    return CollationComparator.from(new DatabaseConfig(props)).get();
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private static CollationComparator binaryCollation() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.COLLATION, "BINARY");
-    return CollationComparator.from(new DatabaseConfig(props)).get();
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   @Test
@@ -354,7 +354,7 @@ public class MutationConditionsValidatorTest {
     // Arrange: a present BINARY collation keeps EQ byte-exact: existing "Apple" != "apple", so the
     // putIf condition is unsatisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(binaryCollation()));
+        new MutationConditionsValidator(binaryCollation());
     prepareExistingTextColumn("Apple");
     Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
 
@@ -383,7 +383,7 @@ public class MutationConditionsValidatorTest {
     // 'B'(0x42) < 'a'(0x61), so under a case-insensitive ICU collation ('b' > 'a') the condition
     // is satisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
     prepareExistingTextColumn("B");
     Put put = putIfExpression(ConditionBuilder.column(C1).isGreaterThanText("a"));
 
@@ -396,10 +396,11 @@ public class MutationConditionsValidatorTest {
 
   @Test
   public void
-      validateConditionIsSatisfied_WithoutCollationAndGtOnText_ShouldThrowUnsatisfiedConditionException() {
-    // Arrange: no-arg validator (unset collation) keeps natural order: 'B'(0x42) < 'a'(0x61), so
+      validateConditionIsSatisfied_WithBinaryCollationAndGtOnText_ShouldThrowUnsatisfiedConditionException() {
+    // Arrange: a BINARY-collation validator keeps byte order: 'B'(0x42) < 'a'(0x61), so
     // col > "a" is unsatisfied.
-    MutationConditionsValidator naturalValidator = new MutationConditionsValidator();
+    MutationConditionsValidator naturalValidator =
+        new MutationConditionsValidator(binaryCollation());
     prepareExistingTextColumn("B");
     Put put = putIfExpression(ConditionBuilder.column(C1).isGreaterThanText("a"));
 
@@ -424,7 +425,7 @@ public class MutationConditionsValidatorTest {
     // Arrange: existing TEXT value "Apple", condition col = "apple". Under a case-insensitive ICU
     // collation these collate-equal, so the condition is satisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
     prepareExistingTextColumn("Apple");
     Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
 
@@ -437,10 +438,11 @@ public class MutationConditionsValidatorTest {
 
   @Test
   public void
-      validateConditionIsSatisfied_WithoutCollationAndEqOnText_ShouldThrowUnsatisfiedConditionException() {
-    // Arrange: no-arg validator (unset collation) keeps EQ byte-exact: existing "Apple" is not
+      validateConditionIsSatisfied_WithBinaryCollationAndEqOnText_ShouldThrowUnsatisfiedConditionException() {
+    // Arrange: a BINARY-collation validator keeps EQ byte-exact: existing "Apple" is not
     // equal to "apple".
-    MutationConditionsValidator naturalValidator = new MutationConditionsValidator();
+    MutationConditionsValidator naturalValidator =
+        new MutationConditionsValidator(binaryCollation());
     prepareExistingTextColumn("Apple");
     Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
 
@@ -456,7 +458,7 @@ public class MutationConditionsValidatorTest {
     // Arrange: existing TEXT value "Apple", condition col != "apple". Under a case-insensitive ICU
     // collation these collate-equal, so the NE guard is unsatisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
     prepareExistingTextColumn("Apple");
     Delete delete = deleteIfExpression(ConditionBuilder.column(C1).isNotEqualToText("apple"));
 
@@ -472,7 +474,7 @@ public class MutationConditionsValidatorTest {
   public void validateConditionIsSatisfied_WithCollationAndEqOnNonText_ShouldStayByteExact() {
     // Arrange: non-TEXT EQ is unaffected by the collation. existing INT 5 = 5 is satisfied.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
     when(existingRecord.getColumns())
         .thenReturn(ImmutableMap.of(C1, com.scalar.db.io.IntColumn.of(C1, 5)));
     Put putSatisfied = putIfExpression(ConditionBuilder.column(C1).isEqualToInt(5));
@@ -497,7 +499,7 @@ public class MutationConditionsValidatorTest {
     // Arrange: a null existing TEXT value with a `= 'apple'` condition stays byte-exact
     // (unsatisfied) and must not throw NPE under a collation.
     MutationConditionsValidator collationValidator =
-        new MutationConditionsValidator(Optional.of(caseInsensitiveIcuCollation()));
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
     when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, TextColumn.ofNull(C1)));
     Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
 

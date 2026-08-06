@@ -469,7 +469,7 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getCollation()).hasValue(Collation.BINARY);
+    assertThat(config.getCollation()).isEqualTo(Collation.BINARY);
     assertThat(config.getCollationIcuLocale()).isEmpty();
     assertThat(config.getCollationIcuStrength()).isEmpty();
     assertThat(config.getCollationIcuRules()).isEmpty();
@@ -488,7 +488,7 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollation()).isEqualTo(Collation.ICU);
     assertThat(config.getCollationIcuLocale()).hasValue("en-US");
     assertThat(config.getCollationIcuStrength()).hasValue(CollationStrength.PRIMARY);
     assertThat(config.getCollationIcuRules()).isEmpty();
@@ -506,7 +506,7 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollation()).isEqualTo(Collation.ICU);
     assertThat(config.getCollationIcuRules()).hasValue("&a < b < c");
   }
 
@@ -522,7 +522,7 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollation()).isEqualTo(Collation.ICU);
     assertThat(config.getCollationIcuStrength()).hasValue(CollationStrength.PRIMARY);
   }
 
@@ -537,11 +537,11 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getCollation()).hasValue(Collation.BINARY);
+    assertThat(config.getCollation()).isEqualTo(Collation.BINARY);
   }
 
   @Test
-  public void constructor_PropertiesWithoutCollationGiven_ShouldLeaveCollationEmpty() {
+  public void constructor_PropertiesWithoutCollationGiven_ShouldDefaultToBinaryCollation() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
@@ -549,8 +549,8 @@ public class DatabaseConfigTest {
     // Act
     DatabaseConfig config = new DatabaseConfig(props);
 
-    // Assert
-    assertThat(config.getCollation()).isEmpty();
+    // Assert: an unset scalar.db.collation defaults to BINARY.
+    assertThat(config.getCollation()).isEqualTo(Collation.BINARY);
     assertThat(config.getCollationIcuLocale()).isEmpty();
     assertThat(config.getCollationIcuStrength()).isEmpty();
     assertThat(config.getCollationIcuRules()).isEmpty();
@@ -568,7 +568,7 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollation()).isEqualTo(Collation.ICU);
     assertThat(config.getCollationIcuLocale()).isEmpty();
     assertThat(config.getCollationIcuStrength()).isEmpty();
     assertThat(config.getCollationIcuRules()).isEmpty();
@@ -616,7 +616,7 @@ public class DatabaseConfigTest {
 
     // Assert: no compatibility validation is performed, so this constructs successfully.
     assertThat(config.getStorage()).isEqualTo("dynamo");
-    assertThat(config.getCollation()).hasValue(Collation.ICU);
+    assertThat(config.getCollation()).isEqualTo(Collation.ICU);
     assertThat(config.getCollationIcuLocale()).hasValue("en-US");
     assertThat(config.getCollationIcuStrength()).hasValue(CollationStrength.PRIMARY);
   }

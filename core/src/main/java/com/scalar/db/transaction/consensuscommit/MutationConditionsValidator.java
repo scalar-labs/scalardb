@@ -16,9 +16,7 @@ import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -29,23 +27,16 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MutationConditionsValidator {
 
-  private final Optional<CollationComparator> collationComparator;
-
-  /** Creates a validator that keeps natural-order, byte-exact behavior on TEXT. */
-  public MutationConditionsValidator() {
-    this(Optional.empty());
-  }
+  private final CollationComparator collationComparator;
 
   /**
    * Creates a validator that uses the given collation for range operators (GT/GTE/LT/LTE) and for
    * EQ/NE on TEXT columns. Collation equality is byte-exact for BINARY and collation-aware for ICU.
-   * When no collation is present EQ/NE stay byte-exact. Identity operators (IS_NULL/IS_NOT_NULL)
-   * are always unchanged.
+   * Identity operators (IS_NULL/IS_NOT_NULL) are always unchanged.
    *
-   * @param collationComparator the collation comparator, or {@link Optional#empty()} to keep
-   *     natural-order behavior
+   * @param collationComparator the collation comparator
    */
-  public MutationConditionsValidator(Optional<CollationComparator> collationComparator) {
+  public MutationConditionsValidator(CollationComparator collationComparator) {
     this.collationComparator = collationComparator;
   }
 
@@ -179,28 +170,23 @@ public class MutationConditionsValidator {
   }
 
   /**
-   * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation. When a collation is
-   * present and the existing column is {@code TEXT}, equality is decided by the collation (both
-   * text values non-null): byte-exact for {@link com.scalar.db.io.Collation#BINARY},
-   * collation-aware for {@link com.scalar.db.io.Collation#ICU}. Otherwise it stays byte-exact via
-   * natural ordering.
+   * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation. When the existing
+   * column is {@code TEXT} and both text values are non-null, equality is decided by the collation:
+   * byte-exact for {@link com.scalar.db.io.Collation#BINARY}, collation-aware for {@link
+   * com.scalar.db.io.Collation#ICU}. Otherwise it stays byte-exact via natural ordering.
    */
   private boolean equalsForCondition(Column<?> existing, Column<?> conditionValue) {
-    if (collationComparator.isPresent() && existing.getDataType() == DataType.TEXT) {
+    if (existing.getDataType() == DataType.TEXT) {
       String a = existing.getTextValue();
       String b = conditionValue.getTextValue();
       if (a != null && b != null) {
-        return collationComparator.get().textEquals(a, b);
+        return collationComparator.textEquals(a, b);
       }
     }
     return Ordering.natural().compare(existing, conditionValue) == 0;
   }
 
   private int rangeCompare(Column<?> a, Column<?> b) {
-    Comparator<Column<?>> rangeComparator =
-        collationComparator
-            .map(CollationComparator::columnComparator)
-            .orElseGet(() -> (x, y) -> Ordering.natural().compare(x, y));
-    return rangeComparator.compare(a, b);
+    return collationComparator.columnComparator().compare(a, b);
   }
 }

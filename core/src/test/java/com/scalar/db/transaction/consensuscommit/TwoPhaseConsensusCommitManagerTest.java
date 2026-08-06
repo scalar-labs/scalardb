@@ -43,6 +43,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import java.util.Arrays;
@@ -76,6 +77,9 @@ public class TwoPhaseConsensusCommitManagerTest {
 
     // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
+    // The manager builds its CollationComparator from the database configuration; a mocked
+    // config must expose the BINARY default explicitly.
+    when(databaseConfig.getCollation()).thenReturn(Collation.BINARY);
 
     manager =
         new TwoPhaseConsensusCommitManager(

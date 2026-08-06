@@ -33,7 +33,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
   private final SelectStatementHandler selectStatementHandler;
   private final MutateStatementHandler mutateStatementHandler;
   private final OperationChecker operationChecker;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   public ObjectStorage(DatabaseConfig databaseConfig) {
     super(databaseConfig);

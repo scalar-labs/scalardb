@@ -47,7 +47,7 @@ public class Cosmos extends AbstractDistributedStorage {
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
   private final OperationChecker operationChecker;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   @Inject
   public Cosmos(DatabaseConfig databaseConfig) {

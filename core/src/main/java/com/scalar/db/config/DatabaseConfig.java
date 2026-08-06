@@ -45,7 +45,7 @@ public class DatabaseConfig {
   private boolean crossPartitionScanOrderingEnabled;
   private String systemNamespaceName;
   private int scanFetchSize;
-  @Nullable private Collation collation;
+  private Collation collation;
   @Nullable private String collationIcuLocale;
   @Nullable private CollationStrength collationIcuStrength;
   @Nullable private String collationIcuRules;
@@ -150,9 +150,8 @@ public class DatabaseConfig {
 
     scanFetchSize = getInt(getProperties(), SCAN_FETCH_SIZE, DEFAULT_SCAN_FETCH_SIZE);
 
-    String collationValue = getString(getProperties(), COLLATION, null);
-    collation =
-        collationValue == null ? null : Collation.valueOf(collationValue.toUpperCase(Locale.ROOT));
+    String collationValue = getString(getProperties(), COLLATION, Collation.BINARY.name());
+    collation = Collation.valueOf(collationValue.toUpperCase(Locale.ROOT));
     collationIcuLocale = getString(getProperties(), COLLATION_ICU_LOCALE, null);
     String collationIcuStrengthValue = getString(getProperties(), COLLATION_ICU_STRENGTH, null);
     collationIcuStrength =
@@ -230,8 +229,8 @@ public class DatabaseConfig {
     return scanFetchSize;
   }
 
-  public Optional<Collation> getCollation() {
-    return Optional.ofNullable(collation);
+  public Collation getCollation() {
+    return collation;
   }
 
   public Optional<String> getCollationIcuLocale() {

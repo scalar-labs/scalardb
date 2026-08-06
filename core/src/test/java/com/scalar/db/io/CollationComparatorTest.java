@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -40,18 +39,21 @@ public class CollationComparatorTest {
     return Integer.compare(value, 0);
   }
 
-  // ---- Unset ----
+  // ---- Unset (defaults to BINARY) ----
 
   @Test
-  public void from_WhenCollationUnset_ShouldReturnEmpty() {
-    // Arrange
+  public void from_WhenCollationUnset_ShouldReturnBinaryComparator() {
+    // Arrange: scalar.db.collation unset defaults to BINARY, so a comparator always exists.
     DatabaseConfig config = config(new Properties());
 
     // Act
-    Optional<CollationComparator> comparator = CollationComparator.from(config);
+    CollationComparator comparator = CollationComparator.from(config);
 
-    // Assert
-    assertThat(comparator).isEmpty();
+    // Assert: byte-exact equality and unsigned UTF-8 byte order, i.e. the BINARY collation.
+    assertThat(comparator).isNotNull();
+    assertThat(comparator.textEquals("Apple", "apple")).isFalse();
+    assertThat(comparator.textEquals("apple", "apple")).isTrue();
+    assertThat(comparator.textComparator().compare("A", "a")).isNegative();
   }
 
   // ---- Collation-aware equality (textEquals follows the collation) ----
@@ -61,11 +63,10 @@ public class CollationComparatorTest {
     // Arrange
     CollationComparator comparator =
         CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")))
-            .get();
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")));
 
     // Act Assert: equality follows the collation whenever one is configured (no flag).
     assertThat(comparator.textEquals("Apple", "apple")).isTrue();
@@ -76,7 +77,7 @@ public class CollationComparatorTest {
   public void textEquals_WhenBinary_ShouldBeByteExact() {
     // Arrange (Covers KTD2/AE2): BINARY collation equality is byte-exact.
     CollationComparator comparator =
-        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY"))).get();
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
 
     // Act Assert
     assertThat(comparator.textEquals("Apple", "apple")).isFalse();
@@ -96,7 +97,7 @@ public class CollationComparatorTest {
   public void textComparator_WhenBinary_ShouldOrderAsciiByByteValue() {
     // Arrange
     CollationComparator comparator =
-        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY"))).get();
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
     Comparator<String> textComparator = comparator.textComparator();
 
     // Act Assert
@@ -114,11 +115,10 @@ public class CollationComparatorTest {
     // Arrange
     CollationComparator comparator =
         CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")))
-            .get();
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")));
     Comparator<String> textComparator = comparator.textComparator();
 
     // Act Assert
@@ -132,11 +132,10 @@ public class CollationComparatorTest {
     // Arrange
     CollationComparator comparator =
         CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_ICU_STRENGTH, "TERTIARY")))
-            .get();
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_STRENGTH, "TERTIARY")));
     Comparator<String> textComparator = comparator.textComparator();
 
     // Act Assert
@@ -149,7 +148,7 @@ public class CollationComparatorTest {
   public void textComparator_WhenBinary_ShouldDivergeFromJavaNaturalOrderAboveBmp() {
     // Arrange
     CollationComparator comparator =
-        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY"))).get();
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
     Comparator<String> textComparator = comparator.textComparator();
     String uFFFF = "￿"; // U+FFFF, UTF-8 EF BF BF
     String u10000 = "𐀀"; // U+10000, UTF-8 F0 90 80 80
@@ -169,11 +168,10 @@ public class CollationComparatorTest {
     // Arrange: reorder so 'b' sorts before 'a'.
     CollationComparator comparator =
         CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_ICU_RULES, "& b < a")))
-            .get();
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_RULES, "& b < a")));
     Comparator<String> textComparator = comparator.textComparator();
 
     // Act Assert
@@ -204,7 +202,6 @@ public class CollationComparatorTest {
                         DatabaseConfig.COLLATION, "ICU",
                         DatabaseConfig.COLLATION_ICU_LOCALE, "sv",
                         DatabaseConfig.COLLATION_ICU_RULES, "& b < a")))
-            .get()
             .textComparator();
     Comparator<String> rulesOnly =
         CollationComparator.from(
@@ -212,7 +209,6 @@ public class CollationComparatorTest {
                     props(
                         DatabaseConfig.COLLATION, "ICU",
                         DatabaseConfig.COLLATION_ICU_RULES, "& b < a")))
-            .get()
             .textComparator();
 
     // Assert: the custom rule applies in both cases.
@@ -232,7 +228,7 @@ public class CollationComparatorTest {
   @Test
   public void from_WhenIcuWithLocale_ShouldBuildComparator() {
     // Arrange Act
-    Optional<CollationComparator> comparator =
+    CollationComparator comparator =
         CollationComparator.from(
             config(
                 props(
@@ -240,14 +236,14 @@ public class CollationComparatorTest {
                     DatabaseConfig.COLLATION_ICU_LOCALE, "de")));
 
     // Assert
-    assertThat(comparator).isPresent();
-    assertThat(comparator.get().textComparator().compare("a", "b")).isNegative();
+    assertThat(comparator).isNotNull();
+    assertThat(comparator.textComparator().compare("a", "b")).isNegative();
   }
 
   @Test
   public void from_WhenIcuWithRegionQualifiedLocale_ShouldBuildComparator() {
     // Arrange Act: a region-qualified locale ICU recognizes (falls back to the language collation).
-    Optional<CollationComparator> comparator =
+    CollationComparator comparator =
         CollationComparator.from(
             config(
                 props(
@@ -255,7 +251,7 @@ public class CollationComparatorTest {
                     DatabaseConfig.COLLATION_ICU_LOCALE, "en_US")));
 
     // Assert
-    assertThat(comparator).isPresent();
+    assertThat(comparator).isNotNull();
   }
 
   @Test
@@ -281,11 +277,10 @@ public class CollationComparatorTest {
     // Arrange
     CollationComparator comparator =
         CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_ICU_STRENGTH, "TERTIARY")))
-            .get();
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_STRENGTH, "TERTIARY")));
     Comparator<String> textComparator = comparator.textComparator();
     int expected = sign(textComparator.compare("apple", "Banana"));
 
@@ -332,7 +327,7 @@ public class CollationComparatorTest {
   }
 
   private void assertConsistency(DatabaseConfig config) {
-    CollationComparator comparator = CollationComparator.from(config).get();
+    CollationComparator comparator = CollationComparator.from(config);
     Comparator<String> textComparator = comparator.textComparator();
     Comparator<Column<?>> columnComparator = comparator.columnComparator();
     Comparator<Key> keyComparator = comparator.keyComparator();
@@ -365,7 +360,7 @@ public class CollationComparatorTest {
   public void columnComparator_ShouldOrderNullTextFirst() {
     // Arrange
     CollationComparator comparator =
-        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY"))).get();
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
     Comparator<Column<?>> columnComparator = comparator.columnComparator();
     Column<?> nullColumn = TextColumn.ofNull("c");
     Column<?> valueColumn = TextColumn.of("c", "a");
@@ -382,7 +377,7 @@ public class CollationComparatorTest {
   public void columnComparator_WhenNonTextColumns_ShouldUseNaturalOrder() {
     // Arrange
     CollationComparator comparator =
-        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY"))).get();
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
     Comparator<Column<?>> columnComparator = comparator.columnComparator();
     IntColumn one = IntColumn.of("c", 1);
     IntColumn two = IntColumn.of("c", 2);
@@ -399,11 +394,10 @@ public class CollationComparatorTest {
     // Arrange
     CollationComparator comparator =
         CollationComparator.from(
-                config(
-                    props(
-                        DatabaseConfig.COLLATION, "ICU",
-                        DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")))
-            .get();
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")));
     Comparator<Key> keyComparator = comparator.keyComparator();
     Key k1 = Key.newBuilder().addText("p", "apple").addInt("c", 1).build();
     Key k2 = Key.newBuilder().addText("p", "apple").addInt("c", 2).build();

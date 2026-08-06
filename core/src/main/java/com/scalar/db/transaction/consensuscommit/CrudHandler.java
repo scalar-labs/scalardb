@@ -55,7 +55,7 @@ public class CrudHandler {
   private final boolean isIndexEventuallyConsistentReadEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
   private final ParallelExecutor parallelExecutor;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
@@ -65,7 +65,7 @@ public class CrudHandler {
       boolean isIncludeMetadataEnabled,
       boolean isIndexEventuallyConsistentReadEnabled,
       ParallelExecutor parallelExecutor,
-      Optional<CollationComparator> collationComparator) {
+      CollationComparator collationComparator) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -85,7 +85,7 @@ public class CrudHandler {
       boolean isIndexEventuallyConsistentReadEnabled,
       MutationConditionsValidator mutationConditionsValidator,
       ParallelExecutor parallelExecutor,
-      Optional<CollationComparator> collationComparator) {
+      CollationComparator collationComparator) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);

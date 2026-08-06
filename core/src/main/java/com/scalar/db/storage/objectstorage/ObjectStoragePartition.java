@@ -63,7 +63,7 @@ public class ObjectStoragePartition {
   }
 
   public void applyPut(
-      Put put, TableMetadata tableMetadata, Optional<CollationComparator> collationComparator)
+      Put put, TableMetadata tableMetadata, CollationComparator collationComparator)
       throws NoMutationException {
     ObjectStorageMutation mutation = new ObjectStorageMutation(put, tableMetadata);
     if (!put.getCondition().isPresent()) {
@@ -107,7 +107,7 @@ public class ObjectStoragePartition {
   }
 
   public void applyDelete(
-      Delete delete, TableMetadata tableMetadata, Optional<CollationComparator> collationComparator)
+      Delete delete, TableMetadata tableMetadata, CollationComparator collationComparator)
       throws NoMutationException {
     ObjectStorageMutation mutation = new ObjectStorageMutation(delete, tableMetadata);
     if (!delete.getCondition().isPresent()) {
@@ -148,11 +148,8 @@ public class ObjectStoragePartition {
       ObjectStorageRecord record,
       List<ConditionalExpression> expressions,
       TableMetadata metadata,
-      Optional<CollationComparator> collationComparator) {
-    Comparator<Column<?>> rangeComparator =
-        collationComparator
-            .map(CollationComparator::columnComparator)
-            .orElseGet(() -> (a, b) -> Ordering.natural().compare(a, b));
+      CollationComparator collationComparator) {
+    Comparator<Column<?>> rangeComparator = collationComparator.columnComparator();
     for (ConditionalExpression expression : expressions) {
       Column<?> expectedColumn = expression.getColumn();
       Column<?> actualColumn =
@@ -229,18 +226,18 @@ public class ObjectStoragePartition {
   }
 
   /**
-   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns. When a collation is
-   * present and both columns are {@code TEXT}, equality is decided by the collation: byte-exact for
-   * {@code BINARY}, collation-aware for {@code ICU}. Otherwise it stays byte-exact via natural
-   * ordering. Non-{@code TEXT} equality is unaffected.
+   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns. When both columns are
+   * {@code TEXT} with non-null values, equality is decided by the collation: byte-exact for {@code
+   * BINARY}, collation-aware for {@code ICU}. Otherwise it stays byte-exact via natural ordering.
+   * Non-{@code TEXT} equality is unaffected.
    */
   private static boolean columnEquals(
-      Column<?> actual, Column<?> expected, Optional<CollationComparator> cc) {
-    if (cc.isPresent() && actual.getDataType() == DataType.TEXT) {
+      Column<?> actual, Column<?> expected, CollationComparator cc) {
+    if (actual.getDataType() == DataType.TEXT) {
       String a = actual.getTextValue();
       String b = expected.getTextValue();
       if (a != null && b != null) {
-        return cc.get().textEquals(a, b);
+        return cc.textEquals(a, b);
       }
     }
     return Ordering.natural().compare(actual, expected) == 0;

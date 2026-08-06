@@ -11,6 +11,8 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
@@ -27,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -62,7 +65,13 @@ class WriteSetEncoderTest {
   }
 
   private Snapshot newSnapshot() {
-    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor, Optional.empty());
+    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor, binaryCollation());
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   @Test

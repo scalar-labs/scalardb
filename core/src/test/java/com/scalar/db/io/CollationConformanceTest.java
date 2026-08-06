@@ -10,7 +10,6 @@ import com.scalar.db.util.ScalarDbUtils;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -34,7 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  *
  * <p>This test proves the three surfaces order a shared text corpus (including nulls, mixed
  * text/non-text keys, and supplementary-plane characters) identically for {@code BINARY} and ICU,
- * and that an unset collation reproduces natural order.
+ * and that an unset collation defaults to the {@code BINARY} (UTF-8 byte order) collation.
  */
 public class CollationConformanceTest {
 
@@ -50,7 +49,7 @@ public class CollationConformanceTest {
   private static CollationComparator binary() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.COLLATION, "BINARY");
-    return CollationComparator.from(config(props)).get();
+    return CollationComparator.from(config(props));
   }
 
   private static CollationComparator icu(String strength) {
@@ -58,7 +57,7 @@ public class CollationConformanceTest {
     props.setProperty(DatabaseConfig.COLLATION, "ICU");
     props.setProperty(DatabaseConfig.COLLATION_ICU_LOCALE, "en_US");
     props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, strength);
-    return CollationComparator.from(config(props)).get();
+    return CollationComparator.from(config(props));
   }
 
   @ParameterizedTest
@@ -139,19 +138,24 @@ public class CollationConformanceTest {
   }
 
   @Test
-  void unsetCollation_ReproducesNaturalOrder() {
-    // Unset -> no comparator; the sites fall back to natural Key/Column ordering.
-    assertThat(CollationComparator.from(config(new Properties()))).isEmpty();
+  void unsetCollation_DefaultsToBinaryOrder() {
+    // Unset -> the configuration defaults to BINARY, so a comparator always exists and every site
+    // orders by unsigned UTF-8 bytes, exactly as with an explicit BINARY collation.
+    CollationComparator unset = CollationComparator.from(config(new Properties()));
+    assertThat(unset).isNotNull();
 
-    // Natural order is Java UTF-16: verify the corpus sorts by String.compareTo, which is exactly
-    // what every site uses when the comparator is absent.
+    Comparator<String> unsetCmp = unset.textComparator();
+    Comparator<String> binaryCmp = binary().textComparator();
     for (String a : CORPUS) {
       for (String b : CORPUS) {
-        int natural = sign(a.compareTo(b));
-        int columnNatural = sign(TextColumn.of("c", a).compareTo(TextColumn.of("c", b)));
-        assertThat(columnNatural).as("natural column order for (%s, %s)", a, b).isEqualTo(natural);
+        assertThat(sign(unsetCmp.compare(a, b)))
+            .as("unset vs explicit BINARY order for (%s, %s)", a, b)
+            .isEqualTo(sign(binaryCmp.compare(a, b)));
       }
     }
+    // Byte-exact equality under the default.
+    assertThat(unset.textEquals("Apple", "apple")).isFalse();
+    assertThat(unset.textEquals("apple", "apple")).isTrue();
   }
 
   private static CollationComparator comparatorFor(String mode) {
@@ -174,8 +178,7 @@ public class CollationConformanceTest {
     Set<Conjunction> conjunctions =
         ImmutableSet.of(
             Conjunction.of(ConditionBuilder.column("col").isGreaterThanOrEqualToText(bound)));
-    return ScalarDbUtils.columnsMatchAnyOfConjunctions(
-        columns, conjunctions, Optional.of(comparator));
+    return ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, comparator);
   }
 
   private static int sign(int value) {

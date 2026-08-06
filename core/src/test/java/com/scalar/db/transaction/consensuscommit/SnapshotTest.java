@@ -133,10 +133,10 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot() {
-    return prepareSnapshot(Optional.empty());
+    return prepareSnapshot(binaryCollation());
   }
 
-  private Snapshot prepareSnapshot(Optional<CollationComparator> collationComparator) {
+  private Snapshot prepareSnapshot(CollationComparator collationComparator) {
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -2756,13 +2756,12 @@ public class SnapshotTest {
 
   private static CollationComparator caseInsensitiveIcuCollation() {
     return CollationComparator.from(
-            collationConfig(
-                DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY"))
-        .get();
+        collationConfig(
+            DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY"));
   }
 
   private static CollationComparator binaryCollation() {
-    return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY")).get();
+    return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY"));
   }
 
   @Test
@@ -2772,7 +2771,7 @@ public class SnapshotTest {
     // Arrange (Covers AE2): under a case-insensitive ICU collation, a written clustering key
     // 'Apple' falls in the range ['apple','banana'] even though it differs by case from the
     // inclusive start boundary.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePut(ANY_TEXT_1, "Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -2798,7 +2797,7 @@ public class SnapshotTest {
           throws CrudException {
     // Arrange: under BINARY collation, 'Apple' (0x41...) sorts before 'apple' (0x61...) so it is
     // out of the range ['apple','banana'] (documented behavior, mirrors AE3's byte ordering).
-    snapshot = prepareSnapshot(Optional.of(binaryCollation()));
+    snapshot = prepareSnapshot(binaryCollation());
     Put put = preparePut(ANY_TEXT_1, "Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -2824,7 +2823,7 @@ public class SnapshotTest {
           throws CrudException {
     // Arrange (guards the removed equals/compareTo mix): a written key that collates-equal to the
     // inclusive start boundary but is not byte-identical must be treated as in-range.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePut(ANY_TEXT_1, "Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -2850,7 +2849,7 @@ public class SnapshotTest {
     // Arrange (Covers R7): two keys that collate-equal under a case-insensitive collation but
     // differ in bytes must stay DISTINCT in identity-keyed maps (writeSet, readSet) and in
     // results.containsKey, because identity stays byte-exact.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put putUpper = preparePut(ANY_TEXT_1, "Apple");
     Put putLower = preparePut(ANY_TEXT_1, "apple");
     Snapshot.Key keyUpper = new Snapshot.Key(putUpper);
@@ -2879,11 +2878,11 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithRangeAndCollationUnsetGivenAndCaseDifferingWrittenKey_ShouldReproduceCurrentBehavior()
+      verifyNoOverlap_ScanWithRangeAndBinaryCollationGivenAndCaseDifferingWrittenKey_ShouldReproduceByteExactBehavior()
           throws CrudException {
-    // Arrange (Covers AE3): with the collation unset, 'Apple' (UTF-16 natural order) sorts before
+    // Arrange (Covers AE3): under the BINARY collation, 'Apple' (UTF-8 byte order) sorts before
     // 'apple' and is out of range ['apple','banana'] — identical to the current release behavior.
-    snapshot = prepareSnapshot(Optional.empty());
+    snapshot = prepareSnapshot(binaryCollation());
     Put put = preparePut(ANY_TEXT_1, "Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -2945,7 +2944,7 @@ public class SnapshotTest {
     // Arrange: a buffered write with name3="B" and a scan whose WHERE range conjunction is
     // name3 > "a". "B" collates after "a" under a case-insensitive collation, so the write
     // overlaps the scan and scan-after-write must be prohibited.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePutWithName3("B");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -2963,14 +2962,14 @@ public class SnapshotTest {
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
-  // Site: areConjunctionsOverlapped -> isWriteSetOverlappedWith(Scan). Backward-compat when unset.
+  // Site: areConjunctionsOverlapped -> isWriteSetOverlappedWith(Scan). Byte-exact under BINARY.
   @Test
   public void
-      verifyNoOverlap_PlainScanRangeConjunctionAndCollationUnset_ShouldReproduceCurrentBehavior()
+      verifyNoOverlap_PlainScanRangeConjunctionAndBinaryCollation_ShouldReproduceByteExactBehavior()
           throws CrudException {
-    // Arrange: with the collation unset, "B" (0x42) sorts before "a" (0x61) in natural order and
-    // does not match name3 > "a", so there is no overlap -- the current release behavior.
-    snapshot = prepareSnapshot(Optional.empty());
+    // Arrange: under the BINARY collation, "B" (0x42) sorts before "a" (0x61) in UTF-8 byte order
+    // and does not match name3 > "a", so there is no overlap -- the current release behavior.
+    snapshot = prepareSnapshot(binaryCollation());
     Put put = preparePutWithName3("B");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -2994,7 +2993,7 @@ public class SnapshotTest {
       verifyNoOverlap_ScanAllRangeConjunctionAndCaseInsensitiveCollation_WrittenValueMatchesOnlyUnderCollation_ShouldThrowException()
           throws CrudException {
     // Arrange: same divergence exercised through the ScanAll (cross-partition) overlap branch.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePutWithName3("B");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scanAll =
@@ -3021,7 +3020,7 @@ public class SnapshotTest {
           throws CrudException {
     // Arrange: a case-only-differing buffered write name3="B" now matches an "=" conjunction on "b"
     // under a case-insensitive collation, so the scan-after-write overlap is detected.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePutWithName3("B");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -3048,7 +3047,7 @@ public class SnapshotTest {
     // Arrange: preparePut sets ANY_NAME_3 = ANY_TEXT_3 ("text3"); a cross-partition scan whose
     // conjunction is name3 = "TEXT3" now overlaps the buffered write under a case-insensitive
     // collation, so scan-after-write is detected.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePut(ANY_TEXT_1, ANY_TEXT_2);
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -3072,7 +3071,7 @@ public class SnapshotTest {
     // Arrange: the merged (write-over-read) result has name3="B" and the Get carries a range
     // conjunction name3 > "a". Under a case-insensitive collation the merged result still matches,
     // so it is returned rather than filtered out.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePutWithName3("B");
     Get get =
         Get.newBuilder(prepareGet())
@@ -3089,14 +3088,14 @@ public class SnapshotTest {
     assertThat(actual).isPresent();
   }
 
-  // Site: mergeResult. Backward-compat when the collation is unset.
+  // Site: mergeResult. Byte-exact under the BINARY collation.
   @Test
   public void
-      getResult_MergedResultRangeConjunctionUnderCollationUnset_ShouldReproduceCurrentBehavior()
+      getResult_MergedResultRangeConjunctionUnderBinaryCollation_ShouldReproduceByteExactBehavior()
           throws CrudException {
-    // Arrange: with the collation unset, name3="B" does not match name3 > "a" in natural order, so
-    // the merged result is filtered out -- the current release behavior.
-    snapshot = prepareSnapshot(Optional.empty());
+    // Arrange: under the BINARY collation, name3="B" does not match name3 > "a" in UTF-8 byte
+    // order, so the merged result is filtered out -- the current release behavior.
+    snapshot = prepareSnapshot(binaryCollation());
     Put put = preparePutWithName3("B");
     Get get =
         Get.newBuilder(prepareGet())
@@ -3120,7 +3119,7 @@ public class SnapshotTest {
           throws CrudException {
     // Arrange: name3="B" against an "=" conjunction on "b" now matches under a case-insensitive
     // collation, so the merged (write-over-read) result is returned rather than filtered out.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePutWithName3("B");
     Get get =
         Get.newBuilder(prepareGet())
@@ -3145,7 +3144,7 @@ public class SnapshotTest {
     // Arrange: the Get originally matched no record (empty), but the latest storage record has
     // name3="B" which matches name3 > "a" under a case-insensitive collation. The result set thus
     // changed, so an anti-dependency must be detected.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Get get =
         Get.newBuilder(prepareGet())
             .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
@@ -3161,13 +3160,15 @@ public class SnapshotTest {
         .isInstanceOf(ValidationConflictException.class);
   }
 
-  // Site: validateGetResult. Backward-compat when the collation is unset.
+  // Site: validateGetResult. Byte-exact under the BINARY collation.
   @Test
-  public void toSerializable_GetRangeConjunctionUnderCollationUnset_ShouldReproduceCurrentBehavior()
-      throws ExecutionException, CrudException {
-    // Arrange: with the collation unset, the latest record name3="B" does not match name3 > "a" in
-    // natural order, so it is filtered out and the result set is unchanged (no anti-dependency).
-    snapshot = prepareSnapshot(Optional.empty());
+  public void
+      toSerializable_GetRangeConjunctionUnderBinaryCollation_ShouldReproduceByteExactBehavior()
+          throws ExecutionException, CrudException {
+    // Arrange: under the BINARY collation, the latest record name3="B" does not match name3 > "a"
+    // in UTF-8 byte order, so it is filtered out and the result set is unchanged (no
+    // anti-dependency).
+    snapshot = prepareSnapshot(binaryCollation());
     Get get =
         Get.newBuilder(prepareGet())
             .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
@@ -3190,7 +3191,7 @@ public class SnapshotTest {
     // Arrange: the scan originally returned no record, but the latest storage record has name3="B"
     // which matches name3 > "a" under a case-insensitive collation. getNextResult must keep it, so
     // the extra record (written by another transaction) is detected as an anti-dependency.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -3212,14 +3213,14 @@ public class SnapshotTest {
         .isInstanceOf(ValidationConflictException.class);
   }
 
-  // Site: getNextResult. Backward-compat when the collation is unset.
+  // Site: getNextResult. Byte-exact under the BINARY collation.
   @Test
   public void
-      toSerializable_ScanRangeConjunctionUnderCollationUnset_ShouldReproduceCurrentBehavior()
+      toSerializable_ScanRangeConjunctionUnderBinaryCollation_ShouldReproduceByteExactBehavior()
           throws ExecutionException {
-    // Arrange: with the collation unset, the latest record name3="B" does not match name3 > "a" in
-    // natural order, so getNextResult filters it out and the scan result set is unchanged.
-    snapshot = prepareSnapshot(Optional.empty());
+    // Arrange: under the BINARY collation, the latest record name3="B" does not match name3 > "a"
+    // in UTF-8 byte order, so getNextResult filters it out and the scan result set is unchanged.
+    snapshot = prepareSnapshot(binaryCollation());
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -3256,7 +3257,7 @@ public class SnapshotTest {
       putIntoWriteSetAndReadSet_CollateEqualByteDifferentKeysUnderCaseInsensitiveIcu_ShouldRemainDistinct()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put putUpper = preparePut(ANY_TEXT_1, "Apple");
     Put putLower = preparePut(ANY_TEXT_1, "apple");
     Snapshot.Key keyUpper = new Snapshot.Key(putUpper);
@@ -3295,7 +3296,7 @@ public class SnapshotTest {
     // name3 = "apple". The byte-exact containsKey fast-path finds no overlap, but the now
     // collation-aware conjunction check is the authority and detects it, so scan-after-write is
     // prohibited.
-    snapshot = prepareSnapshot(Optional.of(caseInsensitiveIcuCollation()));
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Put put = preparePutWithName3("Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =
@@ -3314,15 +3315,15 @@ public class SnapshotTest {
   }
 
   // (d) Equality-conjunction scan-after-write now caught under a case-insensitive ICU collation;
-  // unset reproduces prior byte-exact behavior (Covers AE3) -- the equality analog of the shipped
+  // BINARY reproduces prior byte-exact behavior (Covers AE3) -- the equality analog of the shipped
   // range fix. The positive case is (c) above; here is the negative control.
   @Test
   public void
-      verifyNoOverlap_EqualityConjunctionScanAfterWriteUnderCollationUnset_ShouldReproduceByteExactBehavior()
+      verifyNoOverlap_EqualityConjunctionScanAfterWriteUnderBinaryCollation_ShouldReproduceByteExactBehavior()
           throws CrudException {
-    // Arrange (Covers AE3): with the collation unset, name3="Apple" does not byte-exact-match the
-    // conjunction name3 = "apple", so there is no overlap -- the current release behavior.
-    snapshot = prepareSnapshot(Optional.empty());
+    // Arrange (Covers AE3): under the BINARY collation, name3="Apple" does not byte-exact-match
+    // the conjunction name3 = "apple", so there is no overlap -- the current release behavior.
+    snapshot = prepareSnapshot(binaryCollation());
     Put put = preparePutWithName3("Apple");
     snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Scan scan =

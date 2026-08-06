@@ -21,6 +21,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -32,9 +33,11 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -125,7 +128,13 @@ class ParticipantCommitHandlerTest {
 
   private Snapshot prepareSnapshot() {
     return new Snapshot(
-        ANY_ID, tableMetadataManager, new ParallelExecutor(config), Optional.empty());
+        ANY_ID, tableMetadataManager, new ParallelExecutor(config), binaryCollation());
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() throws CrudException {

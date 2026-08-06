@@ -66,7 +66,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final ConsensusCommitOperationChecker operationChecker;
-  private final Optional<CollationComparator> collationComparator;
+  private final CollationComparator collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject

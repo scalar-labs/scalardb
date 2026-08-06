@@ -690,7 +690,7 @@ public class ScalarDbUtilsTest {
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     props.setProperty(DatabaseConfig.COLLATION, "ICU");
     props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
-    return CollationComparator.from(new DatabaseConfig(props)).get();
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private static CollationComparator binaryComparator() {
@@ -698,7 +698,7 @@ public class ScalarDbUtilsTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     props.setProperty(DatabaseConfig.COLLATION, "BINARY");
-    return CollationComparator.from(new DatabaseConfig(props)).get();
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   @Test
@@ -714,9 +714,9 @@ public class ScalarDbUtilsTest {
 
     // Act
     boolean eqMatched =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, Optional.of(binary));
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, binary);
     boolean neMatched =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, Optional.of(binary));
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, binary);
 
     // Assert
     assertThat(eqMatched).isFalse();
@@ -736,15 +736,14 @@ public class ScalarDbUtilsTest {
     // Under a case-insensitive ICU PRIMARY collation, equality follows the collation: 'Apple' =
     // 'apple' (AE1). There is no separate deterministic mode.
     boolean matchedWithCollation =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(
-            columns, eqConjunctions, Optional.of(caseInsensitive));
-    // No comparator: byte-exact, so 'Apple' != 'apple'.
-    boolean matchedWithoutCollation =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, Optional.empty());
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, caseInsensitive);
+    // BINARY comparator: byte-exact, so 'Apple' != 'apple'.
+    boolean matchedWithBinaryCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, binaryComparator());
 
     // Assert
     assertThat(matchedWithCollation).isTrue();
-    assertThat(matchedWithoutCollation).isFalse();
+    assertThat(matchedWithBinaryCollation).isFalse();
   }
 
   @Test
@@ -760,15 +759,14 @@ public class ScalarDbUtilsTest {
     // NE is the exact negation of the collation-aware EQ: 'Apple' = 'apple', so 'Apple' != 'apple'
     // is false.
     boolean neMatchedWithCollation =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(
-            columns, neConjunctions, Optional.of(caseInsensitive));
-    // No comparator: byte-exact, so 'Apple' != 'apple' is true.
-    boolean neMatchedWithoutCollation =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, Optional.empty());
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, caseInsensitive);
+    // BINARY comparator: byte-exact, so 'Apple' != 'apple' is true.
+    boolean neMatchedWithBinaryCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, binaryComparator());
 
     // Assert
     assertThat(neMatchedWithCollation).isFalse();
-    assertThat(neMatchedWithoutCollation).isTrue();
+    assertThat(neMatchedWithBinaryCollation).isTrue();
   }
 
   @Test
@@ -783,11 +781,11 @@ public class ScalarDbUtilsTest {
     // Act Assert
     assertThat(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                matchingColumns, eqConjunctions, Optional.of(caseInsensitive)))
+                matchingColumns, eqConjunctions, caseInsensitive))
         .isTrue();
     assertThat(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                nonMatchingColumns, eqConjunctions, Optional.of(caseInsensitive)))
+                nonMatchingColumns, eqConjunctions, caseInsensitive))
         .isFalse();
   }
 
@@ -809,17 +807,17 @@ public class ScalarDbUtilsTest {
     // Act Assert
     assertThat(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                nullColumns, isNullConjunctions, Optional.of(caseInsensitive)))
+                nullColumns, isNullConjunctions, caseInsensitive))
         .isTrue();
     assertThat(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                textColumns, likeConjunctions, Optional.of(caseInsensitive)))
+                textColumns, likeConjunctions, caseInsensitive))
         .isEqualTo(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                textColumns, likeConjunctions, Optional.empty()));
+                textColumns, likeConjunctions, binaryComparator()));
     assertThat(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                textColumns, likeConjunctions, Optional.of(caseInsensitive)))
+                textColumns, likeConjunctions, caseInsensitive))
         .isFalse();
   }
 
@@ -836,13 +834,13 @@ public class ScalarDbUtilsTest {
     // Act Assert
     assertThat(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                nullColumns, eqConjunctions, Optional.of(caseInsensitive)))
+                nullColumns, eqConjunctions, caseInsensitive))
         .isEqualTo(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                nullColumns, eqConjunctions, Optional.empty()));
+                nullColumns, eqConjunctions, binaryComparator()));
     assertThat(
             ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                nullColumns, eqConjunctions, Optional.of(caseInsensitive)))
+                nullColumns, eqConjunctions, caseInsensitive))
         .isFalse();
   }
 
@@ -859,35 +857,16 @@ public class ScalarDbUtilsTest {
     // Act
     // Under a case-insensitive ICU PRIMARY collation, 'Apple' >= 'apple'.
     boolean matchedWithCollation =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, Optional.of(comparator));
-    // Without a collation (byte order), 'Apple' (0x41) < 'apple' (0x61), so it is excluded. This is
-    // the pre-change behavior and demonstrates the range branch was actually flipped by collation.
-    boolean matchedWithoutCollation =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, Optional.empty());
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, comparator);
+    // Under the BINARY collation (byte order), 'Apple' (0x41) < 'apple' (0x61), so it is excluded.
+    // This is the pre-change behavior and demonstrates the range branch was actually flipped by
+    // collation.
+    boolean matchedWithBinaryCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, binaryComparator());
 
     // Assert
     assertThat(matchedWithCollation).isTrue();
-    assertThat(matchedWithoutCollation).isFalse();
-  }
-
-  @Test
-  public void
-      columnsMatchAnyOfConjunctions_TwoArgAndThreeArgWithEmpty_ShouldReproduceCurrentBehavior() {
-    // Arrange
-    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "banana"));
-    Set<Conjunction> conjunctions =
-        ImmutableSet.of(
-            Conjunction.of(ConditionBuilder.column("col").isGreaterThanOrEqualToText("apple")));
-
-    // Act
-    boolean twoArg = ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions);
-    boolean threeArgEmpty =
-        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, Optional.empty());
-
-    // Assert
-    assertThat(twoArg).isTrue();
-    assertThat(threeArgEmpty).isTrue();
-    assertThat(twoArg).isEqualTo(threeArgEmpty);
+    assertThat(matchedWithBinaryCollation).isFalse();
   }
 
   @Test
@@ -900,9 +879,7 @@ public class ScalarDbUtilsTest {
     CollationComparator comparator = icuPrimaryComparator();
 
     // Act Assert
-    assertThat(
-            ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                columns, conjunctions, Optional.of(comparator)))
+    assertThat(ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, comparator))
         .isTrue();
   }
 }

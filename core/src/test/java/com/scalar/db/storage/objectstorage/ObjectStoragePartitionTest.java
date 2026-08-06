@@ -124,7 +124,7 @@ public class ObjectStoragePartitionTest {
     Put put = createPut(INT_VALUE_1);
 
     // Act
-    partition.applyPut(put, metadata, Optional.empty());
+    partition.applyPut(put, metadata, binaryCollation());
 
     // Assert
     Map<String, ObjectStorageRecord> records = partition.getRecords();
@@ -145,7 +145,7 @@ public class ObjectStoragePartitionTest {
     Put put = createPut(INT_VALUE_2);
 
     // Act
-    partition.applyPut(put, metadata, Optional.empty());
+    partition.applyPut(put, metadata, binaryCollation());
 
     // Assert
     Map<String, ObjectStorageRecord> resultRecords = partition.getRecords();
@@ -164,7 +164,7 @@ public class ObjectStoragePartitionTest {
         Put.newBuilder(createPut(INT_VALUE_1)).condition(ConditionBuilder.putIfNotExists()).build();
 
     // Act
-    partition.applyPut(put, metadata, Optional.empty());
+    partition.applyPut(put, metadata, binaryCollation());
 
     // Assert
     assertThat(partition.getRecords()).hasSize(1);
@@ -182,7 +182,7 @@ public class ObjectStoragePartitionTest {
         Put.newBuilder(createPut(INT_VALUE_1)).condition(ConditionBuilder.putIfNotExists()).build();
 
     // Act & Assert
-    assertThatThrownBy(() -> partition.applyPut(put, metadata, Optional.empty()))
+    assertThatThrownBy(() -> partition.applyPut(put, metadata, binaryCollation()))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -198,7 +198,7 @@ public class ObjectStoragePartitionTest {
         Put.newBuilder(createPut(INT_VALUE_2)).condition(ConditionBuilder.putIfExists()).build();
 
     // Act
-    partition.applyPut(put, metadata, Optional.empty());
+    partition.applyPut(put, metadata, binaryCollation());
 
     // Assert
     Map<String, ObjectStorageRecord> resultRecords = partition.getRecords();
@@ -215,7 +215,7 @@ public class ObjectStoragePartitionTest {
         Put.newBuilder(createPut(INT_VALUE_1)).condition(ConditionBuilder.putIfExists()).build();
 
     // Act & Assert
-    assertThatThrownBy(() -> partition.applyPut(put, metadata, Optional.empty()))
+    assertThatThrownBy(() -> partition.applyPut(put, metadata, binaryCollation()))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -236,7 +236,7 @@ public class ObjectStoragePartitionTest {
             .build();
 
     // Act
-    partition.applyPut(put, metadata, Optional.empty());
+    partition.applyPut(put, metadata, binaryCollation());
 
     // Assert
     Map<String, ObjectStorageRecord> resultRecords = partition.getRecords();
@@ -262,7 +262,7 @@ public class ObjectStoragePartitionTest {
             .build();
 
     // Act & Assert
-    assertThatThrownBy(() -> partition.applyPut(put, metadata, Optional.empty()))
+    assertThatThrownBy(() -> partition.applyPut(put, metadata, binaryCollation()))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -279,7 +279,7 @@ public class ObjectStoragePartitionTest {
             .build();
 
     // Act & Assert
-    assertThatThrownBy(() -> partition.applyPut(put, metadata, Optional.empty()))
+    assertThatThrownBy(() -> partition.applyPut(put, metadata, binaryCollation()))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -294,7 +294,7 @@ public class ObjectStoragePartitionTest {
     Delete delete = createDelete();
 
     // Act
-    partition.applyDelete(delete, metadata, Optional.empty());
+    partition.applyDelete(delete, metadata, binaryCollation());
 
     // Assert
     assertThat(partition.isEmpty()).isTrue();
@@ -307,7 +307,7 @@ public class ObjectStoragePartitionTest {
     Delete delete = createDelete();
 
     // Act
-    partition.applyDelete(delete, metadata, Optional.empty());
+    partition.applyDelete(delete, metadata, binaryCollation());
 
     // Assert
     assertThat(partition.isEmpty()).isTrue();
@@ -325,7 +325,7 @@ public class ObjectStoragePartitionTest {
         Delete.newBuilder(createDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act
-    partition.applyDelete(delete, metadata, Optional.empty());
+    partition.applyDelete(delete, metadata, binaryCollation());
 
     // Assert
     assertThat(partition.isEmpty()).isTrue();
@@ -339,7 +339,7 @@ public class ObjectStoragePartitionTest {
         Delete.newBuilder(createDelete()).condition(ConditionBuilder.deleteIfExists()).build();
 
     // Act & Assert
-    assertThatThrownBy(() -> partition.applyDelete(delete, metadata, Optional.empty()))
+    assertThatThrownBy(() -> partition.applyDelete(delete, metadata, binaryCollation()))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -360,7 +360,7 @@ public class ObjectStoragePartitionTest {
             .build();
 
     // Act
-    partition.applyDelete(delete, metadata, Optional.empty());
+    partition.applyDelete(delete, metadata, binaryCollation());
 
     // Assert
     assertThat(partition.isEmpty()).isTrue();
@@ -383,7 +383,7 @@ public class ObjectStoragePartitionTest {
             .build();
 
     // Act & Assert
-    assertThatThrownBy(() -> partition.applyDelete(delete, metadata, Optional.empty()))
+    assertThatThrownBy(() -> partition.applyDelete(delete, metadata, binaryCollation()))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -400,7 +400,7 @@ public class ObjectStoragePartitionTest {
             .build();
 
     // Act & Assert
-    assertThatThrownBy(() -> partition.applyDelete(delete, metadata, Optional.empty()))
+    assertThatThrownBy(() -> partition.applyDelete(delete, metadata, binaryCollation()))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -454,7 +454,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -471,7 +471,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -488,7 +488,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -505,7 +505,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -522,7 +522,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -539,7 +539,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -556,7 +556,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -573,7 +573,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -590,7 +590,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -607,7 +607,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -624,7 +624,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -641,7 +641,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -658,7 +658,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -675,7 +675,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -692,7 +692,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -708,7 +708,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -724,7 +724,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -740,7 +740,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isTrue();
@@ -756,7 +756,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -769,14 +769,14 @@ public class ObjectStoragePartitionTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.COLLATION, "ICU");
     props.setProperty(DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY");
-    return CollationComparator.from(new DatabaseConfig(props)).get();
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private static CollationComparator binaryCollation() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.COLLATION, "BINARY");
-    return CollationComparator.from(new DatabaseConfig(props)).get();
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private ObjectStorageRecord createTextRecordForConditionTest(String value) {
@@ -801,18 +801,16 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record,
-            Collections.singletonList(condition),
-            metadata,
-            Optional.of(caseInsensitiveIcuCollation()));
+            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void areConditionsMet_WithoutCollationAndGtConditionOnText_ShouldReturnFalse() {
-    // Arrange: unset collation keeps natural order: 'B'(0x42) < 'a'(0x61), so col > "a" is not met.
+  public void areConditionsMet_WithBinaryCollationAndGtConditionOnText_ShouldReturnFalse() {
+    // Arrange: the BINARY collation keeps byte order: 'B'(0x42) < 'a'(0x61), so col > "a" is not
+    // met.
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("B");
@@ -821,7 +819,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -838,7 +836,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.of(binaryCollation()));
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -859,18 +857,16 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record,
-            Collections.singletonList(condition),
-            metadata,
-            Optional.of(caseInsensitiveIcuCollation()));
+            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
 
     // Assert
     assertThat(result).isTrue();
   }
 
   @Test
-  public void areConditionsMet_WithoutCollationAndEqConditionOnText_ShouldStayByteExact() {
-    // Arrange: unset collation keeps byte-exact equality: "Apple" != "apple".
+  public void
+      areConditionsMet_WithBinaryCollationAndCaseDifferingEqConditionOnText_ShouldStayByteExact() {
+    // Arrange: the BINARY collation keeps byte-exact equality: "Apple" != "apple".
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
@@ -879,7 +875,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, Optional.empty());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -900,10 +896,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record,
-            Collections.singletonList(condition),
-            metadata,
-            Optional.of(caseInsensitiveIcuCollation()));
+            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -920,10 +913,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record,
-            Collections.singletonList(condition),
-            metadata,
-            Optional.of(caseInsensitiveIcuCollation()));
+            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -940,10 +930,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record,
-            Collections.singletonList(condition),
-            metadata,
-            Optional.of(caseInsensitiveIcuCollation()));
+            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
 
     // Assert
     assertThat(result).isFalse();
