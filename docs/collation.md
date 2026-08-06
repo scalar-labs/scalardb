@@ -1,15 +1,16 @@
 # Storage-aligned collation (`scalar.db.collation`)
 
-ScalarDB runs on the JVM and, by default, compares text with Java's natural `String`
-order (UTF-16 code-unit order). The supported backends do not agree with that order or
-with each other: MySQL 8's default `utf8mb4_0900_ai_ci` is case- and accent-insensitive,
-PostgreSQL orders per its configured collation, Cassandra and DynamoDB compare UTF-8
-bytes, and object storage is ordered entirely by ScalarDB in memory. Even byte order
-diverges from Java UTF-16 order above U+FFFF (emoji, rare CJK).
+ScalarDB historically compared text on the JVM with Java's natural `String` order (UTF-16
+code-unit order). The supported backends do not agree with that order or with each other:
+MySQL 8's default `utf8mb4_0900_ai_ci` is case- and accent-insensitive, PostgreSQL orders
+per its configured collation, Cassandra and DynamoDB compare UTF-8 bytes, and object
+storage is ordered entirely by ScalarDB in memory. Even byte order diverges from Java
+UTF-16 order above U+FFFF (emoji, rare CJK).
 
-The `scalar.db.collation` setting aligns ScalarDB's **in-memory string ordering** with the
-collation configured on the underlying storage. It is opt-in: when unset, ScalarDB keeps
-its current comparison behavior and upgrading has no behavioral impact.
+The `scalar.db.collation` setting aligns ScalarDB's **in-memory string comparison** with
+the collation configured on the underlying storage. It defaults to **`BINARY`** (unsigned
+UTF-8 byte order — what byte-order backends actually do), so ScalarDB's own comparisons
+agree with those backends out of the box.
 
 > **Note:** This is a ScalarDB Core repository. The canonical, user-facing configuration
 > reference lives at <https://scalardb.scalar-labs.com/docs/latest/configurations>. This
@@ -19,16 +20,17 @@ its current comparison behavior and upgrading has no behavioral impact.
 
 | Property | Description |
 |---|---|
-| `scalar.db.collation` | Collation mode: `BINARY` or `ICU`. When absent, ScalarDB uses its current comparison behavior (Java UTF-16 code-unit order). Governs both **ordering** and **equality** (see "Collation-aware equality" below). |
+| `scalar.db.collation` | Collation mode: `BINARY` (the default when absent) or `ICU`. Governs both **ordering** and **equality** (see "Collation-aware equality" below). |
 | `scalar.db.collation.icu.locale` | *(ICU only)* Locale that selects the collation rules (for example `en`, `en_US`, `ja`). When absent, ICU's root locale is used. |
 | `scalar.db.collation.icu.strength` | *(ICU only)* One of `PRIMARY`, `SECONDARY`, `TERTIARY`, `QUATERNARY`, `IDENTICAL`. Controls how much detail ordering distinguishes: `PRIMARY` is case- and accent-insensitive; `SECONDARY` adds accent sensitivity; `TERTIARY` adds case sensitivity. When absent, ICU's default strength applies. |
 | `scalar.db.collation.icu.rules` | *(ICU only)* An optional custom ICU tailoring-rule string that fine-tunes ordering *on top of* the configured `locale` (its rules extend the locale's collation, or the root collation when no locale is set) and `strength`. A malformed rule string is rejected at startup. |
 
 ### Values
 
-- **`BINARY`** — orders text by unsigned UTF-8 byte sequence. This is the value most
-  deployments should set (see the recommendation below), though it is **not** the default,
-  because the default must preserve existing behavior.
+- **`BINARY`** *(default)* — orders text by unsigned UTF-8 byte sequence. Equality is
+  byte-exact, identical to how ScalarDB has always compared text for equality; only the
+  in-memory *ordering* of supplementary-plane text differs from the pre-collation Java
+  order (see the upgrade note under Limitations).
 - **`ICU`** — orders text according to the Unicode Collation Algorithm (UCA) as implemented
   by [ICU4J](https://unicode-org.github.io/icu/userguide/collation/), configured by locale,
   strength, and optional tailoring rules. MySQL 8 defaults and PostgreSQL's ICU collation
@@ -137,6 +139,12 @@ Backend equality match has the same best-effort caveats as ordering (see below a
 [Storage collation compatibility](collation-storage-compatibility.md)).
 
 ## Limitations
+- **Upgrade note (default ordering change).** Compared to releases without the collation
+  feature, the `BINARY` default changes ScalarDB's **in-memory ordering** of
+  supplementary-plane text (characters above U+FFFF, e.g. emoji and rare CJK) from Java
+  UTF-16 code-unit order to unsigned UTF-8 byte order on the paths ScalarDB evaluates
+  itself. Equality and key identity remain byte-exact, unchanged. On byte-order backends
+  this aligns in-memory decisions with the storage; no configuration action is needed.
 - **ICU alignment is best-effort, not byte-exact.** ICU matches UCA-based collations closely,
   but cannot exactly reproduce libc-based PostgreSQL ordering (which itself drifts across
   glibc versions), legacy non-UCA MySQL collations (for example `utf8_general_ci`), or SQL
@@ -147,9 +155,9 @@ Backend equality match has the same best-effort caveats as ordering (see below a
   or per-table. Deployments that mix collations across columns are not fully served by this
   version.
 - **ICU4J is added to the runtime classpath.** ICU mode requires ICU4J (~13 MB), added to
-  ScalarDB Core as a runtime dependency for all consumers (including `BINARY`-only and unset
-  ones). A downstream application pinning a different ICU4J major version can hit Gradle
-  conflict resolution, and ICU version differences carry collation-table changes.
+  ScalarDB Core as a runtime dependency for all consumers (including `BINARY`-only ones). A
+  downstream application pinning a different ICU4J major version can hit Gradle conflict
+  resolution, and ICU version differences carry collation-table changes.
 
 - **An unrecognized `scalar.db.collation.icu.locale` is rejected at startup.** Like an invalid
   `scalar.db.collation`, `scalar.db.collation.icu.strength`, or a malformed

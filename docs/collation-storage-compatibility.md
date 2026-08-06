@@ -1,8 +1,8 @@
 # Storage collation compatibility for `scalar.db.collation`
 
 This document records how each ScalarDB-supported storage orders text, and whether the
-`scalar.db.collation` setting (`BINARY`, or `ICU` with `scalar.db.collation.icu.{locale,strength,rules}`)
-can be configured to match it.
+`scalar.db.collation` setting (`BINARY` — ScalarDB's default when the property is absent — or
+`ICU` with `scalar.db.collation.icu.{locale,strength,rules}`) can be configured to match it.
 
 - **Supported-storage list:** ScalarDB 3.18
   ([requirements](https://scalardb.scalar-labs.com/docs/latest/requirements/#databases)).
