@@ -1,5 +1,5 @@
 name: CI
-run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run CI with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run CI with JDK {0} ({1}) - TESTS={2} FLAVOR={3}', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR, inputs.TESTS, inputs.FLAVOR) || '' }}"
 
 on:
   # When triggered by a pull request, basic integration tests will run in addition to the tests related
@@ -170,7 +170,7 @@ jobs:
         env:
           GROOVY_VERSION: '5.0.6'
         run: |
-          curl -sSLo "$RUNNER_TEMP/groovy.zip" "https://repo1.maven.org/maven2/org/apache/groovy/groovy-binary/${GROOVY_VERSION}/groovy-binary-${GROOVY_VERSION}.zip"
+          curl -fsSL --retry 3 --retry-all-errors -o "$RUNNER_TEMP/groovy.zip" "https://repo1.maven.org/maven2/org/apache/groovy/groovy-binary/${GROOVY_VERSION}/groovy-binary-${GROOVY_VERSION}.zip"
           unzip -q "$RUNNER_TEMP/groovy.zip" -d "$RUNNER_TEMP"
           echo "GROOVY_HOME=$RUNNER_TEMP/groovy-${GROOVY_VERSION}" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/groovy-${GROOVY_VERSION}/bin" >> "$GITHUB_PATH"

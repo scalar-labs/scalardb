@@ -2,8 +2,10 @@
 
 # Each test follows the following format:
 # test_category:
-#   - storage: the storage name. Used to select the test via the CI's TESTS input, and to build the
-#     test label: "<storage>_<version>" when versions are present, otherwise "<storage>".
+#   - storage: the storage name. Must be unique across the whole file: it is the entry's identity,
+#     and the test label is derived from it. Used to select the test via the CI's TESTS input, and
+#     to build the test label: "<storage>_<version>" when versions are present, otherwise "<storage>".
+#     Note that the test_category key (the map key above, e.g. "jdbc") is itself a valid TESTS token.
 #     display_name: a human-readable name
 #     runner: (optional) the image name of a hosted Github action runner. The default is "ubuntu-latest".
 #     versions: (optional) an array of quoted database versions to test. If present, a matrix entry for

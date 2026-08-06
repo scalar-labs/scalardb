@@ -66,6 +66,11 @@ def static expandTests(testsByCategory) {
         tests.each { test ->
             test["test_category"] = category
 
+            if (!test.storage) {
+                failWith("Missing 'storage' key for an entry in category '${category}' in tests-config.yaml.\n" +
+                        "  'storage' is required: the test label is derived from it.")
+            }
+
             def flavor = test.flavor ?: 'all'
             if (!(flavor in ['all', 'group-commit', 'normal'])) {
                 System.err.println("Error: Unknown flavor '${flavor}' for storage '${test.storage}' in tests-config.yaml.")
@@ -114,6 +119,17 @@ def static expandTests(testsByCategory) {
         }
     }
 
+    // Uniqueness is checked on the (label, group_commit_enabled) pair rather than on label alone,
+    // because each entry legitimately produces two expanded rows (one per flavor) except
+    // 'normal'/'group-commit' entries, which produce one. This is exactly what ci.yaml's jq
+    // select() keys on, so it is the precise check for what would actually break there.
+    def duplicates = expandedTests.groupBy { [it.label, it.group_commit_enabled] }.findAll { key, rows -> rows.size() > 1 }
+    if (!duplicates.isEmpty()) {
+        failWith("Duplicate test label(s) in tests-config.yaml: " +
+                "${duplicates.keySet().collect { it[0] }.unique().sort().join(', ')}.\n" +
+                "  'storage' must be unique across the whole file — the label is derived from it.")
+    }
+
     return expandedTests
 }
 
@@ -121,6 +137,9 @@ def static expandTests(testsByCategory) {
 // RDBMS and NoSQL tests respectively, and multi-storage covers a feature neither exercises.
 // This is a method rather than a field: a Groovy script cannot declare a static field at top
 // level, and a static method cannot see an @Field instance field.
+// NOTE: these are labels, not categories. Adding an entry to the 'dynamo' or 'multi-storage'
+// category will NOT extend this set - only the exact labels listed here do. This is a deliberate
+// policy choice: 'basic' is a fixed CI-speed set, not "whatever those categories happen to contain".
 static List<String> basicLabels() { ['postgresql_17', 'dynamo', 'multi-storage'] }
 
 // Print an error and abort. Every validation failure goes through here so the format is uniform.
@@ -143,8 +162,15 @@ static def selectTests(expandedTests) {
             .collect { it.trim().toLowerCase() }
             .findAll { it }
 
-    // An empty input means everything, and 'all' wins over any other token.
-    if (tokens.isEmpty() || tokens.contains('all')) {
+    // An explicitly-empty TESTS is an error: GitHub only applies the 'all' default when the input
+    // is omitted, not when it is submitted empty (e.g. a cleared dispatch text box), so treating
+    // empty as 'all' here would silently run everything and could mask a future regression in the
+    // $GITHUB_ENV override on the pull-request path.
+    if (tokens.isEmpty()) {
+        failWith("TESTS is empty. Use 'all' to run everything.")
+    }
+    // 'all' wins over any other token.
+    if (tokens.contains('all')) {
         return expandedTests
     }
 
@@ -196,6 +222,10 @@ static def selectTests(expandedTests) {
             return
         }
 
+        // Storage is checked before category, deliberately: today five of the six categories
+        // share a name with a storage and resolve to the identical label set, so the precedence
+        // cannot diverge from category-first here. A future storage named after a different
+        // category would be shadowed by this order - worth remembering if that ever comes up.
         if (storages.contains(token)) {
             labelsToKeep.addAll(labelsByStorage[token])
             return
