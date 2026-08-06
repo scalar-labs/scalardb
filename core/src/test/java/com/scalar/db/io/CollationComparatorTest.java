@@ -238,6 +238,130 @@ public class CollationComparatorTest {
     assertThat(rulesOnly.compare("z", "ö")).isPositive();
   }
 
+  // ---- Canonical text form (increment B: ICU-only, per-thread) ----
+
+  private static CollationComparator icuPrimary() {
+    return CollationComparator.from(
+        config(
+            props(
+                DatabaseConfig.COLLATION, "ICU",
+                DatabaseConfig.COLLATION_ICU_STRENGTH, "PRIMARY")));
+  }
+
+  @Test
+  public void canonicalTextForm_WhenIcuPrimary_ShouldEquateCollateEqualValues() {
+    // Arrange
+    CollationComparator comparator = icuPrimary();
+
+    // Act Assert: collate-equal values share one canonical form; distinct values do not.
+    assertThat(comparator.hasCanonicalTextForm()).isTrue();
+    assertThat(comparator.canonicalTextFormOf("Apple"))
+        .isEqualTo(comparator.canonicalTextFormOf("apple"));
+    assertThat(comparator.canonicalTextFormOf("Apple"))
+        .isNotEqualTo(comparator.canonicalTextFormOf("banana"));
+  }
+
+  @Test
+  public void canonicalTextForm_WhenIcuTertiary_ShouldDistinguishCase() {
+    // Arrange
+    CollationComparator comparator =
+        CollationComparator.from(
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_STRENGTH, "TERTIARY")));
+
+    // Act Assert: strength is honored by the canonical form.
+    assertThat(comparator.canonicalTextFormOf("Apple"))
+        .isNotEqualTo(comparator.canonicalTextFormOf("apple"));
+  }
+
+  @Test
+  public void canonicalTextForm_WhenIcuWithLocaleAndRules_ShouldFollowTailoredCollator() {
+    // Arrange: with '& b < a', 'b' and 'a' stay distinct but tailored; the canonical form must
+    // come from the same tailored collator as ordering, so equality classes match compare()==0.
+    CollationComparator comparator =
+        CollationComparator.from(
+            config(
+                props(
+                    DatabaseConfig.COLLATION, "ICU",
+                    DatabaseConfig.COLLATION_ICU_LOCALE, "sv",
+                    DatabaseConfig.COLLATION_ICU_RULES, "& b < a")));
+
+    // Act Assert
+    assertThat(comparator.canonicalTextFormOf("b"))
+        .isNotEqualTo(comparator.canonicalTextFormOf("a"));
+    assertThat(comparator.canonicalTextFormOf("v")).isEqualTo(comparator.canonicalTextFormOf("v"));
+  }
+
+  @Test
+  public void canonicalTextForm_InvariantSweep_CanonicalEqualityMatchesCompareZero() {
+    // Arrange: across ASCII, accented, and supplementary-plane text, canonical-bytes equality must
+    // coincide exactly with compare == 0 (KTD2 invariant).
+    CollationComparator comparator = icuPrimary();
+    String[] corpus = {
+      "apple", "Apple", "APPLE", "banana", "café", "cafe", "", "á", "a", "😀", "𐀀"
+    };
+
+    // Act Assert
+    for (String a : corpus) {
+      for (String b : corpus) {
+        boolean canonicalEqual =
+            Arrays.equals(comparator.canonicalTextFormOf(a), comparator.canonicalTextFormOf(b));
+        boolean compareEqual = comparator.textComparator().compare(a, b) == 0;
+        assertThat(canonicalEqual)
+            .as("canonical equality must match compare==0 for ('%s', '%s')", a, b)
+            .isEqualTo(compareEqual);
+      }
+    }
+  }
+
+  @Test
+  public void canonicalTextForm_WhenBinary_ShouldSignalNoMaterialization() {
+    // Arrange (BINARY identity is the value itself; nothing is materialized).
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
+
+    // Act Assert
+    assertThat(comparator.hasCanonicalTextForm()).isFalse();
+    assertThatThrownBy(() -> comparator.canonicalTextFormOf("apple"))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void canonicalTextForm_ConcurrentGeneration_ShouldMatchSingleThreadedOutput()
+      throws Exception {
+    // Arrange: per-thread collators must produce identical canonical bytes across threads.
+    CollationComparator comparator = icuPrimary();
+    String[] values = {"apple", "Apple", "café", "😀", "banana"};
+    List<byte[]> expected = new ArrayList<>();
+    for (String v : values) {
+      expected.add(comparator.canonicalTextFormOf(v));
+    }
+    ExecutorService executor = Executors.newFixedThreadPool(8);
+    try {
+      List<Callable<Boolean>> jobs = new ArrayList<>();
+      for (int i = 0; i < 64; i++) {
+        jobs.add(
+            () -> {
+              for (int j = 0; j < values.length; j++) {
+                if (!Arrays.equals(expected.get(j), comparator.canonicalTextFormOf(values[j]))) {
+                  return false;
+                }
+              }
+              return true;
+            });
+      }
+
+      // Act Assert
+      for (Future<Boolean> result : executor.invokeAll(jobs)) {
+        assertThat(result.get()).isTrue();
+      }
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
   // ---- Locale ----
 
   @Test

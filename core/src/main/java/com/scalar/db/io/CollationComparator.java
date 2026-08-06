@@ -10,6 +10,7 @@ import com.scalar.db.config.DatabaseConfig;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -46,12 +47,24 @@ public final class CollationComparator {
   private final Comparator<Key> keyComparator;
   private final boolean byteExactEquality;
 
-  private CollationComparator(Comparator<String> textComparator, boolean byteExactEquality) {
+  /**
+   * Per-thread canonical-form producer, present only for {@link Collation#ICU}. Collation-key
+   * generation on a shared frozen collator serializes on a JVM-wide lock, so each thread gets its
+   * own thawed clone; a thawed collator is safe for single-threaded use and produces the same
+   * collation keys as the frozen original it was cloned from.
+   */
+  @Nullable private final ThreadLocal<Collator> canonicalizer;
+
+  private CollationComparator(
+      Comparator<String> textComparator,
+      boolean byteExactEquality,
+      @Nullable ThreadLocal<Collator> canonicalizer) {
     this.textComparator = textComparator;
     Comparator<String> nullsFirstText = Comparator.nullsFirst(textComparator);
     this.columnComparator = buildColumnComparator(nullsFirstText);
     this.keyComparator = buildKeyComparator(this.columnComparator);
     this.byteExactEquality = byteExactEquality;
+    this.canonicalizer = canonicalizer;
   }
 
   /**
@@ -70,9 +83,14 @@ public final class CollationComparator {
         // BINARY equality must be exact String equality: UTF-8 encoding is injective for
         // well-formed strings, but String#getBytes replaces unpaired surrogates with '?', which
         // would conflate distinct ill-formed strings if equality went through the comparator.
-        return new CollationComparator(binaryTextComparator(), true);
+        // BINARY has no canonical text form: identity is the value itself.
+        return new CollationComparator(binaryTextComparator(), true, null);
       case ICU:
-        return new CollationComparator(icuTextComparator(config), false);
+        {
+          Collator frozen = buildFrozenIcuCollator(config);
+          return new CollationComparator(
+              frozen::compare, false, ThreadLocal.withInitial(frozen::cloneAsThawed));
+        }
       default:
         throw new AssertionError("Unknown collation: " + collation);
     }
@@ -85,7 +103,7 @@ public final class CollationComparator {
             left.getBytes(StandardCharsets.UTF_8), right.getBytes(StandardCharsets.UTF_8));
   }
 
-  private static Comparator<String> icuTextComparator(DatabaseConfig config) {
+  private static Collator buildFrozenIcuCollator(DatabaseConfig config) {
     Collator collator = buildIcuCollator(config);
     config
         .getCollationIcuStrength()
@@ -93,8 +111,7 @@ public final class CollationComparator {
 
     // Freeze so the collator is immutable and safe for concurrent compare: an unfrozen ICU
     // Collator is mutable and not thread-safe, while a frozen one is safe for concurrent compare.
-    Collator frozen = collator.freeze();
-    return frozen::compare;
+    return collator.freeze();
   }
 
   private static Collator buildIcuCollator(DatabaseConfig config) {
@@ -225,5 +242,37 @@ public final class CollationComparator {
       return a.equals(b);
     }
     return textComparator.compare(a, b) == 0;
+  }
+
+  /**
+   * Returns whether this collation materializes a canonical text form. {@code true} for {@link
+   * Collation#ICU}: two text values have equal canonical forms exactly when they collate-equal.
+   * {@code false} for {@link Collation#BINARY}: identity is the value itself (byte-exact), so no
+   * canonical form is materialized.
+   *
+   * @return {@code true} when {@link #canonicalTextFormOf(String)} is usable
+   */
+  public boolean hasCanonicalTextForm() {
+    return canonicalizer != null;
+  }
+
+  /**
+   * Returns the canonical byte form of the given non-null text value under the configured {@link
+   * Collation#ICU} collation — the collation key bytes, satisfying: {@code
+   * Arrays.equals(canonicalTextFormOf(a), canonicalTextFormOf(b))} iff {@code
+   * textComparator().compare(a, b) == 0}. Generation uses a per-thread collator, so this is safe
+   * for concurrent use and does not contend on a shared lock.
+   *
+   * @param text the text value (non-null)
+   * @return the canonical collation-key bytes
+   * @throws IllegalStateException if this collation has no canonical text form ({@link
+   *     Collation#BINARY}; check {@link #hasCanonicalTextForm()} first)
+   */
+  public byte[] canonicalTextFormOf(String text) {
+    if (canonicalizer == null) {
+      throw new IllegalStateException(
+          "The BINARY collation has no canonical text form; identity is the value itself");
+    }
+    return canonicalizer.get().getCollationKey(text).toByteArray();
   }
 }
