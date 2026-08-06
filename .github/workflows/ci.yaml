@@ -167,11 +167,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install Groovy
+        env:
+          GROOVY_VERSION: '5.0.6'
         run: |
-          curl -s "https://get.sdkman.io?ci=true" | bash
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sdk install groovy
-          echo "$HOME/.sdkman/candidates/groovy/current/bin" >> $GITHUB_PATH
+          curl -sSLo "$RUNNER_TEMP/groovy.zip" "https://repo1.maven.org/maven2/org/apache/groovy/groovy-binary/${GROOVY_VERSION}/groovy-binary-${GROOVY_VERSION}.zip"
+          unzip -q "$RUNNER_TEMP/groovy.zip" -d "$RUNNER_TEMP"
+          echo "GROOVY_HOME=$RUNNER_TEMP/groovy-${GROOVY_VERSION}" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/groovy-${GROOVY_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Check file changes and init environment variables indicating which tests to run
         id: generate-matrix-by-changes
