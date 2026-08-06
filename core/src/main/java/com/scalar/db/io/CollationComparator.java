@@ -44,12 +44,14 @@ public final class CollationComparator {
   private final Comparator<String> textComparator;
   private final Comparator<Column<?>> columnComparator;
   private final Comparator<Key> keyComparator;
+  private final boolean byteExactEquality;
 
-  private CollationComparator(Comparator<String> textComparator) {
+  private CollationComparator(Comparator<String> textComparator, boolean byteExactEquality) {
     this.textComparator = textComparator;
     Comparator<String> nullsFirstText = Comparator.nullsFirst(textComparator);
     this.columnComparator = buildColumnComparator(nullsFirstText);
     this.keyComparator = buildKeyComparator(this.columnComparator);
+    this.byteExactEquality = byteExactEquality;
   }
 
   /**
@@ -65,9 +67,12 @@ public final class CollationComparator {
     Collation collation = config.getCollation();
     switch (collation) {
       case BINARY:
-        return new CollationComparator(binaryTextComparator());
+        // BINARY equality must be exact String equality: UTF-8 encoding is injective for
+        // well-formed strings, but String#getBytes replaces unpaired surrogates with '?', which
+        // would conflate distinct ill-formed strings if equality went through the comparator.
+        return new CollationComparator(binaryTextComparator(), true);
       case ICU:
-        return new CollationComparator(icuTextComparator(config));
+        return new CollationComparator(icuTextComparator(config), false);
       default:
         throw new AssertionError("Unknown collation: " + collation);
     }
@@ -203,15 +208,22 @@ public final class CollationComparator {
   }
 
   /**
-   * Returns whether the two non-null text values are equal under the configured collation, i.e.
-   * {@code textComparator().compare(a, b) == 0}. Callers use this only for {@code TEXT} and handle
-   * nulls themselves; like {@link #textComparator()}, both arguments must be non-null.
+   * Returns whether the two non-null text values are equal under the configured collation. For
+   * {@link Collation#BINARY} this is exact {@link String#equals} (byte-exact; equivalent to UTF-8
+   * byte equality for all well-formed strings, and stricter for ill-formed ones with unpaired
+   * surrogates, which {@code String#getBytes} would conflate via replacement bytes). For {@link
+   * Collation#ICU} it is the collation's equality, {@code textComparator().compare(a, b) == 0}.
+   * Callers use this only for {@code TEXT} and handle nulls themselves; like {@link
+   * #textComparator()}, both arguments must be non-null.
    *
    * @param a the first text value (non-null)
    * @param b the second text value (non-null)
-   * @return {@code true} when the values collate-equal
+   * @return {@code true} when the values are equal under the collation
    */
   public boolean textEquals(String a, String b) {
+    if (byteExactEquality) {
+      return a.equals(b);
+    }
     return textComparator.compare(a, b) == 0;
   }
 }

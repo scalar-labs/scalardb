@@ -33,6 +33,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -89,7 +91,14 @@ class ConsensusCommitParticipantTest {
             recoveryExecutor,
             crud,
             commit,
-            operationChecker);
+            operationChecker,
+            binaryCollation());
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(com.scalar.db.config.DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new com.scalar.db.config.DatabaseConfig(props));
   }
 
   @Test
@@ -115,7 +124,8 @@ class ConsensusCommitParticipantTest {
                     recoveryExecutor,
                     crud,
                     commit,
-                    operationChecker))
+                    operationChecker,
+                    binaryCollation()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

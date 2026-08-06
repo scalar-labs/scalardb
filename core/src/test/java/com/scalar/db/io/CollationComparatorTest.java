@@ -91,6 +91,21 @@ public class CollationComparatorTest {
     assertThat(comparator.textEquals("😀", "😁")).isFalse();
   }
 
+  @Test
+  public void textEquals_WhenBinaryWithUnpairedSurrogates_ShouldMatchStringEquals() {
+    // Arrange: String#getBytes(UTF_8) replaces every unpaired surrogate with '?', so distinct
+    // ill-formed strings encode to the same bytes. BINARY equality must stay exact String
+    // equality (the pre-collation default), not the conflating byte view.
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
+
+    // Act Assert
+    assertThat(comparator.textEquals("\uD800", "\uDC00")).isFalse();
+    assertThat(comparator.textEquals("\uD800", "?")).isFalse();
+    assertThat(comparator.textEquals("a\uD800", "a?")).isFalse();
+    assertThat(comparator.textEquals("\uD800", "\uD800")).isTrue();
+  }
+
   // ---- BINARY happy path ----
 
   @Test
