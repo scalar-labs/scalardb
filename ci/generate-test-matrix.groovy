@@ -19,8 +19,8 @@ def testsByCategory = new YamlSlurper().parse(new File(scriptBasePath.resolve("t
 // Expand tests by versions and group commit settings
 def expandedTestsConfig = expandTests(testsByCategory)
 
-// Filter tests based on environment variables
-expandedTestsConfig = filterTestsByEnvVar(expandedTestsConfig)
+// Select the tests to run based on the TESTS environment variable
+expandedTestsConfig = selectTests(expandedTestsConfig)
 
 // Output the full expanded test configuration as JSON to a file
 // This file will be shared with integration test jobs as a build artifact. This is necessary because
@@ -44,26 +44,12 @@ println(jsonBuilder.toString())
 
 // Utility methods declaration
 
-// Validate that all required environment variables are set
+// Validate that all required environment variables are set. Empty values are allowed: the
+// pull_request and workflow_call paths render FLAVOR as an empty string, which means 'all'.
 static def validateEnvironmentVariables() {
-    def requiredEnvVars = [
-            'ALL',
-            'BASIC',
-            'BLOB_STORAGE',
-            'CASSANDRA',
-            'COSMOS',
-            'DYNAMO',
-            'JDBC',
-            'MULTI_STORAGE',
-            'EXPANDED_TESTS_CONFIG_FILE'
-    ]
+    def requiredEnvVars = ['TESTS', 'FLAVOR', 'EXPANDED_TESTS_CONFIG_FILE']
 
-    def missingVars = []
-    requiredEnvVars.each { varName ->
-        if (System.getenv(varName) == null) {
-            missingVars.add(varName)
-        }
-    }
+    def missingVars = requiredEnvVars.findAll { System.getenv(it) == null }
 
     if (!missingVars.isEmpty()) {
         System.err.println("Error: Required environment variables not set: ${missingVars.join(', ')}")
@@ -130,44 +116,95 @@ def static expandTests(testsByCategory) {
     return expandedTests
 }
 
-// Filter tests based on environment variables
-def static filterTestsByEnvVar(expandedTests) {
-    // If ALL is true, return all tests without filtering
-    if (Boolean.parseBoolean(System.getenv('ALL'))) {
+// The basic set is the cheapest meaningful coverage: PostgreSQL 17 and DynamoDB are the fastest
+// RDBMS and NoSQL tests respectively, and multi-storage covers a feature neither exercises.
+// This is a method rather than a field: a Groovy script cannot declare a static field at top
+// level, and a static method cannot see an @Field instance field.
+static List<String> basicLabels() { ['postgresql_17', 'dynamo', 'multi-storage'] }
+
+// Print an error and abort. Every validation failure goes through here so the format is uniform.
+static def failWith(String message) {
+    System.err.println("Error: ${message}")
+    System.exit(1)
+}
+
+static def failUnknownValue(String value, Set storages, Set categories) {
+    def valid = (['all', 'basic'] + categories.toList() + storages.toList()).unique().sort()
+    failWith("Unknown value '${value}' in the TESTS input.\n" +
+            "Valid values: ${valid.join(', ')}\n" +
+            "  (append ':<version>' to a storage to select one version)")
+}
+
+// Resolve the TESTS input into the list of tests to run.
+static def selectTests(expandedTests) {
+    def tokens = (System.getenv('TESTS') ?: '')
+            .split(',')
+            .collect { it.trim().toLowerCase() }
+            .findAll { it }
+
+    // An empty input means everything, and 'all' wins over any other token.
+    if (tokens.isEmpty() || tokens.contains('all')) {
         return expandedTests
     }
 
-    // Build lists of test categories and labels to keep based on env vars
-    def testCategoriesToKeep = [] as Set
-    def testLabelsToKeep = [] as Set
+    def storages = expandedTests.collect { it.storage }.toSet()
+    def categories = expandedTests.collect { it.test_category }.toSet()
+    def labelsByStorage = expandedTests.groupBy { it.storage }
+            .collectEntries { storage, tests -> [(storage): tests.collect { it.label }.toSet()] }
 
-    if (Boolean.parseBoolean(System.getenv('BASIC'))) {
-        // At minimum, only the integration tests for PostgreSQL 17, Dynamo, and Multi-Storage are
-        // run when the CI is triggered on a PR. PostgresSQL 17, and Dynamo are the
-        // fastest tests among RDBMS and NoSQL storages, respectively, and multi-storage provides
-        // test provide test coverage for a feature that is not tested by the others.
-        testLabelsToKeep.add("postgresql_17")
-        testCategoriesToKeep.add("dynamo")
-        testCategoriesToKeep.add("multi-storage")
+    def missingBasic = basicLabels().findAll { label -> !expandedTests.any { it.label == label } }
+    if (!missingBasic.isEmpty()) {
+        failWith("The 'basic' set refers to labels that no longer exist in tests-config.yaml: " +
+                "${missingBasic.join(', ')}.\n  Update basicLabels() in generate-test-matrix.groovy.")
     }
 
-    def envVarToCategory = [
-            'BLOB_STORAGE' : 'blob-storage',
-            'CASSANDRA'    : 'cassandra',
-            'COSMOS'       : 'cosmos',
-            'DYNAMO'       : 'dynamo',
-            'JDBC'         : 'jdbc',
-            'MULTI_STORAGE': 'multi-storage'
-    ]
+    def labelsToKeep = [] as Set
 
-    envVarToCategory.each { envVar, category ->
-        if (Boolean.parseBoolean(System.getenv(envVar))) {
-            testCategoriesToKeep.add(category)
+    tokens.each { token ->
+        if (token == 'basic') {
+            labelsToKeep.addAll(basicLabels())
+            return
         }
+
+        if (token.contains(':')) {
+            def parts = token.split(':', 2)
+            def storage = parts[0]
+            def version = parts[1]
+
+            if (!storages.contains(storage)) {
+                if (categories.contains(storage)) {
+                    failWith("'${storage}' is a category and has no versions, so '${token}' is invalid.\n" +
+                            "  Use '${storage}', or a storage such as 'mysql:8.0'.")
+                }
+                failUnknownValue(storage, storages, categories)
+            }
+
+            def storageLabels = labelsByStorage[storage]
+            if (storageLabels == ([storage] as Set)) {
+                failWith("Storage '${storage}' has no versions, so '${token}' is invalid.\n" +
+                        "  Use '${storage}'.")
+            }
+
+            def wantedLabel = "${storage}_${version}".toString()
+            if (!storageLabels.contains(wantedLabel)) {
+                def validVersions = storageLabels.collect { it.substring(storage.length() + 1) }.sort()
+                failWith("Storage '${storage}' has no version '${version}' in the TESTS input.\n" +
+                        "Valid versions for '${storage}': ${validVersions.join(', ')}")
+            }
+            labelsToKeep.add(wantedLabel)
+            return
+        }
+
+        if (storages.contains(token)) {
+            labelsToKeep.addAll(labelsByStorage[token])
+            return
+        }
+        if (categories.contains(token)) {
+            labelsToKeep.addAll(expandedTests.findAll { it.test_category == token }.collect { it.label })
+            return
+        }
+        failUnknownValue(token, storages, categories)
     }
 
-    // Filter tests to keep only those in the categories or labels to keep
-    return expandedTests.findAll { test ->
-        testCategoriesToKeep.contains(test.test_category) || testLabelsToKeep.contains(test.label)
-    }
+    return expandedTests.findAll { labelsToKeep.contains(it.label) }
 }
