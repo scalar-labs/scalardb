@@ -2,18 +2,22 @@
 
 # Each test follows the following format:
 # test_category:
-#   - label: a unique label for the test
+#   - storage: the storage name. Used to select the test via the CI's TESTS input, and to build the
+#     test label: "<storage>_<version>" when versions are present, otherwise "<storage>".
 #     display_name: a human-readable name
 #     runner: (optional) the image name of a hosted Github action runner. The default is "ubuntu-latest".
-#     versions: (optional) an array of database versions to test. If present, a matrix entry for each version will be added and the placeholder %VERSION% will be substituted.
-#     disable_group_commit: (optional) if true, the test will not be run with group commit enabled. By default, a matrix entry with group commit enabled and another one with group commit disabled will be added.
+#     versions: (optional) an array of quoted database versions to test. If present, a matrix entry for
+#       each version will be added and the placeholder %VERSION% will be substituted. Always quote the
+#       values so that a version like "1.10" is not parsed as the number 1.1.
+#     flavor: (optional) which test flavors this entry runs as: "all" (default), "group-commit", or
+#       "normal". Controls whether group-commit and/or default matrix entries are generated.
 #     setup: a script to set up the database. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 #     db_healthcheck: (optional) a bash script that succeed if the database is ready. The script will be run repeatedly with a delay until it succeeds with a 10 minutes timeout. If not provided, it is assumed the database is ready before the run script is executed.
 #     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
 
 blob-storage:
-  - label: blob-storage
+  - storage: blob-storage
     display_name: Blob Storage
     # Start azurite with `--skipApiVersionCheck` to avoid API version check issues
     setup: |
@@ -31,7 +35,7 @@ blob-storage:
       ./gradlew integrationTestObjectStorage -Dscalardb.object_storage.endpoint=http://localhost:10000/test/test-container -Dscalardb.object_storage.username=test -Dscalardb.object_storage.password=test
 
 cassandra:
-  - label: cassandra_%VERSION%
+  - storage: cassandra
     display_name: Cassandra %VERSION%
     setup: |
       # Edit cassandra.yaml before the image's entrypoint runs: the entrypoint rewrites the file in
@@ -41,10 +45,10 @@ cassandra:
         sed -i "s/^authorizer:.*/authorizer: org.apache.cassandra.auth.CassandraAuthorizer/" /etc/cassandra/cassandra.yaml &&
         exec docker-entrypoint.sh cassandra -f'
     versions:
-      - 3.0
-      - 3.11
-      - 4.1
-      - 5.0
+      - "3.0"
+      - "3.11"
+      - "4.1"
+      - "5.0"
     db_healthcheck: docker exec cassandra cqlsh -u cassandra -p cassandra -e "SELECT now() FROM system.local;" > /dev/null 2>&1
     create_test_user: |
       docker exec cassandra cqlsh -u cassandra -p cassandra -e "CREATE ROLE test WITH PASSWORD = 'test' AND LOGIN = true;
@@ -56,7 +60,7 @@ cassandra:
     run: ./gradlew integrationTestCassandra -Dscalardb.cassandra.username=test -Dscalardb.cassandra.password=test
 
 cosmos:
-  - label: cosmos
+  - storage: cosmos
     display_name: Cosmos DB
     runner: windows-latest
     setup: |
@@ -91,7 +95,7 @@ cosmos:
       ./gradlew.bat integrationTestCosmos "-Dscalardb.cosmos.uri=https://localhost:8081/" "-Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==" "-Dfile.encoding=UTF-8"
 
 dynamo:
-  - label: dynamo
+  - storage: dynamo
     display_name: DynamoDB Local
     setup: docker run -d --name dynamodb -p 8000:8000 amazon/dynamodb-local
     # Permissions cannot be tested on DynamoDB local
@@ -99,12 +103,12 @@ dynamo:
     run: ./gradlew integrationTestDynamo
 
 jdbc:
-  - label: alloydb_%VERSION%
+  - storage: alloydb
     display_name: AlloyDB %VERSION%
     setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
     versions:
-      - 15
-      - 16
+      - "15"
+      - "16"
     # Connect over TCP, which the entrypoint's temporary server does not listen on
     db_healthcheck: docker exec alloydb psql -h 127.0.0.1 -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
@@ -113,12 +117,12 @@ jdbc:
         GRANT CREATE ON DATABASE postgres TO test;"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: db2_%VERSION%
+  - storage: db2
     display_name: Db2 %VERSION%
     setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
     versions:
-      - 11.5.9.0
-      - 12.1.1.0
+      - "11.5.9.0"
+      - "12.1.1.0"
     db_healthcheck: docker logs db2 2>&1 | grep -i -q "Setup has completed"
     create_test_user: |
       docker exec db2 bash -c "useradd -m -s /bin/bash test"
@@ -126,12 +130,12 @@ jdbc:
       docker exec db2 bash -c "su - db2inst1 -c 'echo -e \"connect to test_db\nGRANT DBADM ON DATABASE TO USER test\" | db2'"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:db2://localhost:50000/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: mariadb_%VERSION%
+  - storage: mariadb
     display_name: MariaDB %VERSION%
     setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     versions:
-      - 10.11
-      - 11.4
+      - "10.11"
+      - "11.4"
     # Connect over TCP, which the entrypoint's temporary server does not listen on; localhost would use the socket
     db_healthcheck: docker exec mariadb mariadb -h 127.0.0.1 -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
@@ -148,13 +152,13 @@ jdbc:
         GRANT DELETE ON *.* TO 'test'@'%%';"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: mysql_%VERSION%
+  - storage: mysql
     display_name: MySQL %VERSION%
     setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     versions:
-      - 5.7
-      - 8.0
-      - 8.4
+      - "5.7"
+      - "8.0"
+      - "8.4"
     # Connect over TCP, which the entrypoint's temporary server does not listen on; localhost would use the socket
     db_healthcheck: docker exec mysql mysql -h 127.0.0.1 -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
@@ -171,12 +175,12 @@ jdbc:
         GRANT DELETE ON *.* TO 'test'@'%%';"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:3306/?sslMode=REQUIRED -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: oracle_%VERSION%
+  - storage: oracle
     display_name: Oracle %VERSION%
     versions:
-      - 19
-      - 21
-      - 23
+      - "19"
+      - "21"
+      - "23"
     setup: |
       echo "Free up storage to accommodate large Oracle Docker image"
       echo "Storage available before deletion"
@@ -214,15 +218,15 @@ jdbc:
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
       ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@//localhost:1521/${PDB[%VERSION%]} -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: postgresql_%VERSION%
+  - storage: postgresql
     display_name: PostgreSQL %VERSION%
     setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
     versions:
-      - 13
-      - 14
-      - 15
-      - 16
-      - 17
+      - "13"
+      - "14"
+      - "15"
+      - "16"
+      - "17"
     # Connect over TCP, which the entrypoint's temporary server does not listen on
     db_healthcheck: docker exec postgresql psql -h 127.0.0.1 -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
@@ -231,7 +235,7 @@ jdbc:
         GRANT CREATE ON DATABASE postgres TO test;"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: sqlserver_%VERSION%
+  - storage: sqlserver
     display_name: SQL Server %VERSION%
     setup: |
       docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
@@ -241,9 +245,9 @@ jdbc:
         docker exec -u root sqlserver ln -s /opt/mssql-tools18 /opt/mssql-tools
       fi
     versions:
-      - 2017
-      - 2019
-      - 2022
+      - "2017"
+      - "2019"
+      - "2022"
     db_healthcheck: docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       # Create the database here, not in setup, because setup runs before db_healthcheck
@@ -256,17 +260,19 @@ jdbc:
         GRANT CREATE VIEW to test;"
     run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433;databaseName=test_db;encrypt=true;trustServerCertificate=true" -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: sqlite_3
-    display_name: SQLite 3
+  - storage: sqlite
+    display_name: SQLite %VERSION%
+    versions:
+      - "3"
     setup: sudo apt-get install -y sqlite3
     run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:sqlite:integration.sqlite3?busy_timeout=50000&journal_mode=WAL"
 
-  - label: tidb_%VERSION%
+  - storage: tidb
     display_name: TiDB %VERSION%
     versions:
-      - 6.5
-      - 7.5
-      - 8.5
+      - "6.5"
+      - "7.5"
+      - "8.5"
     setup: |
       echo "Install TiUP\n"
       curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
@@ -288,7 +294,7 @@ jdbc:
         GRANT DELETE ON *.* TO 'test'@'%%';"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
-  - label: yugabytedb
+  - storage: yugabytedb
     display_name: YugabyteDB 2025.2
     # enable_object_locking_for_table_locks: Uses table-level locks for DDL to avoid "Restart read
     # required" errors when concurrent DDL operations conflict with catalog version checks.
@@ -303,9 +309,9 @@ jdbc:
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
 
 multi-storage:
-  - label: multi-storage
+  - storage: multi-storage
     display_name: Multi-Storage
-    disable_group_commit: true
+    flavor: normal
     setup: |
       docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
       # Edit cassandra.yaml before the image's entrypoint runs: the entrypoint rewrites the file in

@@ -71,7 +71,7 @@ static def validateEnvironmentVariables() {
     }
 }
 
-// Expand tests by versions and group commit settings
+// Expand tests by versions and flavors
 def static expandTests(testsByCategory) {
     def expandedTests = []
 
@@ -79,7 +79,15 @@ def static expandTests(testsByCategory) {
         tests.each { test ->
             test["test_category"] = category
 
-            // Get list of test variants (expanded by version if applicable)
+            def flavor = test.flavor ?: 'all'
+            if (!(flavor in ['all', 'group-commit', 'normal'])) {
+                System.err.println("Error: Unknown flavor '${flavor}' for storage '${test.storage}' in tests-config.yaml.")
+                System.err.println("Valid flavors: all, group-commit, normal")
+                System.exit(1)
+            }
+
+            // Get list of test variants (expanded by version if applicable). The label is derived
+            // from the storage and the version rather than being declared in the config.
             def testVariants = []
             if (test.versions) {
                 test.versions.each { version ->
@@ -91,22 +99,26 @@ def static expandTests(testsByCategory) {
                             testVariant[key] = value.replace('%VERSION%', version.toString())
                         }
                     }
+                    testVariant["label"] = "${test.storage}_${version}".toString()
                     testVariants.add(testVariant)
                 }
             } else {
-                testVariants.add(test)
+                def testVariant = new LinkedHashMap(test)
+                testVariant["label"] = test.storage
+                testVariants.add(testVariant)
             }
 
-            // Expand each variant by group commit setting
+            // Expand each variant by flavor
             testVariants.each { variant ->
                 def baseVariant = new LinkedHashMap(variant)
-                baseVariant.remove("disable_group_commit")
+                baseVariant.remove("flavor")
 
-                def testWithoutGroupCommit = new LinkedHashMap(baseVariant)
-                testWithoutGroupCommit["group_commit_enabled"] = 'false'
-                expandedTests.add(testWithoutGroupCommit)
-
-                if (!variant.disable_group_commit) {
+                if (flavor != 'group-commit') {
+                    def testWithoutGroupCommit = new LinkedHashMap(baseVariant)
+                    testWithoutGroupCommit["group_commit_enabled"] = 'false'
+                    expandedTests.add(testWithoutGroupCommit)
+                }
+                if (flavor != 'normal') {
                     def testWithGroupCommit = new LinkedHashMap(baseVariant)
                     testWithGroupCommit["group_commit_enabled"] = 'true'
                     expandedTests.add(testWithGroupCommit)
