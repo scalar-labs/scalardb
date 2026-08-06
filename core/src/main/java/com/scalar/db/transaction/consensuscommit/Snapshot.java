@@ -28,9 +28,12 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -59,8 +62,9 @@ public class Snapshot {
   private final ParallelExecutor parallelExecutor;
 
   // The collation comparator governing clustering-key range-membership ordering in the
-  // scan-after-write validation. It governs ordering only; key identity and map keying stay
-  // byte-exact.
+  // scan-after-write validation, and — under ICU — the canonical key identity used by the
+  // snapshot maps (see Key): collate-equal keys are one logical key. Under BINARY (the default)
+  // key identity and map keying stay byte-exact.
   private final CollationComparator collationComparator;
 
   // The clustering-key comparator derived from the collation comparator.
@@ -241,6 +245,11 @@ public class Snapshot {
 
   public Collection<Map.Entry<Get, Optional<TransactionResult>>> getGetSet() {
     return new ArrayList<>(getSet.entrySet());
+  }
+
+  /** Returns the comparator governing this snapshot's ordering and key identity. */
+  CollationComparator getCollationComparator() {
+    return collationComparator;
   }
 
   public boolean containsKeyInReadSet(Key key) {
@@ -631,7 +640,7 @@ public class Snapshot {
       } else {
         // For other Get
 
-        Key key = new Key(get);
+        Key key = new Key(get, collationComparator);
         if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
           continue;
         }
@@ -688,7 +697,7 @@ public class Snapshot {
       // Compare the records of the iterators
       while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
-        Key key = new Key(scan, latestTxResult, metadata);
+        Key key = new Key(scan, latestTxResult, metadata, collationComparator);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
@@ -811,7 +820,8 @@ public class Snapshot {
     Scan scanWithIndex = ConsensusCommitUtils.createScanWithIndexFromGet(get);
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
-    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
+    originalResult.ifPresent(
+        r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata, collationComparator), r));
 
     // Validate the result to check if there is no anti-dependency
     validateScanResults(storage, scanWithIndex, results, false, metadata);
@@ -970,43 +980,126 @@ public class Snapshot {
   }
 
   @Immutable
+  /**
+   * The transaction layer's logical record key. Identity follows the configured collation: under
+   * {@code ICU}, TEXT key columns are identified by their canonical collation form, so
+   * collate-equal keys (request-typed vs storage-returned spellings of one physical row) are ONE
+   * logical key across the snapshot maps, joins, and guards — matching what a collation-aligned
+   * backend enforces. Under {@code BINARY} (the default) identity stays byte-exact. The visible
+   * fields and {@link #toString()} always keep the original bytes.
+   */
   public static final class Key implements Comparable<Key> {
+    /** Distinguishes an absent clustering key from an empty one in the canonical identity. */
+    private static final String CLUSTERING_KEY_BOUNDARY = "scalar.db.collation.ck-boundary";
+
     private final String namespace;
     private final String table;
     private final com.scalar.db.io.Key partitionKey;
     private final Optional<com.scalar.db.io.Key> clusteringKey;
 
-    public Key(Get get) {
-      this((Operation) get);
+    /** Collation-canonical identity components; null when identity is byte-exact (BINARY). */
+    @Nullable private final List<Object> canonicalIdentity;
+
+    /** Non-null exactly when {@link #canonicalIdentity} is non-null; used by {@link #compareTo}. */
+    @Nullable private final CollationComparator collationComparator;
+
+    public Key(Get get, CollationComparator collationComparator) {
+      this((Operation) get, collationComparator);
     }
 
-    public Key(Get get, Result result, TableMetadata tableMetadata) {
-      this.namespace = get.forNamespace().get();
-      this.table = get.forTable().get();
-      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
-      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
+    public Key(
+        Get get,
+        Result result,
+        TableMetadata tableMetadata,
+        CollationComparator collationComparator) {
+      this(
+          get.forNamespace().get(),
+          get.forTable().get(),
+          ScalarDbUtils.getPartitionKey(result, tableMetadata),
+          ScalarDbUtils.getClusteringKey(result, tableMetadata),
+          collationComparator);
     }
 
-    public Key(Put put) {
-      this((Operation) put);
+    public Key(Put put, CollationComparator collationComparator) {
+      this((Operation) put, collationComparator);
     }
 
-    public Key(Delete delete) {
-      this((Operation) delete);
+    public Key(Delete delete, CollationComparator collationComparator) {
+      this((Operation) delete, collationComparator);
     }
 
-    public Key(Scan scan, Result result, TableMetadata tableMetadata) {
-      this.namespace = scan.forNamespace().get();
-      this.table = scan.forTable().get();
-      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
-      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
+    public Key(
+        Scan scan,
+        Result result,
+        TableMetadata tableMetadata,
+        CollationComparator collationComparator) {
+      this(
+          scan.forNamespace().get(),
+          scan.forTable().get(),
+          ScalarDbUtils.getPartitionKey(result, tableMetadata),
+          ScalarDbUtils.getClusteringKey(result, tableMetadata),
+          collationComparator);
     }
 
-    private Key(Operation operation) {
-      namespace = operation.forNamespace().get();
-      table = operation.forTable().get();
-      partitionKey = operation.getPartitionKey();
-      clusteringKey = operation.getClusteringKey();
+    private Key(Operation operation, CollationComparator collationComparator) {
+      this(
+          operation.forNamespace().get(),
+          operation.forTable().get(),
+          operation.getPartitionKey(),
+          operation.getClusteringKey(),
+          collationComparator);
+    }
+
+    private Key(
+        String namespace,
+        String table,
+        com.scalar.db.io.Key partitionKey,
+        Optional<com.scalar.db.io.Key> clusteringKey,
+        CollationComparator collationComparator) {
+      this.namespace = namespace;
+      this.table = table;
+      this.partitionKey = partitionKey;
+      this.clusteringKey = clusteringKey;
+      if (collationComparator.hasCanonicalTextForm()) {
+        this.canonicalIdentity =
+            buildCanonicalIdentity(
+                namespace, table, partitionKey, clusteringKey, collationComparator);
+        this.collationComparator = collationComparator;
+      } else {
+        this.canonicalIdentity = null;
+        this.collationComparator = null;
+      }
+    }
+
+    private static List<Object> buildCanonicalIdentity(
+        String namespace,
+        String table,
+        com.scalar.db.io.Key partitionKey,
+        Optional<com.scalar.db.io.Key> clusteringKey,
+        CollationComparator comparator) {
+      List<Object> components = new ArrayList<>();
+      components.add(namespace);
+      components.add(table);
+      addCanonicalColumns(components, partitionKey, comparator);
+      components.add(CLUSTERING_KEY_BOUNDARY);
+      clusteringKey.ifPresent(key -> addCanonicalColumns(components, key, comparator));
+      return components;
+    }
+
+    private static void addCanonicalColumns(
+        List<Object> components, com.scalar.db.io.Key key, CollationComparator comparator) {
+      for (Column<?> column : key.getColumns()) {
+        if (column.getDataType() == DataType.TEXT && !column.hasNullValue()) {
+          // ByteBuffer gives the canonical bytes content-based equals/hashCode; the column name
+          // stays part of the identity via the entry.
+          components.add(
+              new AbstractMap.SimpleImmutableEntry<>(
+                  column.getName(),
+                  ByteBuffer.wrap(comparator.canonicalTextFormOf(column.getTextValue()))));
+        } else {
+          components.add(column);
+        }
+      }
     }
 
     public String getNamespace() {
@@ -1027,6 +1120,9 @@ public class Snapshot {
 
     @Override
     public int hashCode() {
+      if (canonicalIdentity != null) {
+        return canonicalIdentity.hashCode();
+      }
       return Objects.hash(namespace, table, partitionKey, clusteringKey);
     }
 
@@ -1039,6 +1135,9 @@ public class Snapshot {
         return false;
       }
       Key another = (Key) o;
+      if (this.canonicalIdentity != null && another.canonicalIdentity != null) {
+        return this.canonicalIdentity.equals(another.canonicalIdentity);
+      }
       return this.namespace.equals(another.namespace)
           && this.table.equals(another.table)
           && this.partitionKey.equals(another.partitionKey)
@@ -1047,6 +1146,19 @@ public class Snapshot {
 
     @Override
     public int compareTo(Key o) {
+      if (this.collationComparator != null && o.collationComparator != null) {
+        // Equals-consistent with the canonical identity: collate-equal keys compare as 0.
+        Comparator<com.scalar.db.io.Key> keyComparator = this.collationComparator.keyComparator();
+        return ComparisonChain.start()
+            .compare(this.namespace, o.namespace)
+            .compare(this.table, o.table)
+            .compare(this.partitionKey, o.partitionKey, keyComparator)
+            .compare(
+                this.clusteringKey.orElse(null),
+                o.clusteringKey.orElse(null),
+                Comparator.nullsFirst(keyComparator))
+            .result();
+      }
       return ComparisonChain.start()
           .compare(this.namespace, o.namespace)
           .compare(this.table, o.table)

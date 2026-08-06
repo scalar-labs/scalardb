@@ -94,8 +94,8 @@ class WriteSetEncoderTest {
             .partitionKey(Key.ofText("pk", "p2"))
             .clusteringKey(Key.ofInt("ck", 20))
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, binaryCollation()), delete);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);
@@ -132,7 +132,7 @@ class WriteSetEncoderTest {
             .clusteringKey(Key.ofInt("ck", 1))
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, "child-1");
@@ -202,7 +202,7 @@ class WriteSetEncoderTest {
             .clusteringKey(Key.newBuilder().addBigInt("ck1", 100L).addText("ck2", "c").build())
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);
@@ -341,7 +341,7 @@ class WriteSetEncoderTest {
             .partitionKey(partitionKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     return WriteSetEncoder.encodeEntryGroup(snapshot, null);
   }
 
@@ -367,7 +367,7 @@ class WriteSetEncoderTest {
             .partitionKey(Key.ofText("pk", "p1"))
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);

@@ -101,7 +101,7 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     Snapshot snapshot =
         new Snapshot(id, tableMetadataManager, new ParallelExecutor(config), binaryCollation());
     Put put = preparePut();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     return snapshot;
   }
 

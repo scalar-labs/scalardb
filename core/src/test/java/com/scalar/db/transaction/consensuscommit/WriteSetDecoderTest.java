@@ -88,7 +88,7 @@ class WriteSetDecoderTest {
             .partitionKey(partitionKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);
     return group.getEntries(0);
   }
@@ -190,7 +190,7 @@ class WriteSetDecoderTest {
             .clusteringKey(clusteringKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
@@ -216,7 +216,7 @@ class WriteSetDecoderTest {
             .clusteringKey(clusteringKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
@@ -253,7 +253,7 @@ class WriteSetDecoderTest {
             .partitionKey(partitionKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act

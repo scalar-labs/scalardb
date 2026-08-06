@@ -105,7 +105,7 @@ public class CrudHandler {
       // In case of a Get with index, we don't know the key until we read the record
       key = null;
     } else {
-      key = new Snapshot.Key(get);
+      key = new Snapshot.Key(get, collationComparator);
     }
 
     if (isSnapshotReadRequired(context)) {
@@ -217,7 +217,7 @@ public class CrudHandler {
           if (result.isPresent()) {
             // Only when we can get the record with the Get with index, we can put it into the read
             // set
-            key = new Snapshot.Key(get, result.get(), metadata);
+            key = new Snapshot.Key(get, result.get(), metadata, collationComparator);
             putIntoReadSetInSnapshot(key, result, context);
           }
         }
@@ -261,7 +261,7 @@ public class CrudHandler {
     try (Scanner scanner = scanFromStorage(indexScan, metadata, context.transactionId)) {
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
-        Snapshot.Key key = new Snapshot.Key(get, r, metadata);
+        Snapshot.Key key = new Snapshot.Key(get, r, metadata, collationComparator);
         RecoveredResult recovered = recoverAndFilter(key, get, result, context, metadata);
         if (recovered.indexKeyFilteredOut) {
           indexKeyFilteredOut = true;
@@ -438,7 +438,7 @@ public class CrudHandler {
       try (Scanner scanner = scanFromStorage(scan, metadata, context.transactionId)) {
         for (Result r : scanner) {
           TransactionResult result = new TransactionResult(r);
-          Snapshot.Key key = new Snapshot.Key(scan, r, metadata);
+          Snapshot.Key key = new Snapshot.Key(scan, r, metadata, collationComparator);
           Optional<TransactionResult> processedScanResult =
               processScanResult(key, scan, result, context, metadata);
           processedScanResult.ifPresent(res -> results.put(key, res));
@@ -580,7 +580,7 @@ public class CrudHandler {
 
   public void put(Put put, TransactionContext context) throws CrudException {
     TransactionTableMetadata txMetadata = getTransactionTableMetadata(put, context.transactionId);
-    Snapshot.Key key = new Snapshot.Key(put);
+    Snapshot.Key key = new Snapshot.Key(put, collationComparator);
 
     if (put.getCondition().isPresent()
         && (!isImplicitPreReadEnabled(put) && !context.snapshot.containsKeyInReadSet(key))) {
@@ -604,7 +604,7 @@ public class CrudHandler {
   public void delete(Delete delete, TransactionContext context) throws CrudException {
     TransactionTableMetadata txMetadata =
         getTransactionTableMetadata(delete, context.transactionId);
-    Snapshot.Key key = new Snapshot.Key(delete);
+    Snapshot.Key key = new Snapshot.Key(delete, collationComparator);
 
     if (delete.getCondition().isPresent()) {
       if (!context.snapshot.containsKeyInReadSet(key)) {
@@ -881,7 +881,9 @@ public class CrudHandler {
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
-          Snapshot.Key key = new Snapshot.Key(beforeIndexScan, r, metadata.getTableMetadata());
+          Snapshot.Key key =
+              new Snapshot.Key(
+                  beforeIndexScan, r, metadata.getTableMetadata(), collationComparator);
           // This intentionally bypasses executeRecovery(): it always uses
           // RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation level (recovery must actually
           // execute; otherwise the PREPARED/DELETED record remains in storage and retrying would be
@@ -980,7 +982,7 @@ public class CrudHandler {
             return Optional.empty();
           }
 
-          Snapshot.Key key = new Snapshot.Key(scan, r.get(), metadata);
+          Snapshot.Key key = new Snapshot.Key(scan, r.get(), metadata, collationComparator);
           TransactionResult result = new TransactionResult(r.get());
 
           Optional<TransactionResult> processedScanResult =

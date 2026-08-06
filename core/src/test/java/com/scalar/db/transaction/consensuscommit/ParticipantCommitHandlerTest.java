@@ -141,8 +141,8 @@ class ParticipantCommitHandlerTest {
     Snapshot snapshot = prepareSnapshot();
     Put put1 = preparePut1();
     Put put2 = preparePut2();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
-    snapshot.putIntoWriteSet(new Snapshot.Key(put2), put2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put1, binaryCollation()), put1);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put2, binaryCollation()), put2);
     snapshot.putIntoGetSet(prepareGet(), Optional.empty());
     return snapshot;
   }
@@ -423,8 +423,8 @@ class ParticipantCommitHandlerTest {
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .build();
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
-    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.empty());
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, binaryCollation()), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete, binaryCollation()), Optional.empty());
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert
