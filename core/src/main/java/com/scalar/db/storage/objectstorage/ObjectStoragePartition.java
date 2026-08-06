@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -18,7 +17,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
-import com.scalar.db.io.DataType;
+import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.Comparator;
@@ -226,20 +225,11 @@ public class ObjectStoragePartition {
   }
 
   /**
-   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns. When both columns are
-   * {@code TEXT} with non-null values, equality is decided by the collation: byte-exact for {@code
-   * BINARY}, collation-aware for {@code ICU}. Otherwise it stays byte-exact via natural ordering.
-   * Non-{@code TEXT} equality is unaffected.
+   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns, following the collation
+   * (see {@link ScalarDbUtils#columnEquals}).
    */
   private static boolean columnEquals(
       Column<?> actual, Column<?> expected, CollationComparator cc) {
-    if (actual.getDataType() == DataType.TEXT) {
-      String a = actual.getTextValue();
-      String b = expected.getTextValue();
-      if (a != null && b != null) {
-        return cc.textEquals(a, b);
-      }
-    }
-    return Ordering.natural().compare(actual, expected) == 0;
+    return ScalarDbUtils.columnEquals(actual, expected, cc);
   }
 }

@@ -217,7 +217,14 @@ public class MutationConditionsValidatorTest {
       boolean isConditionSatisfied) {
     // Act Assert
     Column<?> existingRecordColumn = mock(Column.class);
-    Column<?> conditionalExpressionColumn = mock(Column.class);
+    // EQ/NE are decided by ScalarDbUtils.columnEquals, which falls back to Column#equals for
+    // these non-TEXT mocks (Mockito cannot stub equals), so column equality is modeled by
+    // passing the SAME column instance; inequality by a distinct mock.
+    boolean modelsEqualColumns =
+        (operator == Operator.EQ || operator == Operator.NE)
+            && Integer.valueOf(0).equals(compareResult);
+    Column<?> conditionalExpressionColumn =
+        modelsEqualColumns ? existingRecordColumn : mock(Column.class);
     when(conditionalExpressionColumn.getName()).thenReturn(C1);
     when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, existingRecordColumn));
     ConditionalExpression conditionalExpression = mock(ConditionalExpression.class);
@@ -251,17 +258,16 @@ public class MutationConditionsValidatorTest {
         .thenReturn(
             ImmutableMap.of(
                 C1, existingRecordColumn1, C2, existingRecordColumn2, C3, existingRecordColumn3));
-    // The first condition operator is 'Equal'
+    // The first condition operator is 'Equal'. EQ is decided by ScalarDbUtils.columnEquals, which
+    // falls back to Column#equals for these non-TEXT mocks (Mockito cannot stub equals), so a
+    // satisfied condition is modeled by passing the SAME column instance and an unsatisfied one by
+    // a distinct mock.
     ConditionalExpression conditionalExpression1 = mock(ConditionalExpression.class);
-    Column<?> conditionalExpressionColumn1 = mock(Column.class);
+    Column<?> conditionalExpressionColumn1 =
+        isCondition1Satisfied ? existingRecordColumn1 : mock(Column.class);
     when(conditionalExpressionColumn1.getName()).thenReturn(C1);
     doReturn(conditionalExpressionColumn1).when(conditionalExpression1).getColumn();
     when(conditionalExpression1.getOperator()).thenReturn(Operator.EQ);
-    if (isCondition1Satisfied) {
-      when(existingRecordColumn1.compareTo(any())).thenReturn(0);
-    } else {
-      when(existingRecordColumn1.compareTo(any())).thenReturn(-1);
-    }
     // The second condition operator is 'GreaterThan'
     ConditionalExpression conditionalExpression2 = mock(ConditionalExpression.class);
     Column<?> conditionalExpressionColumn2 = mock(Column.class);

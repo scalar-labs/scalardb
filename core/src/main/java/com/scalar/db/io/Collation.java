@@ -1,21 +1,21 @@
 package com.scalar.db.io;
 
 /**
- * Selects ScalarDB's in-memory string ordering mode.
+ * Selects ScalarDB's in-memory text comparison mode: it governs ordering, equality, and — under
+ * {@link #ICU}, within the Consensus Commit transaction layer — key identity.
  *
- * <p>This governs only the comparisons ScalarDB performs itself on the JVM (for example
- * object-storage scan sorting and range filtering, in-memory cross-partition range filtering, and
- * the Consensus Commit snapshot's scan-after-write range check). It does not affect comparisons
- * delegated to the backend, nor equality/identity comparisons, which stay byte-exact.
+ * <p>This covers only the comparisons ScalarDB performs itself on the JVM (for example
+ * object-storage scan sorting and filtering, in-memory cross-partition filtering, conditional
+ * mutations, and the Consensus Commit snapshot's bookkeeping and scan-after-write checks).
+ * Comparisons delegated to the backend are unaffected, and stored bytes are never rewritten.
  *
  * <ul>
- *   <li>{@link #BINARY} orders text by unsigned UTF-8 byte sequence.
- *   <li>{@link #ICU} orders text according to the Unicode Collation Algorithm, configured by
- *       locale, strength, and optional tailoring rules.
+ *   <li>{@link #BINARY} — the default when {@code scalar.db.collation} is absent. Orders text by
+ *       unsigned UTF-8 byte sequence; equality and key identity are byte-exact.
+ *   <li>{@link #ICU} — orders text according to the Unicode Collation Algorithm, configured by
+ *       locale, strength, and optional tailoring rules; equality and Consensus Commit key identity
+ *       follow the collation (for example, case-insensitive at {@code PRIMARY} strength).
  * </ul>
- *
- * <p>When {@code scalar.db.collation} is unset, ScalarDB keeps its current comparison behavior
- * (Java UTF-16 code-unit order) and no {@code Collation} is selected.
  */
 public enum Collation {
   BINARY,

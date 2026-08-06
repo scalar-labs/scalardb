@@ -727,6 +727,32 @@ public class MutationsGrouperTest {
 
   @Test
   public void
+      groupMutations_WithRecordAtomicityAndCollateEqualClusteringKeysUnderBinary_ShouldGroupIntoTwoBatches()
+          throws ExecutionException {
+    // Arrange: under BINARY, the clustering keys 'a' and 'A' are distinct records (byte-exact
+    // identity), mirroring the partition-key BINARY twin above.
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mockStorageInfo(StorageInfo.MutationAtomicityUnit.RECORD);
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    Key partitionKey = Key.ofText("pk", "p1");
+    Mutation mutation1 =
+        createMutation(namespace, table, partitionKey, Optional.of(Key.ofText("ck", "a")));
+    Mutation mutation2 =
+        createMutation(namespace, table, partitionKey, Optional.of(Key.ofText("ck", "A")));
+
+    // Act: the default grouper is built with the BINARY comparator.
+    List<List<Mutation>> result = grouper.groupMutations(Arrays.asList(mutation1, mutation2));
+
+    // Assert: TWO groups, one per byte-distinct record.
+    assertThat(result).hasSize(2);
+    assertThat(result.get(0)).containsExactly(mutation1);
+    assertThat(result.get(1)).containsExactly(mutation2);
+  }
+
+  @Test
+  public void
       canBeGroupedAltogether_WithCollateEqualPartitionKeysUnderCaseInsensitiveIcu_ShouldReturnTrue()
           throws ExecutionException {
     // Arrange

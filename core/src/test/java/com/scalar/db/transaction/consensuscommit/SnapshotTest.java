@@ -2848,28 +2848,30 @@ public class SnapshotTest {
 
   @Test
   public void
-      putIntoWriteSetAndReadSet_CollateEqualButByteDifferentKeys_ShouldShareOneIdentityUnderCollation()
+      putIntoWriteSetAndReadSet_CollateEqualButByteDifferentKeys_ShouldRemainDistinctUnderBinary()
           throws CrudException {
-    // Arrange (Covers R7, increment B): two keys that collate-equal under a case-insensitive
-    // collation but differ in bytes are ONE logical key in identity-keyed maps (writeSet, readSet)
-    // and in results.containsKey, because key identity is collation-canonical under ICU.
-    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    // Arrange: BINARY control for the ICU one-logical-key test
+    // (putIntoWriteSetAndReadSet_CollateEqualByteDifferentKeysUnderCaseInsensitiveIcu_...): under
+    // the default BINARY collation, 'Apple' and 'apple' are byte-different and therefore stay
+    // DISTINCT identities in the identity-keyed maps (writeSet, readSet) and under
+    // results.containsKey -- the release byte-exact behavior.
+    snapshot = prepareSnapshot(binaryCollation());
     Put putUpper = preparePut(ANY_TEXT_1, "Apple");
     Put putLower = preparePut(ANY_TEXT_1, "apple");
-    Snapshot.Key keyUpper = new Snapshot.Key(putUpper, caseInsensitiveIcuCollation());
-    Snapshot.Key keyLower = new Snapshot.Key(putLower, caseInsensitiveIcuCollation());
+    Snapshot.Key keyUpper = new Snapshot.Key(putUpper, binaryCollation());
+    Snapshot.Key keyLower = new Snapshot.Key(putLower, binaryCollation());
 
     // Act
     snapshot.putIntoWriteSet(keyUpper, putUpper);
-    // The second put hits the existing entry and MERGES its columns into the buffered put.
+    // The second put lands under its own byte-distinct key: no merge happens.
     snapshot.putIntoWriteSet(keyLower, putLower);
     snapshot.putIntoReadSet(keyUpper, Optional.empty());
     snapshot.putIntoReadSet(keyLower, Optional.empty());
 
     // Assert
-    assertThat(keyUpper).isEqualTo(keyLower);
-    assertThat(writeSet).hasSize(1);
-    assertThat(readSet).hasSize(1);
+    assertThat(keyUpper).isNotEqualTo(keyLower);
+    assertThat(writeSet).hasSize(2);
+    assertThat(readSet).hasSize(2);
     assertThat(snapshot.containsKeyInWriteSet(keyUpper)).isTrue();
     assertThat(snapshot.containsKeyInWriteSet(keyLower)).isTrue();
     assertThat(snapshot.containsKeyInReadSet(keyUpper)).isTrue();
@@ -2878,7 +2880,7 @@ public class SnapshotTest {
     Map<Snapshot.Key, TransactionResult> results = new HashMap<>();
     results.put(keyUpper, prepareResult(ANY_ID, ANY_TEXT_1, "Apple"));
     assertThat(results.containsKey(keyUpper)).isTrue();
-    assertThat(results.containsKey(keyLower)).isTrue();
+    assertThat(results.containsKey(keyLower)).isFalse();
   }
 
   @Test
@@ -3264,8 +3266,8 @@ public class SnapshotTest {
           throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
-    Put putUpper = preparePut(ANY_TEXT_1, "Apple");
-    Put putLower = preparePut(ANY_TEXT_1, "apple");
+    Put putUpper = preparePutWithClusteringKeyAndName3("Apple", "v1");
+    Put putLower = preparePutWithClusteringKeyAndName3("apple", "v2");
     Snapshot.Key keyUpper = new Snapshot.Key(putUpper, caseInsensitiveIcuCollation());
     Snapshot.Key keyLower = new Snapshot.Key(putLower, caseInsensitiveIcuCollation());
 
@@ -3285,6 +3287,14 @@ public class SnapshotTest {
     assertThat(snapshot.containsKeyInWriteSet(keyLower)).isTrue();
     assertThat(snapshot.containsKeyInReadSet(keyUpper)).isTrue();
     assertThat(snapshot.containsKeyInReadSet(keyLower)).isTrue();
+
+    // The surviving entry is retrievable via keys built from BOTH spellings, and the merge is
+    // last-writer-wins on the shared value column: putIntoWriteSet overlays the second put's
+    // columns onto the buffered first put.
+    Put mergedPut = writeSet.get(keyUpper);
+    assertThat(mergedPut).isNotNull();
+    assertThat(writeSet.get(keyLower)).isSameAs(mergedPut);
+    assertThat(mergedPut.getColumns().get(ANY_NAME_3)).isEqualTo(TextColumn.of(ANY_NAME_3, "v2"));
 
     // results.containsKey is collation-canonical: a lookup by either spelling hits the entry.
     Map<Snapshot.Key, TransactionResult> results = new HashMap<>();
@@ -3492,6 +3502,32 @@ public class SnapshotTest {
     assertThat(thrown).doesNotThrowAnyException();
   }
 
+  @Test
+  public void
+      verifyNoOverlap_PlainScanOfDistinctUnpairedSurrogatePartitionKeyUnderBinary_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange: regression guard for Snapshot.partitionKeyEquals staying BYTE-EXACT under BINARY.
+    // The unpaired surrogates U+D800 and U+DC00 are distinct strings, but String#getBytes(UTF_8)
+    // replaces both with the same replacement bytes, so an equality routed through the BINARY
+    // UTF-8-byte comparator would conflate these two distinct partitions and report a spurious
+    // overlap.
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePut("\uD800", ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, "\uDC00"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
   // ---- Collation-canonical key identity — cross-provenance lifecycle (B-U3) ----
   //
   // A snapshot entry can be keyed under the request-typed spelling ('apple') or the
@@ -3503,12 +3539,16 @@ public class SnapshotTest {
   @Test
   public void
       toSerializable_OwnWriteRescannedUnderStoredSpellingUnderCaseInsensitiveIcu_ShouldBeClassifiedAsOwnUpdate()
-          throws ExecutionException, CrudException {
-    // Arrange: the original scan saw the committed row under its stored spelling 'Apple'; the
-    // transaction then updated it via its own spelling 'apple'. At validation, the re-scan
-    // returns the PREPARED record with this transaction's id under the stored spelling 'Apple'.
-    // The own-update classification (originalResultEntry.getKey().equals(key)) must join the
-    // provenances, so no anti-dependency is reported.
+          throws ExecutionException {
+    // Arrange: the original scan-set entry is keyed under the spelling the transaction itself
+    // typed ('apple'); at validation, the re-scan returns the PREPARED record with this
+    // transaction's id under the STORED spelling 'Apple'. The own-update classification
+    // (originalResultEntry.getKey().equals(key built from the re-scan result)) joins the two
+    // provenances ONLY under the collation, so no anti-dependency is reported.
+    //
+    // The writeSet is deliberately left EMPTY: a byte-equal writeSet entry would rescue the
+    // original entry via validateScanResults' leftover loop and mask the cross-provenance join
+    // (making this test pass vacuously regardless of the collation).
     snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
     Scan scan =
         Scan.newBuilder()
@@ -3516,13 +3556,11 @@ public class SnapshotTest {
             .table(ANY_TABLE_NAME)
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .build();
-    TransactionResult originalResult = prepareResult(ANY_ID + "x", ANY_TEXT_1, "Apple");
+    TransactionResult originalResult = prepareResult(ANY_ID + "x", ANY_TEXT_1, "apple");
     Snapshot.Key originalKey =
         new Snapshot.Key(scan, originalResult, TABLE_METADATA, caseInsensitiveIcuCollation());
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(Collections.singletonMap(originalKey, originalResult)));
-    Put put = preparePut(ANY_TEXT_1, "apple");
-    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
 
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult latestOwnResult = prepareResult(ANY_ID, ANY_TEXT_1, "Apple");
@@ -3533,6 +3571,42 @@ public class SnapshotTest {
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanForStorage);
+  }
+
+  @Test
+  public void
+      toSerializable_OwnWriteRescannedUnderStoredSpellingUnderBinary_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange: BINARY control for the ICU own-update test above -- identical cross-provenance
+    // setup, byte-exact identity. The original key 'apple' does NOT join the re-scanned own-id
+    // record keyed 'Apple', so the original entry falls through to the leftover loop where no
+    // writeSet/deleteSet entry rescues it, and an anti-dependency is reported.
+    snapshot = prepareSnapshot(binaryCollation());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+    TransactionResult originalResult = prepareResult(ANY_ID + "x", ANY_TEXT_1, "apple");
+    Snapshot.Key originalKey =
+        new Snapshot.Key(scan, originalResult, TABLE_METADATA, binaryCollation());
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(Collections.singletonMap(originalKey, originalResult)));
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult latestOwnResult = prepareResult(ANY_ID, ANY_TEXT_1, "Apple");
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(latestOwnResult)).thenReturn(Optional.empty());
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
 
     // Assert
     verify(storage).scan(scanForStorage);
@@ -3736,6 +3810,16 @@ public class SnapshotTest {
     assertThat(writeSet)
         .as("collate-equal puts must merge into one logical write, as the CI backend holds one row")
         .hasSize(1);
+
+    // The merge is last-writer-wins on the shared value column (Snapshot.putIntoWriteSet overlays
+    // the second put's columns onto the buffered first put), and the single surviving entry is
+    // retrievable via keys built from BOTH spellings.
+    Snapshot.Key firstKey = new Snapshot.Key(first, caseInsensitiveIcuCollation());
+    Snapshot.Key secondKey = new Snapshot.Key(second, caseInsensitiveIcuCollation());
+    Put mergedPut = writeSet.get(firstKey);
+    assertThat(mergedPut).isNotNull();
+    assertThat(writeSet.get(secondKey)).isSameAs(mergedPut);
+    assertThat(mergedPut.getColumns().get(ANY_NAME_3)).isEqualTo(TextColumn.of(ANY_NAME_3, "v2"));
   }
 
   // Gap 4 — MISSED SCAN-AFTER-WRITE GUARD (silent inconsistent scan). verifyNoOverlap's

@@ -349,4 +349,82 @@ public class SnapshotKeyTest {
     // Act Assert: toString keeps the original spelling, not the canonical collation form.
     assertThat(key.toString()).contains("Apple");
   }
+
+  private Get prepareGetWithCompositePartitionKey(String value1, String value2) {
+    return Get.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(
+            Key.newBuilder().addText(ANY_NAME_1, value1).addText(ANY_NAME_2, value2).build())
+        .build();
+  }
+
+  @Test
+  public void
+      equals_CompositePartitionKeyVsSplitPartitionAndClusteringKeyUnderIcuPrimary_ShouldStayDistinct() {
+    // Arrange: the same flattened TEXT components ['a', 'b'] under two different key shapes: a
+    // two-column partition key with NO clustering key vs a one-column partition key plus a
+    // one-column clustering key. The canonical identity's boundary sentinel and clustering-key
+    // presence marker must keep the flattened component lists from colliding across the
+    // partition/clustering boundary.
+    Snapshot.Key compositeKey =
+        new Snapshot.Key(prepareGetWithCompositePartitionKey("a", "b"), icuPrimaryCollation());
+    Get split =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, "a"))
+            .clusteringKey(Key.ofText(ANY_NAME_2, "b"))
+            .build();
+    Snapshot.Key splitKey = new Snapshot.Key(split, icuPrimaryCollation());
+
+    // Act Assert: NOT equal in either direction, and distinct map entries.
+    assertThat(compositeKey).isNotEqualTo(splitKey);
+    assertThat(splitKey).isNotEqualTo(compositeKey);
+    ConcurrentHashMap<Snapshot.Key, String> map = new ConcurrentHashMap<>();
+    map.put(compositeKey, "composite");
+    map.put(splitKey, "split");
+    assertThat(map).hasSize(2);
+    assertThat(map.get(compositeKey)).isEqualTo("composite");
+    assertThat(map.get(splitKey)).isEqualTo("split");
+  }
+
+  @Test
+  public void
+      equalsAndHashCode_CaseVariantCompositeTextPartitionKeysUnderIcuPrimary_ShouldBeEqual() {
+    // Arrange: EVERY TEXT column of a multi-column partition key is canonicalized: the
+    // component-wise case-variant spellings ['a', 'B'] and ['A', 'b'] collate-equal at PRIMARY
+    // strength.
+    Snapshot.Key key1 =
+        new Snapshot.Key(prepareGetWithCompositePartitionKey("a", "B"), icuPrimaryCollation());
+    Snapshot.Key key2 =
+        new Snapshot.Key(prepareGetWithCompositePartitionKey("A", "b"), icuPrimaryCollation());
+
+    // Act Assert: equal in both directions with consistent hash codes, and ONE map entry.
+    assertThat(key1).isEqualTo(key2);
+    assertThat(key2).isEqualTo(key1);
+    assertThat(key1.hashCode()).isEqualTo(key2.hashCode());
+    ConcurrentHashMap<Snapshot.Key, String> map = new ConcurrentHashMap<>();
+    map.put(key1, "first");
+    map.put(key2, "second");
+    assertThat(map).hasSize(1);
+    assertThat(map.get(key1)).isEqualTo("second");
+  }
+
+  @Test
+  public void equals_ByteIdenticalKeysBuiltWithDifferentComparators_ShouldStayDistinct() {
+    // Arrange: byte-identical keys, one carrying a canonical (ICU) identity and one a byte-exact
+    // (BINARY) identity.
+    Snapshot.Key icuKey = new Snapshot.Key(prepareGet(), icuPrimaryCollation());
+    Snapshot.Key binaryKey = new Snapshot.Key(prepareGet(), binaryCollation());
+
+    // Act Assert: canonical and byte-exact keys live in DIFFERENT identity universes, so a mixed
+    // pair is never equal in either direction, even for byte-identical keys. Treating them as
+    // equal would break the equals/hashCode contract: the canonical hash comes from the canonical
+    // component list while the byte-exact hash comes from the raw key fields, so equal-but-
+    // differently-hashed keys would corrupt hash maps. Production never mixes comparators; this
+    // pins the hardened contract.
+    assertThat(icuKey).isNotEqualTo(binaryKey);
+    assertThat(binaryKey).isNotEqualTo(icuKey);
+  }
 }

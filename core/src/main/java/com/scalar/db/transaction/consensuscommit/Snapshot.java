@@ -506,12 +506,7 @@ public class Snapshot {
       Put put = entry.getValue();
       if (!put.forNamespace().equals(scan.forNamespace())
           || !put.forTable().equals(scan.forTable())
-          // Collation-aware: collate-equal partition keys are the same physical partition on an
-          // aligned backend, so the scan-after-write range logic must apply to them.
-          || collationComparator
-                  .keyComparator()
-                  .compare(put.getPartitionKey(), scan.getPartitionKey())
-              != 0) {
+          || !partitionKeyEquals(put.getPartitionKey(), scan.getPartitionKey())) {
         continue;
       }
 
@@ -533,12 +528,11 @@ public class Snapshot {
         return true;
       }
 
-      // The range-membership check is a pure ordering test using the resolved clustering-key
-      // comparator: collation-aware when configured, otherwise the natural Key.compareTo, which
-      // reproduces ScalarDB's current behavior when the collation setting is unset. Using ordering
-      // only (>= / <= / > / <) rather than mixing byte-equals with compareTo means a key that
-      // collates-equal to an inclusive boundary is judged in-range. This is ordering only; it keys
-      // no map and collapses no identity.
+      // The range-membership check is a pure ordering test using the collation-derived
+      // clustering-key comparator (BINARY byte order by default, ICU when configured). Using
+      // ordering only (>= / <= / > / <) rather than mixing byte-equals with compareTo means a key
+      // that collates-equal to an inclusive boundary is judged in-range. This is ordering only; it
+      // keys no map and collapses no identity.
       if (isStartGiven && isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
@@ -566,6 +560,19 @@ public class Snapshot {
       }
     }
     return false;
+  }
+
+  /**
+   * Key equality following the collation: byte-exact under {@code BINARY} (the comparator's
+   * ordering would conflate distinct ill-formed strings via UTF-8 replacement bytes, so equality
+   * must not go through it), collation-aware under {@code ICU} (collate-equal partition keys are
+   * the same physical partition on an aligned backend).
+   */
+  private boolean partitionKeyEquals(com.scalar.db.io.Key key, com.scalar.db.io.Key another) {
+    if (collationComparator.hasCanonicalTextForm()) {
+      return collationComparator.keyComparator().compare(key, another) == 0;
+    }
+    return key.equals(another);
   }
 
   private boolean isAfterStart(
@@ -985,7 +992,6 @@ public class Snapshot {
         CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), id);
   }
 
-  @Immutable
   /**
    * The transaction layer's logical record key. Identity follows the configured collation: under
    * {@code ICU}, TEXT key columns are identified by their canonical collation form, so
@@ -993,9 +999,18 @@ public class Snapshot {
    * logical key across the snapshot maps, joins, and guards — matching what a collation-aligned
    * backend enforces. Under {@code BINARY} (the default) identity stays byte-exact. The visible
    * fields and {@link #toString()} always keep the original bytes.
+   *
+   * <p>All keys placed in one collection must be built with the same {@link CollationComparator}
+   * (production wiring guarantees this: one comparator per transaction manager). A canonical
+   * (ICU-built) key and a byte-exact (BINARY-built) key are never equal to each other.
    */
+  @Immutable
   public static final class Key implements Comparable<Key> {
-    /** Distinguishes an absent clustering key from an empty one in the canonical identity. */
+    /**
+     * Separates the partition-key components from the clustering-key components in the canonical
+     * identity, so flattened component lists cannot collide across the boundary (e.g. partition
+     * {@code [a, b]} with no clustering key vs partition {@code [a]} with clustering {@code [b]}).
+     */
     private static final String CLUSTERING_KEY_BOUNDARY = "scalar.db.collation.ck-boundary";
 
     private final String namespace;
@@ -1088,6 +1103,9 @@ public class Snapshot {
       components.add(table);
       addCanonicalColumns(components, partitionKey, comparator);
       components.add(CLUSTERING_KEY_BOUNDARY);
+      // Presence marker: keeps an absent clustering key distinct from a present-but-empty one,
+      // consistent with compareTo and MutationsGrouper's identity.
+      components.add(clusteringKey.isPresent());
       clusteringKey.ifPresent(key -> addCanonicalColumns(components, key, comparator));
       return components;
     }
@@ -1156,8 +1174,12 @@ public class Snapshot {
         return false;
       }
       Key another = (Key) o;
-      if (this.canonicalIdentity != null && another.canonicalIdentity != null) {
-        return this.canonicalIdentity.equals(another.canonicalIdentity);
+      if (this.canonicalIdentity != null || another.canonicalIdentity != null) {
+        // Canonical and byte-exact keys are different identity universes: a mixed pair is never
+        // equal (keeps equals consistent with hashCode; production never mixes comparators).
+        return this.canonicalIdentity != null
+            && another.canonicalIdentity != null
+            && this.canonicalIdentity.equals(another.canonicalIdentity);
       }
       return this.namespace.equals(another.namespace)
           && this.table.equals(another.table)

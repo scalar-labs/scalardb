@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
@@ -15,7 +14,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
-import com.scalar.db.io.DataType;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -170,20 +169,11 @@ public class MutationConditionsValidator {
   }
 
   /**
-   * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation. When the existing
-   * column is {@code TEXT} and both text values are non-null, equality is decided by the collation:
-   * byte-exact for {@link com.scalar.db.io.Collation#BINARY}, collation-aware for {@link
-   * com.scalar.db.io.Collation#ICU}. Otherwise it stays byte-exact via natural ordering.
+   * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation, following the
+   * collation (see {@link ScalarDbUtils#columnEquals}).
    */
   private boolean equalsForCondition(Column<?> existing, Column<?> conditionValue) {
-    if (existing.getDataType() == DataType.TEXT) {
-      String a = existing.getTextValue();
-      String b = conditionValue.getTextValue();
-      if (a != null && b != null) {
-        return collationComparator.textEquals(a, b);
-      }
-    }
-    return Ordering.natural().compare(existing, conditionValue) == 0;
+    return ScalarDbUtils.columnEquals(existing, conditionValue, collationComparator);
   }
 
   private int rangeCompare(Column<?> a, Column<?> b) {
