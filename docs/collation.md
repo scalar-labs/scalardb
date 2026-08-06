@@ -20,7 +20,7 @@ agree with those backends out of the box.
 
 | Property | Description |
 |---|---|
-| `scalar.db.collation` | Collation mode: `BINARY` (the default when absent) or `ICU`. Governs both **ordering** and **equality** (see "Collation-aware equality" below). |
+| `scalar.db.collation` | Collation mode: `BINARY` (the default when absent) or `ICU`. Governs **ordering**, **equality**, and — in the Consensus Commit transaction layer — **key identity** (see "Collation-aware equality" and "Collation-aware key identity" below). |
 | `scalar.db.collation.icu.locale` | *(ICU only)* Locale that selects the collation rules (for example `en`, `en_US`, `ja`). When absent, ICU's root locale is used. |
 | `scalar.db.collation.icu.strength` | *(ICU only)* One of `PRIMARY`, `SECONDARY`, `TERTIARY`, `QUATERNARY`, `IDENTICAL`. Controls how much detail ordering distinguishes: `PRIMARY` is case- and accent-insensitive; `SECONDARY` adds accent sensitivity; `TERTIARY` adds case sensitivity. When absent, ICU's default strength applies. |
 | `scalar.db.collation.icu.rules` | *(ICU only)* An optional custom ICU tailoring-rule string that fine-tunes ordering *on top of* the configured `locale` (its rules extend the locale's collation, or the root collation when no locale is set) and `strength`. A malformed rule string is rejected at startup. |
@@ -52,7 +52,8 @@ scalar.db.collation=BINARY
 
 ## Scope — what the setting governs
 
-`scalar.db.collation` governs both **ordering** and **equality**, and only the comparisons
+`scalar.db.collation` governs **ordering**, **equality**, and — under `ICU`, within the Consensus
+Commit transaction layer — **key identity**, and only the comparisons
 ScalarDB performs itself on the JVM:
 
 - object-storage scan sort and range filtering;
@@ -74,11 +75,10 @@ It does **not** affect:
   `ORDER BY`, and backends that reject cross-partition scans with ordering (DynamoDB,
   Cosmos DB, Cassandra) keep their native semantics. ScalarDB never emits `COLLATE` or
   charset clauses in DDL; the storage's collation stays the source of truth.
-- **Key identity** — `Key`/`Column` `equals()`/`hashCode()`, snapshot map keying, deduplication
-  keying, read/write-set membership, and delete-set overlap stay byte-exact **regardless of the
-  setting**. Collation-aware equality changes only *predicate/read* `=`/`!=` evaluation, never key
-  identity — treating distinct keys as one is a transaction-correctness change reserved for a later
-  phase (see "Collation-aware equality").
+- **Public API identity and stored bytes** — `Key`/`Column` `equals()`/`hashCode()` are
+  unchanged, and ScalarDB never rewrites or normalizes stored key bytes. The collation-canonical
+  key identity described under "Collation-aware key identity" below is localized to the Consensus
+  Commit transaction layer's own bookkeeping.
 
 ## Storage recommendation (guidance only)
 
@@ -118,25 +118,54 @@ null-text comparisons always stay byte-exact.
 - **`ICU`** — equality follows the collation: at a case-/accent-insensitive strength `'Apple'`
   equals `'apple'`; at a case-sensitive strength it distinguishes them.
 
-**What it does *not* change (the identity boundary):** `Key`/`Column` `equals()`/`hashCode()`,
-the snapshot map keying (`readSet`/`writeSet`/`deleteSet`), deduplication keying, and physical
-storage record keying stay **byte-exact**. Two values that collate-equal but differ in bytes (for
-example `'Apple'` and `'apple'`) remain **distinct keys and distinct stored rows**. So this version
-matches **predicate/read equality**, not key-level uniqueness — matching the backend's *uniqueness*
-on keys (which would require collation-aware key identity across the snapshot, deduplication, and
-mutation grouping, and a stricter backend invariant) is a **reserved future phase**, deliberately
-not built here.
-
-A concrete consequence of that boundary: a Consensus Commit scan-after-write conflict whose
-overlap depends on a collation-matching **partition or clustering key** — for example a blind
-insert to key `'Apple'` followed by a scan of key `'apple'` under a case-insensitive collation —
-is **not** detected in this version, because partition/clustering keys are still compared
-byte-exact. Only conflicts that depend on a **non-key predicate column** (a `WHERE`/conditional
-`=` on a value column) are collation-aware. Detecting key-collision conflicts is part of the
-reserved key-identity phase.
-
 Backend equality match has the same best-effort caveats as ordering (see below and
 [Storage collation compatibility](collation-storage-compatibility.md)).
+
+## Collation-aware key identity (Consensus Commit)
+
+Under `ICU`, the Consensus Commit transaction layer's **key identity** is collation-canonical:
+two collate-equal keys (for example the `'apple'` your application typed and the `'Apple'` the
+backend physically stores and returns from scans) are **one logical key** across the snapshot's
+read/write/delete bookkeeping, read-your-own-writes merging, the prepare-time before-image join,
+write-write and scan-after-write conflict detection (including collisions on partition/clustering
+keys and secondary-index values), and mutation grouping. This matches what a CI-collated backend
+itself enforces — one physical row per collation class, with collation-aware `=`, uniqueness, and
+read-your-own-writes (verified empirically against MySQL `utf8mb4_0900_ai_ci`). Without it, a
+byte-exact snapshot on such a backend silently returns stale reads of its own writes, aborts valid
+read-modify-writes at prepare, splits one row's writes in two, and misses scan-after-write
+conflicts. Under `BINARY` (the default), key identity stays byte-exact, unchanged.
+
+**What key identity does *not* change:** stored key bytes are never rewritten or normalized (the
+row keeps whatever spelling created it); `Key`/`Column` `equals()`/`hashCode()` and other public
+API semantics are untouched; physical uniqueness remains entirely the backend's job.
+
+**The aligned-backend contract (stricter than for ordering/equality):** collation-aware key
+identity assumes the backend's key collation matches the configured `ICU` collation, in two ways:
+
+1. **Uniqueness:** the backend must enforce one row per collation class on keys (a CI PK/unique
+   index), so the transaction layer's one-logical-key view cannot collapse two real rows.
+2. **Point-read resolution (recovery):** the backend must resolve point reads by the same
+   collation — a write-set key recorded as `'apple'` must find a record physically stored as
+   `'Apple'` during lazy recovery, or recovery silently leaves records `PREPARED`.
+
+"Matches" is bounded by collation-version skew: MySQL's `utf8mb4_0900_*` implements UCA 9.0.0
+while the bundled ICU4J implements a much newer Unicode version, so equality classes can disagree
+for characters whose collation weights changed in between. The alignment premise holds only for
+text whose equality classes agree between the backend collation and the bundled ICU — restrict
+key text to a stable repertoire, and re-verify alignment when the bundled ICU version changes.
+
+**Misaligned backends are unsafe for `ICU` key identity** (byte-order backends such as Cassandra,
+DynamoDB, Cosmos DB, PostgreSQL `C` — or an "aligned" backend on text hitting the version skew
+above). ScalarDB applies the setting without validation, so the operator owns the consequences:
+two physically distinct collate-equal rows collapse into one entry in the transaction layer's
+result maps (a row silently dropped, limit counts change); writes to physically distinct rows are
+canonically merged (one write silently dropped); legitimate scan-after-write patterns on genuinely
+distinct keys abort as false conflicts; and where the backend equates strings ICU distinguishes,
+the split-identity defects resurface for those strings. Use `BINARY` on such backends.
+
+**Upgrade note:** a deployment already running `scalar.db.collation=ICU` (for example adopted for
+ordering alone on an earlier version) gets collation-canonical key identity on upgrade with no
+configuration action. Assess backend alignment per the contract above, or switch to `BINARY`.
 
 ## Limitations
 - **Upgrade note (default ordering change).** Compared to releases without the collation
