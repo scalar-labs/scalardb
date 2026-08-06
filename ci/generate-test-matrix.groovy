@@ -19,8 +19,9 @@ def testsByCategory = new YamlSlurper().parse(new File(scriptBasePath.resolve("t
 // Expand tests by versions and group commit settings
 def expandedTestsConfig = expandTests(testsByCategory)
 
-// Select the tests to run based on the TESTS environment variable
+// Select the tests to run based on the TESTS environment variable, then narrow by FLAVOR
 expandedTestsConfig = selectTests(expandedTestsConfig)
+expandedTestsConfig = filterByFlavor(expandedTestsConfig)
 
 // Output the full expanded test configuration as JSON to a file
 // This file will be shared with integration test jobs as a build artifact. This is necessary because
@@ -207,4 +208,39 @@ static def selectTests(expandedTests) {
     }
 
     return expandedTests.findAll { labelsToKeep.contains(it.label) }
+}
+
+// Abort rather than emit an empty matrix: GitHub reports {"include": []} as an opaque
+// strategy error rather than a useful message.
+static def checkNotEmpty(tests) {
+    if (tests.isEmpty()) {
+        failWith("No tests selected. Check the TESTS and FLAVOR inputs.")
+    }
+}
+
+// Narrow the selection to a single test flavor. An empty FLAVOR means 'all', which is what the
+// pull_request and workflow_call paths pass.
+static def filterByFlavor(selectedTests) {
+    def flavor = ((System.getenv('FLAVOR') ?: '').trim().toLowerCase()) ?: 'all'
+
+    if (!(flavor in ['all', 'group-commit', 'normal'])) {
+        failWith("Unknown FLAVOR '${flavor}'.\nValid flavors: all, group-commit, normal")
+    }
+
+    checkNotEmpty(selectedTests)
+    if (flavor == 'all') {
+        return selectedTests
+    }
+
+    def wantedGroupCommit = (flavor == 'group-commit') ? 'true' : 'false'
+    def filtered = selectedTests.findAll { it.group_commit_enabled == wantedGroupCommit }
+
+    if (filtered.isEmpty()) {
+        def labels = selectedTests.collect { it.label }.unique().sort()
+        failWith("The selection matched ${labels.size()} test(s), but none of them has a " +
+                "${flavor} variant,\n  so FLAVOR='${flavor}' leaves nothing to run.\n" +
+                "  Matched tests: ${labels.join(', ')}")
+    }
+
+    return filtered
 }
