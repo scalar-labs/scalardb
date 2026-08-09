@@ -23,7 +23,7 @@ class RdbEngineTidbTest {
   }
 
   @Test
-  void adjustJdbcUrl_WithNoParams_ShouldAppendPermitMysqlSchemeAndDisableReadOnlyPropagation() {
+  void adjustJdbcUrl_WithNoParams_ShouldAppendMysqlSchemeAndDisableReadOnlyPropagation() {
     String result = rdbEngineTidb.adjustJdbcUrl("jdbc:mysql://localhost:4000/");
     assertThat(result)
         .isEqualTo(
@@ -31,7 +31,7 @@ class RdbEngineTidbTest {
   }
 
   @Test
-  void adjustJdbcUrl_WithExistingParams_ShouldAppendPermitMysqlSchemeAndDisableReadOnlyPropagation() {
+  void adjustJdbcUrl_WithExistingParams_ShouldAppendMysqlSchemeAndDisableReadOnlyPropagation() {
     String result = rdbEngineTidb.adjustJdbcUrl("jdbc:mysql://localhost:4000/?sslMode=REQUIRED");
     assertThat(result)
         .isEqualTo(
