@@ -2,9 +2,10 @@ package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 
 import com.google.auth.Credentials;
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ public class SpannerCredentialsProviderTest {
 
   @Test
   void getCredentials_AfterRegister_ReturnsRegistered() throws Exception {
-    Credentials credentials = mock(Credentials.class);
+    Credentials credentials = newCredentials();
     String className = SpannerCredentialsProvider.register(credentials, key("a"));
 
     SpannerCredentialsProvider provider = instantiate(className);
@@ -28,15 +29,15 @@ public class SpannerCredentialsProviderTest {
 
   @Test
   void register_FirstCredentials_AssignsSlot0() {
-    String className = SpannerCredentialsProvider.register(mock(Credentials.class), key("a"));
+    String className = SpannerCredentialsProvider.register(newCredentials(), key("a"));
 
     assertThat(className).isEqualTo(SpannerCredentialsProvider.Slot0.class.getName());
   }
 
   @Test
   void register_SameIdentityKeyTwice_ReturnsSameSlot() throws Exception {
-    Credentials first = mock(Credentials.class);
-    Credentials second = mock(Credentials.class); // Different instance, same identity bytes.
+    Credentials first = newCredentials();
+    Credentials second = newCredentials(); // Different instance, same identity bytes.
     byte[] identity = key("a");
 
     String firstSlot = SpannerCredentialsProvider.register(first, identity);
@@ -49,8 +50,8 @@ public class SpannerCredentialsProviderTest {
 
   @Test
   void register_DifferentIdentityKeys_AssignsDifferentSlots() throws Exception {
-    Credentials a = mock(Credentials.class);
-    Credentials b = mock(Credentials.class);
+    Credentials a = newCredentials();
+    Credentials b = newCredentials();
 
     String classA = SpannerCredentialsProvider.register(a, key("a"));
     String classB = SpannerCredentialsProvider.register(b, key("b"));
@@ -63,11 +64,11 @@ public class SpannerCredentialsProviderTest {
 
   @Test
   void register_FillsAllFiveSlots_ReturnsDistinctSlotClasses() throws Exception {
-    Credentials c0 = mock(Credentials.class);
-    Credentials c1 = mock(Credentials.class);
-    Credentials c2 = mock(Credentials.class);
-    Credentials c3 = mock(Credentials.class);
-    Credentials c4 = mock(Credentials.class);
+    Credentials c0 = newCredentials();
+    Credentials c1 = newCredentials();
+    Credentials c2 = newCredentials();
+    Credentials c3 = newCredentials();
+    Credentials c4 = newCredentials();
 
     String n0 = SpannerCredentialsProvider.register(c0, key("0"));
     String n1 = SpannerCredentialsProvider.register(c1, key("1"));
@@ -89,25 +90,25 @@ public class SpannerCredentialsProviderTest {
 
   @Test
   void register_SixthDistinctIdentityKey_ThrowsIllegalStateException() {
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("0"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("1"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("2"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("3"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("4"));
+    SpannerCredentialsProvider.register(newCredentials(), key("0"));
+    SpannerCredentialsProvider.register(newCredentials(), key("1"));
+    SpannerCredentialsProvider.register(newCredentials(), key("2"));
+    SpannerCredentialsProvider.register(newCredentials(), key("3"));
+    SpannerCredentialsProvider.register(newCredentials(), key("4"));
 
-    assertThatThrownBy(() -> SpannerCredentialsProvider.register(mock(Credentials.class), key("5")))
+    assertThatThrownBy(() -> SpannerCredentialsProvider.register(newCredentials(), key("5")))
         .isInstanceOf(IllegalStateException.class);
   }
 
   @Test
   void register_AlreadyRegisteredIdentityAfterSlotsFull_ReturnsExistingSlot() {
-    String firstSlot = SpannerCredentialsProvider.register(mock(Credentials.class), key("0"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("1"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("2"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("3"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("4"));
+    String firstSlot = SpannerCredentialsProvider.register(newCredentials(), key("0"));
+    SpannerCredentialsProvider.register(newCredentials(), key("1"));
+    SpannerCredentialsProvider.register(newCredentials(), key("2"));
+    SpannerCredentialsProvider.register(newCredentials(), key("3"));
+    SpannerCredentialsProvider.register(newCredentials(), key("4"));
 
-    String again = SpannerCredentialsProvider.register(mock(Credentials.class), key("0"));
+    String again = SpannerCredentialsProvider.register(newCredentials(), key("0"));
 
     assertThat(again).isEqualTo(firstSlot);
   }
@@ -115,7 +116,7 @@ public class SpannerCredentialsProviderTest {
   @Test
   void register_IdentityKeyIsDefensivelyCopied() throws Exception {
     byte[] identity = key("a");
-    Credentials credentials = mock(Credentials.class);
+    Credentials credentials = newCredentials();
 
     String className = SpannerCredentialsProvider.register(credentials, identity);
 
@@ -144,24 +145,41 @@ public class SpannerCredentialsProviderTest {
 
   @Test
   void register_NullIdentityKey_ThrowsNullPointerException() {
-    assertThatThrownBy(() -> SpannerCredentialsProvider.register(mock(Credentials.class), null))
+    assertThatThrownBy(() -> SpannerCredentialsProvider.register(newCredentials(), null))
         .isInstanceOf(NullPointerException.class);
   }
 
   @Test
   void clear_AfterRegister_ResetsAllSlots() {
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("0"));
-    SpannerCredentialsProvider.register(mock(Credentials.class), key("1"));
+    SpannerCredentialsProvider.register(newCredentials(), key("0"));
+    SpannerCredentialsProvider.register(newCredentials(), key("1"));
 
     SpannerCredentialsProvider.clear();
 
     // After clear, the next registration should land in Slot0 again.
-    String className = SpannerCredentialsProvider.register(mock(Credentials.class), key("0"));
+    String className = SpannerCredentialsProvider.register(newCredentials(), key("0"));
     assertThat(className).isEqualTo(SpannerCredentialsProvider.Slot0.class.getName());
   }
 
   private static byte[] key(String s) {
     return s.getBytes(StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Returns a distinct {@link Credentials} instance. {@link SpannerCredentialsProvider} only stores
+   * and hands back the reference, so these tests just need instances they can compare by identity.
+   *
+   * <p>A real {@link GoogleCredentials} is used rather than a Mockito mock or a hand-written
+   * subclass, because under Java 8 neither works. {@code Credentials} is annotated with JSpecify's
+   * {@code @NullMarked}, whose {@code @Target} lists {@code ElementType.MODULE} — an enum constant
+   * added in Java 9 — so reading its annotations through Java 8 reflection throws {@code
+   * ArrayStoreException: EnumConstantNotPresentExceptionProxy}. That breaks Mockito, which copies
+   * the mocked type's annotations onto the generated mock, and it equally breaks any test-source
+   * subclass of {@code Credentials}, because JUnit walks the supertypes of every class in the test
+   * source set during discovery. Instantiating an existing implementation avoids both.
+   */
+  private static Credentials newCredentials() {
+    return GoogleCredentials.create(new AccessToken("token", null));
   }
 
   /**
