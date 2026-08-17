@@ -15,11 +15,13 @@
 blob-storage:
   - label: blob-storage
     display_name: Blob Storage
+    # Start azurite with `--skipApiVersionCheck` to avoid API version check issues
     setup: |
       docker run -d --name azurite \
         -e AZURITE_ACCOUNTS=test:test \
         -p 10000:10000 \
-        mcr.microsoft.com/azure-storage/azurite
+        mcr.microsoft.com/azure-storage/azurite \
+        azurite --blobHost 0.0.0.0 --location /data --skipApiVersionCheck
     # ScalarDB requires an access key, which has full access to Azure Blob Storage, for authentication.
     create_test_user: # Do nothing
     run: |
