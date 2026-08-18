@@ -283,45 +283,61 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                 return null;
               });
 
-          // Run the drop/alter/re-add sequence atomically: SQL Server DDL is transactional, so a
-          // midway failure rolls back to the original table definition, including the primary key
-          boolean originalAutoCommit = connection.getAutoCommit();
-          connection.setAutoCommit(false);
-          try {
-            // Pass false as requiresExplicitCommit so that each statement does not commit on its
-            // own; the whole sequence is committed once below
-            JdbcAdmin.execute(
-                connection,
-                "ALTER TABLE "
-                    + fullTableName
-                    + " DROP CONSTRAINT "
-                    + rdbEngine.enclose(primaryKeyName),
-                false);
-            for (String alterColumnStatement : alterColumnStatements) {
-              JdbcAdmin.execute(connection, alterColumnStatement, false);
-            }
-            JdbcAdmin.execute(
-                connection,
-                "ALTER TABLE "
-                    + fullTableName
-                    + " ADD CONSTRAINT "
-                    + rdbEngine.enclose(primaryKeyName)
-                    + " PRIMARY KEY ("
-                    + String.join(",", primaryKeyColumnClauses)
-                    + ")",
-                false);
-            connection.commit();
-          } catch (SQLException e) {
-            try {
-              connection.rollback();
-            } catch (SQLException rollbackEx) {
-              e.addSuppressed(rollbackEx);
-            }
-            throw e;
-          } finally {
-            connection.setAutoCommit(originalAutoCommit);
-          }
+          runSqlServerCollationAlterSequence(
+              connection,
+              fullTableName,
+              primaryKeyName,
+              primaryKeyColumnClauses,
+              alterColumnStatements);
         });
+  }
+
+  // The SQL is built from catalog metadata, so the nonconstant-string warning does not apply. The
+  // suppression must live on a named method: SpotBugs does not apply a method-level annotation to
+  // the synthetic method generated for a lambda.
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  private void runSqlServerCollationAlterSequence(
+      Connection connection,
+      String fullTableName,
+      String primaryKeyName,
+      List<String> primaryKeyColumnClauses,
+      List<String> alterColumnStatements)
+      throws SQLException {
+    // Run the drop/alter/re-add sequence atomically: SQL Server DDL is transactional, so a
+    // midway failure rolls back to the original table definition, including the primary key
+    boolean originalAutoCommit = connection.getAutoCommit();
+    connection.setAutoCommit(false);
+    try {
+      // Pass false as requiresExplicitCommit so that each statement does not commit on its
+      // own; the whole sequence is committed once below
+      JdbcAdmin.execute(
+          connection,
+          "ALTER TABLE " + fullTableName + " DROP CONSTRAINT " + rdbEngine.enclose(primaryKeyName),
+          false);
+      for (String alterColumnStatement : alterColumnStatements) {
+        JdbcAdmin.execute(connection, alterColumnStatement, false);
+      }
+      JdbcAdmin.execute(
+          connection,
+          "ALTER TABLE "
+              + fullTableName
+              + " ADD CONSTRAINT "
+              + rdbEngine.enclose(primaryKeyName)
+              + " PRIMARY KEY ("
+              + String.join(",", primaryKeyColumnClauses)
+              + ")",
+          false);
+      connection.commit();
+    } catch (SQLException e) {
+      try {
+        connection.rollback();
+      } catch (SQLException rollbackEx) {
+        e.addSuppressed(rollbackEx);
+      }
+      throw e;
+    } finally {
+      connection.setAutoCommit(originalAutoCommit);
+    }
   }
 
   @Override

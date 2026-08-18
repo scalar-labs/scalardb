@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -171,6 +172,9 @@ public final class JdbcEnv {
     return false;
   }
 
+  // The Statement and ResultSet are closed by try-with-resources; SpotBugs' obligation analysis
+  // cannot see through the compiler-generated close paths and reports a false positive.
+  @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "ODR_OPEN_DATABASE_RESOURCE"})
   private static CollationProbeResult probeMysqlCollationSupport() {
     String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
