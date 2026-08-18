@@ -47,10 +47,10 @@ Legend: ✅ exact match · 🟡 ICU best-effort (not byte-exact) · ⚠️ exact
 | Storage | Byte-order option → `BINARY` | UCA / linguistic option → `ICU` |
 |---|---|---|
 | MySQL 8.4/8.0, Aurora MySQL v3 | `utf8mb4_0900_bin` (NO PAD) → ✅ · legacy `utf8mb4_bin` (PAD SPACE) → ⚠️ trailing spaces | default `utf8mb4_0900_ai_ci` = UCA **9.0.0** + CLDR 30 → 🟡 |
-| MariaDB 11.4 | `utf8mb4_bin` → ⚠️ trailing spaces | 11.4+ default `utf8mb4_uca1400_ai_ci` = UCA **14.0.0** → 🟡 |
+| MariaDB 11.4 | `utf8mb4_nopad_bin` (NO PAD) → ✅ · `utf8mb4_bin` → ⚠️ trailing spaces | 11.4+ default `utf8mb4_uca1400_ai_ci` = UCA **14.0.0** → 🟡 (verified by the collation integration tests at ICU `PRIMARY`) |
 | MariaDB 10.11, Aurora MySQL v2 | `utf8mb4_bin` → ⚠️ trailing spaces | default `utf8mb4_general_ci` = **non-UCA legacy** → ❌ |
-| TiDB 8.5–6.5 | default `utf8mb4_bin` (new framework **trims** trailing spaces) → ⚠️ | `utf8mb4_0900_ai_ci` / `unicode_ci` if configured → 🟡 |
-| PostgreSQL 17–13, Aurora PG, AlloyDB | `C` / `POSIX` / builtin `C.UTF-8` → ✅ (AlloyDB default is `C.UTF-8`) | ICU provider → 🟡 (must match server's ICU version) · **glibc** locale e.g. `en_US.UTF-8` → ❌ (glibc ≠ ICU, version drift) |
+| TiDB 8.5–6.5 | default `utf8mb4_bin` (new framework **trims** trailing spaces) → ⚠️ | `utf8mb4_0900_ai_ci` / `unicode_ci` if configured → 🟡 (TiDB rejects converting the collation of indexed columns, so a collation must be chosen at table creation) |
+| PostgreSQL 17–13, Aurora PG, AlloyDB | `C` / `POSIX` / builtin `C.UTF-8` → ✅ (AlloyDB default is `C.UTF-8`) | ICU provider → 🟡 (must match server's ICU version; a nondeterministic ICU collation at primary strength is verified by the collation integration tests on PostgreSQL 17 and AlloyDB) · **glibc** locale e.g. `en_US.UTF-8` → ❌ (glibc ≠ ICU, version drift) |
 | YugabyteDB 2 (YSQL) | database collation **must be `C`** → ✅ | per-column ICU → 🟡 |
 | Oracle 23ai/21c/19c | `NLS_SORT=BINARY` (common default) → ✅ | `UCA1210_*` → 🟡 · `GENERIC_M` / monolingual (non-UCA) → ❌ |
 | SQL Server 2022–2017 | `*_BIN2` (pure code-point) → ✅ | Windows/`SQL_*` collations = proprietary NLS tables, non-UCA → ❌ in general · `*_CI_AI` (e.g. `Latin1_General_100_CI_AI`) is **practically compatible for basic-Latin data** with ICU `PRIMARY` → 🟡 (expansions such as ß/ss, ligatures, and non-Latin scripts still diverge and stay unaligned) |

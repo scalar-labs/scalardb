@@ -175,13 +175,25 @@ to the target backend collation via a test-only `AdminTestUtils` hook:
 
 - **Storage-layer suite** (`DistributedStorageCollationIntegrationTestBase`): scan ordering,
   conditional-mutation `EQ`/`NE` across collate-equal spellings, range operators across case
-  boundaries, and cross-partition filtering. Runs on MySQL 8.x (`utf8mb4_0900_ai_ci`),
-  SQL Server (`Latin1_General_100_CI_AI`, basic-Latin data only), and object storage (no backend
-  collation — ScalarDB's in-memory comparisons alone are under test).
+  boundaries, and cross-partition filtering. Runs on MySQL 8.x (`utf8mb4_0900_ai_ci`), MariaDB
+  10.10+ (`utf8mb4_uca1400_ai_ci`), PostgreSQL and AlloyDB (a nondeterministic ICU collation at
+  primary strength the tests create), SQL Server (`Latin1_General_100_CI_AI`, basic-Latin data
+  only), and object storage (no backend collation — ScalarDB's in-memory comparisons alone are
+  under test).
 - **Consensus Commit key-identity suite** (`ConsensusCommitCollationIntegrationTestBase`): the
   aligned-backend scenarios above (read-modify-write across spellings, read-your-own-writes,
   write-write convergence to one physical row, scan-after-delete detection) through real
-  transactions. Runs on MySQL 8.x and SQL Server; other backends skip via a capability gate.
+  transactions. Runs on the same JDBC backends as the storage-layer suite (object storage is
+  excluded: its record identity is byte-exact, so the aligned-backend contract is structurally
+  unavailable there). Other JDBC backends skip via a capability gate
+  (`JdbcCollationTestUtils.isCollationTestSupported`); on the CI-covered backends the gate is
+  enforced with `scalardb.jdbc.collation_test=required`, which turns an inconclusive probe (e.g. a
+  connection failure) into a hard error so an unreachable or half-configured backend can never
+  silently skip. A definitive incapability verdict (MySQL 5.7, TiDB, a PostgreSQL build without
+  ICU) still skips even in required mode, with the reason logged at WARN. TiDB stays excluded even though it supports
+  `utf8mb4_0900_ai_ci` expressions: it rejects converting the collation of indexed columns
+  ("Unsupported converting collation ... when index is defined on it"), and every ScalarDB key
+  column is indexed, so the tests cannot produce a collated table there.
 
 The CI jobs' **default** collations are pinned to exact `BINARY` matches so the rest of the test
 matrix exercises the default mode faithfully: MySQL 8.x `utf8mb4_0900_bin` (5.7 keeps legacy

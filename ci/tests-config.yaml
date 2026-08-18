@@ -108,7 +108,7 @@ jdbc:
       docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.jdbc.collation_test=required
 
   - label: db2_%VERSION%
     display_name: Db2 %VERSION%
@@ -144,7 +144,7 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mariadb://localhost:3306 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.jdbc.collation_test=required
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
@@ -233,7 +233,7 @@ jdbc:
       docker exec postgresql psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.jdbc.collation_test=required
 
   - label: sqlserver_%VERSION%
     display_name: SQL Server %VERSION%

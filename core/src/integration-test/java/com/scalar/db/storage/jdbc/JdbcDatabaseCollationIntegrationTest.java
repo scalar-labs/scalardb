@@ -2,10 +2,9 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorageCollationIntegrationTestBase;
 import java.util.Properties;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.condition.EnabledIf;
 
-@EnabledIf("com.scalar.db.storage.jdbc.JdbcEnv#isCollationTestSupported")
+@EnabledIf("com.scalar.db.storage.jdbc.JdbcCollationTestUtils#isCollationTestSupported")
 public class JdbcDatabaseCollationIntegrationTest
     extends DistributedStorageCollationIntegrationTestBase {
 
@@ -20,17 +19,23 @@ public class JdbcDatabaseCollationIntegrationTest
     return properties;
   }
 
-  @AfterAll
-  void closeJdbcAdminTestUtils() throws Exception {
+  @Override
+  protected void closeCollationTestResources() throws Exception {
     if (jdbcAdminTestUtils != null) {
       jdbcAdminTestUtils.close();
     }
   }
 
   @Override
+  protected void cleanUpCollationArtifacts(String namespace) throws Exception {
+    jdbcAdminTestUtils.dropTestCollation(
+        namespace, JdbcCollationTestUtils.getCollationTestTargetCollation());
+  }
+
+  @Override
   protected void applyCollation(String namespace, String table) throws Exception {
     jdbcAdminTestUtils.alterTableCollation(
-        namespace, table, JdbcEnv.getCollationTestTargetCollation());
+        namespace, table, JdbcCollationTestUtils.getCollationTestTargetCollation());
   }
 
   @Override

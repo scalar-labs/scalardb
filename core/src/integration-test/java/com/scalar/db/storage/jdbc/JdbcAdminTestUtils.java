@@ -159,7 +159,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   public void alterTableCollation(String namespace, String table, String collation)
       throws Exception {
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
       execute(
           "ALTER TABLE "
               + rdbEngine.encloseFullTableName(namespace, table)
@@ -167,12 +167,110 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
               + collation);
     } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       alterTableCollationForSqlServer(namespace, table, collation);
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      alterTableCollationForPostgresql(namespace, table, collation);
     } else {
       throw new UnsupportedOperationException(
           "Altering the table collation is not supported for the "
               + rdbEngine.getClass().getSimpleName()
               + " engine");
     }
+  }
+
+  /**
+   * Drops the collation object the collation tests created in the given namespace, if any. On
+   * PostgreSQL the created collation depends on the namespace schema and blocks the non-CASCADE
+   * {@code DROP SCHEMA} used at teardown, so it must be dropped first; on the other engines the
+   * tests use built-in collations and this is a no-op.
+   *
+   * @param namespace the namespace the collation was created in
+   * @param collation the collation name
+   * @throws SQLException if a database error occurs
+   */
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  public void dropTestCollation(String namespace, String collation) throws SQLException {
+    if (!JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return;
+    }
+    execute(
+        "DROP COLLATION IF EXISTS "
+            + rdbEngine.enclose(namespace)
+            + "."
+            + rdbEngine.enclose(collation));
+  }
+
+  /**
+   * Applies a collation to all TEXT columns of the table on PostgreSQL. The named collation is
+   * created in the table's schema as a nondeterministic ICU collation at primary strength (case-
+   * and accent-insensitive); {@code ALTER COLUMN ... TYPE} rebuilds dependent indexes, including
+   * the primary key, so no constraint dance is needed.
+   */
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  private void alterTableCollationForPostgresql(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          String enclosedCollation =
+              rdbEngine.enclose(namespace) + "." + rdbEngine.enclose(collation);
+          // Drop-and-create rather than IF NOT EXISTS so a collation leaked by a prior broken run
+          // is never silently reused with an outdated definition
+          JdbcAdmin.execute(
+              connection, "DROP COLLATION IF EXISTS " + enclosedCollation, requiresExplicitCommit);
+          JdbcAdmin.execute(
+              connection,
+              "CREATE COLLATION "
+                  + enclosedCollation
+                  + " (provider = icu, locale = 'und-u-ks-level1', deterministic = false)",
+              requiresExplicitCommit);
+          // ScalarDB maps TEXT to "text" for regular columns but to VARCHAR(10485760) for key
+          // columns on PostgreSQL, so both character types must be enumerated, restating each
+          // column's own type
+          List<String> alterColumnStatements = new ArrayList<>();
+          executeQuery(
+              connection,
+              "SELECT column_name, data_type, character_maximum_length"
+                  + " FROM information_schema.columns"
+                  + " WHERE table_schema = ? AND table_name = ?"
+                  + " AND data_type IN ('text', 'character varying')",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String dataType = rs.getString(2);
+                  long maxLength = rs.getLong(3);
+                  String type = "text".equals(dataType) ? "TEXT" : "VARCHAR(" + maxLength + ")";
+                  alterColumnStatements.add(
+                      "ALTER TABLE "
+                          + rdbEngine.encloseFullTableName(namespace, table)
+                          + " ALTER COLUMN "
+                          + rdbEngine.enclose(columnName)
+                          + " TYPE "
+                          + type
+                          + " COLLATE "
+                          + enclosedCollation);
+                }
+                return null;
+              });
+          // The tables under collation test always have TEXT columns; finding none means the
+          // enumeration missed the table and the collation would silently not be applied
+          if (alterColumnStatements.isEmpty()) {
+            throw new IllegalStateException(
+                "No character-typed columns found on "
+                    + namespace
+                    + "."
+                    + table
+                    + " to apply the collation");
+          }
+          for (String alterColumnStatement : alterColumnStatements) {
+            JdbcAdmin.execute(connection, alterColumnStatement, requiresExplicitCommit);
+          }
+        });
   }
 
   /**

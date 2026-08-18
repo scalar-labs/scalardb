@@ -148,12 +148,33 @@ public abstract class DistributedStorageCollationIntegrationTestBase {
     } catch (Exception e) {
       logger.warn("Failed to close storage", e);
     }
+    try {
+      closeCollationTestResources();
+    } catch (Exception e) {
+      logger.warn("Failed to close collation test resources", e);
+    }
   }
 
-  private void dropTable() throws ExecutionException {
+  /**
+   * Closes any resources the subclass holds for {@link #applyCollation(String, String)} and {@link
+   * #cleanUpCollationArtifacts(String)}. Called at the end of teardown, after the namespace drop
+   * that {@code cleanUpCollationArtifacts} participates in. The default implementation is a no-op.
+   */
+  protected void closeCollationTestResources() throws Exception {}
+
+  private void dropTable() throws Exception {
     admin.dropTable(namespace, TABLE);
+    cleanUpCollationArtifacts(namespace);
     admin.dropNamespace(namespace);
   }
+
+  /**
+   * Drops any backend collation object {@link #applyCollation(String, String)} created, after the
+   * table is dropped and before the namespace is dropped (on PostgreSQL the created collation
+   * depends on the namespace schema and would block a non-CASCADE schema drop). The default
+   * implementation is a no-op.
+   */
+  protected void cleanUpCollationArtifacts(String namespace) throws Exception {}
 
   /**
    * Clustering-key values that are pairwise distinct under ICU PRIMARY strength but case- and
