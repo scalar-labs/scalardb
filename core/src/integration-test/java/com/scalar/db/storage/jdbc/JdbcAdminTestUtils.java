@@ -15,6 +15,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import javax.annotation.Nullable;
 
@@ -151,6 +153,169 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
       throws ExecutionException {
     deleteAllRowsWithSql(namespace, table + "_data");
     deleteAllRowsWithSql(namespace, table + "_tx_metadata");
+  }
+
+  @Override
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  public void alterTableCollation(String namespace, String table, String collation)
+      throws Exception {
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      execute(
+          "ALTER TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + " CONVERT TO CHARACTER SET utf8mb4 COLLATE "
+              + collation);
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      alterTableCollationForSqlServer(namespace, table, collation);
+    } else {
+      throw new UnsupportedOperationException(
+          "Altering the table collation is not supported for the "
+              + rdbEngine.getClass().getSimpleName()
+              + " engine");
+    }
+  }
+
+  /**
+   * Applies the collation to all character-typed columns of the table on SQL Server. SQL Server
+   * rejects collation changes on columns that are part of a primary key or index, so the primary
+   * key constraint is dropped first, each character column is altered with the collation (restating
+   * its full data type and nullability retrieved from INFORMATION_SCHEMA), and the primary key
+   * constraint is then re-added with its original column order.
+   */
+  private void alterTableCollationForSqlServer(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
+
+          // Retrieve the primary key constraint name
+          String primaryKeyName =
+              executeQuery(
+                  connection,
+                  "SELECT kc.name FROM sys.key_constraints kc"
+                      + " JOIN sys.tables t ON kc.parent_object_id = t.object_id"
+                      + " JOIN sys.schemas s ON t.schema_id = s.schema_id"
+                      + " WHERE kc.type = 'PK' AND s.name = ? AND t.name = ?",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  rs -> rs.next() ? rs.getString(1) : null);
+
+          // Retrieve the primary key columns in their original order
+          List<String> primaryKeyColumns = new ArrayList<>();
+          executeQuery(
+              connection,
+              "SELECT c.name FROM sys.index_columns ic"
+                  + " JOIN sys.indexes i"
+                  + " ON ic.object_id = i.object_id AND ic.index_id = i.index_id"
+                  + " JOIN sys.columns c"
+                  + " ON ic.object_id = c.object_id AND ic.column_id = c.column_id"
+                  + " JOIN sys.tables t ON i.object_id = t.object_id"
+                  + " JOIN sys.schemas s ON t.schema_id = s.schema_id"
+                  + " WHERE i.is_primary_key = 1 AND s.name = ? AND t.name = ?"
+                  + " ORDER BY ic.key_ordinal",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  primaryKeyColumns.add(rs.getString(1));
+                }
+                return null;
+              });
+
+          // Build an ALTER COLUMN statement for each character-typed column, restating its full
+          // data type, length, and nullability
+          List<String> alterColumnStatements = new ArrayList<>();
+          executeQuery(
+              connection,
+              "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE"
+                  + " FROM INFORMATION_SCHEMA.COLUMNS"
+                  + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
+                  + " AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar')",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String dataType = rs.getString(2);
+                  int maxLength = rs.getInt(3);
+                  String length = maxLength == -1 ? "MAX" : String.valueOf(maxLength);
+                  String nullability =
+                      "YES".equalsIgnoreCase(rs.getString(4)) ? "NULL" : "NOT NULL";
+                  alterColumnStatements.add(
+                      "ALTER TABLE "
+                          + fullTableName
+                          + " ALTER COLUMN "
+                          + rdbEngine.enclose(columnName)
+                          + " "
+                          + dataType
+                          + "("
+                          + length
+                          + ") COLLATE "
+                          + collation
+                          + " "
+                          + nullability);
+                }
+                return null;
+              });
+
+          if (primaryKeyName != null) {
+            JdbcAdmin.execute(
+                connection,
+                "ALTER TABLE "
+                    + fullTableName
+                    + " DROP CONSTRAINT "
+                    + rdbEngine.enclose(primaryKeyName),
+                requiresExplicitCommit);
+          }
+          for (String alterColumnStatement : alterColumnStatements) {
+            JdbcAdmin.execute(connection, alterColumnStatement, requiresExplicitCommit);
+          }
+          if (primaryKeyName != null && !primaryKeyColumns.isEmpty()) {
+            List<String> enclosedPrimaryKeyColumns = new ArrayList<>();
+            for (String primaryKeyColumn : primaryKeyColumns) {
+              enclosedPrimaryKeyColumns.add(rdbEngine.enclose(primaryKeyColumn));
+            }
+            JdbcAdmin.execute(
+                connection,
+                "ALTER TABLE "
+                    + fullTableName
+                    + " ADD CONSTRAINT "
+                    + rdbEngine.enclose(primaryKeyName)
+                    + " PRIMARY KEY ("
+                    + String.join(",", enclosedPrimaryKeyColumns)
+                    + ")",
+                requiresExplicitCommit);
+          }
+        });
+  }
+
+  @Override
+  public int countRows(String namespace, String table) throws Exception {
+    String sql = "SELECT COUNT(*) FROM " + rdbEngine.encloseFullTableName(namespace, table);
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, Integer, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    sql,
+                    requiresExplicitCommit,
+                    rs -> {
+                      rs.next();
+                      return rs.getInt(1);
+                    }));
   }
 
   private void execute(String sql) throws SQLException {
