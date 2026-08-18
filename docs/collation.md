@@ -167,6 +167,28 @@ the split-identity defects resurface for those strings. Use `BINARY` on such bac
 ordering alone on an earlier version) gets collation-canonical key identity on upgrade with no
 configuration action. Assess backend alignment per the contract above, or switch to `BINARY`.
 
+## Automated test coverage
+
+Two integration-test suites exercise the ICU mode end-to-end (at `PRIMARY` strength) inside the
+existing CI jobs; the tests create their tables through normal ScalarDB DDL and then alter them
+to the target backend collation via a test-only `AdminTestUtils` hook:
+
+- **Storage-layer suite** (`DistributedStorageCollationIntegrationTestBase`): scan ordering,
+  conditional-mutation `EQ`/`NE` across collate-equal spellings, range operators across case
+  boundaries, and cross-partition filtering. Runs on MySQL 8.x (`utf8mb4_0900_ai_ci`),
+  SQL Server (`Latin1_General_100_CI_AI`, basic-Latin data only), and object storage (no backend
+  collation — ScalarDB's in-memory comparisons alone are under test).
+- **Consensus Commit key-identity suite** (`ConsensusCommitCollationIntegrationTestBase`): the
+  aligned-backend scenarios above (read-modify-write across spellings, read-your-own-writes,
+  write-write convergence to one physical row, scan-after-delete detection) through real
+  transactions. Runs on MySQL 8.x and SQL Server; other backends skip via a capability gate.
+
+The CI jobs' **default** collations are pinned to exact `BINARY` matches so the rest of the test
+matrix exercises the default mode faithfully: MySQL 8.x `utf8mb4_0900_bin` (5.7 keeps legacy
+`utf8mb4_bin` — its only option, PAD SPACE gap documented), MariaDB `utf8mb4_nopad_bin`,
+PostgreSQL `--locale=C` with UTF8 encoding, SQL Server `Japanese_BIN2`, AlloyDB posix ICU locale
+(see `ci/tests-config.yaml`).
+
 ## Limitations
 - **Upgrade note (default ordering change).** Compared to releases without the collation
   feature, the `BINARY` default changes ScalarDB's **in-memory ordering** of

@@ -53,7 +53,7 @@ Legend: ✅ exact match · 🟡 ICU best-effort (not byte-exact) · ⚠️ exact
 | PostgreSQL 17–13, Aurora PG, AlloyDB | `C` / `POSIX` / builtin `C.UTF-8` → ✅ (AlloyDB default is `C.UTF-8`) | ICU provider → 🟡 (must match server's ICU version) · **glibc** locale e.g. `en_US.UTF-8` → ❌ (glibc ≠ ICU, version drift) |
 | YugabyteDB 2 (YSQL) | database collation **must be `C`** → ✅ | per-column ICU → 🟡 |
 | Oracle 23ai/21c/19c | `NLS_SORT=BINARY` (common default) → ✅ | `UCA1210_*` → 🟡 · `GENERIC_M` / monolingual (non-UCA) → ❌ |
-| SQL Server 2022–2017 | `*_BIN2` (pure code-point) → ✅ | default `SQL_Latin1_General_CP1_CI_AS` + all Windows collations = proprietary NLS tables → ❌ |
+| SQL Server 2022–2017 | `*_BIN2` (pure code-point) → ✅ | Windows/`SQL_*` collations = proprietary NLS tables, non-UCA → ❌ in general · `*_CI_AI` (e.g. `Latin1_General_100_CI_AI`) is **practically compatible for basic-Latin data** with ICU `PRIMARY` → 🟡 (expansions such as ß/ss, ligatures, and non-Latin scripts still diverge and stay unaligned) |
 | IBM Db2 12.1/11.5 | `IDENTITY` → ✅ | `CLDR2701`/`CLDR181` = **ICU/CLDR-based** → 🟡 (closest linguistic case — Db2 uses ICU internally) · `SYSTEM` language-aware → ❌ |
 
 ### Object storage — nothing to match
