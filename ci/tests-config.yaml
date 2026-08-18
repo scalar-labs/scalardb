@@ -125,7 +125,9 @@ jdbc:
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
-    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    # utf8mb4_nopad_bin (NO PAD, available since MariaDB 10.2) is the exact byte-order match
+    # for scalar.db.collation=BINARY; legacy utf8mb4_bin PADs trailing spaces.
+    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_nopad_bin
     versions:
       - 10.11
       - 11.4
@@ -146,7 +148,13 @@ jdbc:
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
-    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    # utf8mb4_0900_bin (NO PAD) is the exact byte-order match for scalar.db.collation=BINARY;
+    # it only exists on MySQL 8.x, and mysqld 5.7 exits at startup on unknown collations,
+    # so 5.7 stays on legacy utf8mb4_bin (PAD SPACE, closest available option).
+    setup: |
+      COLLATION=utf8mb4_0900_bin
+      case "%VERSION%" in 5.7*) COLLATION=utf8mb4_bin;; esac
+      docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=$COLLATION
     versions:
       - 5.7
       - 8.0
@@ -211,7 +219,9 @@ jdbc:
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
-    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
+    # Pin the byte-order C locale explicitly (with UTF8 encoding) so the default collation
+    # exactly matches scalar.db.collation=BINARY instead of relying on the alpine image default.
+    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--locale=C --encoding=UTF8" -p 5432:5432 postgres:%VERSION%-alpine
     versions:
       - 13
       - 14
