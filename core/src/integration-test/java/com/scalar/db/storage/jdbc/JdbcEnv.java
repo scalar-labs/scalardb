@@ -139,6 +139,17 @@ public final class JdbcEnv {
     String jdbcUrl = System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
     String username = System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
     String password = System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
+    // ScalarDB serves jdbc:mysql URLs through the MariaDB driver, which is not visible to
+    // DriverManager's service discovery in Gradle test workers and rejects the mysql scheme
+    // unless permitMysqlScheme is set (see JdbcUtils and RdbEngineMysql for the same handling).
+    try {
+      Class.forName("org.mariadb.jdbc.Driver");
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
+    if (!jdbcUrl.contains("permitMysqlScheme")) {
+      jdbcUrl = jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + "permitMysqlScheme=true";
+    }
     try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
         Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery("SELECT VERSION()")) {
