@@ -180,7 +180,10 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
    * rejects collation changes on columns that are part of a primary key or index, so the primary
    * key constraint is dropped first, each character column is altered with the collation (restating
    * its full data type and nullability retrieved from INFORMATION_SCHEMA), and the primary key
-   * constraint is then re-added with its original column order.
+   * constraint is then re-added with its original column order and sort directions. The
+   * drop/alter/re-add sequence runs in a single explicit transaction (SQL Server DDL is
+   * transactional) so a midway failure rolls back to the original table definition instead of
+   * leaving the table without its primary key.
    */
   private void alterTableCollationForSqlServer(String namespace, String table, String collation)
       throws SQLException {
@@ -205,11 +208,11 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                   },
                   rs -> rs.next() ? rs.getString(1) : null);
 
-          // Retrieve the primary key columns in their original order
-          List<String> primaryKeyColumns = new ArrayList<>();
+          // Retrieve the primary key columns in their original order and sort directions
+          List<String> primaryKeyColumnClauses = new ArrayList<>();
           executeQuery(
               connection,
-              "SELECT c.name FROM sys.index_columns ic"
+              "SELECT c.name, ic.is_descending_key FROM sys.index_columns ic"
                   + " JOIN sys.indexes i"
                   + " ON ic.object_id = i.object_id AND ic.index_id = i.index_id"
                   + " JOIN sys.columns c"
@@ -225,10 +228,21 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
               },
               rs -> {
                 while (rs.next()) {
-                  primaryKeyColumns.add(rs.getString(1));
+                  primaryKeyColumnClauses.add(
+                      rdbEngine.enclose(rs.getString(1)) + (rs.getBoolean(2) ? " DESC" : " ASC"));
                 }
                 return null;
               });
+
+          // Every ScalarDB-created SQL Server table has a primary key, so its absence proves a
+          // prior broken run left the table without one. Fail fast instead of silently altering
+          // the collation without dropping and re-adding the primary key.
+          if (primaryKeyName == null || primaryKeyColumnClauses.isEmpty()) {
+            throw new IllegalStateException(
+                "No primary key found on "
+                    + fullTableName
+                    + "; a prior run may have failed after dropping the primary key");
+          }
 
           // Build an ALTER COLUMN statement for each character-typed column, restating its full
           // data type, length, and nullability
@@ -269,22 +283,22 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                 return null;
               });
 
-          if (primaryKeyName != null) {
+          // Run the drop/alter/re-add sequence atomically: SQL Server DDL is transactional, so a
+          // midway failure rolls back to the original table definition, including the primary key
+          boolean originalAutoCommit = connection.getAutoCommit();
+          connection.setAutoCommit(false);
+          try {
+            // Pass false as requiresExplicitCommit so that each statement does not commit on its
+            // own; the whole sequence is committed once below
             JdbcAdmin.execute(
                 connection,
                 "ALTER TABLE "
                     + fullTableName
                     + " DROP CONSTRAINT "
                     + rdbEngine.enclose(primaryKeyName),
-                requiresExplicitCommit);
-          }
-          for (String alterColumnStatement : alterColumnStatements) {
-            JdbcAdmin.execute(connection, alterColumnStatement, requiresExplicitCommit);
-          }
-          if (primaryKeyName != null && !primaryKeyColumns.isEmpty()) {
-            List<String> enclosedPrimaryKeyColumns = new ArrayList<>();
-            for (String primaryKeyColumn : primaryKeyColumns) {
-              enclosedPrimaryKeyColumns.add(rdbEngine.enclose(primaryKeyColumn));
+                false);
+            for (String alterColumnStatement : alterColumnStatements) {
+              JdbcAdmin.execute(connection, alterColumnStatement, false);
             }
             JdbcAdmin.execute(
                 connection,
@@ -293,9 +307,19 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     + " ADD CONSTRAINT "
                     + rdbEngine.enclose(primaryKeyName)
                     + " PRIMARY KEY ("
-                    + String.join(",", enclosedPrimaryKeyColumns)
+                    + String.join(",", primaryKeyColumnClauses)
                     + ")",
-                requiresExplicitCommit);
+                false);
+            connection.commit();
+          } catch (SQLException e) {
+            try {
+              connection.rollback();
+            } catch (SQLException rollbackEx) {
+              e.addSuppressed(rollbackEx);
+            }
+            throw e;
+          } finally {
+            connection.setAutoCommit(originalAutoCommit);
           }
         });
   }
