@@ -121,6 +121,25 @@ public class JdbcAdminTest {
     }
   }
 
+  /**
+   * Verifies that the connection was set to read-only, unless the engine overrides {@link
+   * RdbEngineStrategy#setConnectionToReadOnly(Connection, boolean)} to do nothing. SQLite does not
+   * support read-only mode, and the MySQL family does not benefit from it, cf. {@link
+   * RdbEngineMysql#setConnectionToReadOnly(Connection, boolean)}.
+   */
+  private void verifyConnectionSetToReadOnly(Connection connection, RdbEngine rdbEngine)
+      throws SQLException {
+    switch (rdbEngine) {
+      case SQLITE:
+      case MYSQL:
+      case MARIADB:
+        verify(connection, never()).setReadOnly(anyBoolean());
+        break;
+      default:
+        verify(connection).setReadOnly(true);
+    }
+  }
+
   private JdbcAdmin createJdbcAdminFor(RdbEngineStrategy rdbEngineStrategy) {
     // Arrange
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
@@ -315,11 +334,7 @@ public class JdbcAdminTest {
             .addSecondaryIndex("c4")
             .build();
     assertThat(actualMetadata).isEqualTo(expectedMetadata);
-    if (rdbEngine == RdbEngine.SQLITE) {
-      verify(connection, never()).setReadOnly(anyBoolean());
-    } else {
-      verify(connection).setReadOnly(true);
-    }
+    verifyConnectionSetToReadOnly(connection, rdbEngine);
     verify(connection).prepareStatement(expectedSelectStatements);
   }
 
@@ -2772,11 +2787,7 @@ public class JdbcAdminTest {
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
 
     // Assert
-    if (rdbEngine == RdbEngine.SQLITE) {
-      verify(connection, never()).setReadOnly(anyBoolean());
-    } else {
-      verify(connection).setReadOnly(true);
-    }
+    verifyConnectionSetToReadOnly(connection, rdbEngine);
     verify(connection).prepareStatement(expectedSelectStatement);
     assertThat(actualTableNames).containsExactly(table1, table2);
     verify(preparedStatement).setString(1, namespace + ".%");
@@ -3010,11 +3021,7 @@ public class JdbcAdminTest {
     // Assert
     assertThat(admin.namespaceExists(namespace)).isTrue();
 
-    if (rdbEngine == RdbEngine.SQLITE) {
-      verify(connection, never()).setReadOnly(anyBoolean());
-    } else {
-      verify(connection).setReadOnly(true);
-    }
+    verifyConnectionSetToReadOnly(connection, rdbEngine);
     verify(selectStatement).executeQuery();
     verify(connection).prepareStatement(expectedSelectStatement);
     verify(selectStatement).setString(1, namespace);
@@ -5085,11 +5092,7 @@ public class JdbcAdminTest {
     Set<String> actualNamespaceNames = admin.getNamespaceNames();
 
     // Assert
-    if (rdbEngine == RdbEngine.SQLITE) {
-      verify(connection, never()).setReadOnly(anyBoolean());
-    } else {
-      verify(connection).setReadOnly(true);
-    }
+    verifyConnectionSetToReadOnly(connection, rdbEngine);
     verify(mockStatement).executeQuery(expectedSelectStatement);
     assertThat(actualNamespaceNames).containsOnly(namespace1, namespace2);
   }
@@ -5199,7 +5202,7 @@ public class JdbcAdminTest {
     verify(connection, description(description)).prepareStatement(expectedCheckTableExistStatement);
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
-    verify(connection).setReadOnly(true);
+    verifyConnectionSetToReadOnly(connection, rdbEngine);
     verify(rdbEngineStrategy)
         .getDataTypeForScalarDb(
             any(JDBCType.class),

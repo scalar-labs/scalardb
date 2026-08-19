@@ -29,15 +29,4 @@ public class RdbEngineTidb extends RdbEngineMysql {
     // TiDB doesn't support SERIALIZABLE isolation level
     return Connection.TRANSACTION_REPEATABLE_READ;
   }
-
-  @Override
-  public String adjustJdbcUrl(String jdbcUrl) {
-    // MariaDB client 3.5.10 makes setReadOnly() issue
-    // SET SESSION TRANSACTION READ ONLY, which TiDB rejects unless
-    // tidb_enable_noop_functions is enabled. Keep the pre-3.5.10 behavior.
-    String url = super.adjustJdbcUrl(jdbcUrl);
-    return url.contains("readOnlyPropagatesToServer")
-        ? url
-        : url + "&readOnlyPropagatesToServer=false";
-  }
 }

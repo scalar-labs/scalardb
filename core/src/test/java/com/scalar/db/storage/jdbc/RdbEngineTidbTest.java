@@ -1,8 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.scalar.db.config.DatabaseConfig;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,46 +27,14 @@ class RdbEngineTidbTest {
   }
 
   @Test
-  void adjustJdbcUrl_WithNoParams_ShouldAppendMysqlSchemeAndDisableReadOnlyPropagation() {
-    String result = rdbEngineTidb.adjustJdbcUrl("jdbc:mysql://localhost:4000/");
-    assertThat(result)
-        .isEqualTo(
-            "jdbc:mysql://localhost:4000/?permitMysqlScheme=true&readOnlyPropagatesToServer=false");
-  }
+  void setConnectionToReadOnly_ShouldDoNothing() throws SQLException {
+    // TiDB rejects "SET SESSION TRANSACTION READ ONLY" with error 1235 unless
+    // tidb_enable_noop_functions is enabled, and MariaDB Connector/J 3.5.10 and later issue that
+    // statement from Connection#setReadOnly(). Inherited from RdbEngineMysql.
+    Connection connection = mock(Connection.class);
 
-  @Test
-  void adjustJdbcUrl_WithExistingParams_ShouldAppendMysqlSchemeAndDisableReadOnlyPropagation() {
-    String result = rdbEngineTidb.adjustJdbcUrl("jdbc:mysql://localhost:4000/?sslMode=REQUIRED");
-    assertThat(result)
-        .isEqualTo(
-            "jdbc:mysql://localhost:4000/?sslMode=REQUIRED&permitMysqlScheme=true"
-                + "&readOnlyPropagatesToServer=false");
-  }
+    rdbEngineTidb.setConnectionToReadOnly(connection, true);
 
-  @Test
-  void adjustJdbcUrl_WithPermitMysqlSchemeAlreadyPresent_ShouldOnlyDisableReadOnlyPropagation() {
-    String result =
-        rdbEngineTidb.adjustJdbcUrl("jdbc:mysql://localhost:4000/?permitMysqlScheme=true");
-    assertThat(result)
-        .isEqualTo(
-            "jdbc:mysql://localhost:4000/?permitMysqlScheme=true&readOnlyPropagatesToServer=false");
-  }
-
-  @Test
-  void adjustJdbcUrl_WithReadOnlyPropagatesToServerAlreadyPresent_ShouldNotAppendItAgain() {
-    // A user-specified value must win, so the driver option is never set twice.
-    String url =
-        "jdbc:mysql://localhost:4000/?permitMysqlScheme=true&readOnlyPropagatesToServer=true";
-    assertThat(rdbEngineTidb.adjustJdbcUrl(url)).isEqualTo(url);
-  }
-
-  @Test
-  void adjustJdbcUrl_ShouldDisableReadOnlyPropagationSoTidbAcceptsSetReadOnly() {
-    // MariaDB Connector/J 3.5.10 (CONJ-1307) makes Connection.setReadOnly(true) issue
-    // "SET SESSION TRANSACTION READ ONLY", which TiDB rejects with error 1235 unless
-    // tidb_enable_noop_functions is enabled. The adjusted URL must keep the driver from
-    // propagating the read-only state to the server.
-    assertThat(rdbEngineTidb.adjustJdbcUrl(ANY_JDBC_URL))
-        .contains("readOnlyPropagatesToServer=false");
+    verify(connection, never()).setReadOnly(true);
   }
 }
