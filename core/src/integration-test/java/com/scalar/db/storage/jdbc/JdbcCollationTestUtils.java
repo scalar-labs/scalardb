@@ -295,6 +295,19 @@ public final class JdbcCollationTestUtils {
   }
 
   /**
+   * Returns whether the configured JDBC backend applies the collation integration tests' target
+   * collation at the namespace level (MySQL and MariaDB) and supports the collation tests. Designed
+   * for the JUnit 5 {@code EnabledIf} annotation on tests that exercise the namespace-level
+   * mechanism itself.
+   *
+   * @return true if the backend applies the target collation at the namespace level and supports
+   *     the collation integration tests, false otherwise
+   */
+  public static boolean isNamespaceCollationTestSupported() {
+    return (isMysqlUrl() || isMariaDbUrl()) && isCollationTestSupported();
+  }
+
+  /**
    * Returns the per-engine target collation used by the collation integration tests, to be passed
    * to the {@code AdminTestUtils} collation hooks ({@code alterNamespaceCollation} and {@code
    * alterTableCollation}). On PostgreSQL the returned name denotes the nondeterministic ICU

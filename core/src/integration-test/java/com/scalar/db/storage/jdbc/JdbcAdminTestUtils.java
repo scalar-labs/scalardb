@@ -181,22 +181,79 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   /**
-   * On MySQL and MariaDB this is a no-op: the collation is inherited from the namespace default set
-   * by {@link #alterNamespaceCollation} before the table is created.
+   * On MySQL and MariaDB the collation is inherited from the namespace default set by {@link
+   * #alterNamespaceCollation} before the table is created, so instead of altering the table this
+   * verifies the inheritance took effect: {@code CREATE TABLE ... IF NOT EXISTS} silently reuses a
+   * table leaked by a prior broken run, and such a table keeps its stale collation because a
+   * database default only applies to tables created afterwards.
    */
   @Override
   public void alterTableCollation(String namespace, String table, String collation)
       throws Exception {
-    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
+      verifyTableCollation(namespace, table, collation);
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       alterTableCollationForSqlServer(namespace, table, collation);
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       alterTableCollationForPostgresql(namespace, table, collation);
-    } else if (!JdbcTestUtils.isMysql(rdbEngine) && !JdbcTestUtils.isMariaDB(rdbEngine)) {
+    } else {
       throw new UnsupportedOperationException(
           "Altering the table collation is not supported for the "
               + rdbEngine.getClass().getSimpleName()
               + " engine");
     }
+  }
+
+  private void verifyTableCollation(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          List<String> characterColumns = new ArrayList<>();
+          List<String> mismatchedColumns = new ArrayList<>();
+          executeQuery(
+              connection,
+              "SELECT column_name, collation_name FROM information_schema.columns"
+                  + " WHERE table_schema = ? AND table_name = ? AND collation_name IS NOT NULL",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String columnCollation = rs.getString(2);
+                  characterColumns.add(columnName);
+                  if (!collation.equalsIgnoreCase(columnCollation)) {
+                    mismatchedColumns.add(columnName + " (" + columnCollation + ")");
+                  }
+                }
+                return null;
+              });
+          // The tables under collation test always have TEXT columns; finding none means the
+          // enumeration missed the table and the verification would be vacuous
+          if (characterColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "No character-typed columns found on "
+                    + namespace
+                    + "."
+                    + table
+                    + " to verify the collation");
+          }
+          if (!mismatchedColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "The character-typed columns of "
+                    + namespace
+                    + "."
+                    + table
+                    + " do not carry the expected collation "
+                    + collation
+                    + "; a table leaked by a prior broken run keeps its stale collation: "
+                    + mismatchedColumns);
+          }
+        });
   }
 
   /**
