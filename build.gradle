@@ -105,6 +105,12 @@ subprojects {
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
+        // ICU4J collation behavior (root sort order, CLDR data) shifts between releases, and the
+        // ICU-mode alignment contract in docs/collation.md must be re-verified whenever it does.
+        // Bump this version only at a ScalarDB major version, together with a collation
+        // integration-test rerun and a release note describing the ordering drift; the one
+        // exception is an out-of-band bump for a genuine ICU4J security fix. ICU4J 78+ also
+        // requires Java 11, so bumps are additionally gated on ScalarDB's Java 8 baseline.
         icu4jVersion = '77.1'
         protobufVersion = '4.35.1'
         junitVersion = '5.14.4'
