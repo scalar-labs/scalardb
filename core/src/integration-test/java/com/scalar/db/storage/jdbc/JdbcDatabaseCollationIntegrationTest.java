@@ -33,6 +33,12 @@ public class JdbcDatabaseCollationIntegrationTest
   }
 
   @Override
+  protected void applyNamespaceCollation(String namespace) throws Exception {
+    jdbcAdminTestUtils.alterNamespaceCollation(
+        namespace, JdbcCollationTestUtils.getCollationTestTargetCollation());
+  }
+
+  @Override
   protected void applyCollation(String namespace, String table) throws Exception {
     jdbcAdminTestUtils.alterTableCollation(
         namespace, table, JdbcCollationTestUtils.getCollationTestTargetCollation());

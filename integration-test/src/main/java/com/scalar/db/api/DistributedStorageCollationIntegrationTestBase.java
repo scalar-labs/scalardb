@@ -76,6 +76,13 @@ public abstract class DistributedStorageCollationIntegrationTestBase {
   protected abstract Properties getProperties(String testName);
 
   /**
+   * Applies the backend-specific collation to the test namespace so that tables created in it
+   * afterwards inherit it. Called once after the namespace is created and before the table is
+   * created. The default implementation is a no-op.
+   */
+  protected void applyNamespaceCollation(String namespace) throws Exception {}
+
+  /**
    * Applies the backend-specific collation to the test table. Called once after the table is
    * created. The default implementation is a no-op.
    */
@@ -94,9 +101,10 @@ public abstract class DistributedStorageCollationIntegrationTestBase {
     return NAMESPACE;
   }
 
-  private void createTable() throws ExecutionException {
+  private void createTable() throws Exception {
     Map<String, String> options = getCreationOptions();
     admin.createNamespace(namespace, true, options);
+    applyNamespaceCollation(namespace);
     admin.createTable(
         namespace,
         TABLE,

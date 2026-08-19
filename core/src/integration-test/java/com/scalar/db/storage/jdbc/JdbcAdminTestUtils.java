@@ -155,21 +155,43 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     deleteAllRowsWithSql(namespace, table + "_tx_metadata");
   }
 
+  /**
+   * On MySQL and MariaDB a ScalarDB namespace is a database, and a table created without explicit
+   * collation clauses — as ScalarDB creates them — inherits the database default collation on all
+   * its character-typed columns, so altering the namespace ahead of table creation is sufficient.
+   * PostgreSQL has no schema-level collation and SQL Server scopes collations to the whole
+   * database, so on those engines this is a no-op and {@link #alterTableCollation} applies the
+   * collation to the created table instead.
+   */
   @Override
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
-  public void alterTableCollation(String namespace, String table, String collation)
-      throws Exception {
+  public void alterNamespaceCollation(String namespace, String collation) throws Exception {
     if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
       execute(
-          "ALTER TABLE "
-              + rdbEngine.encloseFullTableName(namespace, table)
-              + " CONVERT TO CHARACTER SET utf8mb4 COLLATE "
+          "ALTER DATABASE "
+              + rdbEngine.enclose(namespace)
+              + " CHARACTER SET utf8mb4 COLLATE "
               + collation);
-    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+    } else if (!JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcTestUtils.isSqlServer(rdbEngine)) {
+      throw new UnsupportedOperationException(
+          "Altering the namespace collation is not supported for the "
+              + rdbEngine.getClass().getSimpleName()
+              + " engine");
+    }
+  }
+
+  /**
+   * On MySQL and MariaDB this is a no-op: the collation is inherited from the namespace default set
+   * by {@link #alterNamespaceCollation} before the table is created.
+   */
+  @Override
+  public void alterTableCollation(String namespace, String table, String collation)
+      throws Exception {
+    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       alterTableCollationForSqlServer(namespace, table, collation);
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       alterTableCollationForPostgresql(namespace, table, collation);
-    } else {
+    } else if (!JdbcTestUtils.isMysql(rdbEngine) && !JdbcTestUtils.isMariaDB(rdbEngine)) {
       throw new UnsupportedOperationException(
           "Altering the table collation is not supported for the "
               + rdbEngine.getClass().getSimpleName()

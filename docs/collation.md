@@ -170,8 +170,11 @@ configuration action. Assess backend alignment per the contract above, or switch
 ## Automated test coverage
 
 Two integration-test suites exercise the ICU mode end-to-end (at `PRIMARY` strength) inside the
-existing CI jobs; the tests create their tables through normal ScalarDB DDL and then alter them
-to the target backend collation via a test-only `AdminTestUtils` hook:
+existing CI jobs; the tests create their tables through normal ScalarDB DDL and apply the target
+backend collation via test-only `AdminTestUtils` hooks — on MySQL and MariaDB by setting it as
+the namespace (database) default before the table is created, so the table inherits it; on
+PostgreSQL and SQL Server, which have no namespace-level collation, by altering the created
+table's character columns:
 
 - **Storage-layer suite** (`DistributedStorageCollationIntegrationTestBase`): scan ordering,
   conditional-mutation `EQ`/`NE` across collate-equal spellings, range operators across case

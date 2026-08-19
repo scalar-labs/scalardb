@@ -296,9 +296,9 @@ public final class JdbcCollationTestUtils {
 
   /**
    * Returns the per-engine target collation used by the collation integration tests, to be passed
-   * to {@code AdminTestUtils#alterTableCollation(String, String, String)}. On PostgreSQL the
-   * returned name denotes the nondeterministic ICU collation the hook creates in the test namespace
-   * rather than a built-in collation.
+   * to the {@code AdminTestUtils} collation hooks ({@code alterNamespaceCollation} and {@code
+   * alterTableCollation}). On PostgreSQL the returned name denotes the nondeterministic ICU
+   * collation the hook creates in the test namespace rather than a built-in collation.
    *
    * @return the target collation for the configured JDBC backend
    * @throws IllegalStateException if the configured JDBC backend does not support the collation

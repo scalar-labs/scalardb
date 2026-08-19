@@ -14,7 +14,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.Collation;
 import com.scalar.db.io.CollationStrength;
@@ -81,6 +80,13 @@ public abstract class ConsensusCommitCollationIntegrationTestBase {
   protected abstract Properties getProperties(String testName);
 
   /**
+   * Applies the backend-specific collation to the test namespace so that tables created in it
+   * afterwards inherit it. Called once after the namespace is created and before the table is
+   * created. The default implementation is a no-op.
+   */
+  protected void applyNamespaceCollation(String namespace) throws Exception {}
+
+  /**
    * Applies the backend-specific collation to the test table. Called once after the table is
    * created. The default implementation is a no-op.
    */
@@ -102,10 +108,11 @@ public abstract class ConsensusCommitCollationIntegrationTestBase {
     return NAMESPACE;
   }
 
-  private void createTables() throws ExecutionException {
+  private void createTables() throws Exception {
     Map<String, String> options = getCreationOptions();
     admin.createCoordinatorTables(true, options);
     admin.createNamespace(namespace, true, options);
+    applyNamespaceCollation(namespace);
     admin.createTable(
         namespace,
         TABLE,
