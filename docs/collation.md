@@ -172,9 +172,11 @@ configuration action. Assess backend alignment per the contract above, or switch
 Two integration-test suites exercise the ICU mode end-to-end (at `PRIMARY` strength) inside the
 existing CI jobs; the tests create their tables through normal ScalarDB DDL and apply the target
 backend collation via test-only `AdminTestUtils` hooks — on MySQL and MariaDB by setting it as
-the namespace (database) default before the table is created, so the table inherits it; on
-PostgreSQL and SQL Server, which have no namespace-level collation, by altering the created
-table's character columns:
+the namespace (database) default before the table is created, so the table inherits it, plus a
+read-back verification of the created table's column collations that fails fast if a table
+leaked by a prior broken run kept a stale collation (covered by its own gated test,
+`JdbcCollationVerificationIntegrationTest`); on PostgreSQL and SQL Server, which have no
+namespace-level collation, by altering the created table's character columns:
 
 - **Storage-layer suite** (`DistributedStorageCollationIntegrationTestBase`): scan ordering,
   conditional-mutation `EQ`/`NE` across collate-equal spellings, range operators across case
@@ -193,10 +195,18 @@ table's character columns:
   enforced with `scalardb.jdbc.collation_test=required`, which turns an inconclusive probe (e.g. a
   connection failure) into a hard error so an unreachable or half-configured backend can never
   silently skip. A definitive incapability verdict (MySQL 5.7, TiDB, a PostgreSQL build without
-  ICU) still skips even in required mode, with the reason logged at WARN. TiDB stays excluded even though it supports
-  `utf8mb4_0900_ai_ci` expressions: it rejects converting the collation of indexed columns
-  ("Unsupported converting collation ... when index is defined on it"), and every ScalarDB key
-  column is indexed, so the tests cannot produce a collated table there.
+  ICU) still skips even in required mode, with the reason logged at WARN. TiDB stays excluded by
+  the capability gate for the moment, but the historical hard blocker is gone: TiDB rejects
+  converting the collation of indexed columns ("Unsupported converting collation ... when index
+  is defined on it"), which ruled it out while the tests converted the table after creation, but
+  the namespace-default mechanism chooses the collation at table creation, which TiDB accepts —
+  a manual run of both suites (plus the leaked-table verification test) passed on TiDB 8.5 with
+  `utf8mb4_0900_ai_ci`. Enabling TiDB in the gate is deferred on two counts: the
+  `utf8mb4_0900_*` collations exist only since TiDB 7.4 while CI also runs 6.5 (the version
+  check would need to become a usage probe, as MariaDB's already is), and the run required
+  `SET GLOBAL tidb_enable_noop_functions=1` because ScalarDB's read-only metadata connections
+  (`Connection.setReadOnly`) are otherwise rejected by TiDB — an environment prerequisite the
+  CI TiDB setup does not currently provide.
 
 The CI jobs' **default** collations are pinned to exact `BINARY` matches so the rest of the test
 matrix exercises the default mode faithfully: MySQL 8.x `utf8mb4_0900_bin` (5.7 keeps legacy
