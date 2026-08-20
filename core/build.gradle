@@ -236,6 +236,15 @@ javadoc {
     title = "ScalarDB"
 }
 
+processResources {
+    // Records the Gradle-declared ICU4J version in the artifact so CollationComparator can warn
+    // when dependency resolution in an embedding application substitutes a different ICU4J at
+    // runtime
+    filesMatching('scalardb-collation.properties') {
+        expand(icu4jVersion: icu4jVersion)
+    }
+}
+
 task integrationTestCassandra(type: Test) {
     description = 'Runs the integration tests for Cassandra.'
     group = 'verification'

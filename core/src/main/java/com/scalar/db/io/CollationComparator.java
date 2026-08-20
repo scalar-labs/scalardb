@@ -5,14 +5,21 @@ import com.google.common.primitives.UnsignedBytes;
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.text.RuleBasedCollator;
 import com.ibm.icu.util.ULocale;
+import com.ibm.icu.util.VersionInfo;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Optional;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A thread-safe, immutable comparator that orders text according to the configured {@link
@@ -41,6 +48,15 @@ import javax.annotation.concurrent.ThreadSafe;
 @Immutable
 @ThreadSafe
 public final class CollationComparator {
+  private static final Logger logger = LoggerFactory.getLogger(CollationComparator.class);
+
+  /**
+   * Resource carrying the ICU4J version this build was verified against, expanded from the Gradle
+   * {@code icu4jVersion} property at build time.
+   */
+  private static final String VERIFIED_ICU_VERSION_RESOURCE = "scalardb-collation.properties";
+
+  private static final AtomicBoolean ICU_VERSION_CHECKED = new AtomicBoolean();
 
   private final Comparator<String> textComparator;
   private final Comparator<Column<?>> columnComparator;
@@ -87,6 +103,7 @@ public final class CollationComparator {
         return new CollationComparator(binaryTextComparator(), true, null);
       case ICU:
         {
+          warnOnIcuVersionMismatch();
           Collator frozen = buildFrozenIcuCollator(config);
           return new CollationComparator(
               frozen::compare, false, ThreadLocal.withInitial(frozen::cloneAsThawed));
@@ -94,6 +111,66 @@ public final class CollationComparator {
       default:
         throw new AssertionError("Unknown collation: " + collation);
     }
+  }
+
+  /**
+   * Warns once per JVM when the ICU4J library loaded at runtime differs from the version this build
+   * was verified against. ICU4J is a plain transitive dependency, so an embedding application's
+   * dependency resolution can substitute another version, and ICU collation behavior (root sort
+   * order, CLDR data) shifts between versions — ordering and equality results would silently differ
+   * from the verified behavior. The check never fails collation setup: it cannot tell a harmless
+   * substitution from a harmful one, only make it diagnosable.
+   */
+  private static void warnOnIcuVersionMismatch() {
+    if (!ICU_VERSION_CHECKED.compareAndSet(false, true)) {
+      return;
+    }
+    String verifiedVersion = null;
+    try (InputStream stream =
+        CollationComparator.class
+            .getClassLoader()
+            .getResourceAsStream(VERIFIED_ICU_VERSION_RESOURCE)) {
+      if (stream != null) {
+        Properties properties = new Properties();
+        properties.load(stream);
+        verifiedVersion = properties.getProperty("icu4j.version");
+      }
+    } catch (IOException e) {
+      logger.debug("Failed to read {}", VERIFIED_ICU_VERSION_RESOURCE, e);
+    }
+    if (verifiedVersion == null) {
+      logger.debug(
+          "The verified ICU4J version is unavailable from {}; skipping the ICU4J version check",
+          VERIFIED_ICU_VERSION_RESOURCE);
+      return;
+    }
+    try {
+      if (loadedIcuVersionDiffersFrom(verifiedVersion)) {
+        logger.warn(
+            "The ICU4J library loaded at runtime (version {}) differs from the version this "
+                + "ScalarDB build was verified against ({}). ICU collation behavior shifts "
+                + "between ICU4J versions, so ICU-mode text ordering and equality may differ "
+                + "from the verified behavior. Align the application's icu4j dependency with "
+                + "ScalarDB's",
+            VersionInfo.ICU_VERSION,
+            verifiedVersion);
+      }
+    } catch (IllegalArgumentException e) {
+      logger.debug("Failed to compare the ICU4J versions", e);
+    }
+  }
+
+  /**
+   * Returns whether the ICU4J library on the classpath differs from the given version.
+   *
+   * <p>Package-private and pure so it can be unit-tested without manipulating the classpath.
+   *
+   * @param version an ICU version string (e.g. {@code "77.1"})
+   * @return true if the loaded ICU4J version differs from the given version
+   * @throws IllegalArgumentException if the given version string is malformed
+   */
+  static boolean loadedIcuVersionDiffersFrom(String version) {
+    return !VersionInfo.getInstance(version).equals(VersionInfo.ICU_VERSION);
   }
 
   private static Comparator<String> binaryTextComparator() {

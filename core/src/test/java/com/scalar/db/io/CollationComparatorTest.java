@@ -552,4 +552,26 @@ public class CollationComparatorTest {
         java.util.stream.Stream.of(k2, k3, k1).sorted(keyComparator).collect(Collectors.toList());
     assertThat(sorted).containsExactly(k1, k2, k3);
   }
+
+  @Test
+  public void loadedIcuVersionDiffersFrom_LoadedVersion_ShouldReturnFalse() {
+    // Act Assert
+    assertThat(
+            CollationComparator.loadedIcuVersionDiffersFrom(
+                com.ibm.icu.util.VersionInfo.ICU_VERSION.toString()))
+        .isFalse();
+  }
+
+  @Test
+  public void loadedIcuVersionDiffersFrom_DifferentVersion_ShouldReturnTrue() {
+    // Act Assert
+    assertThat(CollationComparator.loadedIcuVersionDiffersFrom("1.0")).isTrue();
+  }
+
+  @Test
+  public void loadedIcuVersionDiffersFrom_MalformedVersion_ShouldThrowIllegalArgumentException() {
+    // Act Assert
+    assertThatThrownBy(() -> CollationComparator.loadedIcuVersionDiffersFrom("not-a-version"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }
