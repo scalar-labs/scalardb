@@ -432,6 +432,14 @@ SQL Server, Db2, YugabyteDB, and TiDB accept `ICU` unvalidated, because whether 
 depends on the collation the operator configured on the database — including byte-order
 *configurations* such as PostgreSQL `C`, which remain the operator's responsibility.
 
+In multi-storage, the guard runs inside each sub-storage's constructor while the
+transaction layer compares with the top-level collation, so a per-storage collation
+override could desynchronize the two: `storages.<name>.collation=BINARY` would slip an
+ICU-keyed transaction layer past a binary-only sub-storage's guard — exactly the
+silently-misaligned state this record exists to prevent. `MultiStorageConfig` therefore
+rejects any per-storage `scalar.db.collation` / `scalar.db.collation.icu.*` property;
+collation is one global setting (ADR-1).
+
 ### Alternatives considered
 
 - **Keep documentation-only guidance (pure ADR-6).** Rejected: for these storages the

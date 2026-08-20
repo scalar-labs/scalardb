@@ -1164,7 +1164,15 @@ public enum CoreError implements ScalarDbError {
       "The ICU collation is not supported for this storage because the storage supports only "
           + "binary UTF-8 byte order for text. Storage: %s",
       "",
-      "Remove the property scalar.db.collation or set it to BINARY for this storage"),
+      "Remove the property scalar.db.collation or set it to BINARY"),
+  COLLATION_MULTI_STORAGE_PER_STORAGE_OVERRIDE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0305",
+      "The collation configuration cannot be overridden per storage in multi-storage. "
+          + "Property: %s",
+      "",
+      "Remove the per-storage collation property; scalar.db.collation and "
+          + "scalar.db.collation.icu.* apply to all storages"),
 
   //
   // Errors for the concurrency error category
