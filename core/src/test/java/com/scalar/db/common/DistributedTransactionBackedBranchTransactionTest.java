@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.BranchTransaction.Status;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -96,36 +97,119 @@ class DistributedTransactionBackedBranchTransactionTest {
   }
 
   @Test
-  void end_ShouldNotTouchTransaction() throws Exception {
-    branch.end();
+  void end_WithSuccess_ShouldNotTouchTransaction() throws Exception {
+    branch.end(Status.SUCCESS);
 
     verifyNoInteractions(transaction);
   }
 
   @Test
-  void end_CalledTwice_ShouldThrowIllegalStateException() throws Exception {
-    branch.end();
+  void end_WithFailure_ShouldNotTouchTransaction() throws Exception {
+    branch.end(Status.FAILURE);
 
-    assertThatThrownBy(branch::end).isInstanceOf(IllegalStateException.class);
+    verifyNoInteractions(transaction);
   }
 
   @Test
-  void end_WithOpenScanner_ShouldThrowIllegalStateException_ThenSucceedAfterClose()
+  void end_WithSuccessTwice_ShouldThrowIllegalStateException() throws Exception {
+    branch.end(Status.SUCCESS);
+
+    assertThatThrownBy(() -> branch.end(Status.SUCCESS)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void end_WithFailureAfterSuccess_ShouldBeNoOp() throws Exception {
+    branch.end(Status.SUCCESS);
+
+    branch.end(Status.FAILURE);
+
+    // No-op means nothing reached the underlying transaction and the branch stays ended. Verify
+    // the delegate first: the rejection below builds its message from transaction.getId().
+    verifyNoInteractions(transaction);
+    assertThatThrownBy(() -> branch.get(get())).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void end_WithFailureTwice_ShouldBeIdempotent() throws Exception {
+    branch.end(Status.FAILURE);
+
+    branch.end(Status.FAILURE);
+
+    // The second call leaves the branch ended rather than resetting it. Verify the delegate first:
+    // the rejection below builds its message from transaction.getId().
+    verifyNoInteractions(transaction);
+    assertThatThrownBy(() -> branch.get(get())).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void end_WithSuccessAfterFailure_ShouldThrowIllegalStateException() throws Exception {
+    branch.end(Status.FAILURE);
+
+    assertThatThrownBy(() -> branch.end(Status.SUCCESS)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void end_WithNull_ShouldThrowNullPointerExceptionAndLeaveBranchUnended() throws Exception {
+    assertThatThrownBy(() -> branch.end(null)).isInstanceOf(NullPointerException.class);
+
+    // The branch was left un-ended, so it can still be ended normally.
+    branch.end(Status.SUCCESS);
+  }
+
+  @Test
+  void end_ShouldBeScopedToTheHandle_NotTheTransaction() throws Exception {
+    DistributedTransactionBackedBranchTransaction second =
+        new DistributedTransactionBackedBranchTransaction(transaction);
+    branch.end(Status.SUCCESS);
+
+    // A second handle over the same underlying transaction has its own ended state.
+    second.end(Status.SUCCESS);
+  }
+
+  @Test
+  void end_WithSuccessAndOpenScanner_ShouldThrowIllegalStateException_ThenSucceedAfterClose()
       throws Exception {
     TransactionCrudOperable.Scanner delegateScanner = mock(TransactionCrudOperable.Scanner.class);
     when(transaction.getScanner(scan())).thenReturn(delegateScanner);
     TransactionCrudOperable.Scanner scanner = branch.getScanner(scan());
 
-    assertThatThrownBy(branch::end).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> branch.end(Status.SUCCESS)).isInstanceOf(IllegalStateException.class);
 
     scanner.close();
     verify(delegateScanner).close();
-    branch.end();
+    branch.end(Status.SUCCESS);
   }
 
   @Test
-  void crud_AfterEnd_ShouldThrowIllegalStateExceptionWithoutDelegating() throws Exception {
-    branch.end();
+  void end_WithFailureAndOpenScanner_ShouldNotThrowAndShouldLeaveScannerOpen() throws Exception {
+    TransactionCrudOperable.Scanner delegateScanner = mock(TransactionCrudOperable.Scanner.class);
+    when(transaction.getScanner(scan())).thenReturn(delegateScanner);
+    branch.getScanner(scan());
+
+    branch.end(Status.FAILURE);
+
+    // The scanner is deliberately left open: closing it here would write into the shared snapshot's
+    // scan/scanner sets, which are re-validated at commit. The owning transaction's rollback closes
+    // it instead.
+    verify(delegateScanner, never()).close();
+    assertThatThrownBy(() -> branch.get(get())).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void crud_AfterEndWithSuccess_ShouldThrowIllegalStateExceptionWithoutDelegating()
+      throws Exception {
+    branch.end(Status.SUCCESS);
+
+    assertThatThrownBy(() -> branch.get(get())).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> branch.insert(insert(1))).isInstanceOf(IllegalStateException.class);
+    verify(transaction, never()).get(any(Get.class));
+    verify(transaction, never()).insert(any(Insert.class));
+  }
+
+  @Test
+  void crud_AfterEndWithFailure_ShouldThrowIllegalStateExceptionWithoutDelegating()
+      throws Exception {
+    branch.end(Status.FAILURE);
 
     assertThatThrownBy(() -> branch.get(get())).isInstanceOf(IllegalStateException.class);
     assertThatThrownBy(() -> branch.insert(insert(1))).isInstanceOf(IllegalStateException.class);
