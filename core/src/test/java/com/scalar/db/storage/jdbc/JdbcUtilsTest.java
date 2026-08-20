@@ -390,4 +390,105 @@ public class JdbcUtilsTest {
     // Assert
     assertThat(result1).isNotEqualTo(result2);
   }
+
+  /**
+   * The AWS Advanced JDBC Wrapper supplies its own driver, and the URL must keep the
+   * "jdbc:aws-wrapper:" prefix because that is what routes the connection through it. The engine's
+   * own getDriverClassName() is left alone; only what reaches the pool changes.
+   */
+  @Test
+  public void initDataSource_GivenAwsWrapperUrl_ShouldUseWrapperDriverAndKeepPrefix() {
+    // Arrange
+    String jdbcUrl = "jdbc:aws-wrapper:postgresql://localhost:5432/test";
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.USERNAME, "postgres");
+    properties.setProperty(DatabaseConfig.PASSWORD, "postgres");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl(jdbcUrl)).thenReturn(jdbcUrl);
+
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine);
+    }
+
+    // Assert
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("software.amazon.jdbc.Driver");
+    assertThat(hikariConfig.getJdbcUrl()).isEqualTo(jdbcUrl);
+  }
+
+  @Test
+  public void initDataSource_GivenNonAwsWrapperUrl_ShouldKeepEngineDriverClass() {
+    // Arrange
+    String jdbcUrl = "jdbc:postgresql://localhost:5432/test";
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl(jdbcUrl)).thenReturn(jdbcUrl);
+
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine);
+    }
+
+    // Assert
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+  }
+
+  @Test
+  public void isAwsWrapperUrl_ShouldMatchOnlyTheExactPrefix() {
+    // Act Assert
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapper:postgresql://h/db")).isTrue();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapper:mysql://h/db")).isTrue();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:postgresql://h/db")).isFalse();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapperfoo:postgresql://h/db")).isFalse();
+    assertThat(JdbcUtils.isAwsWrapperUrl(null)).isFalse();
+  }
+
+  @Test
+  public void removeAwsWrapperPrefix_ShouldExposeUnderlyingUrl() {
+    // Act Assert
+    assertThat(JdbcUtils.removeAwsWrapperPrefix("jdbc:aws-wrapper:postgresql://h:5432/db"))
+        .isEqualTo("jdbc:postgresql://h:5432/db");
+    assertThat(
+            JdbcUtils.removeAwsWrapperPrefix(
+                "jdbc:aws-wrapper:mysql://h:3306/db?permitMysqlScheme=true"))
+        .isEqualTo("jdbc:mysql://h:3306/db?permitMysqlScheme=true");
+  }
 }

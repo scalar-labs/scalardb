@@ -3,6 +3,7 @@ package com.scalar.db.transaction.jdbc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -23,12 +24,17 @@ import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.jdbc.FailoverSimulatingDriver;
 import com.scalar.db.storage.jdbc.JdbcCrudService;
 import com.scalar.db.storage.jdbc.RdbEngineStrategy;
+import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -43,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -1093,5 +1100,228 @@ public class JdbcTransactionTest {
     // Act Assert
     assertThatThrownBy(() -> transaction.batch(Collections.emptyList()))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /**
+   * {@link JdbcTransaction#commit()} infers the transaction outcome from whether the follow-up
+   * {@code rollback()} succeeds. That inference is sound only because HikariCP evicts a connection
+   * whose SQLState starts with "08", which is exactly the range the AWS Advanced JDBC Wrapper uses
+   * to report a failover. Setting HikariCP's {@code exceptionOverrideClassName} -- which AWS
+   * recommends -- would keep the connection alive, let the rollback succeed as a no-op, and turn an
+   * unknown outcome into a {@link com.scalar.db.exception.transaction.CommitException} whose
+   * contract tells the caller it is safe to retry from the beginning.
+   *
+   * <p>These tests run against a real HikariCP pool so the eviction is genuinely exercised. See
+   * {@code JdbcFailoverExceptionBehaviorTest} for the pool-level counterpart.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"08001", "08S02", "08007"})
+  public void commit_WhenFailoverSqlStateThrown_ShouldThrowUnknownTransactionStatusException(
+      String sqlState) throws SQLException {
+    // Arrange
+    try (HikariDataSource dataSource = FailoverSimulatingDriver.createDataSource()) {
+      Connection pooledConnection = dataSource.getConnection();
+      JdbcTransaction target =
+          new JdbcTransaction(ANY_TX_ID, jdbcCrudService, pooledConnection, rdbEngineStrategy);
+      FailoverSimulatingDriver.failOnCommitWith(sqlState);
+
+      // Act Assert
+      assertThatThrownBy(target::commit).isInstanceOf(UnknownTransactionStatusException.class);
+    } finally {
+      FailoverSimulatingDriver.reset();
+    }
+  }
+
+  @Test
+  public void commit_WhenConflictThrownAndConnectionAlive_ShouldThrowCommitConflictException()
+      throws SQLException {
+    // Arrange
+    try (HikariDataSource dataSource = FailoverSimulatingDriver.createDataSource()) {
+      Connection pooledConnection = dataSource.getConnection();
+      JdbcTransaction target =
+          new JdbcTransaction(ANY_TX_ID, jdbcCrudService, pooledConnection, rdbEngineStrategy);
+      when(rdbEngineStrategy.isConflict(any(SQLException.class))).thenReturn(true);
+      // 40001 is a genuine serialization failure. HikariCP does not evict, so the rollback
+      // succeeds and the outcome is known to be a failure rather than unknown.
+      FailoverSimulatingDriver.failOnCommitWith("40001");
+
+      // Act Assert
+      assertThatThrownBy(target::commit).isInstanceOf(CommitConflictException.class);
+    } finally {
+      FailoverSimulatingDriver.reset();
+    }
+  }
+
+  @Test
+  public void commit_WhenNonConflictThrownAndConnectionAlive_ShouldThrowPlainCommitException()
+      throws SQLException {
+    // Arrange
+    try (HikariDataSource dataSource = FailoverSimulatingDriver.createDataSource()) {
+      Connection pooledConnection = dataSource.getConnection();
+      JdbcTransaction target =
+          new JdbcTransaction(ANY_TX_ID, jdbcCrudService, pooledConnection, rdbEngineStrategy);
+      when(rdbEngineStrategy.isConflict(any(SQLException.class))).thenReturn(false);
+      // 42000 is a syntax error or access rule violation: neither a conflict nor a connection
+      // exception. HikariCP does not evict, so the rollback succeeds and the transaction is known
+      // to have failed. Reporting it as unknown would send the caller reconciling a transaction
+      // that plainly did not commit.
+      FailoverSimulatingDriver.failOnCommitWith("42000");
+
+      // Act Assert
+      assertThatThrownBy(target::commit)
+          .isInstanceOf(CommitException.class)
+          .isNotInstanceOf(CommitConflictException.class);
+    } finally {
+      FailoverSimulatingDriver.reset();
+    }
+  }
+
+  /**
+   * Losing the connection during the CRUD phase means the transaction was never committed: the pool
+   * opens transactional connections with autoCommit disabled, so nothing has been applied and the
+   * server discards the open transaction. Reporting this as a conflict lets an application's normal
+   * retry loop absorb an Aurora failover instead of surfacing it as a generic failure.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"08001", "08S02", "08007", "08006"})
+  public void get_WhenConnectionExceptionThrown_ShouldThrowCrudConflictException(String sqlState)
+      throws ExecutionException, SQLException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+    when(jdbcCrudService.get(any(Get.class), any(Connection.class)))
+        .thenThrow(new SQLException("Simulated failover", sqlState));
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.get(get)).isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
+  public void get_WhenNonConnectionExceptionThrown_ShouldThrowPlainCrudException()
+      throws ExecutionException, SQLException {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+    // 42P01 is undefined_table -- an application error, not something a retry would fix.
+    when(jdbcCrudService.get(any(Get.class), any(Connection.class)))
+        .thenThrow(new SQLException("Undefined table", "42P01"));
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.get(get))
+        .isInstanceOf(CrudException.class)
+        .isNotInstanceOf(CrudConflictException.class);
+  }
+
+  /**
+   * The scanner reports a read failure as an {@link ExecutionException} carrying the {@link
+   * SQLException} as its cause, so iterating one would otherwise be the only CRUD path that misses
+   * the classification above and reports a failover as a non-retriable {@link CrudException}.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"08001", "08S02", "08007", "08006"})
+  public void
+      getScannerAndScannerOne_WhenConnectionExceptionThrown_ShouldThrowCrudConflictException(
+          String sqlState) throws ExecutionException, SQLException, CrudException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenThrow(
+            new ExecutionException(
+                "Fetching the next result failed",
+                new SQLException("Simulated failover", sqlState)));
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThatThrownBy(actual::one).isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerAll_WhenConnectionExceptionThrown_ShouldThrowCrudConflictException()
+          throws ExecutionException, SQLException, CrudException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.all())
+        .thenThrow(
+            new ExecutionException(
+                "Fetching the next result failed",
+                new SQLException("Simulated failover", "08S02")));
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThatThrownBy(actual::all).isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
+  public void
+      getScannerAndScannerOne_WhenNonConnectionExceptionThrown_ShouldThrowPlainCrudException()
+          throws ExecutionException, SQLException, CrudException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText("p1", "val"))
+            .build();
+    Scanner scanner = mock(Scanner.class);
+    // 42P01 is undefined_table -- an application error, not something a retry would fix.
+    when(scanner.one())
+        .thenThrow(
+            new ExecutionException(
+                "Fetching the next result failed", new SQLException("Undefined table", "42P01")));
+    when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
+
+    // Act Assert
+    TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
+    assertThatThrownBy(actual::one)
+        .isInstanceOf(CrudException.class)
+        .isNotInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
+  public void commit_WhenFailoverSqlStateThrown_ShouldKeepOriginalFailureAsSuppressed()
+      throws SQLException {
+    // Arrange
+    try (HikariDataSource dataSource = FailoverSimulatingDriver.createDataSource()) {
+      Connection pooledConnection = dataSource.getConnection();
+      JdbcTransaction target =
+          new JdbcTransaction(ANY_TX_ID, jdbcCrudService, pooledConnection, rdbEngineStrategy);
+      FailoverSimulatingDriver.failOnCommitWith("08007");
+
+      // Act
+      Throwable thrown = catchThrowable(target::commit);
+
+      // Assert
+      assertThat(thrown).isInstanceOf(UnknownTransactionStatusException.class);
+      // Without this the caller only learns that a rollback failed, which says nothing about the
+      // failover that made the outcome unknown in the first place.
+      assertThat(thrown.getSuppressed()).hasSize(1);
+      assertThat(thrown.getSuppressed()[0]).isInstanceOf(SQLException.class);
+      assertThat(((SQLException) thrown.getSuppressed()[0]).getSQLState()).isEqualTo("08007");
+    } finally {
+      FailoverSimulatingDriver.reset();
+    }
   }
 }

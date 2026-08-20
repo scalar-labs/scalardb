@@ -173,6 +173,12 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     }
     // 40001: serialization_failure
     // 40P01: deadlock_detected
+
+    // Do not add the AWS Advanced JDBC Wrapper failover SQLStates (08001, 08S02, 08007) here.
+    // A conflict is converted into a RetriableExecutionException by JdbcDatabase, which tells the
+    // caller the operation definitely did not apply and is safe to retry. A failover gives no such
+    // guarantee: the outcome may be unknown, or the write may already have been applied on the old
+    // writer. See RdbEnginePostgresqlTest#isConflict_GivenFailoverSqlStates_ShouldReturnFalse.
     return e.getSQLState().equals("40001") || e.getSQLState().equals("40P01");
   }
 

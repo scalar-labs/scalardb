@@ -117,7 +117,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         try {
           return scanner.one();
         } catch (ExecutionException e) {
-          throw new CrudException(e.getMessage(), e, txId);
+          throw createCrudException(e);
         }
       }
 
@@ -126,7 +126,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         try {
           return scanner.all();
         } catch (ExecutionException e) {
-          throw new CrudException(e.getMessage(), e, txId);
+          throw createCrudException(e);
         }
       }
 
@@ -287,14 +287,30 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       connection.commit();
     } catch (SQLException e) {
+      // The outcome of the failed commit is inferred from whether the rollback below succeeds. That
+      // works because HikariCP evicts a connection whose SQLState starts with "08" (a connection
+      // exception, which is also what the AWS Advanced JDBC Wrapper reports on an Aurora failover),
+      // leaving the rollback to fail and the outcome correctly reported as unknown.
+      //
+      // Do not set HikariCP's exceptionOverrideClassName. AWS recommends it, but its implementation
+      // returns DO_NOT_EVICT for 08007 -- precisely the state that means "outcome unknown". The
+      // connection would then survive, this rollback would succeed as a no-op, and an unknown
+      // outcome would be reported as a CommitException, whose contract tells the caller it is safe
+      // to retry from the beginning. See JdbcTransactionTest and JdbcFailoverExceptionBehaviorTest.
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new UnknownTransactionStatusException(
-            CoreError.JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS.buildMessage(
-                sqlException.getMessage()),
-            sqlException,
-            txId);
+        UnknownTransactionStatusException exception =
+            new UnknownTransactionStatusException(
+                CoreError.JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS.buildMessage(
+                    sqlException.getMessage()),
+                sqlException,
+                txId);
+        // Keep the commit failure too. It carries the SQLState explaining why the outcome is
+        // unknown, and without it the caller only sees that a rollback failed, which says nothing
+        // about whether this was an infrastructure event such as an Aurora failover.
+        exception.addSuppressed(e);
+        throw exception;
       }
       throw createCommitException(e);
     } finally {
@@ -357,14 +373,54 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   }
 
   private CrudException createCrudException(SQLException e, String message) {
-    if (rdbEngine.isConflict(e)) {
+    if (rdbEngine.isConflict(e) || isConnectionException(e)) {
       return new CrudConflictException(
           CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(e.getMessage()), e, txId);
     }
     return new CrudException(message, e, txId);
   }
 
+  /**
+   * Classifies what a scanner threw the same way a single CRUD operation's {@link SQLException} is
+   * classified.
+   *
+   * <p>The scanner reports a failure while reading the result set as an {@link ExecutionException}
+   * that carries the {@link SQLException} as its cause. Without unwrapping it here, iterating a
+   * scanner would be the one CRUD path where a lost connection is not reported as retriable, even
+   * though the reasoning in {@link #isConnectionException(SQLException)} applies to it just as much
+   * -- more so, since a scan applies nothing at all.
+   */
+  private CrudException createCrudException(ExecutionException e) {
+    if (e.getCause() instanceof SQLException) {
+      return createCrudException((SQLException) e.getCause(), e.getMessage());
+    }
+    return new CrudException(e.getMessage(), e, txId);
+  }
+
+  /**
+   * Returns whether the exception is a connection exception (SQLState class "08"), which includes
+   * everything the AWS Advanced JDBC Wrapper reports on an Aurora failover.
+   *
+   * <p>Losing the connection here, before {@link #commit()} runs, means the transaction was never
+   * committed: the pool opens transactional connections with autoCommit disabled, so nothing has
+   * been applied, and the server discards the open transaction when the connection dies. The
+   * transaction is therefore safe to retry from the beginning.
+   *
+   * <p>This reasoning holds only in the CRUD phase. Do not reuse it for {@link #commit()}, where a
+   * lost connection leaves the outcome genuinely unknown, nor for {@code
+   * RdbEngineStrategy#isConflict}, which the storage layer uses without knowing which phase it is
+   * serving.
+   */
+  private static boolean isConnectionException(SQLException e) {
+    String sqlState = e.getSQLState();
+    return sqlState != null && sqlState.startsWith("08");
+  }
+
   private CommitException createCommitException(SQLException e) {
+    // Unlike createCrudException, connection exceptions (SQLState class "08") are deliberately not
+    // treated as conflicts here. A connection lost during commit leaves the outcome unknown, and a
+    // conflict tells the caller it is safe to retry. They normally never reach this method anyway:
+    // commit() turns them into UnknownTransactionStatusException when the rollback fails.
     if (rdbEngine.isConflict(e)) {
       return new CommitConflictException(
           CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(e.getMessage()), e, txId);

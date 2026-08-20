@@ -19,6 +19,8 @@ public final class JdbcUtils {
   // SQL Server: 128).
   @VisibleForTesting static final int MAX_INDEX_NAME_LENGTH = 63;
 
+  private static final String AWS_WRAPPER_URL_PREFIX = "jdbc:aws-wrapper:";
+
   private JdbcUtils() {}
 
   public static HikariDataSource initDataSource(JdbcConfig config, RdbEngineStrategy rdbEngine) {
@@ -79,12 +81,16 @@ public final class JdbcUtils {
       @Nullable Long keepaliveTime) {
     HikariConfig hikariConfig = new HikariConfig();
 
+    // Do not set exceptionOverrideClassName here. JdbcTransaction#commit() infers an unknown
+    // outcome from HikariCP evicting a connection whose SQLState starts with "08"; see that method
+    // for why AWS recommends the override and why setting it would break the inference.
+
     /*
      * We need to set the driver class of an underlying database to the dataSource in order
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    hikariConfig.setDriverClassName(rdbEngine.getDriverClassName());
+    hikariConfig.setDriverClassName(getDriverClassName(config, rdbEngine));
 
     hikariConfig.setJdbcUrl(rdbEngine.adjustJdbcUrl(config.getJdbcUrl()));
     rdbEngine.setConnectionCredentials(config, hikariConfig);
@@ -126,6 +132,32 @@ public final class JdbcUtils {
   @VisibleForTesting
   static HikariDataSource createDataSource(HikariConfig hikariConfig) {
     return new HikariDataSource(hikariConfig);
+  }
+
+  static boolean isAwsWrapperUrl(String jdbcUrl) {
+    return jdbcUrl != null && jdbcUrl.startsWith(AWS_WRAPPER_URL_PREFIX);
+  }
+
+  /**
+   * Exposes the URL of the underlying database. Use this only to decide which RDB engine to use:
+   * the URL passed to the connection pool must keep the prefix, because that is what makes the
+   * wrapper handle the connection.
+   */
+  static String removeAwsWrapperPrefix(String jdbcUrl) {
+    assert isAwsWrapperUrl(jdbcUrl);
+    return "jdbc:" + jdbcUrl.substring(AWS_WRAPPER_URL_PREFIX.length());
+  }
+
+  /**
+   * The AWS Advanced JDBC Wrapper supplies its own driver, so the underlying database's driver
+   * class must not be used when the URL routes through it. The engine's own {@code
+   * getDriverClassName()} is left untouched; the substitution happens only here.
+   */
+  private static String getDriverClassName(JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    if (isAwsWrapperUrl(config.getJdbcUrl())) {
+      return software.amazon.jdbc.Driver.class.getName();
+    }
+    return rdbEngine.getDriverClassName();
   }
 
   private static String toHikariTransactionIsolation(Isolation isolation) {
