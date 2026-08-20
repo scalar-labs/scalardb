@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -43,10 +44,12 @@ class RdbEngineMysqlTest {
   void setConnectionToReadOnly_ShouldDoNothing() throws SQLException {
     // MariaDB Connector/J 3.5.10 and later issue SET SESSION TRANSACTION READ ONLY / READ WRITE
     // from Connection#setReadOnly(), which adds two round trips per read and which TiDB rejects.
+    // This override was first added in #2801 and dropped in #3428; if this test starts failing,
+    // check whether the driver still propagates the read-only state before relaxing it.
     Connection connection = mock(Connection.class);
 
     rdbEngineMysql.setConnectionToReadOnly(connection, true);
 
-    verify(connection, never()).setReadOnly(true);
+    verify(connection, never()).setReadOnly(anyBoolean());
   }
 }

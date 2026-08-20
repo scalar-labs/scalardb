@@ -494,11 +494,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
-    // Do nothing. Setting a connection to read-only brings no benefit in MySQL. A read is a single
-    // SELECT with autocommit enabled, for which InnoDB applies the read-only transaction
-    // optimization automatically, while MariaDB Connector/J 3.5.10 and later issue
-    // SET SESSION TRANSACTION READ ONLY / READ WRITE, which adds two round trips per read since
-    // HikariCP restores the pool default on connection return. TiDB rejects the statement entirely.
+    // Do nothing. Setting a connection to read-only brings no benefit in MySQL: read-only is
+    // enforced at the ScalarDB layer (see ReadOnlyDistributedTransaction) and the read paths
+    // only issue SELECTs, while MariaDB Connector/J 3.5.10 and later issue SET SESSION
+    // TRANSACTION READ ONLY / READ WRITE, which adds two round trips per read since HikariCP
+    // restores the pool default on connection return. TiDB rejects the statement entirely.
   }
 
   @Override

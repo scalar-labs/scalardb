@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,6 @@ class RdbEngineTidbTest {
 
     rdbEngineTidb.setConnectionToReadOnly(connection, true);
 
-    verify(connection, never()).setReadOnly(true);
+    verify(connection, never()).setReadOnly(anyBoolean());
   }
 }
