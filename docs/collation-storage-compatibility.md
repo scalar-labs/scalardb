@@ -23,10 +23,12 @@ backend:
   check consistent with what the backend's SQL scan returns.
 - **Cassandra / DynamoDB / Cosmos DB:** these reject cross-partition scans *with ordering*, so
   ScalarDB never sorts their rows in memory; the setting governs **in-memory conjunction range
-  filtering** (`FilterableScanner`) plus the **snapshot** check.
+  filtering** (`FilterableScanner`) plus the **snapshot** check. These storages accept only
+  `BINARY` — an `ICU` configuration is rejected at startup (see the table below).
 - **Object storage (S3 / Azure Blob / GCS):** ScalarDB orders records **entirely in memory** (scan
-  sort + range filter + snapshot). There is no server-side record collation — ScalarDB *is* the
-  collation authority, so there is nothing external to match.
+  sort + range filter + snapshot). There is no server-side record collation, and record identity
+  is byte-exact (objects and records are keyed by the raw key text), so only `BINARY` is
+  supported — an `ICU` configuration is rejected at startup.
 
 ## Compatibility matrix
 
@@ -42,6 +44,12 @@ Legend: ✅ exact match · 🟡 ICU best-effort (not byte-exact) · ⚠️ exact
 | Google Cloud Spanner (PG dialect) | Unicode code-point (= UTF-8 byte order); `COLLATE` unsupported in PG dialect | No | `BINARY` ✅ |
 | SQLite 3 | default `BINARY` (`memcmp` of UTF-8) | `NOCASE`/`RTRIM`/custom only | `BINARY` ✅ |
 
+ScalarDB **rejects `scalar.db.collation=ICU` at startup** on these storages, since the storage type
+alone proves the order (the Cassandra, DynamoDB, and Cosmos DB adapters; SQLite and Spanner through
+JDBC engine detection). A PG-dialect Spanner reached through the PostgreSQL driver is
+indistinguishable from PostgreSQL and is not rejected. See ADR-9 in
+[collation-adr.md](collation-adr.md).
+
 ### Configurable relational backends — depends on the collation the DB uses
 
 | Storage | Byte-order option → `BINARY` | UCA / linguistic option → `ICU` |
@@ -56,11 +64,11 @@ Legend: ✅ exact match · 🟡 ICU best-effort (not byte-exact) · ⚠️ exact
 | SQL Server 2022–2017 | `*_BIN2` (pure code-point) → ✅ | Windows/`SQL_*` collations = proprietary NLS tables, non-UCA → ❌ in general · `*_CI_AI` (e.g. `Latin1_General_100_CI_AI`) is **practically compatible for basic-Latin data** with ICU `PRIMARY` → 🟡 (expansions such as ß/ss, ligatures, and non-Latin scripts still diverge and stay unaligned) |
 | IBM Db2 12.1/11.5 | `IDENTITY` → ✅ | `CLDR2701`/`CLDR181` = **ICU/CLDR-based** → 🟡 (closest linguistic case — Db2 uses ICU internally) · `SYSTEM` language-aware → ❌ |
 
-### Object storage — nothing to match
+### Object storage — `BINARY` only
 
 | Storage | Note |
 |---|---|
-| Amazon S3, Azure Blob Storage, Google Cloud Storage | No server-side record collation. ScalarDB defines the order in memory. Use `BINARY` (canonical byte order — recommended) or `ICU` for linguistic ordering. No external target. |
+| Amazon S3, Azure Blob Storage, Google Cloud Storage | No server-side record collation — ScalarDB defines the order in memory — but record identity is byte-exact: partition objects are named by the raw partition-key text and records are keyed by the raw concatenated key text, so the adapter cannot provide the one-record-per-collation-class uniqueness and collation-aware point reads that `ICU` key identity requires. Only `BINARY` is supported; `ICU` is rejected at startup (ADR-9 in [collation-adr.md](collation-adr.md)). |
 
 ## Why the ICU version matters (and when it doesn't)
 
@@ -102,8 +110,9 @@ match is therefore only reliably available through `BINARY` against a byte-order
   keying is never changed: stored bytes stay as written, and uniqueness remains the backend's job —
   which is why `ICU` key identity requires a backend whose key collation matches, covering both
   uniqueness and recovery point-read resolution (see the key-identity section in `collation.md`).
-- **No runtime validation.** ScalarDB does not check the collation against the backend; matching it is
-  the operator's responsibility.
+- **Runtime validation is minimal.** ScalarDB rejects `ICU` at startup only on the structurally
+  binary-only storages above. For every configurable backend it does not check the collation
+  against the backend; matching it is the operator's responsibility.
 
 ## Recommendations
 

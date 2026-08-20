@@ -82,9 +82,12 @@ It does **not** affect:
 
 ## Storage recommendation (guidance only)
 
-ScalarDB does **not** validate collation-vs-storage compatibility — it neither rejects nor
-warns, and applies the collation uniformly regardless of backend. Matching the collation to
-the storage is the operator's responsibility.
+ScalarDB rejects `scalar.db.collation=ICU` at startup on storages that are binary-only *by
+construction* — Cassandra, DynamoDB, Cosmos DB, object storage, and (through JDBC engine
+detection) SQLite and Cloud Spanner — since no collation the operator could configure there
+would let `ICU` match. For every other backend it does **not** validate collation-vs-storage
+compatibility — it neither rejects nor warns, and applies the collation uniformly. Matching
+the collation to the storage is the operator's responsibility.
 
 - Use **`BINARY`** for byte-order backends: Cassandra, DynamoDB, PostgreSQL with the `C`
   collation, and MySQL `*_bin` collations.
@@ -154,9 +157,11 @@ for characters whose collation weights changed in between. The alignment premise
 text whose equality classes agree between the backend collation and the bundled ICU — restrict
 key text to a stable repertoire, and re-verify alignment when the bundled ICU version changes.
 
-**Misaligned backends are unsafe for `ICU` key identity** (byte-order backends such as Cassandra,
-DynamoDB, Cosmos DB, PostgreSQL `C` — or an "aligned" backend on text hitting the version skew
-above). ScalarDB applies the setting without validation, so the operator owns the consequences:
+**Misaligned backends are unsafe for `ICU` key identity.** Storages that are byte-order by
+construction (Cassandra, DynamoDB, Cosmos DB, object storage, SQLite, Cloud Spanner) reject
+`ICU` at startup. A byte-order *configuration* of a configurable backend (such as PostgreSQL
+`C`) — or an "aligned" backend on text hitting the version skew above — is not detected, and
+the operator owns the consequences:
 two physically distinct collate-equal rows collapse into one entry in the transaction layer's
 result maps (a row silently dropped, limit counts change); writes to physically distinct rows are
 canonically merged (one write silently dropped); legitimate scan-after-write patterns on genuinely
@@ -182,15 +187,14 @@ namespace-level collation, by altering the created table's character columns:
   conditional-mutation `EQ`/`NE` across collate-equal spellings, range operators across case
   boundaries, and cross-partition filtering. Runs on MySQL 8.x (`utf8mb4_0900_ai_ci`), MariaDB
   10.10+ (`utf8mb4_uca1400_ai_ci`), PostgreSQL and AlloyDB (a nondeterministic ICU collation at
-  primary strength the tests create), SQL Server (`Latin1_General_100_CI_AI`, basic-Latin data
-  only), and object storage (no backend collation — ScalarDB's in-memory comparisons alone are
-  under test).
+  primary strength the tests create), and SQL Server (`Latin1_General_100_CI_AI`, basic-Latin
+  data only). Object storage is excluded: it rejects `ICU` at startup (the constructor
+  rejection is unit-tested).
 - **Consensus Commit key-identity suite** (`ConsensusCommitCollationIntegrationTestBase`): the
   aligned-backend scenarios above (read-modify-write across spellings, read-your-own-writes,
   write-write convergence to one physical row, scan-after-delete detection) through real
-  transactions. Runs on the same JDBC backends as the storage-layer suite (object storage is
-  excluded: its record identity is byte-exact, so the aligned-backend contract is structurally
-  unavailable there). Other JDBC backends skip via a capability gate
+  transactions. Runs on the same JDBC backends as the storage-layer suite. Other JDBC backends
+  skip via a capability gate
   (`JdbcCollationTestUtils.isCollationTestSupported`); on the CI-covered backends the gate is
   enforced with `scalardb.jdbc.collation_test=required`, which turns an inconclusive probe (e.g. a
   connection failure) into a hard error so an unreachable or half-configured backend can never
