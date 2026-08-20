@@ -64,7 +64,8 @@ public class ObjectStorageTest {
 
     // Act Assert
     assertThatThrownBy(() -> new ObjectStorage(new DatabaseConfig(properties)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test

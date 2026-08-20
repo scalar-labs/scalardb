@@ -71,7 +71,8 @@ public class CosmosTest {
 
     // Act Assert
     assertThatThrownBy(() -> new Cosmos(new DatabaseConfig(properties)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test

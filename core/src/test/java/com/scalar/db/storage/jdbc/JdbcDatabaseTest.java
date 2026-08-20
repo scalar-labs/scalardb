@@ -94,7 +94,8 @@ public class JdbcDatabaseTest {
 
     // Act Assert
     assertThatThrownBy(() -> new JdbcDatabase(new DatabaseConfig(properties)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test
@@ -108,7 +109,8 @@ public class JdbcDatabaseTest {
 
     // Act Assert
     assertThatThrownBy(() -> new JdbcDatabase(new DatabaseConfig(properties)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test

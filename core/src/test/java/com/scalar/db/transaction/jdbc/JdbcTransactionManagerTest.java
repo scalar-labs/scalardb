@@ -96,7 +96,8 @@ public class JdbcTransactionManagerTest {
 
     // Act Assert
     assertThatThrownBy(() -> new JdbcTransactionManager(new DatabaseConfig(properties)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test

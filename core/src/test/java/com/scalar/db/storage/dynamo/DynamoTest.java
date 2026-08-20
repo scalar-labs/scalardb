@@ -67,7 +67,8 @@ public class DynamoTest {
 
     // Act Assert
     assertThatThrownBy(() -> new Dynamo(new DatabaseConfig(properties)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test

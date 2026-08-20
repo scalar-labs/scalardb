@@ -73,7 +73,8 @@ public class CassandraTest {
 
     // Act Assert
     assertThatThrownBy(() -> new Cassandra(new DatabaseConfig(properties)))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test
