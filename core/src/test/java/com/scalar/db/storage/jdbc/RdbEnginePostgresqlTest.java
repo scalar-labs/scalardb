@@ -1,13 +1,22 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import org.junit.jupiter.api.Test;
 
 class RdbEnginePostgresqlTest {
+
+  @Test
+  void throwIfCollationNotSupported_GivenIcu_ShouldNotThrowAnyException() {
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    assertThatCode(() -> rdbEngine.throwIfCollationNotSupported(Collation.ICU))
+        .doesNotThrowAnyException();
+  }
 
   @Test
   void createTableInternalSqlsAfterCreateTable_GivenSameClusteringOrders_ShouldNotCreateIndex() {

@@ -6,6 +6,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.scalar.db.io.Collation;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
@@ -132,5 +133,17 @@ class RdbEngineSqliteTest {
       throwIfInvalidTableName_WhenContainsNamespaceSeparator_ShouldThrowIllegalArgumentException() {
     assertThatThrownBy(() -> rdbEngine.throwIfInvalidTableName("a$b"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void throwIfCollationNotSupported_GivenIcu_ShouldThrowIllegalArgumentException() {
+    assertThatThrownBy(() -> rdbEngine.throwIfCollationNotSupported(Collation.ICU))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void throwIfCollationNotSupported_GivenBinary_ShouldNotThrowAnyException() {
+    assertThatCode(() -> rdbEngine.throwIfCollationNotSupported(Collation.BINARY))
+        .doesNotThrowAnyException();
   }
 }

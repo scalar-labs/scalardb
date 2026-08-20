@@ -1158,6 +1158,13 @@ public enum CoreError implements ScalarDbError {
       "",
       "Specify a locale that ICU has collation data for (for example en, en_US, or ja) for the "
           + "property scalar.db.collation.icu.locale"),
+  COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE(
+      Category.USER_ERROR,
+      "0304",
+      "The ICU collation is not supported for this storage because the storage supports only "
+          + "binary UTF-8 byte order for text. Storage: %s",
+      "",
+      "Remove the property scalar.db.collation or set it to BINARY for this storage"),
 
   //
   // Errors for the concurrency error category

@@ -20,6 +20,7 @@ import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
@@ -60,6 +61,13 @@ public class Dynamo extends AbstractDistributedStorage {
     if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
           CoreError.DYNAMO_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
+    }
+
+    // DynamoDB orders text only by UTF-8 bytes, so ICU can never match it
+    if (databaseConfig.getCollation() == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(
+              databaseConfig.getStorage()));
     }
 
     DynamoConfig config = new DynamoConfig(databaseConfig);

@@ -58,6 +58,19 @@ public class DynamoTest {
   }
 
   @Test
+  public void constructor_WithIcuCollationConfigured_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    properties.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    properties.setProperty(DatabaseConfig.COLLATION, "ICU");
+
+    // Act Assert
+    assertThatThrownBy(() -> new Dynamo(new DatabaseConfig(properties)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void get_WithoutConjunction_ShouldHandledWithOriginalGet() throws ExecutionException {
     // Arrange
     Get get =

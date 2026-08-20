@@ -55,6 +55,19 @@ public class ObjectStorageTest {
   }
 
   @Test
+  public void constructor_WithIcuCollationConfigured_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    properties.setProperty(DatabaseConfig.STORAGE, "s3");
+    properties.setProperty(DatabaseConfig.COLLATION, "ICU");
+
+    // Act Assert
+    assertThatThrownBy(() -> new ObjectStorage(new DatabaseConfig(properties)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void get_WithoutConjunction_ShouldHandledWithOriginalGet() throws ExecutionException {
     // Arrange
     Get get =

@@ -19,6 +19,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.CollationComparator;
 import java.io.IOException;
 import java.util.List;
@@ -40,6 +41,15 @@ public class ObjectStorage extends AbstractDistributedStorage {
     if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
           CoreError.OBJECT_STORAGE_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
+    }
+    // Object storage record identity is byte-exact (partition objects are named by the raw
+    // partition-key text and records are keyed by the raw concatenated key text), so it cannot
+    // provide the one-row-per-collation-class uniqueness and collation-aware point-read
+    // resolution that ICU-mode key identity requires
+    if (databaseConfig.getCollation() == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(
+              databaseConfig.getStorage()));
     }
     ObjectStorageConfig objectStorageConfig =
         ObjectStorageUtils.getObjectStorageConfig(databaseConfig);

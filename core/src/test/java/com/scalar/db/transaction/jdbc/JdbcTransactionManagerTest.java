@@ -50,6 +50,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -83,6 +84,19 @@ public class JdbcTransactionManagerTest {
             tableMetadataDataSource,
             RdbEngine.createRdbEngineStrategy(RdbEngine.POSTGRESQL),
             jdbcCrudService);
+  }
+
+  @Test
+  public void constructor_WithIcuCollationAndSqliteEngine_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "jdbc:sqlite:test.db");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(DatabaseConfig.COLLATION, "ICU");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcTransactionManager(new DatabaseConfig(properties)))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
