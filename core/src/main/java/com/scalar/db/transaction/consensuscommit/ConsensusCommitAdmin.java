@@ -308,6 +308,23 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   @Override
+  public boolean tableExists(String namespace, String table) throws ExecutionException {
+    // The default implementation checks the table against getNamespaceTableNames(), which loads the
+    // metadata of every table in the namespace. Answer the same question with a single table
+    // instead: the table is a transaction table when the storage has it and it has transaction
+    // metadata.
+    //
+    // The storage is asked first, in the same order as getNamespaceTableNames(), which only reaches
+    // for metadata once it knows the table is there. Reading metadata for a table the storage does
+    // not have is not always harmless: on DynamoDB it fails outright while the metadata table has
+    // yet to be created.
+    if (namespace.equals(coordinatorNamespace)) {
+      return false;
+    }
+    return admin.tableExists(namespace, table) && getTableMetadata(namespace, table) != null;
+  }
+
+  @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     if (namespace.equals(coordinatorNamespace)) {
       return false;

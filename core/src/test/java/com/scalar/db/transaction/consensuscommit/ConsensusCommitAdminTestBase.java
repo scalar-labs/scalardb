@@ -600,6 +600,93 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void tableExists_ForTransactionTable_ShouldReturnTrueWithoutListingTheNamespace()
+      throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE)).thenReturn(true);
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE))
+        .thenReturn(transactionTableMetadata());
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isTrue();
+    verify(distributedStorageAdmin).tableExists(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForStorageTable_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    TableMetadata storageTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("id")
+            .addColumn("id", DataType.TEXT)
+            .addColumn("created_at", DataType.BIGINT)
+            .build();
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE)).thenReturn(true);
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE))
+        .thenReturn(storageTableMetadata);
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_WhenStorageDoesNotHaveTheTable_ShouldNotReadTheMetadata()
+      throws ExecutionException {
+    // Arrange
+    // Reading metadata for a table the storage does not have is not always harmless: on DynamoDB it
+    // fails while the metadata table has yet to be created.
+    when(distributedStorageAdmin.tableExists(NAMESPACE, TABLE)).thenReturn(false);
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never()).getTableMetadata(anyString(), anyString());
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForCoordinatorNamespace_ShouldReturnFalseWithoutReachingTheStorage()
+      throws ExecutionException {
+    // Act
+    boolean actual = admin.tableExists(coordinatorNamespaceName, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never()).tableExists(anyString(), anyString());
+    verify(distributedStorageAdmin, never()).getTableMetadata(anyString(), anyString());
+  }
+
+  private static TableMetadata transactionTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addPartitionKey("account_id")
+        .addColumn("account_id", DataType.INT)
+        .addColumn("balance", DataType.INT)
+        .addColumn(Attribute.ID, DataType.TEXT)
+        .addColumn(Attribute.STATE, DataType.INT)
+        .addColumn(Attribute.VERSION, DataType.INT)
+        .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+        .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+        .addColumn(Attribute.BEFORE_PREFIX + "balance", DataType.INT)
+        .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+        .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+        .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+        .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+        .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+        .build();
+  }
+
+  @Test
   public void
       getNamespaceTableNames_ForNamespaceContainingTransactionAndStorageTables_ShouldCallReturnOnlyTransactionTables()
           throws ExecutionException {
@@ -1083,6 +1170,7 @@ public abstract class ConsensusCommitAdminTestBase {
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(admin.getTableMetadata(coordinatorNamespaceName, "tbl")).isNull();
     assertThat(admin.getNamespaceTableNames(coordinatorNamespaceName)).isEmpty();
+    assertThat(admin.tableExists(coordinatorNamespaceName, "tbl")).isFalse();
     assertThat(admin.namespaceExists(coordinatorNamespaceName)).isFalse();
     assertThatThrownBy(
             () -> admin.repairNamespace(coordinatorNamespaceName, Collections.emptyMap()))
