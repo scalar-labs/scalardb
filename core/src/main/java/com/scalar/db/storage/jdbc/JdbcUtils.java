@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
+import com.scalar.db.common.CoreError;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
@@ -80,6 +81,18 @@ public final class JdbcUtils {
       @Nullable Long maxLifetime,
       @Nullable Long keepaliveTime) {
     HikariConfig hikariConfig = new HikariConfig();
+
+    // The constructor above also reads whatever the hikaricp.configurationFile system property
+    // points at, so this setting can arrive without ScalarDB configuration being involved at all --
+    // and AWS documentation recommends setting it when using their JDBC wrapper. Refuse to start
+    // rather than run with the inference in JdbcTransaction#commit() quietly broken. That failure
+    // would only surface during a failover, would look like an ordinary retry, and would be found
+    // by noticing duplicated data.
+    if (hikariConfig.getExceptionOverrideClassName() != null) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_HIKARICP_EXCEPTION_OVERRIDE_NOT_SUPPORTED.buildMessage(
+              hikariConfig.getExceptionOverrideClassName()));
+    }
 
     // Do not set exceptionOverrideClassName here. JdbcTransaction#commit() infers an unknown
     // outcome from HikariCP evicting a connection whose SQLState starts with "08"; see that method

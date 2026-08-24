@@ -1151,6 +1151,12 @@ public enum CoreError implements ScalarDbError {
       "The RDB engine is not supported with the AWS Advanced JDBC Wrapper. Only Aurora PostgreSQL and Aurora MySQL are supported. JDBC connection URL: %s",
       "",
       ""),
+  JDBC_HIKARICP_EXCEPTION_OVERRIDE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0303",
+      "The HikariCP exceptionOverrideClassName setting is not supported. ScalarDB determines whether a failed commit left the transaction in an unknown state by checking whether the connection survived, which relies on HikariCP discarding a connection that reports a connection exception. An override that keeps such a connection alive would make an unknown outcome be reported as a definite failure, which the caller is told is safe to retry. Configured class: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

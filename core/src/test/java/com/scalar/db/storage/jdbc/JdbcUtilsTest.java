@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
@@ -10,6 +11,9 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
@@ -490,5 +494,39 @@ public class JdbcUtilsTest {
             JdbcUtils.removeAwsWrapperPrefix(
                 "jdbc:aws-wrapper:mysql://h:3306/db?permitMysqlScheme=true"))
         .isEqualTo("jdbc:mysql://h:3306/db?permitMysqlScheme=true");
+  }
+
+  /**
+   * HikariCP reads {@code hikaricp.configurationFile} in its constructor, so this setting can
+   * arrive without ScalarDB configuration being involved -- and AWS documentation recommends
+   * setting it when using their JDBC wrapper. It must be refused rather than silently breaking the
+   * inference {@link com.scalar.db.transaction.jdbc.JdbcTransaction#commit()} relies on.
+   */
+  @Test
+  public void initDataSource_GivenHikariExceptionOverrideConfigured_ShouldThrowException()
+      throws Exception {
+    // Arrange
+    Path configFile = Files.createTempFile("hikari", ".properties");
+    try {
+      Files.write(
+          configFile,
+          "exceptionOverrideClassName=software.amazon.jdbc.util.HikariCPSQLException"
+              .getBytes(StandardCharsets.UTF_8));
+      System.setProperty("hikaricp.configurationFile", configFile.toString());
+
+      Properties properties = new Properties();
+      properties.setProperty(
+          DatabaseConfig.CONTACT_POINTS, "jdbc:postgresql://localhost:5432/test");
+      properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+      JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+
+      // Act Assert
+      assertThatThrownBy(() -> JdbcUtils.initDataSource(config, rdbEngine))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("exceptionOverrideClassName");
+    } finally {
+      System.clearProperty("hikaricp.configurationFile");
+      Files.deleteIfExists(configFile);
+    }
   }
 }
