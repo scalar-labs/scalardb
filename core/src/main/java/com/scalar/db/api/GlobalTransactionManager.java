@@ -23,8 +23,10 @@ import java.util.Map;
  * <p>A typical flow: an initiator begins the global transaction with {@link #begin()}, reads the
  * transaction ID with {@link GlobalTransaction#getId()}, and shares it; each branch is begun by
  * calling {@link #beginBranch(String)} with that ID, performs its CRUD on the returned {@link
- * BranchTransaction}, and is ended with {@link BranchTransaction#end()}; finally the initiator
- * calls {@link GlobalTransaction#commit()} (or {@link GlobalTransaction#rollback()}).
+ * BranchTransaction}, and is ended with {@link BranchTransaction#end(BranchTransaction.Status)}
+ * declaring that branch's outcome; finally the initiator calls {@link GlobalTransaction#commit()}
+ * (or {@link GlobalTransaction#rollback()}). Every branch is ended, including one the initiator
+ * began itself, and on the rollback path as well as the commit path.
  *
  * <p>The {@code beginReadOnly} variants begin a read-only transaction, which the implementation may
  * optimize. The {@code startXxx} methods are aliases of the corresponding {@code beginXxx} methods.
