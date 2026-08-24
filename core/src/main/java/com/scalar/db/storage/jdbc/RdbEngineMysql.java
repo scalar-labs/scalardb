@@ -505,6 +505,10 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // The AWS Advanced JDBC Wrapper, however, defaults to the MySQL Connector/J dialect for a
     // "jdbc:mysql://" URL, so without this the wrapper asks for a driver that is not on the
     // classpath. Users who set the dialect themselves keep their choice.
+    //
+    // The trailing "3" is MariaDB Connector/J's major version, which the wrapper builds into the
+    // dialect name -- it defines no equivalent for any other major version. Moving ScalarDB to a
+    // v4 driver therefore needs a wrapper that names a v4 dialect, and this value updated to match.
     if (JdbcUtils.isAwsWrapperUrl(jdbcUrl)
         && !adjustedJdbcUrl.contains(WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER)) {
       adjustedJdbcUrl =
