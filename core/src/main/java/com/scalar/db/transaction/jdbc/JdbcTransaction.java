@@ -373,7 +373,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
   }
 
   private CrudException createCrudException(SQLException e, String message) {
-    if (rdbEngine.isConflict(e) || isConnectionException(e)) {
+    if (rdbEngine.isConflict(e)) {
       return new CrudConflictException(
           CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(e.getMessage()), e, txId);
     }
@@ -386,9 +386,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
    *
    * <p>The scanner reports a failure while reading the result set as an {@link ExecutionException}
    * that carries the {@link SQLException} as its cause. Without unwrapping it here, iterating a
-   * scanner would be the one CRUD path where a lost connection is not reported as retriable, even
-   * though the reasoning in {@link #isConnectionException(SQLException)} applies to it just as much
-   * -- more so, since a scan applies nothing at all.
+   * scanner would be the one CRUD path where a conflict is not reported as one.
    */
   private CrudException createCrudException(ExecutionException e) {
     if (e.getCause() instanceof SQLException) {
@@ -397,30 +395,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     return new CrudException(e.getMessage(), e, txId);
   }
 
-  /**
-   * Returns whether the exception is a connection exception (SQLState class "08"), which includes
-   * everything the AWS Advanced JDBC Wrapper reports on an Aurora failover.
-   *
-   * <p>Losing the connection here, before {@link #commit()} runs, means the transaction was never
-   * committed: the pool opens transactional connections with autoCommit disabled, so nothing has
-   * been applied, and the server discards the open transaction when the connection dies. The
-   * transaction is therefore safe to retry from the beginning.
-   *
-   * <p>This reasoning holds only in the CRUD phase. Do not reuse it for {@link #commit()}, where a
-   * lost connection leaves the outcome genuinely unknown, nor for {@code
-   * RdbEngineStrategy#isConflict}, which the storage layer uses without knowing which phase it is
-   * serving.
-   */
-  private static boolean isConnectionException(SQLException e) {
-    String sqlState = e.getSQLState();
-    return sqlState != null && sqlState.startsWith("08");
-  }
-
   private CommitException createCommitException(SQLException e) {
-    // Unlike createCrudException, connection exceptions (SQLState class "08") are deliberately not
-    // treated as conflicts here. A connection lost during commit leaves the outcome unknown, and a
-    // conflict tells the caller it is safe to retry. They normally never reach this method anyway:
-    // commit() turns them into UnknownTransactionStatusException when the rollback fails.
     if (rdbEngine.isConflict(e)) {
       return new CommitConflictException(
           CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(e.getMessage()), e, txId);

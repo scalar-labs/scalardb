@@ -1177,59 +1177,13 @@ public class JdbcTransactionTest {
   }
 
   /**
-   * Losing the connection during the CRUD phase means the transaction was never committed: the pool
-   * opens transactional connections with autoCommit disabled, so nothing has been applied and the
-   * server discards the open transaction. Reporting this as a conflict lets an application's normal
-   * retry loop absorb an Aurora failover instead of surfacing it as a generic failure.
-   */
-  @ParameterizedTest
-  @ValueSource(strings = {"08001", "08S02", "08007", "08006"})
-  public void get_WhenConnectionExceptionThrown_ShouldThrowCrudConflictException(String sqlState)
-      throws ExecutionException, SQLException {
-    // Arrange
-    Get get =
-        Get.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .build();
-    when(jdbcCrudService.get(any(Get.class), any(Connection.class)))
-        .thenThrow(new SQLException("Simulated failover", sqlState));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.get(get)).isInstanceOf(CrudConflictException.class);
-  }
-
-  @Test
-  public void get_WhenNonConnectionExceptionThrown_ShouldThrowPlainCrudException()
-      throws ExecutionException, SQLException {
-    // Arrange
-    Get get =
-        Get.newBuilder()
-            .namespace(ANY_NAMESPACE)
-            .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            .build();
-    // 42P01 is undefined_table -- an application error, not something a retry would fix.
-    when(jdbcCrudService.get(any(Get.class), any(Connection.class)))
-        .thenThrow(new SQLException("Undefined table", "42P01"));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.get(get))
-        .isInstanceOf(CrudException.class)
-        .isNotInstanceOf(CrudConflictException.class);
-  }
-
-  /**
    * The scanner reports a read failure as an {@link ExecutionException} carrying the {@link
-   * SQLException} as its cause, so iterating one would otherwise be the only CRUD path that misses
-   * the classification above and reports a failover as a non-retriable {@link CrudException}.
+   * SQLException} as its cause, so without unwrapping it, iterating one would be the only CRUD path
+   * that fails to recognize a conflict.
    */
-  @ParameterizedTest
-  @ValueSource(strings = {"08001", "08S02", "08007", "08006"})
-  public void
-      getScannerAndScannerOne_WhenConnectionExceptionThrown_ShouldThrowCrudConflictException(
-          String sqlState) throws ExecutionException, SQLException, CrudException {
+  @Test
+  public void getScannerAndScannerOne_WhenConflictThrown_ShouldThrowCrudConflictException()
+      throws ExecutionException, SQLException, CrudException {
     // Arrange
     Scan scan =
         Scan.newBuilder()
@@ -1242,8 +1196,9 @@ public class JdbcTransactionTest {
         .thenThrow(
             new ExecutionException(
                 "Fetching the next result failed",
-                new SQLException("Simulated failover", sqlState)));
+                new SQLException("Serialization failure", "40001")));
     when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(rdbEngineStrategy.isConflict(any(SQLException.class))).thenReturn(true);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
@@ -1251,9 +1206,8 @@ public class JdbcTransactionTest {
   }
 
   @Test
-  public void
-      getScannerAndScannerAll_WhenConnectionExceptionThrown_ShouldThrowCrudConflictException()
-          throws ExecutionException, SQLException, CrudException {
+  public void getScannerAndScannerAll_WhenConflictThrown_ShouldThrowCrudConflictException()
+      throws ExecutionException, SQLException, CrudException {
     // Arrange
     Scan scan =
         Scan.newBuilder()
@@ -1266,8 +1220,9 @@ public class JdbcTransactionTest {
         .thenThrow(
             new ExecutionException(
                 "Fetching the next result failed",
-                new SQLException("Simulated failover", "08S02")));
+                new SQLException("Serialization failure", "40001")));
     when(jdbcCrudService.getScanner(scan, connection, false)).thenReturn(scanner);
+    when(rdbEngineStrategy.isConflict(any(SQLException.class))).thenReturn(true);
 
     // Act Assert
     TransactionCrudOperable.Scanner actual = transaction.getScanner(scan);
@@ -1275,9 +1230,8 @@ public class JdbcTransactionTest {
   }
 
   @Test
-  public void
-      getScannerAndScannerOne_WhenNonConnectionExceptionThrown_ShouldThrowPlainCrudException()
-          throws ExecutionException, SQLException, CrudException {
+  public void getScannerAndScannerOne_WhenNonConflictThrown_ShouldThrowPlainCrudException()
+      throws ExecutionException, SQLException, CrudException {
     // Arrange
     Scan scan =
         Scan.newBuilder()
@@ -1286,7 +1240,6 @@ public class JdbcTransactionTest {
             .partitionKey(Key.ofText("p1", "val"))
             .build();
     Scanner scanner = mock(Scanner.class);
-    // 42P01 is undefined_table -- an application error, not something a retry would fix.
     when(scanner.one())
         .thenThrow(
             new ExecutionException(
