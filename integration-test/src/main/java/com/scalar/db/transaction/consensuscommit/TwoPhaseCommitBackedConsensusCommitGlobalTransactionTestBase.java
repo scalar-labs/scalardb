@@ -120,7 +120,7 @@ public abstract class TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestBa
         TimeUnit.MILLISECONDS.sleep(100);
       }
       branch.put(preparePut(0, 0, balance + 100));
-      branch.end();
+      branch.end(BranchTransaction.Status.SUCCESS);
       global.commit();
     }
 

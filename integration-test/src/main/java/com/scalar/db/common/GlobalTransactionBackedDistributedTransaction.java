@@ -14,13 +14,17 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test-only adapter that presents a {@link GlobalTransaction} (coordinator side) plus a {@link
@@ -37,6 +41,8 @@ import java.util.Optional;
  * transaction and its branch are begun.
  */
 public class GlobalTransactionBackedDistributedTransaction extends AbstractDistributedTransaction {
+  private static final Logger logger =
+      LoggerFactory.getLogger(GlobalTransactionBackedDistributedTransaction.class);
 
   private final GlobalTransaction globalTransaction;
   private final BranchTransaction branchTransaction;
@@ -122,11 +128,34 @@ public class GlobalTransactionBackedDistributedTransaction extends AbstractDistr
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
+    // The branch is ended before the transaction is committed, as the branch-lifecycle contract
+    // requires. end(Status)'s checked exceptions are unrelated to commit()'s, so they are mapped:
+    // a conflict stays retriable, anything else does not. Neither is reachable today — no backing
+    // throws from end — but the mapping has to exist for this to compile.
+    try {
+      branchTransaction.end(BranchTransaction.Status.SUCCESS);
+    } catch (CrudConflictException e) {
+      throw new CommitConflictException(e.getMessage(), e, getId());
+    } catch (CrudException e) {
+      throw new CommitException(e.getMessage(), e, getId());
+    }
+
     globalTransaction.commit();
   }
 
   @Override
   public void rollback() throws RollbackException {
-    globalTransaction.rollback();
+    // The branch is ended on this path too: the owner's rollback does not discharge the branch's
+    // own obligation. end(FAILURE) is contractually quiet, but its checked signature is unrelated
+    // to RollbackException, so log and swallow — and roll back in a finally, so a failure while
+    // ending can never strand an in-flight transaction. This mirrors ConsensusCommit.rollback()'s
+    // own scanner cleanup.
+    try {
+      branchTransaction.end(BranchTransaction.Status.FAILURE);
+    } catch (CrudException e) {
+      logger.warn("Failed to end the branch. Transaction ID: {}", getId(), e);
+    } finally {
+      globalTransaction.rollback();
+    }
   }
 }
