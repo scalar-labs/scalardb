@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.BranchTransaction;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.GlobalTransaction;
@@ -190,7 +191,8 @@ class AbstractDistributedTransactionProviderTest {
 
     GlobalTransactionManager manager = provider.createGlobalTransactionManager(config);
     GlobalTransaction global = manager.begin();
-    manager.beginBranch(global.getId());
+    BranchTransaction branch = manager.beginBranch(global.getId());
+    branch.end(BranchTransaction.Status.SUCCESS);
 
     // The manager must compose from the decorating factory methods, not the raw ones. Switching to
     // createRawTwoPhaseCommitParticipant would still compile and leave every other test green,
