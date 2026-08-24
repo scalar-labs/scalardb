@@ -107,7 +107,7 @@ public abstract class DecoratedBranchTransaction implements BranchTransaction {
   }
 
   @Override
-  public void end() throws CrudException {
-    branchTransaction.end();
+  public void end(Status status) throws CrudException {
+    branchTransaction.end(status);
   }
 }
