@@ -25,11 +25,18 @@ import org.slf4j.LoggerFactory;
  * Integration-test corpus for the {@link GlobalTransactionManager} / {@link GlobalTransaction} /
  * {@link BranchTransaction} API, exercised against a real storage.
  *
- * <p>Every test drives a global transaction spanning <b>two branches</b>: begin the overall
+ * <p>Most tests drive a global transaction spanning <b>two branches</b>: begin the overall
  * transaction on {@link #manager1}, join a branch on {@link #manager1} and another on {@link
  * #manager2} (both keyed by {@link GlobalTransaction#getId()}), run CRUD through each branch on a
  * distinct record, then drive the outcome atomically across both branches with {@link
  * GlobalTransaction#commit()} / {@link GlobalTransaction#rollback()}.
+ *
+ * <p>The rest pin the branch lifecycle contract that {@link
+ * BranchTransaction#end(BranchTransaction.Status)} states: which repeat calls are refused and which
+ * are quiet, that a scanner must be closed before a branch is ended successfully, and that an ended
+ * branch takes no further CRUD. Those rules are what the idioms published on {@link
+ * BranchTransaction} rely on, so they belong here rather than only in the unit tests of the
+ * backings this repository ships — every implementation of the API owes them to its callers.
  *
  * <p>{@link #manager1} and {@link #manager2} may be the same instance or two distinct instances,
  * depending on the backing the subclass wires in {@link #setUpManagers()}: a two-phase-commit
@@ -375,6 +382,125 @@ public abstract class GlobalTransactionTestBase {
     // staged write is gone and the rows are readable by an independent transaction.
     assertThat(get(1, 1).get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
     assertThat(get(0, 0).get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  public void end_WithSuccessTwice_ShouldThrowIllegalStateException() throws TransactionException {
+    // Act
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch = manager1.beginBranch(global.getId());
+    branch.end(BranchTransaction.Status.SUCCESS);
+
+    // Assert: SUCCESS rejects a branch that has already been ended. The refusal changes nothing —
+    // the branch stays ended with SUCCESS, so the transaction is still committable.
+    assertThatThrownBy(() -> branch.end(BranchTransaction.Status.SUCCESS))
+        .isInstanceOf(IllegalStateException.class);
+    global.commit();
+  }
+
+  @Test
+  public void end_WithSuccessAfterFailure_ShouldThrowIllegalStateException()
+      throws TransactionException {
+    // Act
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch = manager1.beginBranch(global.getId());
+    branch.end(BranchTransaction.Status.FAILURE);
+
+    // Assert: already-ended is already-ended, whichever outcome ended it.
+    assertThatThrownBy(() -> branch.end(BranchTransaction.Status.SUCCESS))
+        .isInstanceOf(IllegalStateException.class);
+    global.rollback();
+  }
+
+  @Test
+  public void end_WithFailureAfterSuccess_ShouldBeNoOp() throws TransactionException {
+    // Act: this is the cell the initiator idiom published on BranchTransaction leans on — it ends
+    // with SUCCESS, then ends with FAILURE from its catch block without checking whether the
+    // branch was already ended. If FAILURE were to reject an ended branch, that idiom would
+    // displace the failure it is handling.
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch = manager1.beginBranch(global.getId());
+    branch.end(BranchTransaction.Status.SUCCESS);
+    branch.end(BranchTransaction.Status.FAILURE);
+
+    // Assert: the second call was quiet and left the branch ended rather than reviving it.
+    assertThatThrownBy(() -> branch.get(prepareGet(0, 0)))
+        .isInstanceOf(IllegalStateException.class);
+    global.rollback();
+  }
+
+  @Test
+  public void end_WithFailureTwice_ShouldBeIdempotent() throws TransactionException {
+    // Act: a failure path may run more than once (nested cleanup, a retry wrapper), so repeating
+    // FAILURE has to stay quiet.
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch = manager1.beginBranch(global.getId());
+    branch.end(BranchTransaction.Status.FAILURE);
+    branch.end(BranchTransaction.Status.FAILURE);
+
+    // Assert: the second call left the branch ended rather than resetting it.
+    assertThatThrownBy(() -> branch.get(prepareGet(0, 0)))
+        .isInstanceOf(IllegalStateException.class);
+    global.rollback();
+  }
+
+  @Test
+  public void end_WithNull_ShouldThrowNullPointerExceptionAndLeaveBranchUnended()
+      throws TransactionException {
+    // Act
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch = manager1.beginBranch(global.getId());
+
+    // Assert: the rejection happens before any state change, so the branch is still usable — it
+    // takes CRUD and can still be ended normally.
+    assertThatThrownBy(() -> branch.end(null)).isInstanceOf(NullPointerException.class);
+    branch.put(preparePut(0, 0, 100));
+    branch.end(BranchTransaction.Status.SUCCESS);
+    global.commit();
+    assertThat(get(0, 0).get().getInt(BALANCE)).isEqualTo(100);
+  }
+
+  @Test
+  public void end_WithSuccessAndOpenScannerThenClosed_ShouldRejectThenAccept()
+      throws TransactionException {
+    // Arrange
+    putThenCommit(0, 0, INITIAL_BALANCE);
+
+    // Act
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch = manager1.beginBranch(global.getId());
+    TransactionCrudOperable.Scanner scanner = branch.getScanner(prepareScan(0));
+    scanner.one();
+
+    // Assert: SUCCESS requires every scanner the branch handed out to be closed first, and the
+    // refusal leaves the branch endable once it is.
+    assertThatThrownBy(() -> branch.end(BranchTransaction.Status.SUCCESS))
+        .isInstanceOf(IllegalStateException.class);
+    scanner.close();
+    branch.end(BranchTransaction.Status.SUCCESS);
+    global.commit();
+  }
+
+  @Test
+  public void crud_AfterEnd_ShouldThrowIllegalStateExceptionWhicheverStatusWasDeclared()
+      throws TransactionException {
+    // Act
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch1 = manager1.beginBranch(global.getId());
+    BranchTransaction branch2 = manager2.beginBranch(global.getId());
+    branch1.end(BranchTransaction.Status.SUCCESS);
+    branch2.end(BranchTransaction.Status.FAILURE);
+
+    // Assert: an ended branch takes no further CRUD, whichever outcome ended it.
+    assertThatThrownBy(() -> branch1.get(prepareGet(0, 0)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> branch1.put(preparePut(0, 0, 100)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> branch2.get(prepareGet(1, 1)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> branch2.put(preparePut(1, 1, 200)))
+        .isInstanceOf(IllegalStateException.class);
+    global.rollback();
   }
 
   protected void putThenCommit(int id, int type, int balance) throws TransactionException {
