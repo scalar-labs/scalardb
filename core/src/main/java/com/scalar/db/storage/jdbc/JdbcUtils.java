@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
+import com.scalar.db.common.CoreError;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,8 @@ public final class JdbcUtils {
   // databases (PostgreSQL). Other databases have higher limits (e.g., MySQL: 64, Oracle: 128,
   // SQL Server: 128).
   @VisibleForTesting static final int MAX_INDEX_NAME_LENGTH = 63;
+
+  private static final String AWS_WRAPPER_URL_PREFIX = "jdbc:aws-wrapper:";
 
   private JdbcUtils() {}
 
@@ -79,12 +82,28 @@ public final class JdbcUtils {
       @Nullable Long keepaliveTime) {
     HikariConfig hikariConfig = new HikariConfig();
 
+    // The constructor above also reads whatever the hikaricp.configurationFile system property
+    // points at, so this setting can arrive without ScalarDB configuration being involved at all --
+    // and AWS documentation recommends setting it when using their JDBC wrapper. Refuse to start
+    // rather than run with the inference in JdbcTransaction#commit() quietly broken. That failure
+    // would only surface during a failover, would look like an ordinary retry, and would be found
+    // by noticing duplicated data.
+    if (hikariConfig.getExceptionOverrideClassName() != null) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_HIKARICP_EXCEPTION_OVERRIDE_NOT_SUPPORTED.buildMessage(
+              hikariConfig.getExceptionOverrideClassName()));
+    }
+
+    // Do not set exceptionOverrideClassName here. JdbcTransaction#commit() infers an unknown
+    // outcome from HikariCP evicting a connection whose SQLState starts with "08"; see that method
+    // for why AWS recommends the override and why setting it would break the inference.
+
     /*
      * We need to set the driver class of an underlying database to the dataSource in order
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
      * work (e.g., when we dynamically load a driver class from a fatJar).
      */
-    hikariConfig.setDriverClassName(rdbEngine.getDriverClassName());
+    hikariConfig.setDriverClassName(getDriverClassName(config, rdbEngine));
 
     hikariConfig.setJdbcUrl(rdbEngine.adjustJdbcUrl(config.getJdbcUrl()));
     rdbEngine.setConnectionCredentials(config, hikariConfig);
@@ -126,6 +145,32 @@ public final class JdbcUtils {
   @VisibleForTesting
   static HikariDataSource createDataSource(HikariConfig hikariConfig) {
     return new HikariDataSource(hikariConfig);
+  }
+
+  static boolean isAwsWrapperUrl(String jdbcUrl) {
+    return jdbcUrl != null && jdbcUrl.startsWith(AWS_WRAPPER_URL_PREFIX);
+  }
+
+  /**
+   * Exposes the URL of the underlying database. Use this only to decide which RDB engine to use:
+   * the URL passed to the connection pool must keep the prefix, because that is what makes the
+   * wrapper handle the connection.
+   */
+  static String removeAwsWrapperPrefix(String jdbcUrl) {
+    assert isAwsWrapperUrl(jdbcUrl);
+    return "jdbc:" + jdbcUrl.substring(AWS_WRAPPER_URL_PREFIX.length());
+  }
+
+  /**
+   * The AWS Advanced JDBC Wrapper supplies its own driver, so the underlying database's driver
+   * class must not be used when the URL routes through it. The engine's own {@code
+   * getDriverClassName()} is left untouched; the substitution happens only here.
+   */
+  private static String getDriverClassName(JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    if (isAwsWrapperUrl(config.getJdbcUrl())) {
+      return software.amazon.jdbc.Driver.class.getName();
+    }
+    return rdbEngine.getDriverClassName();
   }
 
   private static String toHikariTransactionIsolation(Isolation isolation) {

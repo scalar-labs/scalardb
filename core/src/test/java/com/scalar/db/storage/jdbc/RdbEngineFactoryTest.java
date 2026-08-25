@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -210,5 +211,129 @@ class RdbEngineFactoryTest {
     assertThatThrownBy(() -> RdbEngineFactory.create(config))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage(CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(unsupportedUrl));
+  }
+
+  @Test
+  void create_GivenAwsWrapperPostgresqlUrl_ShouldReturnRdbEnginePostgresql() {
+    // Arrange
+    JdbcConfig config = configWithUrl("jdbc:aws-wrapper:postgresql://localhost:5432/test");
+
+    // Act
+    RdbEngineStrategy engine = RdbEngineFactory.create(config);
+
+    // Assert
+    assertThat(engine).isInstanceOf(RdbEnginePostgresql.class);
+  }
+
+  @Test
+  void create_GivenAwsWrapperMysqlUrlAndMysqlServer_ShouldReturnRdbEngineMysql()
+      throws SQLException {
+    // Arrange
+    JdbcConfig config = configWithUrl("jdbc:aws-wrapper:mysql://localhost:3306/test");
+    HikariDataSource dataSource = mock(HikariDataSource.class);
+    Connection connection = mock(Connection.class);
+    DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getMetaData()).thenReturn(metaData);
+    when(metaData.getDatabaseProductVersion()).thenReturn("8.0.44");
+
+    // The wrapper-URL helpers must keep their real behavior, so only the data source is stubbed.
+    try (MockedStatic<JdbcUtils> mocked = mockStatic(JdbcUtils.class, CALLS_REAL_METHODS)) {
+      mocked
+          .when(() -> JdbcUtils.initDataSourceForAdmin(any(JdbcConfig.class), any()))
+          .thenReturn(dataSource);
+
+      // Act
+      RdbEngineStrategy engine = RdbEngineFactory.create(config);
+
+      // Assert
+      assertThat(engine).isInstanceOf(RdbEngineMysql.class);
+      assertThat(engine).isNotInstanceOf(RdbEngineTidb.class);
+    }
+  }
+
+  @Test
+  void create_GivenAwsWrapperMysqlUrlAndTidbServer_ShouldThrowIllegalArgumentException()
+      throws SQLException {
+    // Arrange
+    String jdbcUrl = "jdbc:aws-wrapper:mysql://localhost:4000/test";
+    JdbcConfig config = configWithUrl(jdbcUrl);
+    HikariDataSource dataSource = mock(HikariDataSource.class);
+    Connection connection = mock(Connection.class);
+    DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getMetaData()).thenReturn(metaData);
+    when(metaData.getDatabaseProductVersion()).thenReturn("5.7.25-TiDB-v6.1.0");
+
+    try (MockedStatic<JdbcUtils> mocked = mockStatic(JdbcUtils.class, CALLS_REAL_METHODS)) {
+      mocked
+          .when(() -> JdbcUtils.initDataSourceForAdmin(any(JdbcConfig.class), any()))
+          .thenReturn(dataSource);
+
+      // Act Assert
+      // TiDB is untested through the wrapper, so it is rejected like MariaDB.
+      assertThatThrownBy(() -> RdbEngineFactory.create(config))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessage(
+              CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED_WITH_AWS_ADVANCED_JDBC_WRAPPER.buildMessage(
+                  jdbcUrl));
+    }
+  }
+
+  @Test
+  void create_GivenAwsWrapperMariadbUrl_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String jdbcUrl = "jdbc:aws-wrapper:mariadb://localhost:3306/test";
+    JdbcConfig config = configWithUrl(jdbcUrl);
+
+    // Act Assert
+    // The wrapper supports MariaDB, but ScalarDB does not test that combination for Aurora.
+    assertThatThrownBy(() -> RdbEngineFactory.create(config))
+        .isInstanceOf(IllegalArgumentException.class)
+        // The message must show the URL the user configured, not the prefix-stripped one.
+        .hasMessage(
+            CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED_WITH_AWS_ADVANCED_JDBC_WRAPPER.buildMessage(
+                jdbcUrl));
+  }
+
+  @Test
+  void create_GivenAwsWrapperUnsupportedUrl_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String jdbcUrl = "jdbc:aws-wrapper:oracle:thin:@//localhost:1521/FREEPDB1";
+    JdbcConfig config = configWithUrl(jdbcUrl);
+
+    // Act Assert
+    assertThatThrownBy(() -> RdbEngineFactory.create(config))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED_WITH_AWS_ADVANCED_JDBC_WRAPPER.buildMessage(
+                jdbcUrl));
+  }
+
+  @Test
+  void create_GivenAwsWrapperUrlWithoutUnderlyingScheme_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String jdbcUrl = "jdbc:aws-wrapper:";
+    JdbcConfig config = configWithUrl(jdbcUrl);
+
+    // Act Assert
+    assertThatThrownBy(() -> RdbEngineFactory.create(config))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED_WITH_AWS_ADVANCED_JDBC_WRAPPER.buildMessage(
+                jdbcUrl));
+  }
+
+  @Test
+  void create_GivenUrlOnlyResemblingAwsWrapperPrefix_ShouldNotBeTreatedAsWrapper() {
+    // Arrange
+    // "jdbc:aws-wrapperfoo:" must not be mistaken for the wrapper prefix.
+    String jdbcUrl = "jdbc:aws-wrapperfoo:postgresql://localhost:5432/test";
+    JdbcConfig config = configWithUrl(jdbcUrl);
+
+    // Act Assert
+    assertThatThrownBy(() -> RdbEngineFactory.create(config))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(jdbcUrl));
   }
 }
