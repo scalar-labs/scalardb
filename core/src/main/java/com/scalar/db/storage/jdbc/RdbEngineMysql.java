@@ -26,6 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RdbEngineMysql extends AbstractRdbEngine {
+
+  private static final String PERMIT_MYSQL_SCHEME_PARAMETER = "permitMysqlScheme";
+  private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
+      "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
@@ -213,6 +217,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // Error number: 1205; Symbol: ER_LOCK_WAIT_TIMEOUT; SQLSTATE: HY000
     // Message: Lock wait timeout exceeded; try restarting transaction
 
+    // Do not add the AWS Advanced JDBC Wrapper failover SQLStates (08001, 08S02, 08007) here.
+    // A conflict is converted into a RetriableExecutionException by JdbcDatabase, which tells the
+    // caller the operation definitely did not apply and is safe to retry. A failover gives no such
+    // guarantee: the outcome may be unknown, or the write may already have been applied on the old
+    // writer. See RdbEngineMysqlTest#isConflict_GivenFailoverSqlStates_ShouldReturnFalse.
     return e.getErrorCode() == 1213 || e.getErrorCode() == 1205;
   }
 
@@ -486,14 +495,36 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String adjustJdbcUrl(String jdbcUrl) {
+    String adjustedJdbcUrl = jdbcUrl;
+
     // MariaDB Connector/J checks for "permitMysqlScheme" in the JDBC URL during URL parsing before
     // any connection properties are applied. If the URL starts with "jdbc:mysql:" and doesn't
     // contain "permitMysqlScheme", the driver rejects the URL entirely. That's why we need to embed
     // it directly in the JDBC URL rather than using getConnectionProperties().
-    if (jdbcUrl.contains("permitMysqlScheme")) {
-      return jdbcUrl;
+    if (!adjustedJdbcUrl.contains(PERMIT_MYSQL_SCHEME_PARAMETER)) {
+      adjustedJdbcUrl = appendParameter(adjustedJdbcUrl, PERMIT_MYSQL_SCHEME_PARAMETER + "=true");
     }
-    return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + "permitMysqlScheme=true";
+
+    // ScalarDB talks to MySQL through MariaDB Connector/J and does not bundle MySQL Connector/J.
+    // The AWS Advanced JDBC Wrapper, however, defaults to the MySQL Connector/J dialect for a
+    // "jdbc:mysql://" URL, so without this the wrapper asks for a driver that is not on the
+    // classpath. Users who set the dialect themselves keep their choice.
+    //
+    // The trailing "3" is MariaDB Connector/J's major version, which the wrapper builds into the
+    // dialect name -- it defines no equivalent for any other major version. Moving ScalarDB to a
+    // v4 driver therefore needs a wrapper that names a v4 dialect, and this value updated to match.
+    if (JdbcUtils.isAwsWrapperUrl(jdbcUrl)
+        && !adjustedJdbcUrl.contains(WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER)) {
+      adjustedJdbcUrl =
+          appendParameter(
+              adjustedJdbcUrl, WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER + "=mariadb-connector-j-3");
+    }
+
+    return adjustedJdbcUrl;
+  }
+
+  private static String appendParameter(String jdbcUrl, String parameter) {
+    return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + parameter;
   }
 
   @Override
