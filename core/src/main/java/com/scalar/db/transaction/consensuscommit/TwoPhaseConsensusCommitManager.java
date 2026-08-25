@@ -110,7 +110,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -155,7 +156,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -193,7 +195,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
   }
 
   private void throwIfGroupCommitIsEnabled() {

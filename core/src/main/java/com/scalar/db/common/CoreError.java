@@ -1173,6 +1173,14 @@ public enum CoreError implements ScalarDbError {
       "",
       "Remove the per-storage collation property; scalar.db.collation and "
           + "scalar.db.collation.icu.* apply to all storages"),
+  COLLATION_ICU_LIKE_CONDITION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0306",
+      "The %s condition is not supported in a transaction when scalar.db.collation is set to ICU "
+          + "because the collation does not define pattern-matching semantics. Operation: %s, "
+          + "Column: %s",
+      "",
+      "Remove the LIKE or NOT_LIKE condition, or set scalar.db.collation to BINARY"),
 
   //
   // Errors for the concurrency error category

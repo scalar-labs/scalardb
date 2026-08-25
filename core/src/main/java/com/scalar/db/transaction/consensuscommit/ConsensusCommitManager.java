@@ -117,7 +117,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -159,7 +160,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -202,7 +204,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
   }
 
   // `groupCommitter` must be set before calling this method.

@@ -128,7 +128,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
   }
 
   @VisibleForTesting
