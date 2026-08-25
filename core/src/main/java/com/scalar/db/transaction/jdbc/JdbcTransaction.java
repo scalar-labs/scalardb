@@ -117,7 +117,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         try {
           return scanner.one();
         } catch (ExecutionException e) {
-          throw new CrudException(e.getMessage(), e, txId);
+          throw createCrudException(e);
         }
       }
 
@@ -126,7 +126,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
         try {
           return scanner.all();
         } catch (ExecutionException e) {
-          throw new CrudException(e.getMessage(), e, txId);
+          throw createCrudException(e);
         }
       }
 
@@ -287,14 +287,30 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
     try {
       connection.commit();
     } catch (SQLException e) {
+      // The outcome of the failed commit is inferred from whether the rollback below succeeds. That
+      // works because HikariCP evicts a connection whose SQLState starts with "08" (a connection
+      // exception, which is also what the AWS Advanced JDBC Wrapper reports on an Aurora failover),
+      // leaving the rollback to fail and the outcome correctly reported as unknown.
+      //
+      // Do not set HikariCP's exceptionOverrideClassName. AWS recommends it, but its implementation
+      // returns DO_NOT_EVICT for 08007 -- precisely the state that means "outcome unknown". The
+      // connection would then survive, this rollback would succeed as a no-op, and an unknown
+      // outcome would be reported as a CommitException, whose contract tells the caller it is safe
+      // to retry from the beginning. See JdbcTransactionTest and JdbcFailoverExceptionBehaviorTest.
       try {
         connection.rollback();
       } catch (SQLException sqlException) {
-        throw new UnknownTransactionStatusException(
-            CoreError.JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS.buildMessage(
-                sqlException.getMessage()),
-            sqlException,
-            txId);
+        UnknownTransactionStatusException exception =
+            new UnknownTransactionStatusException(
+                CoreError.JDBC_TRANSACTION_UNKNOWN_TRANSACTION_STATUS.buildMessage(
+                    sqlException.getMessage()),
+                sqlException,
+                txId);
+        // Keep the commit failure too. It carries the SQLState explaining why the outcome is
+        // unknown, and without it the caller only sees that a rollback failed, which says nothing
+        // about whether this was an infrastructure event such as an Aurora failover.
+        exception.addSuppressed(e);
+        throw exception;
       }
       throw createCommitException(e);
     } finally {
@@ -362,6 +378,21 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
           CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED.buildMessage(e.getMessage()), e, txId);
     }
     return new CrudException(message, e, txId);
+  }
+
+  /**
+   * Classifies what a scanner threw the same way a single CRUD operation's {@link SQLException} is
+   * classified.
+   *
+   * <p>The scanner reports a failure while reading the result set as an {@link ExecutionException}
+   * that carries the {@link SQLException} as its cause. Without unwrapping it here, iterating a
+   * scanner would be the one CRUD path where a conflict is not reported as one.
+   */
+  private CrudException createCrudException(ExecutionException e) {
+    if (e.getCause() instanceof SQLException) {
+      return createCrudException((SQLException) e.getCause(), e.getMessage());
+    }
+    return new CrudException(e.getMessage(), e, txId);
   }
 
   private CommitException createCommitException(SQLException e) {
