@@ -199,6 +199,8 @@ dependencies {
     implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerDriverVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    // Enables fast Aurora failover by discovering the cluster topology instead of waiting for DNS
+    implementation "software.amazon.jdbc:aws-advanced-jdbc-wrapper:${awsAdvancedJdbcWrapperVersion}"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"

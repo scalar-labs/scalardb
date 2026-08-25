@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
@@ -10,6 +11,9 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
@@ -389,5 +393,140 @@ public class JdbcUtilsTest {
 
     // Assert
     assertThat(result1).isNotEqualTo(result2);
+  }
+
+  /**
+   * The AWS Advanced JDBC Wrapper supplies its own driver, and the URL must keep the
+   * "jdbc:aws-wrapper:" prefix because that is what routes the connection through it. The engine's
+   * own getDriverClassName() is left alone; only what reaches the pool changes.
+   */
+  @Test
+  public void initDataSource_GivenAwsWrapperUrl_ShouldUseWrapperDriverAndKeepPrefix() {
+    // Arrange
+    String jdbcUrl = "jdbc:aws-wrapper:postgresql://localhost:5432/test";
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.USERNAME, "postgres");
+    properties.setProperty(DatabaseConfig.PASSWORD, "postgres");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl(jdbcUrl)).thenReturn(jdbcUrl);
+
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine);
+    }
+
+    // Assert
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("software.amazon.jdbc.Driver");
+    assertThat(hikariConfig.getJdbcUrl()).isEqualTo(jdbcUrl);
+  }
+
+  @Test
+  public void initDataSource_GivenNonAwsWrapperUrl_ShouldKeepEngineDriverClass() {
+    // Arrange
+    String jdbcUrl = "jdbc:postgresql://localhost:5432/test";
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl(jdbcUrl)).thenReturn(jdbcUrl);
+
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine);
+    }
+
+    // Assert
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+  }
+
+  @Test
+  public void isAwsWrapperUrl_ShouldMatchOnlyTheExactPrefix() {
+    // Act Assert
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapper:postgresql://h/db")).isTrue();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapper:mysql://h/db")).isTrue();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:postgresql://h/db")).isFalse();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapperfoo:postgresql://h/db")).isFalse();
+    assertThat(JdbcUtils.isAwsWrapperUrl(null)).isFalse();
+  }
+
+  @Test
+  public void removeAwsWrapperPrefix_ShouldExposeUnderlyingUrl() {
+    // Act Assert
+    assertThat(JdbcUtils.removeAwsWrapperPrefix("jdbc:aws-wrapper:postgresql://h:5432/db"))
+        .isEqualTo("jdbc:postgresql://h:5432/db");
+    assertThat(
+            JdbcUtils.removeAwsWrapperPrefix(
+                "jdbc:aws-wrapper:mysql://h:3306/db?permitMysqlScheme=true"))
+        .isEqualTo("jdbc:mysql://h:3306/db?permitMysqlScheme=true");
+  }
+
+  /**
+   * HikariCP reads {@code hikaricp.configurationFile} in its constructor, so this setting can
+   * arrive without ScalarDB configuration being involved -- and AWS documentation recommends
+   * setting it when using their JDBC wrapper. It must be refused rather than silently breaking the
+   * inference {@link com.scalar.db.transaction.jdbc.JdbcTransaction#commit()} relies on.
+   */
+  @Test
+  public void initDataSource_GivenHikariExceptionOverrideConfigured_ShouldThrowException()
+      throws Exception {
+    // Arrange
+    Path configFile = Files.createTempFile("hikari", ".properties");
+    try {
+      Files.write(
+          configFile,
+          "exceptionOverrideClassName=software.amazon.jdbc.util.HikariCPSQLException"
+              .getBytes(StandardCharsets.UTF_8));
+      System.setProperty("hikaricp.configurationFile", configFile.toString());
+
+      Properties properties = new Properties();
+      properties.setProperty(
+          DatabaseConfig.CONTACT_POINTS, "jdbc:postgresql://localhost:5432/test");
+      properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+      JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+
+      // Act Assert
+      assertThatThrownBy(() -> JdbcUtils.initDataSource(config, rdbEngine))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("exceptionOverrideClassName");
+    } finally {
+      System.clearProperty("hikaricp.configurationFile");
+      Files.deleteIfExists(configFile);
+    }
   }
 }

@@ -98,10 +98,14 @@ subprojects {
         sqliteDriverVersion = '3.53.2.1'
         yugabyteDriverVersion = '42.7.3-yb-4'
         db2DriverVersion = '12.1.5.0'
+        // Bumping the major version means updating the wrapperTargetDriverDialect value in
+        // RdbEngineMysql too -- the AWS wrapper names its MariaDB dialect after the driver's major
+        // version, and only defines one for v3.
         mariadDbDriverVersion = '3.5.10'
         alloyDbJdbcConnectorVersion = '1.3.3'
         googleCloudStorageVersion = '2.71.0'
         spannerDriverVersion = '2.42.0'
+        awsAdvancedJdbcWrapperVersion = '4.3.0'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
