@@ -66,8 +66,9 @@ ScalarDB performs itself on the JVM:
   to storage are evaluated by the backend's own collation.)
 
 Equality follows the collation whenever one is set (see "Collation-aware equality" below):
-byte-exact for `BINARY`, collation-aware for `ICU`. `IS_NULL`/`IS_NOT_NULL`/`LIKE` and null-text
-comparisons always stay byte-exact.
+byte-exact for `BINARY`, collation-aware for `ICU`. `IS_NULL`/`IS_NOT_NULL` and null-text
+comparisons always stay byte-exact. Pattern matching never follows the collation, and under `ICU`
+a `LIKE`/`NOT_LIKE` condition is rejected rather than evaluated (see "Pattern matching" below).
 
 It does **not** affect:
 
@@ -113,8 +114,32 @@ conjunction/scan filtering, conditional-mutation `EQ`/`NE` (`putIf`/`deleteIf`/`
 Consensus Commit and object storage), and the Consensus Commit snapshot's equality-based overlap
 check — so with a case-insensitive `ICU` collation a `WHERE textcol = 'apple'` predicate matches a
 stored `'Apple'`, and an `=`-predicate scan-after-write detects a case-differing pending write (the
-equality analog of the range behavior). `IS_NULL`/`IS_NOT_NULL`, `LIKE`, non-text equality, and
-null-text comparisons always stay byte-exact.
+equality analog of the range behavior). `IS_NULL`/`IS_NOT_NULL`, non-text equality, and null-text
+comparisons always stay byte-exact; `LIKE`/`NOT_LIKE` is covered under "Pattern matching" below.
+
+## Pattern matching
+
+The collation never governs `LIKE`/`NOT_LIKE`. ScalarDB matches patterns over exact code points at
+any collation, so on a backend whose own collation makes its `LIKE` case- or accent-insensitive the
+two disagree.
+
+Under `ICU`, a `LIKE`/`NOT_LIKE` condition on a `Get` or `Scan` is therefore **rejected** inside a
+transaction — one-phase and two-phase Consensus Commit, at every isolation level. The transaction
+layer re-evaluates a selection's conditions itself after the backend has applied them, so accepting
+the condition would discard rows the backend matched, hide the transaction's own case-differing
+writes from it, and miss a scan-after-write conflict the backend would have seen. No definition of
+`_` and `%` against contractions and expansions matches a specific backend, so the operation is
+refused instead of answered differently from the storage. PostgreSQL takes the same position for
+its own nondeterministic collations.
+
+The rejection is scoped to the paths ScalarDB evaluates itself. Reads through the storage API, the
+JDBC transaction manager, and single-CRUD transaction mode push the pattern down to the backend and
+are unaffected. Under `BINARY`, the default, `LIKE`/`NOT_LIKE` is accepted everywhere and stays
+byte-exact.
+
+To use pattern matching inside a transaction on a UCA-collated backend, set
+`scalar.db.collation=BINARY` and accept that ScalarDB's own equality and ordering become byte-exact
+too, or filter the pattern outside the transaction.
 
 - **`BINARY`** — equality is byte-exact (`'Apple' != 'apple'`), identical to ScalarDB's current
   behavior.

@@ -112,7 +112,15 @@ match is therefore only reliably available through `BINARY` against a byte-order
   uniqueness and recovery point-read resolution (see the key-identity section in `collation.md`).
 - **Runtime validation is minimal.** ScalarDB rejects `ICU` at startup only on the structurally
   binary-only storages above. For every configurable backend it does not check the collation
-  against the backend; matching it is the operator's responsibility.
+  against the backend; matching it is the operator's responsibility. The one per-operation
+  rejection is `LIKE`/`NOT_LIKE` inside a transaction under `ICU`, which no collation can make
+  agree with the backend (ADR-10 in [collation-adr.md](collation-adr.md)).
+- **Pattern matching is not part of the match.** The rows in this matrix describe ordering and
+  equality. A backend's collation may also govern its own `LIKE` — MySQL and MariaDB defaults,
+  SQL Server defaults, TiDB, and Oracle under `NLS_COMP=LINGUISTIC` all do — while `BINARY` keeps
+  ScalarDB's own pattern matching byte-exact, so a ✅ row does not imply pattern-matching
+  agreement. SQLite is the sharpest case: `BINARY` matches its ordering exactly, but its `LIKE` is
+  ASCII-case-insensitive by default regardless of column collation.
 
 ## Recommendations
 
