@@ -53,7 +53,8 @@ jobs:
       - name: Create pull request
         if: steps.diff.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Requesting a team review needs organization read access, which `GITHUB_TOKEN` lacks.
+          GH_TOKEN: ${{ secrets.CR_PAT }}
         run: |
           BRANCH="update-third-party-notices-$(date +%Y%m%d)"
 

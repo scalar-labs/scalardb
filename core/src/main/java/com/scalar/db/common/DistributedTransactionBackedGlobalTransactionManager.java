@@ -42,8 +42,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * branches of one global transaction must never run concurrently — the branches must be driven one
  * at a time, with the caller providing the happens-before when they hop threads. Likewise, calling
  * {@code beginBranch} again for the same transaction returns a new handle over that same shared
- * transaction — the {@link BranchTransaction#end()} bookkeeping is per handle — so begin each
- * branch once and drive it through that one handle.
+ * transaction — the {@link BranchTransaction#end(BranchTransaction.Status)} bookkeeping is per
+ * handle — so begin each branch once and drive it through that one handle.
  *
  * <p>The shared transaction lives in the manager instance this backing wraps, so a global
  * transaction and all of its branches must be driven through that same instance — in practice,
