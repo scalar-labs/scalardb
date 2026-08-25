@@ -69,9 +69,7 @@ public class ConsensusCommitOperationChecker {
         if (operator == Operator.LIKE || operator == Operator.NOT_LIKE) {
           throw new IllegalArgumentException(
               CoreError.COLLATION_ICU_LIKE_CONDITION_NOT_SUPPORTED.buildMessage(
-                  operator,
-                  selection.forFullTableName().orElse(selection.toString()),
-                  condition.getColumn().getName()));
+                  operator, selection.forFullTableName().get(), condition.getColumn().getName()));
         }
       }
     }

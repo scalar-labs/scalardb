@@ -1177,7 +1177,7 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0306",
       "The %s condition is not supported in a transaction when scalar.db.collation is set to ICU "
-          + "because the collation does not define pattern-matching semantics. Operation: %s, "
+          + "because the collation does not define pattern-matching semantics. Table: %s; "
           + "Column: %s",
       "",
       "Remove the LIKE or NOT_LIKE condition, or set scalar.db.collation to BINARY"),

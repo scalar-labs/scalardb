@@ -13,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
@@ -2592,5 +2593,38 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     verify(commit).setBeforePreparationHook(beforePreparationHook);
+  }
+
+  @Test
+  public void scan_WithLikeConditionAndIcuCollationConfigured_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
+    // Arrange
+    when(databaseConfig.getCollation()).thenReturn(Collation.ICU);
+    ConsensusCommitManager icuManager =
+        new ConsensusCommitManager(
+            storage,
+            admin,
+            consensusCommitConfig,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recoveryExecutor,
+            crud,
+            commit,
+            Isolation.SNAPSHOT,
+            null);
+    ConsensusCommit transaction = (ConsensusCommit) icuManager.begin();
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column("col").isLikeText("app%"))
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.scan(scan))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("scalar.db.collation");
   }
 }

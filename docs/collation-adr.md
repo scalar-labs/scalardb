@@ -180,8 +180,9 @@ Remove the flag. The configured collation governs ScalarDB's in-memory equality 
 as well as its ordering: the collation flavor is the determinism. `BINARY` equality is
 byte-exact (unchanged behavior); `ICU` equality follows the configured locale/strength. To
 get case-sensitive equality, configure a case-sensitive collation.
-`IS_NULL`/`IS_NOT_NULL`/`LIKE`, non-text equality, and null-text comparisons always stay
-byte-exact.
+`IS_NULL`/`IS_NOT_NULL`, non-text equality, and null-text comparisons always stay
+byte-exact. Pattern matching never follows the collation either, and under `ICU` a
+`LIKE`/`NOT_LIKE` condition is rejected rather than evaluated ([ADR-10](#adr-10)).
 
 ### Alternatives considered
 
