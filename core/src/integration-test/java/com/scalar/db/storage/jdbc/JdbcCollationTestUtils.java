@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +22,13 @@ import org.slf4j.LoggerFactory;
  * <ul>
  *   <li>SQL Server — {@code Latin1_General_100_CI_AI} (practically compatible with ICU {@code
  *       PRIMARY} for basic-Latin data; no probe needed, every supported SQL Server has it)
- *   <li>MySQL 8.x — {@code utf8mb4_0900_ai_ci} (UCA 9.0.0); a version probe excludes TiDB and
- *       MariaDB (both reachable through {@code jdbc:mysql:} URLs) and MySQL 5.x
+ *   <li>MySQL 8.x — {@code utf8mb4_0900_ai_ci} (UCA 9.0.0); a version probe excludes MariaDB
+ *       (reachable through {@code jdbc:mysql:} URLs) and MySQL 5.x
+ *   <li>TiDB 7.4+ — {@code utf8mb4_0900_ai_ci}, also reached through {@code jdbc:mysql:} URLs; a
+ *       usage probe checks the collation exists and that comparing under it is case-insensitive. A
+ *       case-sensitive result means the cluster was bootstrapped with {@code
+ *       new_collations_enabled_on_first_bootstrap=false}, under which every collation compares
+ *       binary while {@code information_schema} keeps reporting it correctly
  *   <li>MariaDB 10.10+ — {@code utf8mb4_uca1400_ai_ci} (UCA 14.0.0); a usage probe checks the
  *       collation exists (the {@code information_schema.COLLATIONS} view lists uca1400 collations
  *       under charset-generic names, so a catalog lookup is not reliable)
@@ -41,6 +48,14 @@ public final class JdbcCollationTestUtils {
    * scalar.db.collation.icu.strength=PRIMARY} configuration.
    */
   static final String POSTGRESQL_TEST_COLLATION = "scalardb_collation_test_ci";
+
+  /** Matches the TiDB release in a version string shaped like {@code 8.0.11-TiDB-v8.5.0}. */
+  private static final Pattern TIDB_RELEASE_PATTERN = Pattern.compile("TiDB-v(\\d+)\\.(\\d+)");
+
+  /** First TiDB release offering {@code utf8mb4_0900_ai_ci}. */
+  private static final int TIDB_COLLATION_MAJOR = 7;
+
+  private static final int TIDB_COLLATION_MINOR = 4;
 
   /** Outcome of a collation-support probe. */
   private enum CollationProbeResult {
@@ -83,8 +98,8 @@ public final class JdbcCollationTestUtils {
    * cached (the next evaluation re-probes), and the suite is skipped — unless the system property
    * {@code scalardb.jdbc.collation_test} is set to {@code required}, in which case an {@link
    * IllegalStateException} is thrown so the skip cannot go unnoticed. A definitive UNSUPPORTED
-   * verdict (e.g. TiDB, MySQL 5.x, a PostgreSQL build without ICU) still skips even in required
-   * mode.
+   * verdict (e.g. TiDB below 7.4, MySQL 5.x, a PostgreSQL build without ICU) still skips even in
+   * required mode.
    *
    * @return true if the collation integration tests are supported, false otherwise
    */
@@ -141,26 +156,30 @@ public final class JdbcCollationTestUtils {
     }
     try (Connection connection =
             DriverManager.getConnection(jdbcUrl, JdbcEnv.getUsername(), JdbcEnv.getPassword());
-        Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery("SELECT VERSION()")) {
-      if (!resultSet.next()) {
-        logger.warn(
-            "Skipping the collation integration tests: the MySQL version probe query "
-                + "(SELECT VERSION()) returned no rows");
-        return CollationProbeResult.PROBE_FAILED;
+        Statement statement = connection.createStatement()) {
+      String version;
+      try (ResultSet resultSet = statement.executeQuery("SELECT VERSION()")) {
+        if (!resultSet.next()) {
+          logger.warn(
+              "Skipping the collation integration tests: the MySQL version probe query "
+                  + "(SELECT VERSION()) returned no rows");
+          return CollationProbeResult.PROBE_FAILED;
+        }
+        version = resultSet.getString(1);
       }
-      String version = resultSet.getString(1);
       if (version == null) {
         logger.warn(
             "Skipping the collation integration tests: the MySQL version probe query "
                 + "(SELECT VERSION()) returned a null version");
         return CollationProbeResult.PROBE_FAILED;
       }
+      if (isTidbVersion(version)) {
+        return probeTidbCollationSupport(statement, version);
+      }
       if (!isCollationCapableMysqlVersion(version)) {
         logger.warn(
             "Skipping the collation integration tests: the server version \"{}\" does not "
-                + "support the utf8mb4_0900_* collations (TiDB, MariaDB, and MySQL 5.x are "
-                + "excluded)",
+                + "support the utf8mb4_0900_* collations (MariaDB and MySQL 5.x are excluded)",
             version);
         return CollationProbeResult.UNSUPPORTED;
       }
@@ -168,6 +187,53 @@ public final class JdbcCollationTestUtils {
     } catch (SQLException e) {
       logger.warn(
           "Skipping the collation integration tests: the MySQL version probe connection failed", e);
+      return CollationProbeResult.PROBE_FAILED;
+    }
+  }
+
+  // A usage probe: evaluating a comparison under the target collation proves the server both
+  // knows utf8mb4_0900_ai_ci (offered since TiDB 7.4) and applies it.
+  @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "ODR_OPEN_DATABASE_RESOURCE"})
+  private static CollationProbeResult probeTidbCollationSupport(
+      Statement statement, String version) {
+    try (ResultSet resultSet =
+        statement.executeQuery("SELECT _utf8mb4'a' = _utf8mb4'A' COLLATE utf8mb4_0900_ai_ci")) {
+      if (!resultSet.next()) {
+        logger.warn(
+            "Skipping the collation integration tests: the TiDB collation probe query returned "
+                + "no rows");
+        return CollationProbeResult.PROBE_FAILED;
+      }
+      if (!resultSet.getBoolean(1)) {
+        // A hard error rather than UNSUPPORTED: new_collations_enabled_on_first_bootstrap is
+        // read only at bootstrap and silently ignored afterwards, so a skip would pin a condition
+        // that cannot be repaired on the running cluster
+        throw new IllegalStateException(
+            "The TiDB server at "
+                + JdbcEnv.getJdbcUrl()
+                + " compares strings case-sensitively under utf8mb4_0900_ai_ci, which means the "
+                + "cluster was bootstrapped with new_collations_enabled_on_first_bootstrap=false. "
+                + "Recreate the cluster with that setting enabled before running the collation "
+                + "integration tests");
+      }
+      return CollationProbeResult.SUPPORTED;
+    } catch (SQLException e) {
+      // A capable version reporting the collation as unknown is a regression, not an
+      // incapability: keeping it PROBE_FAILED is what makes required mode fail rather than skip
+      if (isUnknownCollationError(e) && isCollationIncapableTidbVersion(version)) {
+        logger.warn(
+            "Skipping the collation integration tests on {}: the TiDB server version \"{}\" does "
+                + "not support the utf8mb4_0900_ai_ci collation (available since TiDB 7.4)",
+            JdbcEnv.getJdbcUrl(),
+            version,
+            e);
+        return CollationProbeResult.UNSUPPORTED;
+      }
+      logger.warn(
+          "Skipping the collation integration tests: the TiDB collation probe statement failed "
+              + "on server version \"{}\"",
+          version,
+          e);
       return CollationProbeResult.PROBE_FAILED;
     }
   }
@@ -263,17 +329,6 @@ public final class JdbcCollationTestUtils {
   }
 
   /**
-   * Returns whether the given server version string (as reported by {@code SELECT VERSION()} over a
-   * {@code jdbc:mysql:} URL) supports the {@code utf8mb4_0900_*} collations used by the collation
-   * integration tests. TiDB and MariaDB (both reachable through the {@code jdbc:mysql:} URL) and
-   * MySQL 5.x do not support them.
-   *
-   * <p>Package-private and pure so it can be unit-tested without a live database.
-   *
-   * @param version the server version string, may be null
-   * @return true if the version denotes a collation-capable MySQL server, false otherwise
-   */
-  /**
    * Returns whether the given exception denotes MySQL/MariaDB error 1273 (ER_UNKNOWN_COLLATION) —
    * the one statement-stage error that proves a definitive collation incapability rather than a
    * transient or environmental failure.
@@ -287,11 +342,62 @@ public final class JdbcCollationTestUtils {
     return e.getErrorCode() == 1273;
   }
 
+  /**
+   * Returns whether the given server version string (as reported by {@code SELECT VERSION()} over a
+   * {@code jdbc:mysql:} URL) supports the {@code utf8mb4_0900_*} collations used by the collation
+   * integration tests. MariaDB (also reachable through the {@code jdbc:mysql:} URL) and MySQL 5.x
+   * do not support them. TiDB is classified by {@link #isCollationIncapableTidbVersion(String)}
+   * instead.
+   *
+   * <p>Package-private and pure so it can be unit-tested without a live database.
+   *
+   * @param version the server version string, may be null
+   * @return true if the version denotes a collation-capable MySQL server, false otherwise
+   */
   static boolean isCollationCapableMysqlVersion(String version) {
     if (version == null) {
       return false;
     }
-    return !version.contains("TiDB") && !version.contains("MariaDB") && !version.startsWith("5.");
+    return !version.contains("MariaDB") && !version.startsWith("5.");
+  }
+
+  /**
+   * Returns whether the given server version string denotes TiDB, which reports a version shaped
+   * like {@code 8.0.11-TiDB-v8.5.0} — the MySQL version it is wire-compatible with, then its own
+   * release.
+   *
+   * <p>Package-private and pure so it can be unit-tested without a live database.
+   *
+   * @param version the server version string, may be null
+   * @return true if the version denotes a TiDB server, false otherwise
+   */
+  static boolean isTidbVersion(String version) {
+    return version != null && version.contains("TiDB");
+  }
+
+  /**
+   * Returns whether the given TiDB version string denotes a release older than 7.4, the first that
+   * offers {@code utf8mb4_0900_ai_ci}. A version string whose TiDB release cannot be parsed yields
+   * false, so an unknown-collation error reported by it is treated as a probe failure rather than a
+   * definitive incapability.
+   *
+   * <p>Package-private and pure so it can be unit-tested without a live database.
+   *
+   * @param version the server version string, may be null
+   * @return true if the version denotes a TiDB release known to predate 7.4, false otherwise
+   */
+  static boolean isCollationIncapableTidbVersion(String version) {
+    if (version == null) {
+      return false;
+    }
+    Matcher matcher = TIDB_RELEASE_PATTERN.matcher(version);
+    if (!matcher.find()) {
+      return false;
+    }
+    int major = Integer.parseInt(matcher.group(1));
+    int minor = Integer.parseInt(matcher.group(2));
+    return major < TIDB_COLLATION_MAJOR
+        || (major == TIDB_COLLATION_MAJOR && minor < TIDB_COLLATION_MINOR);
   }
 
   /**
