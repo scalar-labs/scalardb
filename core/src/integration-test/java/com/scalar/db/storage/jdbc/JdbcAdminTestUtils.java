@@ -187,11 +187,11 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
   }
 
   /**
-   * On MySQL and MariaDB the collation is inherited from the namespace default set by {@link
-   * #alterNamespaceCollation} before the table is created, so instead of altering the table this
-   * verifies the inheritance took effect: {@code CREATE TABLE ... IF NOT EXISTS} silently reuses a
-   * table leaked by a prior broken run, and such a table keeps its stale collation because a
-   * database default only applies to tables created afterwards.
+   * On MySQL, MariaDB and Oracle the collation is inherited from the namespace default set by
+   * {@link #alterNamespaceCollation} before the table is created, so this verifies the inheritance
+   * took effect rather than altering the table: {@code CREATE TABLE ... IF NOT EXISTS} silently
+   * reuses a table leaked by a prior broken run, and such a table keeps its stale collation because
+   * a database default only applies to tables created afterwards.
    */
   @Override
   public void alterTableCollation(String namespace, String table, String collation)

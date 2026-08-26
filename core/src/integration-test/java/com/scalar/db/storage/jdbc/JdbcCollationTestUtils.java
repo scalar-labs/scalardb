@@ -316,7 +316,7 @@ public final class JdbcCollationTestUtils {
   // Oracle has no error code that definitively proves an incapability. ORA-43929 reports the
   // missing MAX_STRING_SIZE=EXTENDED prerequisite, which is a fixable property of the database
   // rather than of the server version, so every failure stays PROBE_FAILED and required mode fails
-  // instead of dropping coverage. The collation name comes from a fixed per-version mapping, not
+  // rather than dropping coverage. The collation name comes from a fixed per-version mapping, not
   // from any external input.
   @SuppressFBWarnings({
     "OBL_UNSATISFIED_OBLIGATION",

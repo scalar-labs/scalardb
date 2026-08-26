@@ -197,8 +197,8 @@ jdbc:
       # The collation suites declare a namespace default collation. That is DDL-level collation, which
       # requires MAX_STRING_SIZE=EXTENDED (ORA-43929). The parameter is PDB-scoped and irreversible, and
       # it applies to every Oracle integration test on this job, not only the collation suites. OPEN
-      # UPGRADE and utl32k are SYSDBA operations, and closing the PDB from a session attached to it ends
-      # that session, so drive the migration from the CDB root instead of the SYSTEM service connection.
+      # UPGRADE and utl32k are SYSDBA operations, and the first close has to come from outside the PDB,
+      # so the migration runs on its own SYSDBA connection to the CDB root.
       echo "WHENEVER SQLERROR EXIT FAILURE
       ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} CLOSE IMMEDIATE;
       ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} OPEN UPGRADE;
@@ -206,6 +206,9 @@ jdbc:
       ALTER SYSTEM SET MAX_STRING_SIZE=EXTENDED;
       @?/rdbms/admin/utl32k.sql
       @?/rdbms/admin/utlrp.sql
+      -- utl32k.sql ends by setting WHENEVER SQLERROR CONTINUE, so re-arm the directive before the
+      -- statements below; otherwise a failure here leaves the PDB unusable and still exits zero.
+      WHENEVER SQLERROR EXIT FAILURE
       ALTER PLUGGABLE DATABASE CLOSE IMMEDIATE;
       ALTER PLUGGABLE DATABASE OPEN;
       ALTER PLUGGABLE DATABASE SAVE STATE;
