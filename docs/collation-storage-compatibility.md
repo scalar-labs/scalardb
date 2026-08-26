@@ -52,17 +52,24 @@ indistinguishable from PostgreSQL and is not rejected. See ADR-9 in
 
 ### Configurable relational backends — depends on the collation the DB uses
 
+Each rating below describes how well a backend's collation can align with `BINARY` or `ICU`
+ordering. It does not say whether the collation integration tests can run there: hosting them
+also needs a way to apply a collation to the tables the tests create, which Db2 and YugabyteDB
+lack despite their 🟡 ratings.
+
 | Storage | Byte-order option → `BINARY` | UCA / linguistic option → `ICU` |
 |---|---|---|
 | MySQL 8.4/8.0, Aurora MySQL v3 | `utf8mb4_0900_bin` (NO PAD) → ✅ · legacy `utf8mb4_bin` (PAD SPACE) → ⚠️ trailing spaces | default `utf8mb4_0900_ai_ci` = UCA **9.0.0** + CLDR 30 → 🟡 |
 | MariaDB 11.4 | `utf8mb4_nopad_bin` (NO PAD) → ✅ · `utf8mb4_bin` → ⚠️ trailing spaces | 11.4+ default `utf8mb4_uca1400_ai_ci` = UCA **14.0.0** → 🟡 (verified by the collation integration tests at ICU `PRIMARY`) |
 | MariaDB 10.11, Aurora MySQL v2 | `utf8mb4_bin` → ⚠️ trailing spaces | default `utf8mb4_general_ci` = **non-UCA legacy** → ❌ |
-| TiDB 8.5–6.5 | default `utf8mb4_bin` (new framework **trims** trailing spaces) → ⚠️ | `utf8mb4_0900_ai_ci` (7.4+) / `unicode_ci` if configured → 🟡 (TiDB rejects converting the collation of indexed columns, so a collation must be chosen at table creation — which the collation tests' namespace-default mechanism does; verified manually on 8.5, CI gate widening pending) |
+| TiDB 8.5–6.5 | default `utf8mb4_bin` (new framework **trims** trailing spaces) → ⚠️ | `utf8mb4_0900_ai_ci` (7.4+) / `unicode_ci` if configured → 🟡 (TiDB rejects converting the collation of indexed columns, so a collation must be chosen at table creation — which the collation tests' namespace-default mechanism does; covered by the collation integration tests on 7.4+, which also guard against a cluster
+bootstrapped with `new_collations_enabled_on_first_bootstrap=false`, where every collation
+compares binary while `information_schema` still reports it correctly) |
 | PostgreSQL 17–13, Aurora PG, AlloyDB | `C` / `POSIX` / builtin `C.UTF-8` → ✅ (AlloyDB default is `C.UTF-8`) | ICU provider → 🟡 (must match server's ICU version; a nondeterministic ICU collation at primary strength is verified by the collation integration tests on PostgreSQL 17 and AlloyDB) · **glibc** locale e.g. `en_US.UTF-8` → ❌ (glibc ≠ ICU, version drift) |
-| YugabyteDB 2 (YSQL) | database collation **must be `C`** → ✅ | per-column ICU → 🟡 |
-| Oracle 23ai/21c/19c | `NLS_SORT=BINARY` (common default) → ✅ | `UCA1210_*` → 🟡 · `GENERIC_M` / monolingual (non-UCA) → ❌ |
+| YugabyteDB 2 (YSQL) | database collation **must be `C`** → ✅ | per-column ICU → 🟡 (**cannot host the collation tests**: YSQL supports only deterministic collations, databases can use only `C`, and column collation cannot be altered after creation, so a deterministic collation cannot deliver case-insensitive equality) |
+| Oracle 23ai/21c/19c | `NLS_SORT=BINARY` (common default) → ✅ | `UCA1210_*` on 21c and later, `UCA0700_*` on 19c which offers no UCA1210 family → 🟡 (covered by the collation integration tests, which derive the name per version and need `MAX_STRING_SIZE=EXTENDED` on the database) · `GENERIC_M` / monolingual (non-UCA) → ❌ |
 | SQL Server 2022–2017 | `*_BIN2` (pure code-point) → ✅ | Windows/`SQL_*` collations = proprietary NLS tables, non-UCA → ❌ in general · `*_CI_AI` (e.g. `Latin1_General_100_CI_AI`) is **practically compatible for basic-Latin data** with ICU `PRIMARY` → 🟡 (expansions such as ß/ss, ligatures, and non-Latin scripts still diverge and stay unaligned) |
-| IBM Db2 12.1/11.5 | `IDENTITY` → ✅ | `CLDR2701`/`CLDR181` = **ICU/CLDR-based** → 🟡 (closest linguistic case — Db2 uses ICU internally) · `SYSTEM` language-aware → ❌ |
+| IBM Db2 12.1/11.5 | `IDENTITY` → ✅ | `CLDR2701`/`CLDR181` = **ICU/CLDR-based** → 🟡 (closest linguistic case — Db2 uses ICU internally; **cannot host the collation tests**: the collating sequence is fixed at `CREATE DATABASE ... COLLATE USING` with no `ALTER DATABASE` path, no per-column `COLLATE`, and no session override, and being database-wide it would change every existing Db2 test. Db2 also makes `LIKE` collation-aware, which is context for ADR-10) · `SYSTEM` language-aware → ❌ |
 
 ### Object storage — `BINARY` only
 
@@ -129,7 +136,7 @@ match is therefore only reliably available through `BINARY` against a byte-order
    `*_0900_bin`, PostgreSQL/YugabyteDB/AlloyDB `C`/`C.UTF-8`). This yields an exact, version-stable
    match across the entire supported matrix and needs no ICU.
 2. **Use `ICU` only when the storage must keep a UCA-based collation** (MySQL `0900_ai_ci`, MariaDB
-   `uca1400`, Db2 CLDR, Oracle `UCA1210`, PostgreSQL ICU provider). Configure `.icu.locale` and
+   `uca1400`, Db2 CLDR, Oracle `UCA1210` or `UCA0700` on 19c, PostgreSQL ICU provider). Configure `.icu.locale` and
    `.icu.strength` to approximate it, and treat the result as best-effort — verify ordering on your
    data, and expect drift if ScalarDB's ICU4J version and the backend's UCA/CLDR version differ.
 3. **For non-UCA/proprietary collations** (glibc locales, Oracle `GENERIC_M`, SQL Server Windows/`SQL_*`,

@@ -223,19 +223,26 @@ namespace-level collation, by altering the created table's character columns:
   (`JdbcCollationTestUtils.isCollationTestSupported`); on the CI-covered backends the gate is
   enforced with `scalardb.jdbc.collation_test=required`, which turns an inconclusive probe (e.g. a
   connection failure) into a hard error so an unreachable or half-configured backend can never
-  silently skip. A definitive incapability verdict (MySQL 5.7, TiDB, a PostgreSQL build without
-  ICU) still skips even in required mode, with the reason logged at WARN. TiDB stays excluded by
-  the capability gate for the moment, but the historical hard blocker is gone: TiDB rejects
-  converting the collation of indexed columns ("Unsupported converting collation ... when index
-  is defined on it"), which ruled it out while the tests converted the table after creation, but
-  the namespace-default mechanism chooses the collation at table creation, which TiDB accepts —
-  a manual run of both suites (plus the leaked-table verification test) passed on TiDB 8.5 with
-  `utf8mb4_0900_ai_ci`. Enabling TiDB in the gate is deferred on two counts: the
-  `utf8mb4_0900_*` collations exist only since TiDB 7.4 while CI also runs 6.5 (the version
-  check would need to become a usage probe, as MariaDB's already is), and the run required
-  `SET GLOBAL tidb_enable_noop_functions=1` because ScalarDB's read-only metadata connections
-  (`Connection.setReadOnly`) are otherwise rejected by TiDB — an environment prerequisite the
-  CI TiDB setup does not currently provide.
+  silently skip. A definitive incapability verdict (MySQL 5.7, TiDB below 7.4, a PostgreSQL build
+  without ICU) still skips even in required mode, with the reason logged at WARN.
+
+  TiDB and Oracle both run the suites. Neither rejects the namespace-default mechanism, which
+  chooses the collation at table creation: TiDB rejects only *converting* the collation of an
+  indexed column, and on Oracle a namespace is a user whose default collation its tables inherit.
+
+  TiDB's one constraint is a version floor: `utf8mb4_0900_ai_ci` exists from 7.4, so 6.5 skips.
+  The gate also guards a hazard no catalog reports. A cluster bootstrapped with
+  `new_collations_enabled_on_first_bootstrap=false` compares every collation binary while
+  `information_schema` keeps reporting the collation correctly, so the probe reads the result of a
+  comparison under the target collation rather than trusting the catalog. That setting is read only
+  at bootstrap, so the cluster has to be recreated to fix it.
+
+  Oracle's constraint is a database prerequisite: declaring a namespace default collation is
+  DDL-level collation, which Oracle rejects with ORA-43929 unless `MAX_STRING_SIZE` is `EXTENDED`.
+  No read-only probe can observe that parameter, so a database without it runs the suites and fails
+  in them rather than skipping. The target collation is also the only one derived per version
+  instead of fixed: 19c offers no `UCA1210_*` family, so it uses `UCA0700_ROOT_AI` while 21c and
+  later use `UCA1210_ROOT_AI`.
 
 The CI jobs' **default** collations are pinned to exact `BINARY` matches so the rest of the test
 matrix exercises the default mode faithfully: MySQL 8.x `utf8mb4_0900_bin` (5.7 keeps legacy

@@ -357,32 +357,47 @@ layer) and `ConsensusCommitCollationIntegrationTestBase` (key identity), exercis
 `PRIMARY` strength inside the existing CI jobs, with the backend collation applied through
 test-only `AdminTestUtils` hooks:
 
-- **MySQL/MariaDB:** set the CI collation as the **namespace (database) default** before
+- **MySQL/MariaDB/TiDB:** set the CI collation as the **namespace (database) default** before
   table creation so tables inherit it at creation time, plus a read-back verification of
   the created columns' collations that fails fast on a stale collation left by a leaked
   table (`JdbcCollationVerificationIntegrationTest`). Choosing the collation at creation
   rather than altering afterward is also what removes TiDB's historical hard blocker.
+- **Oracle:** a namespace is a user, so the collation is set with `ALTER USER <namespace>
+  DEFAULT COLLATION` before table creation and the created columns are read back from
+  `ALL_TAB_COLS`. The per-column path is closed: ORA-43923 rejects altering the collation of
+  a primary-key column and Oracle DDL auto-commits, so a drop-and-recreate cannot be atomic.
 - **PostgreSQL/SQL Server** (no namespace-level collation): alter the created table's
   character columns.
 - **Capability gate:** other JDBC backends skip via
   `JdbcCollationTestUtils.isCollationTestSupported`; on CI-covered backends the gate runs
   with `scalardb.jdbc.collation_test=required`, which turns an *inconclusive* probe (e.g. a
   connection failure) into a hard error so a half-configured backend can never silently
-  skip, while a *definitive* incapability verdict (MySQL 5.7, TiDB pending, a PostgreSQL
-  build without ICU) still skips with the reason logged.
+  skip, while a *definitive* incapability verdict (MySQL 5.7, TiDB below 7.4, a PostgreSQL
+  build without ICU) still skips with the reason logged. Oracle has no such verdict: its only
+  known failure, the missing `MAX_STRING_SIZE=EXTENDED` prerequisite, is a fixable property of
+  the database rather than of the server version, so every Oracle probe failure stays
+  inconclusive and required mode fails rather than dropping coverage.
 - **Default-mode fidelity:** the CI jobs' default collations are pinned to exact `BINARY`
   matches (`utf8mb4_0900_bin`, `utf8mb4_nopad_bin`, PostgreSQL `--locale=C`,
   `Japanese_BIN2`, AlloyDB posix, per `ci/tests-config.yaml`) so the rest of the test
-  matrix exercises the default mode against byte-ordered backends.
+  matrix exercises the default mode against byte-ordered backends. Two exceptions: the TiDB
+  job pins no default collation, so it inherits TiUP's `utf8mb4_bin` and carries the same PAD
+  SPACE gap already documented for MySQL 5.7; and the Oracle job's `MAX_STRING_SIZE=EXTENDED`
+  prerequisite is irreversible and applies to every Oracle integration test on that job, not
+  only the collation suites.
 
 ### Consequences
 
 - The aligned-backend contract of ADR-5 is exercised end-to-end on MySQL 8.x, MariaDB
-  10.10+, PostgreSQL/AlloyDB, and SQL Server; object storage runs neither suite because it
-  rejects `ICU` at startup (ADR-9), which is unit-tested instead.
-- TiDB remains gate-excluded pending a version-check-to-usage-probe change and a CI
-  environment prerequisite (`tidb_enable_noop_functions=1` for read-only metadata
-  connections), though both suites passed manually on TiDB 8.5.
+  10.10+, PostgreSQL/AlloyDB, SQL Server, TiDB 7.4+, and Oracle 19c/21c/23ai; object storage
+  runs neither suite because it rejects `ICU` at startup (ADR-9), which is unit-tested instead.
+- Db2 and YugabyteDB cannot host the suites. Db2 fixes its collating sequence at
+  `CREATE DATABASE ... COLLATE USING` with no `ALTER DATABASE` path, no per-column `COLLATE`,
+  and no session override, and because the sequence is database-wide a case-insensitive Db2
+  database would change the semantics of every existing Db2 test. YugabyteDB's YSQL supports
+  only deterministic collations, its databases can use only `C`, and column collation cannot be
+  altered after creation, so neither half of the PostgreSQL mechanism is available and a
+  deterministic collation cannot deliver case-insensitive equality.
 - Test coverage tracks the bundled ICU version: alignment must be re-verified when it
   changes (ADR-3).
 
@@ -480,7 +495,7 @@ The Consensus Commit transaction layer re-evaluates a selection's conjunctions i
 after the backend has already applied them — when merging the transaction's own writes,
 when re-checking records whose before images matched, and when detecting scan-after-write
 conflicts. On a backend whose own collation governs `LIKE` (MySQL and MariaDB defaults,
-SQL Server defaults, TiDB, Oracle under `NLS_COMP=LINGUISTIC`) the backend returns rows
+SQL Server defaults, TiDB, Db2, Oracle under `NLS_COMP=LINGUISTIC`) the backend returns rows
 that this byte-exact re-check then discards, a case-differing own write stays hidden from
 the transaction that made it, and a pending write the backend would treat as overlapping a
 scan goes unseen. The last of these is the unsafe direction: a missed conflict rather than
@@ -490,7 +505,8 @@ Making the pattern collation-aware requires defining what `_` and `%` mean again
 contractions, expansions, and strength-ignorable characters. No two backends answer that
 the same way: MySQL carries a per-collation wildcard comparator, and PostgreSQL refuses
 pattern matching under a nondeterministic collation outright ("The pattern matching
-operators of all three kinds do not support nondeterministic collations"). An in-memory
+operators of all three kinds do not support nondeterministic collations"), and Db2 makes
+`LIKE` collation-aware, a third answer next to those two. An in-memory
 answer would be a third dialect matching neither the backend nor the operator's
 expectation, and — unlike ordering, where ADR-3 accepts a documented best-effort gap —
 a wrong row set is not a near miss.
