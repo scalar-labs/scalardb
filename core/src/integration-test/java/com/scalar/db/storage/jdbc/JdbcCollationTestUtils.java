@@ -193,7 +193,6 @@ public final class JdbcCollationTestUtils {
 
   // A usage probe: evaluating a comparison under the target collation proves the server both
   // knows utf8mb4_0900_ai_ci (offered since TiDB 7.4) and applies it.
-  @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "ODR_OPEN_DATABASE_RESOURCE"})
   private static CollationProbeResult probeTidbCollationSupport(
       Statement statement, String version) {
     try (ResultSet resultSet =
@@ -345,9 +344,10 @@ public final class JdbcCollationTestUtils {
   /**
    * Returns whether the given server version string (as reported by {@code SELECT VERSION()} over a
    * {@code jdbc:mysql:} URL) supports the {@code utf8mb4_0900_*} collations used by the collation
-   * integration tests. MariaDB (also reachable through the {@code jdbc:mysql:} URL) and MySQL 5.x
-   * do not support them. TiDB is classified by {@link #isCollationIncapableTidbVersion(String)}
-   * instead.
+   * integration tests. MariaDB and TiDB (both also reachable through the {@code jdbc:mysql:} URL)
+   * and MySQL 5.x do not support them. TiDB is excluded here as well as dispatched ahead of this
+   * check, so no evaluation order lets a TiDB server reach the suites without the case-sensitivity
+   * probe; its own version floor is {@link #isCollationIncapableTidbVersion(String)}.
    *
    * <p>Package-private and pure so it can be unit-tested without a live database.
    *
@@ -358,7 +358,7 @@ public final class JdbcCollationTestUtils {
     if (version == null) {
       return false;
     }
-    return !version.contains("MariaDB") && !version.startsWith("5.");
+    return !version.contains("TiDB") && !version.contains("MariaDB") && !version.startsWith("5.");
   }
 
   /**

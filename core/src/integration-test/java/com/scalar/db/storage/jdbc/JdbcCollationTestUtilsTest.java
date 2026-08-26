@@ -25,6 +25,14 @@ public class JdbcCollationTestUtilsTest {
   }
 
   @Test
+  public void isCollationCapableMysqlVersion_TidbVersions_ShouldReturnFalse() {
+    assertThat(JdbcCollationTestUtils.isCollationCapableMysqlVersion("8.0.11-TiDB-v8.5.0"))
+        .isFalse();
+    assertThat(JdbcCollationTestUtils.isCollationCapableMysqlVersion("5.7.25-TiDB-v6.5.0"))
+        .isFalse();
+  }
+
+  @Test
   public void isCollationCapableMysqlVersion_MariaDbVersions_ShouldReturnFalse() {
     assertThat(JdbcCollationTestUtils.isCollationCapableMysqlVersion("11.4.2-MariaDB")).isFalse();
     assertThat(JdbcCollationTestUtils.isCollationCapableMysqlVersion("10.11.8-MariaDB-ubu2204"))
