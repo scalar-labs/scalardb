@@ -194,6 +194,38 @@ jdbc:
     create_test_user: |
       # Oracle connection endpoint depends on the Oracle version used
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+      # The collation suites declare a namespace default collation. That is DDL-level collation, which
+      # requires MAX_STRING_SIZE=EXTENDED (ORA-43929). The parameter is PDB-scoped and irreversible, and
+      # it applies to every Oracle integration test on this job, not only the collation suites. OPEN
+      # UPGRADE and utl32k are SYSDBA operations, and closing the PDB from a session attached to it ends
+      # that session, so drive the migration from the CDB root instead of the SYSTEM service connection.
+      echo "WHENEVER SQLERROR EXIT FAILURE
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} OPEN UPGRADE;
+      ALTER SESSION SET CONTAINER=${PDB[%VERSION%]};
+      ALTER SYSTEM SET MAX_STRING_SIZE=EXTENDED;
+      @?/rdbms/admin/utl32k.sql
+      @?/rdbms/admin/utlrp.sql
+      ALTER PLUGGABLE DATABASE CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE OPEN;
+      ALTER PLUGGABLE DATABASE SAVE STATE;
+      EXIT" | docker exec -i oracle sqlplus -s "/ as sysdba"
+      # Fail the job on a partial migration rather than letting the suites report it. A COLLATE
+      # expression evaluates normally under MAX_STRING_SIZE=STANDARD and so cannot detect one; only
+      # DDL-level collation raises ORA-43929.
+      echo "WHENEVER SQLERROR EXIT FAILURE
+      DECLARE
+        v VARCHAR2(30);
+      BEGIN
+        SELECT value INTO v FROM v\$parameter WHERE name='max_string_size';
+        IF v <> 'EXTENDED' THEN
+          RAISE_APPLICATION_ERROR(-20001, 'max_string_size is '||v);
+        END IF;
+      END;
+      /
+      CREATE TABLE collation_prereq_check (c VARCHAR2(16) COLLATE BINARY_CI);
+      DROP TABLE collation_prereq_check PURGE;
+      EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
       echo "CREATE USER test IDENTIFIED BY test;
       ALTER USER test QUOTA UNLIMITED ON USERS;
       GRANT CREATE SESSION TO test;
