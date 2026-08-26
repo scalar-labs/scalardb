@@ -207,6 +207,8 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.start(txId, isolation, strategy);
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return manager.resume(txId);

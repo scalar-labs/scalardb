@@ -206,11 +206,15 @@ public abstract class DecoratedDistributedTransactionManager
     return transaction;
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return transactionManager.resume(txId);
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction join(String txId) throws TransactionNotFoundException {
     return transactionManager.join(txId);
