@@ -32,6 +32,11 @@ import org.slf4j.LoggerFactory;
  *   <li>MariaDB 10.10+ — {@code utf8mb4_uca1400_ai_ci} (UCA 14.0.0); a usage probe checks the
  *       collation exists (the {@code information_schema.COLLATIONS} view lists uca1400 collations
  *       under charset-generic names, so a catalog lookup is not reliable)
+ *   <li>Oracle — {@code UCA0700_ROOT_AI} on 19c and {@code UCA1210_ROOT_AI} on 21c and later,
+ *       derived from the version the JDBC driver reports because 19c offers no {@code UCA1210_*}
+ *       family; a usage probe checks the derived collation exists and compares case-insensitively.
+ *       Applying it needs {@code MAX_STRING_SIZE=EXTENDED} on the database, which no read-only
+ *       probe can observe, so a database without it reaches the suites and fails there
  *   <li>PostgreSQL (and AlloyDB) — a nondeterministic ICU collation at primary strength that the
  *       {@code alterTableCollation} hook creates in the test namespace; a probe checks the server
  *       was built with ICU ({@code pg_collation} has ICU-provider rows)
@@ -56,6 +61,17 @@ public final class JdbcCollationTestUtils {
   private static final int TIDB_COLLATION_MAJOR = 7;
 
   private static final int TIDB_COLLATION_MINOR = 4;
+
+  /** First Oracle release offering the {@code UCA1210_*} family; 19c reaches only UCA 7.0. */
+  private static final int ORACLE_UCA1210_MAJOR = 21;
+
+  /**
+   * Target collation derived by the Oracle probe. Oracle is the only backend whose target is not
+   * knowable from the URL, and {@link #getCollationTestTargetCollation()} is reached from paths
+   * that never probe, including teardown, so an absent value throws rather than falling back to a
+   * name nothing verified.
+   */
+  private static final AtomicReference<String> ORACLE_TARGET_COLLATION = new AtomicReference<>();
 
   /** Outcome of a collation-support probe. */
   enum CollationProbeResult {
@@ -109,7 +125,7 @@ public final class JdbcCollationTestUtils {
     if (JdbcEnv.isSqlServer()) {
       return true;
     }
-    if (!isMysqlUrl() && !isMariaDbUrl() && !isPostgresqlUrl()) {
+    if (!isMysqlUrl() && !isMariaDbUrl() && !isPostgresqlUrl() && !JdbcEnv.isOracle()) {
       return false;
     }
     CollationProbeResult result = COLLATION_SUPPORT_PROBE.get();
@@ -138,6 +154,9 @@ public final class JdbcCollationTestUtils {
     }
     if (isMariaDbUrl()) {
       return probeMariaDbCollationSupport();
+    }
+    if (JdbcEnv.isOracle()) {
+      return probeOracleCollationSupport();
     }
     return probePostgresqlCollationSupport();
   }
@@ -294,6 +313,69 @@ public final class JdbcCollationTestUtils {
     }
   }
 
+  // Oracle has no error code that definitively proves an incapability. ORA-43929 reports the
+  // missing MAX_STRING_SIZE=EXTENDED prerequisite, which is a fixable property of the database
+  // rather than of the server version, so every failure stays PROBE_FAILED and required mode fails
+  // instead of dropping coverage. The collation name comes from a fixed per-version mapping, not
+  // from any external input.
+  @SuppressFBWarnings({
+    "OBL_UNSATISFIED_OBLIGATION",
+    "ODR_OPEN_DATABASE_RESOURCE",
+    "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"
+  })
+  private static CollationProbeResult probeOracleCollationSupport() {
+    if (!registerDriver("oracle.jdbc.OracleDriver")) {
+      return CollationProbeResult.PROBE_FAILED;
+    }
+    try (Connection connection =
+        DriverManager.getConnection(
+            JdbcEnv.getJdbcUrl(), JdbcEnv.getUsername(), JdbcEnv.getPassword())) {
+      // The driver reports the version, so the probe needs no grant on v$instance, which the CI
+      // test user does not hold
+      String collation = oracleTargetCollation(connection.getMetaData().getDatabaseMajorVersion());
+      try (Statement statement = connection.createStatement();
+          ResultSet resultSet =
+              statement.executeQuery(
+                  "SELECT CASE WHEN 'a' = 'A' COLLATE "
+                      + collation
+                      + " THEN 1 ELSE 0 END FROM dual")) {
+        if (!resultSet.next()) {
+          logger.warn(
+              "Skipping the collation integration tests: the Oracle collation probe query "
+                  + "returned no rows");
+          return CollationProbeResult.PROBE_FAILED;
+        }
+        if (resultSet.getInt(1) != 1) {
+          logger.warn(
+              "Skipping the collation integration tests on {}: the Oracle server compares strings "
+                  + "case-sensitively under {}",
+              JdbcEnv.getJdbcUrl(),
+              collation);
+          return CollationProbeResult.PROBE_FAILED;
+        }
+      }
+      ORACLE_TARGET_COLLATION.set(collation);
+      return CollationProbeResult.SUPPORTED;
+    } catch (SQLException e) {
+      logger.warn("Skipping the collation integration tests: the Oracle collation probe failed", e);
+      return CollationProbeResult.PROBE_FAILED;
+    }
+  }
+
+  /**
+   * Returns the target collation for the given Oracle major version. 19c offers no {@code
+   * UCA1210_*} family, so it takes the UCA 7.0 name; 21c and later take the UCA 12.1 one. Both are
+   * accent-insensitive, which on Oracle implies case-insensitive.
+   *
+   * <p>Package-private and pure so it can be unit-tested without a live database.
+   *
+   * @param majorVersion the Oracle major version, as reported by the JDBC driver
+   * @return the target collation for that version
+   */
+  static String oracleTargetCollation(int majorVersion) {
+    return majorVersion >= ORACLE_UCA1210_MAJOR ? "UCA1210_ROOT_AI" : "UCA0700_ROOT_AI";
+  }
+
   // A PostgreSQL server built without ICU has no ICU-provider rows in pg_collation, and the
   // nondeterministic ICU collation the tests rely on cannot be created there.
   @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "ODR_OPEN_DATABASE_RESOURCE"})
@@ -448,6 +530,16 @@ public final class JdbcCollationTestUtils {
     }
     if (JdbcEnv.isSqlServer()) {
       return "Latin1_General_100_CI_AI";
+    }
+    if (JdbcEnv.isOracle()) {
+      String collation = ORACLE_TARGET_COLLATION.get();
+      if (collation == null) {
+        throw new IllegalStateException(
+            "The Oracle target collation is unavailable because the collation-support probe has "
+                + "not reached a supported verdict for "
+                + JdbcEnv.getJdbcUrl());
+      }
+      return collation;
     }
     throw new IllegalStateException(
         "The collation integration tests are not supported for the JDBC URL: "

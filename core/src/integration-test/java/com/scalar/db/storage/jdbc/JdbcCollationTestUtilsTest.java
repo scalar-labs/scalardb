@@ -13,9 +13,9 @@ import java.sql.Statement;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for the version-classification logic and the TiDB probe verdicts behind the collation
- * capability gate. Database-independent; runs on every backend the integrationTestJdbc task
- * targets.
+ * Unit tests for the version-classification logic, the Oracle collation derivation, and the TiDB
+ * probe verdicts behind the collation capability gate. Database-independent; runs on every backend
+ * the integrationTestJdbc task targets.
  */
 public class JdbcCollationTestUtilsTest {
 
@@ -53,6 +53,17 @@ public class JdbcCollationTestUtilsTest {
   @Test
   public void isCollationCapableMysqlVersion_NullVersion_ShouldReturnFalse() {
     assertThat(JdbcCollationTestUtils.isCollationCapableMysqlVersion(null)).isFalse();
+  }
+
+  @Test
+  public void oracleTargetCollation_Oracle21OrLater_ShouldReturnUca1210Collation() {
+    assertThat(JdbcCollationTestUtils.oracleTargetCollation(21)).isEqualTo("UCA1210_ROOT_AI");
+    assertThat(JdbcCollationTestUtils.oracleTargetCollation(23)).isEqualTo("UCA1210_ROOT_AI");
+  }
+
+  @Test
+  public void oracleTargetCollation_Oracle19_ShouldReturnOlderUca0700Collation() {
+    assertThat(JdbcCollationTestUtils.oracleTargetCollation(19)).isEqualTo("UCA0700_ROOT_AI");
   }
 
   @Test

@@ -162,6 +162,10 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
    * PostgreSQL has no schema-level collation and SQL Server scopes collations to the whole
    * database, so on those engines this is a no-op and {@link #alterTableCollation} applies the
    * collation to the created table instead.
+   *
+   * <p>On Oracle a ScalarDB namespace is a user, whose default collation the tables created in it
+   * inherit. The per-column path is closed there: ORA-43923 rejects altering the collation of a
+   * primary-key column, and Oracle DDL auto-commits, so a drop-and-recreate could not be atomic.
    */
   @Override
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
@@ -172,6 +176,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
               + rdbEngine.enclose(namespace)
               + " CHARACTER SET utf8mb4 COLLATE "
               + collation);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      execute("ALTER USER " + rdbEngine.enclose(namespace) + " DEFAULT COLLATION " + collation);
     } else if (!JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcTestUtils.isSqlServer(rdbEngine)) {
       throw new UnsupportedOperationException(
           "Altering the namespace collation is not supported for the "
@@ -196,6 +202,8 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
       alterTableCollationForSqlServer(namespace, table, collation);
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       alterTableCollationForPostgresql(namespace, table, collation);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      verifyTableCollationForOracle(namespace, table, collation);
     } else {
       throw new UnsupportedOperationException(
           "Altering the table collation is not supported for the "
@@ -251,6 +259,88 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     + " do not carry the expected collation "
                     + collation
                     + "; a table leaked by a prior broken run keeps its stale collation: "
+                    + mismatchedColumns);
+          }
+        });
+  }
+
+  /**
+   * Verifies that the table inherited the namespace default collation set by {@link
+   * #alterNamespaceCollation}, the Oracle counterpart of {@link #verifyTableCollation}. Oracle
+   * needs this more than the MySQL family does: it reports neither a duplicate schema nor a
+   * duplicate table as an error, so a table leaked by a prior broken run is reused silently while
+   * re-applying the schema default appears to succeed and leaves that table untouched.
+   *
+   * <p>{@code ALL_TAB_COLS} reports the expanded collation name rather than the name as written, so
+   * both sides are normalized through the server. Its hidden columns are excluded: the primary key
+   * over collated columns generates {@code SYS_NC*$} virtual columns that carry no collation and
+   * would otherwise read as uncollated character columns.
+   */
+  private void verifyTableCollationForOracle(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          List<String> expandedCollation = new ArrayList<>();
+          executeQuery(
+              connection,
+              "SELECT NLS_COLLATION_NAME(NLS_COLLATION_ID(?)) FROM dual",
+              requiresExplicitCommit,
+              ps -> ps.setString(1, collation),
+              rs -> {
+                if (rs.next()) {
+                  expandedCollation.add(rs.getString(1));
+                }
+                return null;
+              });
+          if (expandedCollation.isEmpty() || expandedCollation.get(0) == null) {
+            throw new IllegalStateException(
+                "The Oracle server does not recognize the collation " + collation);
+          }
+          String expected = expandedCollation.get(0);
+          List<String> characterColumns = new ArrayList<>();
+          List<String> mismatchedColumns = new ArrayList<>();
+          executeQuery(
+              connection,
+              "SELECT column_name, collation FROM all_tab_cols"
+                  + " WHERE owner = ? AND table_name = ? AND collation IS NOT NULL"
+                  + " AND hidden_column = 'NO'",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String columnCollation = rs.getString(2);
+                  characterColumns.add(columnName);
+                  if (!expected.equalsIgnoreCase(columnCollation)) {
+                    mismatchedColumns.add(columnName + " (" + columnCollation + ")");
+                  }
+                }
+                return null;
+              });
+          if (characterColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "No character-typed columns found on "
+                    + namespace
+                    + "."
+                    + table
+                    + " to verify the collation");
+          }
+          if (!mismatchedColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "The character-typed columns of "
+                    + namespace
+                    + "."
+                    + table
+                    + " do not carry the expected collation "
+                    + collation
+                    + " ("
+                    + expected
+                    + "); a table leaked by a prior broken run keeps its stale collation: "
                     + mismatchedColumns);
           }
         });
