@@ -1,15 +1,26 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.scalar.db.storage.jdbc.JdbcCollationTestUtils.CollationProbeResult;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for the pure version-classification logic behind the collation capability gate.
- * Database-independent; runs on every backend the integrationTestJdbc task targets.
+ * Unit tests for the version-classification logic and the TiDB probe verdicts behind the collation
+ * capability gate. Database-independent; runs on every backend the integrationTestJdbc task
+ * targets.
  */
 public class JdbcCollationTestUtilsTest {
+
+  private static final String TIDB_CAPABLE_VERSION = "8.0.11-TiDB-v8.5.0";
+  private static final String TIDB_PRE_74_VERSION = "5.7.25-TiDB-v6.5.0";
 
   @Test
   public void isCollationCapableMysqlVersion_Mysql8OrLaterVersions_ShouldReturnTrue() {
@@ -110,5 +121,82 @@ public class JdbcCollationTestUtilsTest {
             JdbcCollationTestUtils.isUnknownCollationError(
                 new SQLException("Access denied", "28000", 1045)))
         .isFalse();
+  }
+
+  @Test
+  public void probeTidbCollationSupport_CaseInsensitiveComparison_ShouldReturnSupported()
+      throws SQLException {
+    Statement statement = statementReturningComparison(true);
+
+    assertThat(JdbcCollationTestUtils.probeTidbCollationSupport(statement, TIDB_CAPABLE_VERSION))
+        .isEqualTo(CollationProbeResult.SUPPORTED);
+  }
+
+  @Test
+  public void probeTidbCollationSupport_CaseSensitiveComparison_ShouldThrowIllegalStateException()
+      throws SQLException {
+    Statement statement = statementReturningComparison(false);
+
+    assertThatThrownBy(
+            () -> JdbcCollationTestUtils.probeTidbCollationSupport(statement, TIDB_CAPABLE_VERSION))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("new_collations_enabled_on_first_bootstrap");
+  }
+
+  @Test
+  public void
+      probeTidbCollationSupport_UnknownCollationErrorOnPre74Version_ShouldReturnUnsupported()
+          throws SQLException {
+    Statement statement = statementThrowing(new SQLException("Unknown collation", "HY000", 1273));
+
+    assertThat(JdbcCollationTestUtils.probeTidbCollationSupport(statement, TIDB_PRE_74_VERSION))
+        .isEqualTo(CollationProbeResult.UNSUPPORTED);
+  }
+
+  @Test
+  public void
+      probeTidbCollationSupport_UnknownCollationErrorOnCapableVersion_ShouldReturnProbeFailed()
+          throws SQLException {
+    Statement statement = statementThrowing(new SQLException("Unknown collation", "HY000", 1273));
+
+    assertThat(JdbcCollationTestUtils.probeTidbCollationSupport(statement, TIDB_CAPABLE_VERSION))
+        .isEqualTo(CollationProbeResult.PROBE_FAILED);
+  }
+
+  @Test
+  public void probeTidbCollationSupport_OtherSqlErrorOnCapableVersion_ShouldReturnProbeFailed()
+      throws SQLException {
+    Statement statement = statementThrowing(new SQLException("Access denied", "28000", 1045));
+
+    assertThat(JdbcCollationTestUtils.probeTidbCollationSupport(statement, TIDB_CAPABLE_VERSION))
+        .isEqualTo(CollationProbeResult.PROBE_FAILED);
+  }
+
+  @Test
+  public void probeTidbCollationSupport_NoRowsReturned_ShouldReturnProbeFailed()
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.next()).thenReturn(false);
+    Statement statement = mock(Statement.class);
+    when(statement.executeQuery(anyString())).thenReturn(resultSet);
+
+    assertThat(JdbcCollationTestUtils.probeTidbCollationSupport(statement, TIDB_CAPABLE_VERSION))
+        .isEqualTo(CollationProbeResult.PROBE_FAILED);
+  }
+
+  private static Statement statementReturningComparison(boolean caseInsensitive)
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.next()).thenReturn(true);
+    when(resultSet.getBoolean(1)).thenReturn(caseInsensitive);
+    Statement statement = mock(Statement.class);
+    when(statement.executeQuery(anyString())).thenReturn(resultSet);
+    return statement;
+  }
+
+  private static Statement statementThrowing(SQLException e) throws SQLException {
+    Statement statement = mock(Statement.class);
+    when(statement.executeQuery(anyString())).thenThrow(e);
+    return statement;
   }
 }

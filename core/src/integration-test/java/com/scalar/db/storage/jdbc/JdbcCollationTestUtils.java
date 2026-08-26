@@ -58,7 +58,7 @@ public final class JdbcCollationTestUtils {
   private static final int TIDB_COLLATION_MINOR = 4;
 
   /** Outcome of a collation-support probe. */
-  private enum CollationProbeResult {
+  enum CollationProbeResult {
     /** The server supports the collations used by the collation integration tests. */
     SUPPORTED,
     /** The server definitively lacks the required collations. */
@@ -99,7 +99,9 @@ public final class JdbcCollationTestUtils {
    * {@code scalardb.jdbc.collation_test} is set to {@code required}, in which case an {@link
    * IllegalStateException} is thrown so the skip cannot go unnoticed. A definitive UNSUPPORTED
    * verdict (e.g. TiDB below 7.4, MySQL 5.x, a PostgreSQL build without ICU) still skips even in
-   * required mode.
+   * required mode. A TiDB cluster that accepts {@code utf8mb4_0900_ai_ci} yet compares binary under
+   * it throws an {@link IllegalStateException} whatever {@code scalardb.jdbc.collation_test} is set
+   * to, because the cause is fixed at bootstrap and cannot be repaired on the running cluster.
    *
    * @return true if the collation integration tests are supported, false otherwise
    */
@@ -191,10 +193,21 @@ public final class JdbcCollationTestUtils {
     }
   }
 
-  // A usage probe: evaluating a comparison under the target collation proves the server both
-  // knows utf8mb4_0900_ai_ci (offered since TiDB 7.4) and applies it.
-  private static CollationProbeResult probeTidbCollationSupport(
-      Statement statement, String version) {
+  /**
+   * Probes whether the TiDB server behind the given statement supports the collation integration
+   * tests. A usage probe: evaluating a comparison under the target collation proves the server both
+   * knows {@code utf8mb4_0900_ai_ci} (offered since TiDB 7.4) and applies it.
+   *
+   * <p>Package-private, and taking the statement as a parameter, so its verdicts can be unit-tested
+   * against a mocked {@link Statement} without a live database.
+   *
+   * @param statement an open statement on the server to probe
+   * @param version the server version string, as reported by {@code SELECT VERSION()}
+   * @return the probe verdict
+   * @throws IllegalStateException if the server accepts the target collation but compares binary
+   *     under it
+   */
+  static CollationProbeResult probeTidbCollationSupport(Statement statement, String version) {
     try (ResultSet resultSet =
         statement.executeQuery("SELECT _utf8mb4'a' = _utf8mb4'A' COLLATE utf8mb4_0900_ai_ci")) {
       if (!resultSet.next()) {
