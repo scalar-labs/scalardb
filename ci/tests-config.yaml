@@ -288,7 +288,7 @@ jdbc:
         GRANT INSERT ON *.* TO 'test'@'%%';
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalardb.jdbc.collation_test=required
 
   - label: yugabytedb
     display_name: YugabyteDB 2025.2
