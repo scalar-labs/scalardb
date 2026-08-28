@@ -22,6 +22,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ThrowableConsumer;
 import com.scalar.db.util.ThrowableFunction;
+import com.scalar.db.util.ThrowableSupplier;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -57,6 +58,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
 
   private static final String INDEX_NAME_PREFIX = "index";
+
+  /**
+   * The maximum number of retries for a conflict error on a catalog statement. Conflict errors on
+   * the admin path are transient: one statement is one transaction here, so re-executing the
+   * statement after a rollback is safe. The measured worst case is two consecutive retries, so this
+   * bound has ample headroom. No backoff is applied; see the retry helper for details.
+   */
+  @VisibleForTesting static final int MAX_CONFLICT_RETRY_COUNT = 10;
 
   private final RdbEngineStrategy rdbEngine;
   private final HikariDataSource dataSource;
@@ -1640,12 +1649,87 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(sql);
-      if (requiresExplicitCommit) {
-        connection.commit();
-      }
+      executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            stmt.execute(sql);
+            return null;
+          });
 
+      // Outside the retry region on purpose: the handler runs after the commit has succeeded, so an
+      // exception raised here must never trigger a re-execution of an already committed statement.
       throwSqlWarningIfNeeded(handler, stmt);
+    }
+  }
+
+  /**
+   * Executes a catalog statement, retrying it when the engine reports a conflict error.
+   *
+   * <p>The retried region covers the statement execution <em>and</em> the commit, because a
+   * conflict can surface at either point. The explicit {@code commit()} below runs only for engines
+   * that require one, which today means Oracle at SERIALIZABLE; on an autocommit connection the
+   * commit happens inside the statement call, so a conflict raised at commit time (PostgreSQL
+   * raises {@code 40001} there) falls in the same region. Conversely, once the commit succeeds the
+   * loop is left immediately, which guarantees that a committed statement is never re-executed.
+   *
+   * <p>Retrying a single statement is safe on the admin path because one statement is one
+   * transaction there: with explicit commit the failed transaction is rolled back below, and with
+   * autocommit the driver has already ended it.
+   *
+   * <p>No backoff is applied. The conflicts seen here resolve on their own (an index leaf block
+   * split has completed by the time the retry runs; a deadlock victim is chosen before the error is
+   * returned), so waiting does not improve the odds, and failing fast keeps admin operations
+   * responsive.
+   */
+  private static <T> T executeWithConflictRetry(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      boolean requiresExplicitCommit,
+      String sql,
+      ThrowableSupplier<T, SQLException> action)
+      throws SQLException {
+    int attempt = 0;
+    while (true) {
+      try {
+        T result = action.get();
+        if (requiresExplicitCommit) {
+          connection.commit();
+        }
+        return result;
+      } catch (SQLException e) {
+        if (!rdbEngine.isConflict(e)) {
+          throw e;
+        }
+        if (attempt >= MAX_CONFLICT_RETRY_COUNT) {
+          logger.warn(
+              "Giving up on a conflicting statement after {} retries. SQL: {}, error code: {}",
+              attempt,
+              sql,
+              e.getErrorCode());
+          throw e;
+        }
+        if (requiresExplicitCommit) {
+          // Only engines that require an explicit commit reach this branch, which today means
+          // Oracle at SERIALIZABLE, where the transaction is already rolled back once the conflict
+          // error is returned. The call is kept for engines that keep the transaction alive after a
+          // conflict, and is harmless when it has already ended.
+          try {
+            connection.rollback();
+          } catch (SQLException rollbackEx) {
+            e.addSuppressed(rollbackEx);
+            throw e;
+          }
+        }
+        attempt++;
+        logger.warn(
+            "Retrying a conflicting statement (attempt {}). SQL: {}, error code: {}",
+            attempt,
+            sql,
+            e.getErrorCode());
+      }
     }
   }
 
@@ -1683,6 +1767,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  /**
+   * Executes an update statement, retrying it when the engine reports a conflict error.
+   *
+   * <p>Because a conflict retry re-runs the whole action, {@code paramSetter} must be free of side
+   * effects and safe to run more than once. The retry re-applies it to the same {@link
+   * PreparedStatement}.
+   */
   static void executeUpdate(
       Connection connection,
       RdbEngineStrategy rdbEngine,
@@ -1691,14 +1782,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       ThrowableConsumer<PreparedStatement, SQLException> paramSetter)
       throws SQLException {
     try (PreparedStatement ps = connection.prepareStatement(sql)) {
-      paramSetter.accept(ps);
-      ps.executeUpdate();
-      if (requiresExplicitCommit) {
-        connection.commit();
-      }
+      executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            paramSetter.accept(ps);
+            ps.executeUpdate();
+            return null;
+          });
     }
   }
 
+  /**
+   * Executes a query, retrying it when the engine reports a conflict error.
+   *
+   * <p>Because a conflict retry re-runs the whole action, {@code resultMapper} must be free of side
+   * effects and safe to run more than once. The retry re-runs it against a new {@link ResultSet}.
+   * Build any collection it returns inside the lambda rather than appending to one captured from
+   * the enclosing scope, which a retry would fill twice.
+   */
   static <T> T executeQuery(
       Connection connection,
       RdbEngineStrategy rdbEngine,
@@ -1706,16 +1810,29 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       boolean requiresExplicitCommit,
       ThrowableFunction<ResultSet, T, SQLException> resultMapper)
       throws SQLException {
-    try (Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(sql)) {
-      T result = resultMapper.apply(rs);
-      if (requiresExplicitCommit) {
-        connection.commit();
-      }
-      return result;
+    try (Statement stmt = connection.createStatement()) {
+      return executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+              return resultMapper.apply(rs);
+            }
+          });
     }
   }
 
+  /**
+   * Executes a query with bound parameters, retrying it when the engine reports a conflict error.
+   *
+   * <p>Because a conflict retry re-runs the whole action, {@code paramSetter} and {@code
+   * resultMapper} must be free of side effects and safe to run more than once. The retry re-applies
+   * the former to the same {@link PreparedStatement} and re-runs the latter against a new {@link
+   * ResultSet}. Build any collection it returns inside the lambda rather than appending to one
+   * captured from the enclosing scope, which a retry would fill twice.
+   */
   static <T> T executeQuery(
       Connection connection,
       RdbEngineStrategy rdbEngine,
@@ -1725,14 +1842,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       ThrowableFunction<ResultSet, T, SQLException> resultMapper)
       throws SQLException {
     try (PreparedStatement ps = connection.prepareStatement(sql)) {
-      paramSetter.accept(ps);
-      try (ResultSet rs = ps.executeQuery()) {
-        T result = resultMapper.apply(rs);
-        if (requiresExplicitCommit) {
-          connection.commit();
-        }
-        return result;
-      }
+      return executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            paramSetter.accept(ps);
+            try (ResultSet rs = ps.executeQuery()) {
+              return resultMapper.apply(rs);
+            }
+          });
     }
   }
 

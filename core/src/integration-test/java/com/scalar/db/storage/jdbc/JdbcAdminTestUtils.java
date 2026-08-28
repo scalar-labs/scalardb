@@ -15,6 +15,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import javax.annotation.Nullable;
 
@@ -195,23 +197,26 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         dataSource,
         requiresExplicitCommit,
         connection -> {
-          java.util.List<String> indexNames = new java.util.ArrayList<>();
-          executeQuery(
-              connection,
-              rdbEngine,
-              "SELECT index_name FROM information_schema.indexes"
-                  + " WHERE table_schema = ? AND table_name = ? AND index_type = 'INDEX'",
-              requiresExplicitCommit,
-              ps -> {
-                ps.setString(1, namespace);
-                ps.setString(2, table);
-              },
-              rs -> {
-                while (rs.next()) {
-                  indexNames.add(rs.getString(1));
-                }
-                return null;
-              });
+          // The mapper must build its own collection: a conflict retry re-runs it, and appending
+          // to a list captured from this scope would fill it twice.
+          List<String> indexNames =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT index_name FROM information_schema.indexes"
+                      + " WHERE table_schema = ? AND table_name = ? AND index_type = 'INDEX'",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  rs -> {
+                    List<String> names = new ArrayList<>();
+                    while (rs.next()) {
+                      names.add(rs.getString(1));
+                    }
+                    return names;
+                  });
           for (String indexName : indexNames) {
             String dropIndexSql = rdbEngine.dropIndexSql(namespace, table, indexName);
             JdbcAdmin.execute(connection, rdbEngine, dropIndexSql, requiresExplicitCommit);
