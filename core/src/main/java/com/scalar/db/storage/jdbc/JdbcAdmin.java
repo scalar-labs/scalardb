@@ -172,7 +172,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           dataSource,
           requiresExplicitCommit,
           connection -> {
-            execute(connection, rdbEngine.createSchemaSqls(namespace), requiresExplicitCommit);
+            execute(
+                connection,
+                rdbEngine,
+                rdbEngine.createSchemaSqls(namespace),
+                requiresExplicitCommit);
             createMetadataSchemaIfNotExists(connection);
             createNamespacesTableIfNotExists(connection);
             namespaceMetadataService.insertIntoNamespacesTable(connection, namespace);
@@ -250,6 +254,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       execute(
           connection,
+          rdbEngine,
           stmts,
           requiresExplicitCommit,
           ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
@@ -323,10 +328,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     assert tableMetadata != null;
     execute(
         connection,
+        rdbEngine,
         rdbEngine.dropTableInternalSqlsBeforeDropTable(schema, table, tableMetadata),
         requiresExplicitCommit);
     execute(
-        connection, "DROP TABLE " + encloseFullTableName(schema, table), requiresExplicitCommit);
+        connection,
+        rdbEngine,
+        "DROP TABLE " + encloseFullTableName(schema, table),
+        requiresExplicitCommit);
   }
 
   @Override
@@ -342,7 +351,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                   CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
                       namespace, remainingTables));
             }
-            execute(connection, rdbEngine.dropNamespaceSql(namespace), requiresExplicitCommit);
+            execute(
+                connection,
+                rdbEngine,
+                rdbEngine.dropNamespaceSql(namespace),
+                requiresExplicitCommit);
             namespaceMetadataService.deleteFromNamespacesTable(connection, namespace);
             namespaceMetadataService.deleteNamespacesTableIfEmpty(connection);
             deleteMetadataSchemaIfEmpty(connection);
@@ -360,6 +373,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
     return executeQuery(
         connection,
+        rdbEngine,
         sql,
         requiresExplicitCommit,
         ps -> ps.setString(1, namespace),
@@ -387,12 +401,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               // truncate the source tables
               execute(
                   connection,
+                  rdbEngine,
                   rdbEngine.truncateTableSql(
                       virtualTableInfo.getLeftSourceNamespaceName(),
                       virtualTableInfo.getLeftSourceTableName()),
                   requiresExplicitCommit);
               execute(
                   connection,
+                  rdbEngine,
                   rdbEngine.truncateTableSql(
                       virtualTableInfo.getRightSourceNamespaceName(),
                       virtualTableInfo.getRightSourceTableName()),
@@ -402,7 +418,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
             // For a regular table
             String truncateTableStatement = rdbEngine.truncateTableSql(namespace, table);
-            execute(connection, truncateTableStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, truncateTableStatement, requiresExplicitCommit);
           });
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -740,7 +756,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
-    execute(connection, sqls, requiresExplicitCommit);
+    execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -755,7 +771,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String columnType = rdbEngine.getDataTypeForEngine(dataType);
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
-    execute(connection, sqls, requiresExplicitCommit);
+    execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
   @Override
@@ -920,7 +936,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     + enclose(columnName)
                     + " "
                     + getVendorDbColumnType(updatedTableMetadata, columnName);
-            execute(connection, addNewColumnStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, addNewColumnStatement, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
           });
     } catch (SQLException e) {
@@ -958,7 +974,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     .build();
             String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
 
-            execute(connection, dropColumnStatements, requiresExplicitCommit);
+            execute(connection, rdbEngine, dropColumnStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
           });
     } catch (SQLException e) {
@@ -1006,7 +1022,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     oldColumnName,
                     newColumnName,
                     getVendorDbColumnType(updatedTableMetadata, newColumnName));
-            execute(connection, renameColumnStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, renameColumnStatement, requiresExplicitCommit);
 
             if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
               renameIndexInternal(
@@ -1050,7 +1066,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             String[] alterColumnTypeStatements =
                 rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
 
-            execute(connection, alterColumnTypeStatements, requiresExplicitCommit);
+            execute(connection, rdbEngine, alterColumnTypeStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
           });
     } catch (SQLException e) {
@@ -1080,7 +1096,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
             String renameTableStatement =
                 rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
-            execute(connection, renameTableStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, renameTableStatement, requiresExplicitCommit);
 
             tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
 
@@ -1118,7 +1134,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String[] sqls =
         rdbEngine.renameIndexSqls(schema, newTable, newColumn, oldIndexName, newIndexName);
     try {
-      execute(connection, sqls, requiresExplicitCommit);
+      execute(connection, rdbEngine, sqls, requiresExplicitCommit);
     } catch (SQLException e) {
       if (!rdbEngine.isUndefinedIndexError(e)) {
         throw e;
@@ -1132,7 +1148,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
       String[] fallbackSqls =
           rdbEngine.renameIndexSqls(schema, newTable, newColumn, originalIndexName, newIndexName);
-      execute(connection, fallbackSqls, requiresExplicitCommit);
+      execute(connection, rdbEngine, fallbackSqls, requiresExplicitCommit);
     }
   }
 
@@ -1148,6 +1164,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       execute(
           connection,
+          rdbEngine,
           createIndexStatement,
           requiresExplicitCommit,
           ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
@@ -1164,7 +1181,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String indexName = getIndexName(schema, table, indexedColumn);
     String sql = rdbEngine.dropIndexSql(schema, table, indexName);
     try {
-      execute(connection, sql, requiresExplicitCommit);
+      execute(connection, rdbEngine, sql, requiresExplicitCommit);
     } catch (SQLException e) {
       if (!rdbEngine.isUndefinedIndexError(e)) {
         throw e;
@@ -1177,7 +1194,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         throw e;
       }
       String fallbackSql = rdbEngine.dropIndexSql(schema, table, originalIndexName);
-      execute(connection, fallbackSql, requiresExplicitCommit);
+      execute(connection, rdbEngine, fallbackSql, requiresExplicitCommit);
     }
   }
 
@@ -1417,13 +1434,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       firstCondition = false;
     }
 
-    execute(connection, createViewSql.toString(), requiresExplicitCommit);
+    execute(connection, rdbEngine, createViewSql.toString(), requiresExplicitCommit);
   }
 
   private void dropVirtualTableView(Connection connection, String namespace, String table)
       throws SQLException {
     String dropViewStatement = "DROP VIEW " + encloseFullTableName(namespace, table);
-    execute(connection, dropViewStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, dropViewStatement, requiresExplicitCommit);
   }
 
   @Override
@@ -1504,7 +1521,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String sql = rdbEngine.deleteMetadataSchemaSql(metadataSchema);
-    execute(connection, sql, requiresExplicitCommit);
+    execute(connection, rdbEngine, sql, requiresExplicitCommit);
   }
 
   private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
@@ -1514,7 +1531,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt, requiresExplicitCommit);
+      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -1537,6 +1554,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     return executeQuery(
         connection,
+        rdbEngine,
         rdbEngine.internalTableExistsCheckSql(),
         requiresExplicitCommit,
         ps -> rdbEngine.bindInternalTableExistsCheckParams(ps, schema, table),
@@ -1546,7 +1564,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
     String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
     try {
-      execute(connection, sqls, requiresExplicitCommit);
+      execute(connection, rdbEngine, sqls, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress exceptions indicating the duplicate metadata schema
       if (!rdbEngine.isDuplicateSchemaError(e)) {
@@ -1601,13 +1619,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  static void execute(Connection connection, String sql, boolean requiresExplicitCommit)
+  static void execute(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      String sql,
+      boolean requiresExplicitCommit)
       throws SQLException {
-    execute(connection, sql, requiresExplicitCommit, null);
+    execute(connection, rdbEngine, sql, requiresExplicitCommit, null);
   }
 
   static void execute(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       @Nullable SqlWarningHandler handler)
@@ -1639,24 +1662,30 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  static void execute(Connection connection, String[] sqls, boolean requiresExplicitCommit)
+  static void execute(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      String[] sqls,
+      boolean requiresExplicitCommit)
       throws SQLException {
-    execute(connection, sqls, requiresExplicitCommit, null);
+    execute(connection, rdbEngine, sqls, requiresExplicitCommit, null);
   }
 
   static void execute(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String[] sqls,
       boolean requiresExplicitCommit,
       @Nullable SqlWarningHandler warningHandler)
       throws SQLException {
     for (String sql : sqls) {
-      execute(connection, sql, requiresExplicitCommit, warningHandler);
+      execute(connection, rdbEngine, sql, requiresExplicitCommit, warningHandler);
     }
   }
 
   static void executeUpdate(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       ThrowableConsumer<PreparedStatement, SQLException> paramSetter)
@@ -1672,6 +1701,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   static <T> T executeQuery(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       ThrowableFunction<ResultSet, T, SQLException> resultMapper)
@@ -1688,6 +1718,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   static <T> T executeQuery(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       ThrowableConsumer<PreparedStatement, SQLException> paramSetter,

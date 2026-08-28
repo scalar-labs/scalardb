@@ -158,7 +158,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         dataSource,
         requiresExplicitCommit,
         connection -> {
-          JdbcAdmin.execute(connection, sql, requiresExplicitCommit);
+          JdbcAdmin.execute(connection, rdbEngine, sql, requiresExplicitCommit);
         });
   }
 
@@ -198,6 +198,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
           java.util.List<String> indexNames = new java.util.ArrayList<>();
           executeQuery(
               connection,
+              rdbEngine,
               "SELECT index_name FROM information_schema.indexes"
                   + " WHERE table_schema = ? AND table_name = ? AND index_type = 'INDEX'",
               requiresExplicitCommit,
@@ -213,7 +214,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
               });
           for (String indexName : indexNames) {
             String dropIndexSql = rdbEngine.dropIndexSql(namespace, table, indexName);
-            JdbcAdmin.execute(connection, dropIndexSql, requiresExplicitCommit);
+            JdbcAdmin.execute(connection, rdbEngine, dropIndexSql, requiresExplicitCommit);
           }
         });
   }
@@ -250,6 +251,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
             connection ->
                 executeQuery(
                     connection,
+                    rdbEngine,
                     sql,
                     requiresExplicitCommit,
                     ps -> ps.setString(1, namespace),
