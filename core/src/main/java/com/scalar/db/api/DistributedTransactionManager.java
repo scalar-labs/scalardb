@@ -415,7 +415,9 @@ public interface DistributedTransactionManager
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
    *     transaction ID is not found. You can retry the transaction from the beginning
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   default DistributedTransaction join(String txId) throws TransactionNotFoundException {
     return resume(txId);
   }
@@ -427,7 +429,9 @@ public interface DistributedTransactionManager
    * @return {@link DistributedTransaction}
    * @throws TransactionNotFoundException if the transaction associated with the specified
    *     transaction ID is not found. You can retry the transaction from the beginning
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   DistributedTransaction resume(String txId) throws TransactionNotFoundException;
 
   /**
