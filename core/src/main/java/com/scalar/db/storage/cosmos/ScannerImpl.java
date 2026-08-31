@@ -2,9 +2,12 @@ package com.scalar.db.storage.cosmos;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.FeedResponse;
 import com.scalar.db.api.Result;
 import com.scalar.db.common.AbstractScanner;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.exception.storage.ExecutionException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,16 +41,26 @@ public final class ScannerImpl extends AbstractScanner {
 
   @Override
   @Nonnull
-  public Optional<Result> one() {
-    while (currentPageRecords.hasNext() || recordsPages.hasNext()) {
-      // Return the next record of the current page if there is one
-      if (currentPageRecords.hasNext()) {
-        Record currentRecord = currentPageRecords.next();
-        return Optional.of(resultInterpreter.interpret(currentRecord));
-      } else {
-        // Otherwise, advance to the next page
-        currentPageRecords = recordsPages.next().getResults().iterator();
+  public Optional<Result> one() throws ExecutionException {
+    // The pages are fetched lazily, so a CosmosException can be thrown while advancing to the next
+    // page. It must be wrapped here since it would otherwise reach the callers as is, with the
+    // whole CosmosDiagnostics embedded in its message.
+    try {
+      while (currentPageRecords.hasNext() || recordsPages.hasNext()) {
+        // Return the next record of the current page if there is one
+        if (currentPageRecords.hasNext()) {
+          Record currentRecord = currentPageRecords.next();
+          return Optional.of(resultInterpreter.interpret(currentRecord));
+        } else {
+          // Otherwise, advance to the next page
+          currentPageRecords = recordsPages.next().getResults().iterator();
+        }
       }
+    } catch (CosmosException e) {
+      throw new ExecutionException(
+          CoreError.COSMOS_ERROR_OCCURRED_IN_SELECTION.buildMessage(
+              CosmosUtils.buildErrorDetails(e)),
+          e);
     }
     // There is no records left
     return Optional.empty();
@@ -55,14 +68,25 @@ public final class ScannerImpl extends AbstractScanner {
 
   @Override
   @Nonnull
-  public List<Result> all() {
+  public List<Result> all() throws ExecutionException {
     List<Result> ret = new ArrayList<>();
-    // Consume the remaining records of the current page
-    currentPageRecords.forEachRemaining(record -> ret.add(resultInterpreter.interpret(record)));
+    // The pages are fetched lazily, so a CosmosException can be thrown while advancing to the next
+    // page. It must be wrapped here since it would otherwise reach the callers as is, with the
+    // whole CosmosDiagnostics embedded in its message.
+    try {
+      // Consume the remaining records of the current page
+      currentPageRecords.forEachRemaining(record -> ret.add(resultInterpreter.interpret(record)));
 
-    // Consume all the records of the remaining pages
-    recordsPages.forEachRemaining(
-        page -> page.getResults().forEach(record -> ret.add(resultInterpreter.interpret(record))));
+      // Consume all the records of the remaining pages
+      recordsPages.forEachRemaining(
+          page ->
+              page.getResults().forEach(record -> ret.add(resultInterpreter.interpret(record))));
+    } catch (CosmosException e) {
+      throw new ExecutionException(
+          CoreError.COSMOS_ERROR_OCCURRED_IN_SELECTION.buildMessage(
+              CosmosUtils.buildErrorDetails(e)),
+          e);
+    }
 
     // Set to empty iterator to release the records from the memory
     currentPageRecords = Collections.emptyIterator();
