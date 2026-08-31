@@ -1683,9 +1683,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * raises {@code 40001} there) falls in the same region. Conversely, once the commit succeeds the
    * loop is left immediately, which guarantees that a committed statement is never re-executed.
    *
-   * <p>Retrying a single statement is safe on the admin path because one statement is one
-   * transaction there: with explicit commit the failed transaction is rolled back below, and with
-   * autocommit the driver has already ended it.
+   * <p>These helpers do not run only under the admin operations. {@link JdbcDatabase} builds a
+   * {@link JdbcAdmin} over the table metadata pool and hands it to {@link
+   * com.scalar.db.common.TableMetadataManager}, whose cache loader calls {@code getTableMetadata()}
+   * on a miss and blocks the calling thread while it reloads. Retrying a single statement is safe
+   * on both paths because one statement is one transaction on either: the two pools are both
+   * created non-transactional and apply {@code requiresExplicitCommit} the same way, so with
+   * explicit commit the failed transaction is rolled back below, and with autocommit the driver has
+   * already ended it.
+   *
+   * <p>Of the two, the data path is the less exposed: the statement it runs is a non-locking read
+   * of the catalog, which takes no row locks to contend over, so the errors reported only after a
+   * lock wait, discussed below, are effectively out of reach there.
    *
    * <p>No backoff is applied. The conflicts this retry exists for consume no wait before they are
    * reported: an index leaf block split has completed by the time the retry runs, and a deadlock
@@ -1699,8 +1708,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * as 1205 instead, so excluding it would stop retrying the very case this helper exists for.
    *
    * <p>What would make those waits add up is sustained contention on the catalog tables, and that
-   * cannot originate from this path: catalog statements are committed one at a time, so no lock is
-   * held across statements. It indicates a leaked or external transaction, which is a bug to
+   * cannot originate from either path: catalog statements are committed one at a time, so no lock
+   * is held across statements. It indicates a leaked or external transaction, which is a bug to
    * surface rather than a condition to absorb -- hence the per-attempt warning below and no
    * elapsed-time bound on the loop.
    */
