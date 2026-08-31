@@ -1679,10 +1679,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * transaction there: with explicit commit the failed transaction is rolled back below, and with
    * autocommit the driver has already ended it.
    *
-   * <p>No backoff is applied. The conflicts seen here resolve on their own (an index leaf block
-   * split has completed by the time the retry runs; a deadlock victim is chosen before the error is
-   * returned), so waiting does not improve the odds, and failing fast keeps admin operations
-   * responsive.
+   * <p>No backoff is applied. The conflicts this retry exists for consume no wait before they are
+   * reported: an index leaf block split has completed by the time the retry runs, and a deadlock
+   * victim is rolled back as soon as the server detects the cycle. Waiting therefore does not
+   * improve the odds.
+   *
+   * <p>{@link RdbEngineStrategy#isConflict(SQLException)} also matches errors that are reported
+   * only after a lock wait has already elapsed (MySQL 1205, SQLite 5 and 6, Db2 -911 raised on
+   * timeout), for which a retry re-enters the same wait. Those are deliberately not excluded here:
+   * with {@code innodb_deadlock_detect} disabled, MySQL never reports 1213 and a deadlock surfaces
+   * as 1205 instead, so excluding it would stop retrying the very case this helper exists for.
+   *
+   * <p>What would make those waits add up is sustained contention on the catalog tables, and that
+   * cannot originate from this path: catalog statements are committed one at a time, so no lock is
+   * held across statements. It indicates a leaked or external transaction, which is a bug to
+   * surface rather than a condition to absorb -- hence the per-attempt warning below and no
+   * elapsed-time bound on the loop.
    */
   private static <T> T executeWithConflictRetry(
       Connection connection,
