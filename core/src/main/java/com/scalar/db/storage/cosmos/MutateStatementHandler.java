@@ -57,19 +57,20 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   private void throwException(CosmosException exception) throws ExecutionException {
-    int statusCode = exception.getSubStatusCode();
+    int subStatusCode = exception.getSubStatusCode();
 
-    if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
+    if (subStatusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
       throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), exception);
-    } else if (statusCode == CosmosErrorCode.RETRY_WITH.get()) {
+    } else if (subStatusCode == CosmosErrorCode.RETRY_WITH.get()) {
       throw new RetriableExecutionException(
           CoreError.COSMOS_RETRY_WITH_ERROR_OCCURRED_IN_MUTATION.buildMessage(
-              exception.getMessage()),
+              CosmosUtils.buildErrorDetails(exception)),
           exception);
     }
 
     throw new ExecutionException(
-        CoreError.COSMOS_ERROR_OCCURRED_IN_MUTATION.buildMessage(exception.getMessage()),
+        CoreError.COSMOS_ERROR_OCCURRED_IN_MUTATION.buildMessage(
+            CosmosUtils.buildErrorDetails(exception)),
         exception);
   }
 }

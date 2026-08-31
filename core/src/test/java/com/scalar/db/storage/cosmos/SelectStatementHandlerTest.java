@@ -55,6 +55,11 @@ public class SelectStatementHandlerTest {
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
   private static final int ANY_LIMIT = 100;
+  private static final String ANY_SHORT_MESSAGE = "[\"Request rate is large\"]";
+  // getMessage() of CosmosException embeds the whole CosmosDiagnostics, which makes the message too
+  // large for callers that impose a size limit on error messages. It must not appear in the built
+  // message.
+  private static final String ANY_MESSAGE_WITH_DIAGNOSTICS = "diagnostics-must-not-appear";
 
   private SelectStatementHandler handler;
   private String id;
@@ -181,6 +186,51 @@ public class SelectStatementHandlerTest {
     assertThatThrownBy(() -> handler.handle(get))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      handle_GetOperationCosmosExceptionThrown_ShouldThrowExecutionExceptionWithShortMessageAndStatusCodes() {
+    // Arrange
+    CosmosException toThrow = mock(CosmosException.class);
+    doThrow(toThrow)
+        .when(container)
+        .readItem(anyString(), any(PartitionKey.class), eq(Record.class));
+    when(toThrow.getStatusCode()).thenReturn(429);
+    when(toThrow.getSubStatusCode()).thenReturn(3200);
+    when(toThrow.getShortMessage()).thenReturn(ANY_SHORT_MESSAGE);
+    when(toThrow.getMessage()).thenReturn(ANY_MESSAGE_WITH_DIAGNOSTICS);
+
+    Get get = prepareGet();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(get))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(toThrow)
+        .hasMessageContaining("statusCode=429")
+        .hasMessageContaining("subStatusCode=3200")
+        .hasMessageContaining(ANY_SHORT_MESSAGE)
+        .hasMessageNotContaining(ANY_MESSAGE_WITH_DIAGNOSTICS);
+  }
+
+  @Test
+  public void
+      handle_GetOperationRuntimeExceptionThrown_ShouldThrowExecutionExceptionWithExceptionMessage() {
+    // Arrange
+    // A RuntimeException that is not a CosmosException has no short message, so the handler must
+    // keep using getMessage() for it.
+    RuntimeException toThrow = new RuntimeException("some runtime error");
+    doThrow(toThrow)
+        .when(container)
+        .readItem(anyString(), any(PartitionKey.class), eq(Record.class));
+
+    Get get = prepareGet();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(get))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(toThrow)
+        .hasMessageContaining("some runtime error");
   }
 
   @Test

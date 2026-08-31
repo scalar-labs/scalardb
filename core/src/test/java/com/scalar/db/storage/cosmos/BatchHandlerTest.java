@@ -28,6 +28,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,6 +52,11 @@ public class BatchHandlerTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final int ANY_INT_1 = 1;
   private static final int ANY_INT_2 = 2;
+  private static final String ANY_SHORT_MESSAGE = "[\"Request rate is large\"]";
+  // getMessage() of CosmosException embeds the whole CosmosDiagnostics, which makes the message too
+  // large for callers that impose a size limit on error messages. It must not appear in the built
+  // message.
+  private static final String ANY_MESSAGE_WITH_DIAGNOSTICS = "diagnostics-must-not-appear";
 
   private BatchHandler handler;
   @Mock private CosmosClient client;
@@ -181,5 +187,83 @@ public class BatchHandlerTest {
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      handle_CosmosExceptionThrown_ShouldThrowExecutionExceptionWithShortMessageAndStatusCodes() {
+    // Arrange
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
+    CosmosException toThrow = mock(CosmosException.class);
+    doThrow(toThrow)
+        .when(storedProcedure)
+        .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
+    when(toThrow.getStatusCode()).thenReturn(429);
+    when(toThrow.getSubStatusCode()).thenReturn(3200);
+    when(toThrow.getShortMessage()).thenReturn(ANY_SHORT_MESSAGE);
+    when(toThrow.getMessage()).thenReturn(ANY_MESSAGE_WITH_DIAGNOSTICS);
+
+    Put put1 = preparePut();
+    Put put2 = preparePut();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(toThrow)
+        .hasMessageContaining("statusCode=429")
+        .hasMessageContaining("subStatusCode=3200")
+        .hasMessageContaining(ANY_SHORT_MESSAGE)
+        .hasMessageNotContaining(ANY_MESSAGE_WITH_DIAGNOSTICS);
+  }
+
+  @Test
+  public void
+      handle_CosmosExceptionWithRetryWithThrown_ShouldThrowRetriableExecutionExceptionWithShortMessageAndStatusCodes() {
+    // Arrange
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
+    CosmosException toThrow = mock(CosmosException.class);
+    doThrow(toThrow)
+        .when(storedProcedure)
+        .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
+    when(toThrow.getStatusCode()).thenReturn(449);
+    when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.RETRY_WITH.get());
+    when(toThrow.getShortMessage()).thenReturn(ANY_SHORT_MESSAGE);
+    when(toThrow.getMessage()).thenReturn(ANY_MESSAGE_WITH_DIAGNOSTICS);
+
+    Put put1 = preparePut();
+    Put put2 = preparePut();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(toThrow)
+        .hasMessageContaining("statusCode=449")
+        .hasMessageContaining("subStatusCode=" + CosmosErrorCode.RETRY_WITH.get())
+        .hasMessageContaining(ANY_SHORT_MESSAGE)
+        .hasMessageNotContaining(ANY_MESSAGE_WITH_DIAGNOSTICS);
+  }
+
+  @Test
+  public void handle_RuntimeExceptionThrown_ShouldThrowExecutionExceptionWithExceptionMessage() {
+    // Arrange
+    // A RuntimeException that is not a CosmosException has no short message, so the handler must
+    // keep using getMessage() for it.
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
+    RuntimeException toThrow = new RuntimeException("some runtime error");
+    doThrow(toThrow)
+        .when(storedProcedure)
+        .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
+
+    Put put1 = preparePut();
+    Put put2 = preparePut();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(toThrow)
+        .hasMessageContaining("some runtime error");
   }
 }
