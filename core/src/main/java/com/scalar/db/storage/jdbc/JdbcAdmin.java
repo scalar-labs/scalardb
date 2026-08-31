@@ -60,10 +60,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static final String INDEX_NAME_PREFIX = "index";
 
   /**
-   * The maximum number of retries for a conflict error on a catalog statement. Conflict errors on
-   * the admin path are transient: one statement is one transaction here, so re-executing the
-   * statement after a rollback is safe. The measured worst case is two consecutive retries, so this
-   * bound has ample headroom. No backoff is applied; see the retry helper for details.
+   * The maximum number of retries for a conflict error on a catalog statement. Conflict errors here
+   * are transient: one statement is one transaction on this path, so re-executing the statement
+   * after a rollback is safe.
+   *
+   * <p>Two consecutive retries is the worst case measured while reproducing the Oracle {@code
+   * ORA-08177} leaf split, which is the only engine this was measured on. It is not the bound that
+   * matters for the others: a deadlock or a serialization failure is settled by the server before
+   * the error is returned, so a retry either succeeds or meets a genuinely contended table. This
+   * bound therefore has ample headroom in both cases.
+   *
+   * <p>No backoff is applied. See {@link #executeWithConflictRetry} for why, and for why errors
+   * reported only after a lock wait are retried under the same bound.
    */
   @VisibleForTesting static final int MAX_CONFLICT_RETRY_COUNT = 10;
 
