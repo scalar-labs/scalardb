@@ -39,6 +39,9 @@ public class TableMetadataService {
     this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
+  // This method manages its own transaction (commit/rollback) to ensure the DELETE and all INSERTs
+  // are applied atomically, unlike other methods that rely on per-statement commits via
+  // requiresExplicitCommit.
   void addTableMetadata(
       Connection connection,
       String namespace,
@@ -50,17 +53,48 @@ public class TableMetadataService {
     if (createMetadataTable) {
       createTableMetadataTableIfNotExists(connection);
     }
-    if (overwriteMetadata) {
-      // Delete the metadata for the table before we add them
-      execute(
-          connection, getDeleteTableMetadataStatement(namespace, table), requiresExplicitCommit);
-    }
-    LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
-    orderedColumns.addAll(metadata.getClusteringKeyNames());
-    orderedColumns.addAll(metadata.getColumnNames());
-    int ordinalPosition = 1;
-    for (String column : orderedColumns) {
-      insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
+
+    boolean originalAutoCommit = connection.getAutoCommit();
+    SQLException primaryException = null;
+    try {
+      if (originalAutoCommit) {
+        connection.setAutoCommit(false);
+      }
+
+      if (overwriteMetadata) {
+        // Delete the metadata for the table before we add them
+        execute(connection, getDeleteTableMetadataStatement(namespace, table), false);
+      }
+
+      LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
+      orderedColumns.addAll(metadata.getClusteringKeyNames());
+      orderedColumns.addAll(metadata.getColumnNames());
+      int ordinalPosition = 1;
+      for (String column : orderedColumns) {
+        insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
+      }
+
+      connection.commit();
+    } catch (SQLException e) {
+      primaryException = e;
+      try {
+        connection.rollback();
+      } catch (SQLException rollbackEx) {
+        e.addSuppressed(rollbackEx);
+      }
+      throw e;
+    } finally {
+      if (originalAutoCommit) {
+        try {
+          connection.setAutoCommit(true);
+        } catch (SQLException e) {
+          if (primaryException != null) {
+            primaryException.addSuppressed(e);
+          } else {
+            throw e;
+          }
+        }
+      }
     }
   }
 
@@ -131,7 +165,7 @@ public class TableMetadataService {
             metadata.getClusteringOrder(column),
             metadata.getSecondaryIndexNames().contains(column),
             ordinalPosition);
-    execute(connection, insertStatement, requiresExplicitCommit);
+    execute(connection, insertStatement, false);
   }
 
   private String getInsertStatement(
