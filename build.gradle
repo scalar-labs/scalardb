@@ -29,7 +29,7 @@ subprojects {
         cassandraDriverVersion = '3.12.1'
         azureCosmosVersion = '4.81.0'
         jooqVersion = '3.14.16'
-        awssdkVersion = '2.31.3'
+        awssdkVersion = '2.49.3'
         commonsDbcp2Version = '2.13.0'
         postgresqlDriverVersion = '42.7.13'
         oracleDriverVersion = '23.8.0.25.04'
