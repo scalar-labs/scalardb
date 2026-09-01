@@ -63,6 +63,7 @@ public class NamespaceMetadataService {
     Set<String> namespaces =
         executeQuery(
             connection,
+            rdbEngine,
             selectAllTables,
             requiresExplicitCommit,
             rs -> {
@@ -85,7 +86,11 @@ public class NamespaceMetadataService {
     String insertStatement =
         "INSERT INTO " + encloseFullTableName(metadataSchema, TABLE_NAME) + " VALUES (?)";
     executeUpdate(
-        connection, insertStatement, requiresExplicitCommit, ps -> ps.setString(1, namespaceName));
+        connection,
+        rdbEngine,
+        insertStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, namespaceName));
   }
 
   void upsertIntoNamespacesTable(Connection connection, String namespace) throws SQLException {
@@ -107,7 +112,11 @@ public class NamespaceMetadataService {
             + enclose(COL_NAMESPACE_NAME)
             + " = ?";
     executeUpdate(
-        connection, deleteStatement, requiresExplicitCommit, ps -> ps.setString(1, namespaceName));
+        connection,
+        rdbEngine,
+        deleteStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, namespaceName));
   }
 
   boolean namespaceExists(Connection connection, String namespace) throws SQLException {
@@ -123,6 +132,7 @@ public class NamespaceMetadataService {
             + " = ?";
     return executeQuery(
         connection,
+        rdbEngine,
         selectQuery,
         requiresExplicitCommit,
         ps -> ps.setString(1, namespace),
@@ -137,6 +147,7 @@ public class NamespaceMetadataService {
     String selectQuery = "SELECT * FROM " + encloseFullTableName(metadataSchema, TABLE_NAME);
     return executeQuery(
         connection,
+        rdbEngine,
         selectQuery,
         requiresExplicitCommit,
         rs -> {
@@ -159,7 +170,7 @@ public class NamespaceMetadataService {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt, requiresExplicitCommit);
+      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -176,7 +187,7 @@ public class NamespaceMetadataService {
 
   private void deleteTable(Connection connection, String fullTableName) throws SQLException {
     String dropTableStatement = "DROP TABLE " + fullTableName;
-    execute(connection, dropTableStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, dropTableStatement, requiresExplicitCommit);
   }
 
   private String enclose(String name) {
