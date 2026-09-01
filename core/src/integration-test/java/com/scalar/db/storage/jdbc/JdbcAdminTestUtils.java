@@ -150,7 +150,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         dataSource,
         requiresExplicitCommit,
         connection -> {
-          JdbcAdmin.execute(connection, sql, requiresExplicitCommit);
+          JdbcAdmin.execute(connection, rdbEngine, sql, requiresExplicitCommit);
         });
   }
 
@@ -181,6 +181,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
             connection ->
                 executeQuery(
                     connection,
+                    rdbEngine,
                     sql,
                     requiresExplicitCommit,
                     ps -> ps.setString(1, namespace),
