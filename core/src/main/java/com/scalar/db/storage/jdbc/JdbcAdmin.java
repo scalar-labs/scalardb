@@ -22,6 +22,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.util.ThrowableConsumer;
 import com.scalar.db.util.ThrowableFunction;
+import com.scalar.db.util.ThrowableSupplier;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
@@ -57,6 +58,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String JDBC_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
 
   private static final String INDEX_NAME_PREFIX = "index";
+
+  /**
+   * The maximum number of retries for a conflict error on a catalog statement. Conflict errors here
+   * are transient: one statement is one transaction on this path, so re-executing the statement
+   * after a rollback is safe.
+   *
+   * <p>Two consecutive retries is the worst case measured while reproducing the Oracle {@code
+   * ORA-08177} leaf split, which is the only engine this was measured on. It is not the bound that
+   * matters for the others: a deadlock or a serialization failure is settled by the server before
+   * the error is returned, so a retry either succeeds or meets a genuinely contended table. This
+   * bound therefore has ample headroom in both cases.
+   *
+   * <p>No backoff is applied. See {@link #executeWithConflictRetry} for why, and for why errors
+   * reported only after a lock wait are retried under the same bound.
+   */
+  @VisibleForTesting static final int MAX_CONFLICT_RETRY_COUNT = 10;
 
   private final RdbEngineStrategy rdbEngine;
   private final HikariDataSource dataSource;
@@ -166,7 +183,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           dataSource,
           requiresExplicitCommit,
           connection -> {
-            execute(connection, rdbEngine.createSchemaSqls(namespace), requiresExplicitCommit);
+            execute(
+                connection,
+                rdbEngine,
+                rdbEngine.createSchemaSqls(namespace),
+                requiresExplicitCommit);
           });
     } catch (SQLException e) {
       throw new ExecutionException("Creating the " + namespace + " schema failed", e);
@@ -241,6 +262,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       execute(
           connection,
+          rdbEngine,
           stmts,
           requiresExplicitCommit,
           ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
@@ -315,10 +337,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     assert tableMetadata != null;
     execute(
         connection,
+        rdbEngine,
         rdbEngine.dropTableInternalSqlsBeforeDropTable(schema, table, tableMetadata),
         requiresExplicitCommit);
     execute(
-        connection, "DROP TABLE " + encloseFullTableName(schema, table), requiresExplicitCommit);
+        connection,
+        rdbEngine,
+        "DROP TABLE " + encloseFullTableName(schema, table),
+        requiresExplicitCommit);
   }
 
   @Override
@@ -334,7 +360,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                   CoreError.NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED.buildMessage(
                       namespace, remainingTables));
             }
-            execute(connection, rdbEngine.dropNamespaceSql(namespace), requiresExplicitCommit);
+            execute(
+                connection,
+                rdbEngine,
+                rdbEngine.dropNamespaceSql(namespace),
+                requiresExplicitCommit);
           });
     } catch (SQLException e) {
       throw new ExecutionException("Dropping the " + namespace + " schema failed", e);
@@ -349,6 +379,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
     return executeQuery(
         connection,
+        rdbEngine,
         sql,
         requiresExplicitCommit,
         ps -> ps.setString(1, namespace),
@@ -376,12 +407,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               // truncate the source tables
               execute(
                   connection,
+                  rdbEngine,
                   rdbEngine.truncateTableSql(
                       virtualTableInfo.getLeftSourceNamespaceName(),
                       virtualTableInfo.getLeftSourceTableName()),
                   requiresExplicitCommit);
               execute(
                   connection,
+                  rdbEngine,
                   rdbEngine.truncateTableSql(
                       virtualTableInfo.getRightSourceNamespaceName(),
                       virtualTableInfo.getRightSourceTableName()),
@@ -391,7 +424,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
             // For a regular table
             String truncateTableStatement = rdbEngine.truncateTableSql(namespace, table);
-            execute(connection, truncateTableStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, truncateTableStatement, requiresExplicitCommit);
           });
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -624,6 +657,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String namespaceExistsStatement = rdbEngine.namespaceExistsStatement();
     return executeQuery(
         connection,
+        rdbEngine,
         namespaceExistsStatement,
         requiresExplicitCommit,
         ps -> ps.setString(1, rdbEngine.namespaceExistsPlaceholder(namespace)),
@@ -742,7 +776,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
-    execute(connection, sqls, requiresExplicitCommit);
+    execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
   private void alterToRegularColumnTypeIfNecessary(
@@ -757,7 +791,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String columnType = rdbEngine.getDataTypeForEngine(dataType);
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
-    execute(connection, sqls, requiresExplicitCommit);
+    execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
   @Override
@@ -902,7 +936,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     + enclose(columnName)
                     + " "
                     + getVendorDbColumnType(updatedTableMetadata, columnName);
-            execute(connection, addNewColumnStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, addNewColumnStatement, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
           });
     } catch (SQLException e) {
@@ -940,7 +974,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     .build();
             String[] dropColumnStatements = rdbEngine.dropColumnSql(namespace, table, columnName);
 
-            execute(connection, dropColumnStatements, requiresExplicitCommit);
+            execute(connection, rdbEngine, dropColumnStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
           });
     } catch (SQLException e) {
@@ -988,7 +1022,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     oldColumnName,
                     newColumnName,
                     getVendorDbColumnType(updatedTableMetadata, newColumnName));
-            execute(connection, renameColumnStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, renameColumnStatement, requiresExplicitCommit);
 
             if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
               renameIndexInternal(
@@ -1032,7 +1066,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             String[] alterColumnTypeStatements =
                 rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
 
-            execute(connection, alterColumnTypeStatements, requiresExplicitCommit);
+            execute(connection, rdbEngine, alterColumnTypeStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
           });
     } catch (SQLException e) {
@@ -1062,7 +1096,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
             String renameTableStatement =
                 rdbEngine.renameTableSql(namespace, oldTableName, newTableName);
-            execute(connection, renameTableStatement, requiresExplicitCommit);
+            execute(connection, rdbEngine, renameTableStatement, requiresExplicitCommit);
 
             tableMetadataService.deleteTableMetadata(connection, namespace, oldTableName, false);
 
@@ -1100,7 +1134,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String[] sqls =
         rdbEngine.renameIndexSqls(schema, newTable, newColumn, oldIndexName, newIndexName);
     try {
-      execute(connection, sqls, requiresExplicitCommit);
+      execute(connection, rdbEngine, sqls, requiresExplicitCommit);
     } catch (SQLException e) {
       if (!rdbEngine.isUndefinedIndexError(e)) {
         throw e;
@@ -1114,7 +1148,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
       String[] fallbackSqls =
           rdbEngine.renameIndexSqls(schema, newTable, newColumn, originalIndexName, newIndexName);
-      execute(connection, fallbackSqls, requiresExplicitCommit);
+      execute(connection, rdbEngine, fallbackSqls, requiresExplicitCommit);
     }
   }
 
@@ -1130,6 +1164,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       execute(
           connection,
+          rdbEngine,
           createIndexStatement,
           requiresExplicitCommit,
           ifNotExists ? null : rdbEngine::throwIfDuplicatedIndexWarning);
@@ -1146,7 +1181,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     String indexName = getIndexName(schema, table, indexedColumn);
     String sql = rdbEngine.dropIndexSql(schema, table, indexName);
     try {
-      execute(connection, sql, requiresExplicitCommit);
+      execute(connection, rdbEngine, sql, requiresExplicitCommit);
     } catch (SQLException e) {
       if (!rdbEngine.isUndefinedIndexError(e)) {
         throw e;
@@ -1159,7 +1194,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         throw e;
       }
       String fallbackSql = rdbEngine.dropIndexSql(schema, table, originalIndexName);
-      execute(connection, fallbackSql, requiresExplicitCommit);
+      execute(connection, rdbEngine, fallbackSql, requiresExplicitCommit);
     }
   }
 
@@ -1368,13 +1403,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       firstCondition = false;
     }
 
-    execute(connection, createViewSql.toString(), requiresExplicitCommit);
+    execute(connection, rdbEngine, createViewSql.toString(), requiresExplicitCommit);
   }
 
   private void dropVirtualTableView(Connection connection, String namespace, String table)
       throws SQLException {
     String dropViewStatement = "DROP VIEW " + encloseFullTableName(namespace, table);
-    execute(connection, dropViewStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, dropViewStatement, requiresExplicitCommit);
   }
 
   @Override
@@ -1445,7 +1480,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     String sql = rdbEngine.dropNamespaceSql(metadataSchema);
-    execute(connection, sql, requiresExplicitCommit);
+    execute(connection, rdbEngine, sql, requiresExplicitCommit);
   }
 
   private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
@@ -1455,7 +1490,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt, requiresExplicitCommit);
+      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -1478,6 +1513,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     return executeQuery(
         connection,
+        rdbEngine,
         rdbEngine.internalTableExistsCheckSql(),
         requiresExplicitCommit,
         ps -> rdbEngine.bindInternalTableExistsCheckParams(ps, schema, table),
@@ -1487,7 +1523,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
     String[] sqls = rdbEngine.createSchemaIfNotExistsSqls(schema);
     try {
-      execute(connection, sqls, requiresExplicitCommit);
+      execute(connection, rdbEngine, sqls, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress exceptions indicating the duplicate metadata schema
       if (!rdbEngine.isDuplicateSchemaError(e)) {
@@ -1542,13 +1578,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  static void execute(Connection connection, String sql, boolean requiresExplicitCommit)
+  static void execute(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      String sql,
+      boolean requiresExplicitCommit)
       throws SQLException {
-    execute(connection, sql, requiresExplicitCommit, null);
+    execute(connection, rdbEngine, sql, requiresExplicitCommit, null);
   }
 
   static void execute(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       @Nullable SqlWarningHandler handler)
@@ -1558,12 +1599,108 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Statement stmt = connection.createStatement()) {
-      stmt.execute(sql);
-      if (requiresExplicitCommit) {
-        connection.commit();
-      }
+      executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            stmt.execute(sql);
+            return null;
+          });
 
+      // Outside the retry region on purpose: the handler runs after the commit has succeeded, so an
+      // exception raised here must never trigger a re-execution of an already committed statement.
       throwSqlWarningIfNeeded(handler, stmt);
+    }
+  }
+
+  /**
+   * Executes a catalog statement, retrying it when the engine reports a conflict error.
+   *
+   * <p>The retried region covers the statement execution <em>and</em> the commit, because a
+   * conflict can surface at either point. The explicit {@code commit()} below runs only for engines
+   * that require one, which today means Oracle at SERIALIZABLE; on an autocommit connection the
+   * commit happens inside the statement call, so a conflict raised at commit time (PostgreSQL
+   * raises {@code 40001} there) falls in the same region. Conversely, once the commit succeeds the
+   * loop is left immediately, which guarantees that a committed statement is never re-executed.
+   *
+   * <p>These helpers do not run only under the admin operations. {@link JdbcDatabase} builds a
+   * {@link JdbcAdmin} over the table metadata pool and hands it to {@link
+   * com.scalar.db.common.TableMetadataManager}, whose cache loader calls {@code getTableMetadata()}
+   * on a miss and blocks the calling thread while it reloads. Retrying a single statement is safe
+   * on both paths because one statement is one transaction on either: the two pools are both
+   * created non-transactional and apply {@code requiresExplicitCommit} the same way, so with
+   * explicit commit the failed transaction is rolled back below, and with autocommit the driver has
+   * already ended it.
+   *
+   * <p>Of the two, the data path is the less exposed: the statement it runs is a non-locking read
+   * of the catalog, which takes no row locks to contend over, so the errors reported only after a
+   * lock wait, discussed below, are effectively out of reach there.
+   *
+   * <p>No backoff is applied. The conflicts this retry exists for consume no wait before they are
+   * reported: an index leaf block split has completed by the time the retry runs, and a deadlock
+   * victim is rolled back as soon as the server detects the cycle. Waiting therefore does not
+   * improve the odds.
+   *
+   * <p>{@link RdbEngineStrategy#isConflict(SQLException)} also matches errors that are reported
+   * only after a lock wait has already elapsed (MySQL 1205, SQLite 5 and 6, Db2 -911 raised on
+   * timeout), for which a retry re-enters the same wait. Those are deliberately not excluded here:
+   * with {@code innodb_deadlock_detect} disabled, MySQL never reports 1213 and a deadlock surfaces
+   * as 1205 instead, so excluding it would stop retrying the very case this helper exists for.
+   *
+   * <p>What would make those waits add up is sustained contention on the catalog tables, and that
+   * cannot originate from either path: catalog statements are committed one at a time, so no lock
+   * is held across statements. It indicates a leaked or external transaction, which is a bug to
+   * surface rather than a condition to absorb -- hence the per-attempt warning below and no
+   * elapsed-time bound on the loop.
+   */
+  private static <T> T executeWithConflictRetry(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      boolean requiresExplicitCommit,
+      String sql,
+      ThrowableSupplier<T, SQLException> action)
+      throws SQLException {
+    int attempt = 0;
+    while (true) {
+      try {
+        T result = action.get();
+        if (requiresExplicitCommit) {
+          connection.commit();
+        }
+        return result;
+      } catch (SQLException e) {
+        if (!rdbEngine.isConflict(e)) {
+          throw e;
+        }
+        if (attempt >= MAX_CONFLICT_RETRY_COUNT) {
+          logger.warn(
+              "Giving up on a conflicting statement after {} retries. SQL: {}, error code: {}",
+              attempt,
+              sql,
+              e.getErrorCode());
+          throw e;
+        }
+        if (requiresExplicitCommit) {
+          // Only engines that require an explicit commit reach this branch, which today means
+          // Oracle at SERIALIZABLE, where the transaction is already rolled back once the conflict
+          // error is returned. The call is kept for engines that keep the transaction alive after a
+          // conflict, and is harmless when it has already ended.
+          try {
+            connection.rollback();
+          } catch (SQLException rollbackEx) {
+            e.addSuppressed(rollbackEx);
+            throw e;
+          }
+        }
+        attempt++;
+        logger.warn(
+            "Retrying a conflicting statement (attempt {}). SQL: {}, error code: {}",
+            attempt,
+            sql,
+            e.getErrorCode());
+      }
     }
   }
 
@@ -1580,69 +1717,113 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  static void execute(Connection connection, String[] sqls, boolean requiresExplicitCommit)
+  static void execute(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      String[] sqls,
+      boolean requiresExplicitCommit)
       throws SQLException {
-    execute(connection, sqls, requiresExplicitCommit, null);
+    execute(connection, rdbEngine, sqls, requiresExplicitCommit, null);
   }
 
   static void execute(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String[] sqls,
       boolean requiresExplicitCommit,
       @Nullable SqlWarningHandler warningHandler)
       throws SQLException {
     for (String sql : sqls) {
-      execute(connection, sql, requiresExplicitCommit, warningHandler);
+      execute(connection, rdbEngine, sql, requiresExplicitCommit, warningHandler);
     }
   }
 
+  /**
+   * Executes an update statement, retrying it when the engine reports a conflict error.
+   *
+   * <p>Because a conflict retry re-runs the whole action, {@code paramSetter} must be free of side
+   * effects and safe to run more than once. The retry re-applies it to the same {@link
+   * PreparedStatement}.
+   */
   static void executeUpdate(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       ThrowableConsumer<PreparedStatement, SQLException> paramSetter)
       throws SQLException {
     try (PreparedStatement ps = connection.prepareStatement(sql)) {
-      paramSetter.accept(ps);
-      ps.executeUpdate();
-      if (requiresExplicitCommit) {
-        connection.commit();
-      }
+      executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            paramSetter.accept(ps);
+            ps.executeUpdate();
+            return null;
+          });
     }
   }
 
+  /**
+   * Executes a query, retrying it when the engine reports a conflict error.
+   *
+   * <p>Because a conflict retry re-runs the whole action, {@code resultMapper} must be free of side
+   * effects and safe to run more than once. The retry re-runs it against a new {@link ResultSet}.
+   * Build any collection it returns inside the lambda rather than appending to one captured from
+   * the enclosing scope, which a retry would fill twice.
+   */
   static <T> T executeQuery(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       ThrowableFunction<ResultSet, T, SQLException> resultMapper)
       throws SQLException {
-    try (Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(sql)) {
-      T result = resultMapper.apply(rs);
-      if (requiresExplicitCommit) {
-        connection.commit();
-      }
-      return result;
+    try (Statement stmt = connection.createStatement()) {
+      return executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+              return resultMapper.apply(rs);
+            }
+          });
     }
   }
 
+  /**
+   * Executes a query with bound parameters, retrying it when the engine reports a conflict error.
+   *
+   * <p>Because a conflict retry re-runs the whole action, {@code paramSetter} and {@code
+   * resultMapper} must be free of side effects and safe to run more than once. The retry re-applies
+   * the former to the same {@link PreparedStatement} and re-runs the latter against a new {@link
+   * ResultSet}. Build any collection it returns inside the lambda rather than appending to one
+   * captured from the enclosing scope, which a retry would fill twice.
+   */
   static <T> T executeQuery(
       Connection connection,
+      RdbEngineStrategy rdbEngine,
       String sql,
       boolean requiresExplicitCommit,
       ThrowableConsumer<PreparedStatement, SQLException> paramSetter,
       ThrowableFunction<ResultSet, T, SQLException> resultMapper)
       throws SQLException {
     try (PreparedStatement ps = connection.prepareStatement(sql)) {
-      paramSetter.accept(ps);
-      try (ResultSet rs = ps.executeQuery()) {
-        T result = resultMapper.apply(rs);
-        if (requiresExplicitCommit) {
-          connection.commit();
-        }
-        return result;
-      }
+      return executeWithConflictRetry(
+          connection,
+          rdbEngine,
+          requiresExplicitCommit,
+          sql,
+          () -> {
+            paramSetter.accept(ps);
+            try (ResultSet rs = ps.executeQuery()) {
+              return resultMapper.apply(rs);
+            }
+          });
     }
   }
 
