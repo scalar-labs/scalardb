@@ -200,7 +200,7 @@ public class JdbcAdminImportTestUtils {
         dataSource,
         requiresExplicitCommit,
         connection -> {
-          JdbcAdmin.execute(connection, sql, requiresExplicitCommit);
+          JdbcAdmin.execute(connection, rdbEngine, sql, requiresExplicitCommit);
         });
   }
 
@@ -209,7 +209,7 @@ public class JdbcAdminImportTestUtils {
         dataSource,
         requiresExplicitCommit,
         connection -> {
-          JdbcAdmin.execute(connection, sqls, requiresExplicitCommit);
+          JdbcAdmin.execute(connection, rdbEngine, sqls, requiresExplicitCommit);
         });
   }
 
