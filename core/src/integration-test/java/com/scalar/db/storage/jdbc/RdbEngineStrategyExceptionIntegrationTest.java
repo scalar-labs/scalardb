@@ -298,7 +298,7 @@ public class RdbEngineStrategyExceptionIntegrationTest {
         dataSource,
         requiresExplicitCommit,
         (ThrowableConsumer<Connection, SQLException>)
-            conn -> execute(conn, sql, requiresExplicitCommit));
+            conn -> execute(conn, rdbEngine, sql, requiresExplicitCommit));
   }
 
   private void executeIgnoringError(String sql) {
@@ -316,7 +316,7 @@ public class RdbEngineStrategyExceptionIntegrationTest {
         (ThrowableConsumer<Connection, SQLException>)
             conn -> {
               for (String sql : sqls) {
-                execute(conn, sql, requiresExplicitCommit);
+                execute(conn, rdbEngine, sql, requiresExplicitCommit);
               }
             });
   }
