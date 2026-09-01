@@ -53,7 +53,10 @@ public class TableMetadataService {
     if (overwriteMetadata) {
       // Delete the metadata for the table before we add them
       execute(
-          connection, getDeleteTableMetadataStatement(namespace, table), requiresExplicitCommit);
+          connection,
+          rdbEngine,
+          getDeleteTableMetadataStatement(namespace, table),
+          requiresExplicitCommit);
     }
     LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
     orderedColumns.addAll(metadata.getClusteringKeyNames());
@@ -131,7 +134,7 @@ public class TableMetadataService {
             metadata.getClusteringOrder(column),
             metadata.getSecondaryIndexNames().contains(column),
             ordinalPosition);
-    execute(connection, insertStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, insertStatement, requiresExplicitCommit);
   }
 
   private String getInsertStatement(
@@ -161,7 +164,10 @@ public class TableMetadataService {
       throws SQLException {
     try {
       execute(
-          connection, getDeleteTableMetadataStatement(namespace, table), requiresExplicitCommit);
+          connection,
+          rdbEngine,
+          getDeleteTableMetadataStatement(namespace, table),
+          requiresExplicitCommit);
       if (deleteMetadataTableIfEmpty) {
         deleteMetadataTableIfEmpty(connection);
       }
@@ -195,7 +201,8 @@ public class TableMetadataService {
             + enclose(COL_FULL_TABLE_NAME)
             + " FROM "
             + encloseFullTableName(metadataSchema, TABLE_NAME);
-    return executeQuery(connection, selectAllTables, requiresExplicitCommit, rs -> !rs.next());
+    return executeQuery(
+        connection, rdbEngine, selectAllTables, requiresExplicitCommit, rs -> !rs.next());
   }
 
   TableMetadata getTableMetadata(Connection connection, String namespace, String table)
@@ -206,6 +213,7 @@ public class TableMetadataService {
 
     return executeQuery(
         connection,
+        rdbEngine,
         getSelectColumnsStatement(),
         requiresExplicitCommit,
         ps -> ps.setString(1, getFullTableName(namespace, table)),
@@ -291,7 +299,7 @@ public class TableMetadataService {
             + "='"
             + columnName
             + "'";
-    execute(connection, updateStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, updateStatement, requiresExplicitCommit);
   }
 
   Set<String> getNamespaceTableNames(Connection connection, String namespace) throws SQLException {
@@ -310,6 +318,7 @@ public class TableMetadataService {
     String prefix = namespace + ".";
     return executeQuery(
         connection,
+        rdbEngine,
         selectTablesOfNamespaceStatement,
         requiresExplicitCommit,
         ps -> ps.setString(1, prefix + "%"),
@@ -336,6 +345,7 @@ public class TableMetadataService {
     Set<String> namespaceOfExistingTables =
         executeQuery(
             connection,
+            rdbEngine,
             selectAllTableNames,
             requiresExplicitCommit,
             rs -> {
@@ -370,7 +380,7 @@ public class TableMetadataService {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt, requiresExplicitCommit);
+      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -387,7 +397,7 @@ public class TableMetadataService {
 
   private void deleteTable(Connection connection, String fullTableName) throws SQLException {
     String dropTableStatement = "DROP TABLE " + fullTableName;
-    execute(connection, dropTableStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, dropTableStatement, requiresExplicitCommit);
   }
 
   private String enclose(String name) {
