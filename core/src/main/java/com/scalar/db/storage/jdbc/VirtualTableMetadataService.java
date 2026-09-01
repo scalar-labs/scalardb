@@ -80,7 +80,8 @@ public class VirtualTableMetadataService {
 
   private boolean isVirtualTablesTableEmpty(Connection connection) throws SQLException {
     String selectAllTables = "SELECT * FROM " + encloseFullTableName(metadataSchema, TABLE_NAME);
-    return executeQuery(connection, selectAllTables, requiresExplicitCommit, rs -> !rs.next());
+    return executeQuery(
+        connection, rdbEngine, selectAllTables, requiresExplicitCommit, rs -> !rs.next());
   }
 
   void insertIntoVirtualTablesTable(
@@ -98,6 +99,7 @@ public class VirtualTableMetadataService {
         "INSERT INTO " + encloseFullTableName(metadataSchema, TABLE_NAME) + " VALUES (?,?,?,?,?)";
     executeUpdate(
         connection,
+        rdbEngine,
         insertStatement,
         requiresExplicitCommit,
         ps -> {
@@ -119,6 +121,7 @@ public class VirtualTableMetadataService {
             + " = ?";
     executeUpdate(
         connection,
+        rdbEngine,
         deleteStatement,
         requiresExplicitCommit,
         ps -> ps.setString(1, getFullTableName(namespace, table)));
@@ -139,6 +142,7 @@ public class VirtualTableMetadataService {
             + " = ?";
     return executeQuery(
         connection,
+        rdbEngine,
         selectStatement,
         requiresExplicitCommit,
         ps -> ps.setString(1, getFullTableName(namespace, table)),
@@ -166,6 +170,7 @@ public class VirtualTableMetadataService {
             + " = ?";
     return executeQuery(
         connection,
+        rdbEngine,
         selectStatement,
         requiresExplicitCommit,
         ps -> {
@@ -255,6 +260,7 @@ public class VirtualTableMetadataService {
     String prefix = namespace + ".";
     return executeQuery(
         connection,
+        rdbEngine,
         selectTablesOfNamespaceStatement,
         requiresExplicitCommit,
         ps -> ps.setString(1, prefix + "%"),
@@ -280,6 +286,7 @@ public class VirtualTableMetadataService {
             + encloseFullTableName(metadataSchema, TABLE_NAME);
     return executeQuery(
         connection,
+        rdbEngine,
         selectAllTableNames,
         requiresExplicitCommit,
         rs -> {
@@ -304,7 +311,7 @@ public class VirtualTableMetadataService {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt, requiresExplicitCommit);
+      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -321,7 +328,7 @@ public class VirtualTableMetadataService {
 
   private void deleteTable(Connection connection, String fullTableName) throws SQLException {
     String dropTableStatement = "DROP TABLE " + fullTableName;
-    execute(connection, dropTableStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, dropTableStatement, requiresExplicitCommit);
   }
 
   private String enclose(String name) {
