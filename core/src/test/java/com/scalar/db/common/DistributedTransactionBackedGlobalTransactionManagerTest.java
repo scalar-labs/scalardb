@@ -69,6 +69,7 @@ class DistributedTransactionBackedGlobalTransactionManagerTest {
 
     verify(manager).join("tx-1");
     assertThat(branch).isInstanceOf(DistributedTransactionBackedBranchTransaction.class);
+    branch.end(BranchTransaction.Status.SUCCESS);
   }
 
   @Test
@@ -80,6 +81,7 @@ class DistributedTransactionBackedGlobalTransactionManagerTest {
 
     verify(manager).join("tx-1");
     assertThat(branch).isInstanceOf(AttributePropagatingBranchTransaction.class);
+    branch.end(BranchTransaction.Status.SUCCESS);
   }
 
   @Test

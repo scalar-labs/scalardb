@@ -63,11 +63,15 @@ public abstract class AbstractDistributedTransactionManager
     return tableName;
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction join(String txId) throws TransactionNotFoundException {
     throw new UnsupportedOperationException("join is not supported in this implementation");
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     throw new UnsupportedOperationException("resume is not supported in this implementation");

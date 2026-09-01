@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.BranchTransaction;
+import com.scalar.db.api.BranchTransaction.Status;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -242,9 +243,16 @@ class AttributePropagatingBranchTransactionTest {
   }
 
   @Test
-  void end_ShouldDelegateToBranch() throws Exception {
-    branch(attrs("k", "v")).end();
+  void end_WithSuccess_ShouldDelegateToBranch() throws Exception {
+    branch(attrs("k", "v")).end(Status.SUCCESS);
 
-    verify(delegate).end();
+    verify(delegate).end(Status.SUCCESS);
+  }
+
+  @Test
+  void end_WithFailure_ShouldDelegateToBranch() throws Exception {
+    branch(attrs("k", "v")).end(Status.FAILURE);
+
+    verify(delegate).end(Status.FAILURE);
   }
 }
