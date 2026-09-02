@@ -134,6 +134,52 @@ public abstract class AdminTestUtils {
   public abstract void dropTable(String namespace, String table) throws Exception;
 
   /**
+   * Sets a backend collation as the namespace default so that tables created in the namespace
+   * afterwards inherit it. This is a test-only hook for collation integration tests; it modifies
+   * the namespace directly in the underlying storage, bypassing ScalarDB. Engines without a
+   * namespace-level collation apply the collation per existing table via {@link
+   * #alterTableCollation(String, String, String)} instead.
+   *
+   * @param namespace a namespace
+   * @param collation the backend-specific collation to apply
+   * @throws Exception if an error occurs
+   */
+  public void alterNamespaceCollation(String namespace, String collation) throws Exception {
+    throw new UnsupportedOperationException(
+        "Altering the namespace collation is not supported for this storage");
+  }
+
+  /**
+   * Applies a backend collation to an existing table's TEXT columns. This is a test-only hook for
+   * collation integration tests; it modifies the table directly in the underlying storage,
+   * bypassing ScalarDB. Engines whose collation is inherited from a namespace-level default apply
+   * it via {@link #alterNamespaceCollation(String, String)} instead.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @param collation the backend-specific collation to apply
+   * @throws Exception if an error occurs
+   */
+  public void alterTableCollation(String namespace, String table, String collation)
+      throws Exception {
+    throw new UnsupportedOperationException(
+        "Altering the table collation is not supported for this storage");
+  }
+
+  /**
+   * Counts the rows of the specified table directly in the underlying storage, bypassing ScalarDB.
+   * Used to assert physical row counts in integration tests.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @return the number of rows in the table
+   * @throws Exception if an error occurs
+   */
+  public int countRows(String namespace, String table) throws Exception {
+    throw new UnsupportedOperationException("Counting rows is not supported for this storage");
+  }
+
+  /**
    * Closes connections to the storage
    *
    * @throws Exception if an error occurs
