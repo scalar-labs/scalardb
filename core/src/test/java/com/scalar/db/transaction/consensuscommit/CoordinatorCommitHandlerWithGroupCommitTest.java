@@ -15,9 +15,11 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
@@ -27,6 +29,7 @@ import com.scalar.db.util.groupcommit.GroupCommitException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,14 +98,21 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   }
 
   private Snapshot prepareSnapshotWithWrite(String id) throws CrudException {
-    Snapshot snapshot = new Snapshot(id, tableMetadataManager, new ParallelExecutor(config));
+    Snapshot snapshot =
+        new Snapshot(id, tableMetadataManager, new ParallelExecutor(config), binaryCollation());
     Put put = preparePut();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     return snapshot;
   }
 
   private Snapshot prepareEmptySnapshot(String id) {
-    return new Snapshot(id, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(id, tableMetadataManager, new ParallelExecutor(config), binaryCollation());
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private TransactionContext createContext(String id, Snapshot snapshot, boolean slotReserved) {

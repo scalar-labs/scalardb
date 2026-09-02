@@ -1,6 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
@@ -13,7 +12,9 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -24,6 +25,19 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public class MutationConditionsValidator {
+
+  private final CollationComparator collationComparator;
+
+  /**
+   * Creates a validator that uses the given collation for range operators (GT/GTE/LT/LTE) and for
+   * EQ/NE on TEXT columns. Collation equality is byte-exact for BINARY and collation-aware for ICU.
+   * Identity operators (IS_NULL/IS_NOT_NULL) are always unchanged.
+   *
+   * @param collationComparator the collation comparator
+   */
+  public MutationConditionsValidator(CollationComparator collationComparator) {
+    this.collationComparator = collationComparator;
+  }
 
   /**
    * This checks if the condition of the specified Put operation is satisfied for the specified
@@ -131,26 +145,38 @@ public class MutationConditionsValidator {
       case IS_NOT_NULL:
         return !existingRecordColumn.hasNullValue();
       case EQ:
-        return Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) == 0;
+        return equalsForCondition(existingRecordColumn, conditionalExpressionColumn);
       case NE:
-        return Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) != 0;
+        return !equalsForCondition(existingRecordColumn, conditionalExpressionColumn);
         // For 'greater than' and 'less than' types of conditions and when the existing record is
         // null, we consider the condition to be unsatisfied. This mimics the behavior as if
         // the condition was executed by the underlying storage
       case GT:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) > 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) > 0;
       case GTE:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) >= 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) >= 0;
       case LT:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) < 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) < 0;
       case LTE:
         return !existingRecordColumn.hasNullValue()
-            && Ordering.natural().compare(existingRecordColumn, conditionalExpressionColumn) <= 0;
+            && rangeCompare(existingRecordColumn, conditionalExpressionColumn) <= 0;
       default:
         throw new AssertionError();
     }
+  }
+
+  /**
+   * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation, following the
+   * collation (see {@link ScalarDbUtils#columnEquals}).
+   */
+  private boolean equalsForCondition(Column<?> existing, Column<?> conditionValue) {
+    return ScalarDbUtils.columnEquals(existing, conditionValue, collationComparator);
+  }
+
+  private int rangeCompare(Column<?> a, Column<?> b) {
+    return collationComparator.columnComparator().compare(a, b);
   }
 }

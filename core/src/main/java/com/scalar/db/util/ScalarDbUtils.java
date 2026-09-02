@@ -29,7 +29,6 @@ import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.api.UpsertBuilder;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
@@ -37,7 +36,6 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.Collation;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -63,7 +61,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
@@ -365,32 +362,6 @@ public final class ScalarDbUtils {
                 .getConditions()
                 .forEach(condition -> columns.add(condition.getColumn().getName())));
     return columns;
-  }
-
-  private static final CollationComparator BINARY_COLLATION_COMPARATOR =
-      binaryCollationComparator();
-
-  private static CollationComparator binaryCollationComparator() {
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    properties.setProperty(DatabaseConfig.COLLATION, Collation.BINARY.name());
-    return CollationComparator.from(new DatabaseConfig(properties));
-  }
-  // TODO Temporary code, will be changed in a later PR
-  /**
-   * Returns whether the given columns match any of the given conjunctions under {@link
-   * Collation#BINARY} semantics. This overload bridges callers without a {@link
-   * CollationComparator}, and it is deleted once every caller has migrated to the three-argument
-   * form.
-   *
-   * @param columns the columns of a record keyed by column name
-   * @param conjunctions the conjunctions to evaluate
-   * @return {@code true} if the columns match any of the conjunctions
-   */
-  public static boolean columnsMatchAnyOfConjunctions(
-      Map<String, Column<?>> columns, Set<Conjunction> conjunctions) {
-    return columnsMatchAnyOfConjunctions(columns, conjunctions, BINARY_COLLATION_COMPARATOR);
   }
 
   /**
