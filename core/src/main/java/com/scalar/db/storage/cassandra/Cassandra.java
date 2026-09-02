@@ -15,6 +15,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.StorageInfoProvider;
@@ -45,6 +46,7 @@ public class Cassandra extends AbstractDistributedStorage {
   private final ClusterManager clusterManager;
   private final TableMetadataManager metadataManager;
   private final OperationChecker operationChecker;
+  private final CollationComparator collationComparator;
 
   @Inject
   public Cassandra(DatabaseConfig config) {
@@ -80,6 +82,7 @@ public class Cassandra extends AbstractDistributedStorage {
         new TableMetadataManager(cassandraAdmin, config.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new OperationChecker(config, metadataManager, new StorageInfoProvider(cassandraAdmin));
+    collationComparator = CollationComparator.from(config);
   }
 
   @VisibleForTesting
@@ -96,6 +99,7 @@ public class Cassandra extends AbstractDistributedStorage {
     this.batch = batch;
     this.metadataManager = metadataManager;
     this.operationChecker = operationChecker;
+    this.collationComparator = CollationComparator.from(config);
   }
 
   @Override
@@ -111,7 +115,9 @@ public class Cassandra extends AbstractDistributedStorage {
       } else {
         scanner =
             new FilterableScanner(
-                get, getInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)));
+                get,
+                getInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)),
+                collationComparator);
       }
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
@@ -151,7 +157,9 @@ public class Cassandra extends AbstractDistributedStorage {
       return scanInternal(scan);
     } else {
       return new FilterableScanner(
-          scan, scanInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)));
+          scan,
+          scanInternal(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)),
+          collationComparator);
     }
   }
 
