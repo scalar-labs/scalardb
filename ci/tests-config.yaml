@@ -125,7 +125,9 @@ jdbc:
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
-    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    # utf8mb4_nopad_bin (NO PAD, available since MariaDB 10.2) is the exact byte-order match
+    # for scalar.db.collation=BINARY; legacy utf8mb4_bin PADs trailing spaces.
+    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_nopad_bin
     versions:
       - 10.11
       - 11.4
@@ -146,7 +148,13 @@ jdbc:
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
-    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    # utf8mb4_0900_bin (NO PAD) is the exact byte-order match for scalar.db.collation=BINARY;
+    # it only exists on MySQL 8.x, and mysqld 5.7 exits at startup on unknown collations,
+    # so 5.7 stays on legacy utf8mb4_bin (PAD SPACE, closest available option).
+    setup: |
+      COLLATION=utf8mb4_0900_bin
+      case "%VERSION%" in 5.7*) COLLATION=utf8mb4_bin;; esac
+      docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=$COLLATION
     versions:
       - 5.7
       - 8.0
@@ -186,6 +194,24 @@ jdbc:
     create_test_user: |
       # Oracle connection endpoint depends on the Oracle version used
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+      # The collation suites declare a namespace default collation. That is DDL-level collation, which
+      # requires MAX_STRING_SIZE=EXTENDED (ORA-43929). The parameter is PDB-scoped and irreversible, and
+      # it applies to every Oracle integration test on this job, not only the collation suites. OPEN
+      # UPGRADE and utl32k are SYSDBA operations, and the first close has to come from outside the PDB,
+      # so the migration runs on its own SYSDBA connection to the CDB root.
+      echo "WHENEVER SQLERROR EXIT FAILURE
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} OPEN UPGRADE;
+      ALTER SESSION SET CONTAINER=${PDB[%VERSION%]};
+      ALTER SYSTEM SET MAX_STRING_SIZE=EXTENDED;
+      @?/rdbms/admin/utl32k.sql
+      @?/rdbms/admin/utlrp.sql
+      -- utl32k.sql ends by setting WHENEVER SQLERROR CONTINUE, so re-arm the directive before the
+      -- statements below; otherwise a failure here leaves the PDB unusable and still exits zero.
+      WHENEVER SQLERROR EXIT FAILURE
+      ALTER PLUGGABLE DATABASE CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE OPEN;
+      EXIT" | docker exec -i oracle sqlplus -s "/ as sysdba"
       echo "CREATE USER test IDENTIFIED BY test;
       ALTER USER test QUOTA UNLIMITED ON USERS;
       GRANT CREATE SESSION TO test;
@@ -211,7 +237,9 @@ jdbc:
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
-    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
+    # Pin the byte-order C locale explicitly (with UTF8 encoding) so the default collation
+    # exactly matches scalar.db.collation=BINARY instead of relying on the alpine image default.
+    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--locale=C --encoding=UTF8" -p 5432:5432 postgres:%VERSION%-alpine
     versions:
       - 13
       - 14
