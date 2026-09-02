@@ -155,6 +155,490 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     deleteAllRowsWithSql(namespace, table + "_tx_metadata");
   }
 
+  /**
+   * On MySQL and MariaDB a ScalarDB namespace is a database, and a table created without explicit
+   * collation clauses — as ScalarDB creates them — inherits the database default collation on all
+   * its character-typed columns, so altering the namespace ahead of table creation is sufficient.
+   * PostgreSQL has no schema-level collation and SQL Server scopes collations to the whole
+   * database, so on those engines this is a no-op and {@link #alterTableCollation} applies the
+   * collation to the created table instead.
+   *
+   * <p>On Oracle a ScalarDB namespace is a user, whose default collation the tables created in it
+   * inherit. The per-column path is closed there: ORA-43923 rejects altering the collation of a
+   * primary-key column, and Oracle DDL auto-commits, so a drop-and-recreate could not be atomic.
+   */
+  @Override
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  public void alterNamespaceCollation(String namespace, String collation) throws Exception {
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
+      execute(
+          "ALTER DATABASE "
+              + rdbEngine.enclose(namespace)
+              + " CHARACTER SET utf8mb4 COLLATE "
+              + collation);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      execute("ALTER USER " + rdbEngine.enclose(namespace) + " DEFAULT COLLATION " + collation);
+    } else if (!JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcTestUtils.isSqlServer(rdbEngine)) {
+      throw new UnsupportedOperationException(
+          "Altering the namespace collation is not supported for the "
+              + rdbEngine.getClass().getSimpleName()
+              + " engine");
+    }
+  }
+
+  /**
+   * On MySQL, MariaDB and Oracle the collation is inherited from the namespace default set by
+   * {@link #alterNamespaceCollation} before the table is created, so this verifies the inheritance
+   * took effect rather than altering the table: {@code CREATE TABLE ... IF NOT EXISTS} silently
+   * reuses a table leaked by a prior broken run, and such a table keeps its stale collation because
+   * a database default only applies to tables created afterwards.
+   */
+  @Override
+  public void alterTableCollation(String namespace, String table, String collation)
+      throws Exception {
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
+      verifyTableCollation(namespace, table, collation);
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      alterTableCollationForSqlServer(namespace, table, collation);
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      alterTableCollationForPostgresql(namespace, table, collation);
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      verifyTableCollationForOracle(namespace, table, collation);
+    } else {
+      throw new UnsupportedOperationException(
+          "Altering the table collation is not supported for the "
+              + rdbEngine.getClass().getSimpleName()
+              + " engine");
+    }
+  }
+
+  private void verifyTableCollation(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          List<String> characterColumns = new ArrayList<>();
+          List<String> mismatchedColumns = new ArrayList<>();
+          executeQuery(
+              connection,
+              rdbEngine,
+              "SELECT column_name, collation_name FROM information_schema.columns"
+                  + " WHERE table_schema = ? AND table_name = ? AND collation_name IS NOT NULL",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String columnCollation = rs.getString(2);
+                  characterColumns.add(columnName);
+                  if (!collation.equalsIgnoreCase(columnCollation)) {
+                    mismatchedColumns.add(columnName + " (" + columnCollation + ")");
+                  }
+                }
+                return null;
+              });
+          // The tables under collation test always have TEXT columns; finding none means the
+          // enumeration missed the table and the verification would be vacuous
+          if (characterColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "No character-typed columns found on "
+                    + namespace
+                    + "."
+                    + table
+                    + " to verify the collation");
+          }
+          if (!mismatchedColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "The character-typed columns of "
+                    + namespace
+                    + "."
+                    + table
+                    + " do not carry the expected collation "
+                    + collation
+                    + "; a table leaked by a prior broken run keeps its stale collation: "
+                    + mismatchedColumns);
+          }
+        });
+  }
+
+  /**
+   * Verifies that the table inherited the namespace default collation set by {@link
+   * #alterNamespaceCollation}, the Oracle counterpart of {@link #verifyTableCollation}. Oracle
+   * needs this more than the MySQL family does: it reports neither a duplicate schema nor a
+   * duplicate table as an error, so a table leaked by a prior broken run is reused silently while
+   * re-applying the schema default appears to succeed and leaves that table untouched.
+   *
+   * <p>{@code ALL_TAB_COLS} reports the expanded collation name rather than the name as written, so
+   * both sides are normalized through the server. Its hidden columns are excluded: the primary key
+   * over collated columns generates {@code SYS_NC*$} virtual columns that carry no collation and
+   * would otherwise read as uncollated character columns.
+   */
+  private void verifyTableCollationForOracle(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          List<String> expandedCollation = new ArrayList<>();
+          executeQuery(
+              connection,
+              rdbEngine,
+              "SELECT NLS_COLLATION_NAME(NLS_COLLATION_ID(?)) FROM dual",
+              requiresExplicitCommit,
+              ps -> ps.setString(1, collation),
+              rs -> {
+                if (rs.next()) {
+                  expandedCollation.add(rs.getString(1));
+                }
+                return null;
+              });
+          if (expandedCollation.isEmpty() || expandedCollation.get(0) == null) {
+            throw new IllegalStateException(
+                "The Oracle server does not recognize the collation " + collation);
+          }
+          String expected = expandedCollation.get(0);
+          List<String> characterColumns = new ArrayList<>();
+          List<String> mismatchedColumns = new ArrayList<>();
+          executeQuery(
+              connection,
+              rdbEngine,
+              "SELECT column_name, collation FROM all_tab_cols"
+                  + " WHERE owner = ? AND table_name = ? AND collation IS NOT NULL"
+                  + " AND hidden_column = 'NO'",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String columnCollation = rs.getString(2);
+                  characterColumns.add(columnName);
+                  if (!expected.equalsIgnoreCase(columnCollation)) {
+                    mismatchedColumns.add(columnName + " (" + columnCollation + ")");
+                  }
+                }
+                return null;
+              });
+          if (characterColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "No character-typed columns found on "
+                    + namespace
+                    + "."
+                    + table
+                    + " to verify the collation");
+          }
+          if (!mismatchedColumns.isEmpty()) {
+            throw new IllegalStateException(
+                "The character-typed columns of "
+                    + namespace
+                    + "."
+                    + table
+                    + " do not carry the expected collation "
+                    + collation
+                    + " ("
+                    + expected
+                    + "); a table leaked by a prior broken run keeps its stale collation: "
+                    + mismatchedColumns);
+          }
+        });
+  }
+
+  /**
+   * Drops the collation object the collation tests created in the given namespace, if any. On
+   * PostgreSQL the created collation depends on the namespace schema and blocks the non-CASCADE
+   * {@code DROP SCHEMA} used at teardown, so it must be dropped first; on the other engines the
+   * tests use built-in collations and this is a no-op.
+   *
+   * @param namespace the namespace the collation was created in
+   * @param collation the collation name
+   * @throws SQLException if a database error occurs
+   */
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  public void dropTestCollation(String namespace, String collation) throws SQLException {
+    if (!JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return;
+    }
+    execute(
+        "DROP COLLATION IF EXISTS "
+            + rdbEngine.enclose(namespace)
+            + "."
+            + rdbEngine.enclose(collation));
+  }
+
+  /**
+   * Applies a collation to all TEXT columns of the table on PostgreSQL. The named collation is
+   * created in the table's schema as a nondeterministic ICU collation at primary strength (case-
+   * and accent-insensitive); {@code ALTER COLUMN ... TYPE} rebuilds dependent indexes, including
+   * the primary key, so no constraint dance is needed.
+   */
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  private void alterTableCollationForPostgresql(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          String enclosedCollation =
+              rdbEngine.enclose(namespace) + "." + rdbEngine.enclose(collation);
+          // Drop-and-create rather than IF NOT EXISTS so a collation leaked by a prior broken run
+          // is never silently reused with an outdated definition
+          JdbcAdmin.execute(
+              connection,
+              rdbEngine,
+              "DROP COLLATION IF EXISTS " + enclosedCollation,
+              requiresExplicitCommit);
+          JdbcAdmin.execute(
+              connection,
+              rdbEngine,
+              "CREATE COLLATION "
+                  + enclosedCollation
+                  + " (provider = icu, locale = 'und-u-ks-level1', deterministic = false)",
+              requiresExplicitCommit);
+          // ScalarDB maps TEXT to "text" for regular columns but to VARCHAR(10485760) for key
+          // columns on PostgreSQL, so both character types must be enumerated, restating each
+          // column's own type
+          List<String> alterColumnStatements = new ArrayList<>();
+          executeQuery(
+              connection,
+              rdbEngine,
+              "SELECT column_name, data_type, character_maximum_length"
+                  + " FROM information_schema.columns"
+                  + " WHERE table_schema = ? AND table_name = ?"
+                  + " AND data_type IN ('text', 'character varying')",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String dataType = rs.getString(2);
+                  long maxLength = rs.getLong(3);
+                  String type = "text".equals(dataType) ? "TEXT" : "VARCHAR(" + maxLength + ")";
+                  alterColumnStatements.add(
+                      "ALTER TABLE "
+                          + rdbEngine.encloseFullTableName(namespace, table)
+                          + " ALTER COLUMN "
+                          + rdbEngine.enclose(columnName)
+                          + " TYPE "
+                          + type
+                          + " COLLATE "
+                          + enclosedCollation);
+                }
+                return null;
+              });
+          // The tables under collation test always have TEXT columns; finding none means the
+          // enumeration missed the table and the collation would silently not be applied
+          if (alterColumnStatements.isEmpty()) {
+            throw new IllegalStateException(
+                "No character-typed columns found on "
+                    + namespace
+                    + "."
+                    + table
+                    + " to apply the collation");
+          }
+          for (String alterColumnStatement : alterColumnStatements) {
+            JdbcAdmin.execute(connection, rdbEngine, alterColumnStatement, requiresExplicitCommit);
+          }
+        });
+  }
+
+  /**
+   * Applies the collation to all character-typed columns of the table on SQL Server. SQL Server
+   * rejects collation changes on columns that are part of a primary key or index, so the primary
+   * key constraint is dropped first, each character column is altered with the collation (restating
+   * its full data type and nullability retrieved from INFORMATION_SCHEMA), and the primary key
+   * constraint is then re-added with its original column order and sort directions. The
+   * drop/alter/re-add sequence runs in a single explicit transaction (SQL Server DDL is
+   * transactional) so a midway failure rolls back to the original table definition instead of
+   * leaving the table without its primary key.
+   */
+  private void alterTableCollationForSqlServer(String namespace, String table, String collation)
+      throws SQLException {
+    withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        connection -> {
+          String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
+
+          // Retrieve the primary key constraint name
+          String primaryKeyName =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT kc.name FROM sys.key_constraints kc"
+                      + " JOIN sys.tables t ON kc.parent_object_id = t.object_id"
+                      + " JOIN sys.schemas s ON t.schema_id = s.schema_id"
+                      + " WHERE kc.type = 'PK' AND s.name = ? AND t.name = ?",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  rs -> rs.next() ? rs.getString(1) : null);
+
+          // Retrieve the primary key columns in their original order and sort directions
+          List<String> primaryKeyColumnClauses = new ArrayList<>();
+          executeQuery(
+              connection,
+              rdbEngine,
+              "SELECT c.name, ic.is_descending_key FROM sys.index_columns ic"
+                  + " JOIN sys.indexes i"
+                  + " ON ic.object_id = i.object_id AND ic.index_id = i.index_id"
+                  + " JOIN sys.columns c"
+                  + " ON ic.object_id = c.object_id AND ic.column_id = c.column_id"
+                  + " JOIN sys.tables t ON i.object_id = t.object_id"
+                  + " JOIN sys.schemas s ON t.schema_id = s.schema_id"
+                  + " WHERE i.is_primary_key = 1 AND s.name = ? AND t.name = ?"
+                  + " ORDER BY ic.key_ordinal",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  primaryKeyColumnClauses.add(
+                      rdbEngine.enclose(rs.getString(1)) + (rs.getBoolean(2) ? " DESC" : " ASC"));
+                }
+                return null;
+              });
+
+          // Every ScalarDB-created SQL Server table has a primary key, so its absence proves a
+          // prior broken run left the table without one. Fail fast instead of silently altering
+          // the collation without dropping and re-adding the primary key.
+          if (primaryKeyName == null || primaryKeyColumnClauses.isEmpty()) {
+            throw new IllegalStateException(
+                "No primary key found on "
+                    + fullTableName
+                    + "; a prior run may have failed after dropping the primary key");
+          }
+
+          // Build an ALTER COLUMN statement for each character-typed column, restating its full
+          // data type, length, and nullability
+          List<String> alterColumnStatements = new ArrayList<>();
+          executeQuery(
+              connection,
+              rdbEngine,
+              "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE"
+                  + " FROM INFORMATION_SCHEMA.COLUMNS"
+                  + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
+                  + " AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar')",
+              requiresExplicitCommit,
+              ps -> {
+                ps.setString(1, namespace);
+                ps.setString(2, table);
+              },
+              rs -> {
+                while (rs.next()) {
+                  String columnName = rs.getString(1);
+                  String dataType = rs.getString(2);
+                  int maxLength = rs.getInt(3);
+                  String length = maxLength == -1 ? "MAX" : String.valueOf(maxLength);
+                  String nullability =
+                      "YES".equalsIgnoreCase(rs.getString(4)) ? "NULL" : "NOT NULL";
+                  alterColumnStatements.add(
+                      "ALTER TABLE "
+                          + fullTableName
+                          + " ALTER COLUMN "
+                          + rdbEngine.enclose(columnName)
+                          + " "
+                          + dataType
+                          + "("
+                          + length
+                          + ") COLLATE "
+                          + collation
+                          + " "
+                          + nullability);
+                }
+                return null;
+              });
+
+          runSqlServerCollationAlterSequence(
+              connection,
+              fullTableName,
+              primaryKeyName,
+              primaryKeyColumnClauses,
+              alterColumnStatements);
+        });
+  }
+
+  // The SQL is built from catalog metadata, so the nonconstant-string warning does not apply. The
+  // suppression must live on a named method: SpotBugs does not apply a method-level annotation to
+  // the synthetic method generated for a lambda.
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  private void runSqlServerCollationAlterSequence(
+      Connection connection,
+      String fullTableName,
+      String primaryKeyName,
+      List<String> primaryKeyColumnClauses,
+      List<String> alterColumnStatements)
+      throws SQLException {
+    // Run the drop/alter/re-add sequence atomically: SQL Server DDL is transactional, so a
+    // midway failure rolls back to the original table definition, including the primary key
+    boolean originalAutoCommit = connection.getAutoCommit();
+    connection.setAutoCommit(false);
+    try {
+      // Pass false as requiresExplicitCommit so that each statement does not commit on its
+      // own; the whole sequence is committed once below
+      JdbcAdmin.execute(
+          connection,
+          rdbEngine,
+          "ALTER TABLE " + fullTableName + " DROP CONSTRAINT " + rdbEngine.enclose(primaryKeyName),
+          false);
+      for (String alterColumnStatement : alterColumnStatements) {
+        JdbcAdmin.execute(connection, rdbEngine, alterColumnStatement, false);
+      }
+      JdbcAdmin.execute(
+          connection,
+          rdbEngine,
+          "ALTER TABLE "
+              + fullTableName
+              + " ADD CONSTRAINT "
+              + rdbEngine.enclose(primaryKeyName)
+              + " PRIMARY KEY ("
+              + String.join(",", primaryKeyColumnClauses)
+              + ")",
+          false);
+      connection.commit();
+    } catch (SQLException e) {
+      try {
+        connection.rollback();
+      } catch (SQLException rollbackEx) {
+        e.addSuppressed(rollbackEx);
+      }
+      throw e;
+    } finally {
+      connection.setAutoCommit(originalAutoCommit);
+    }
+  }
+
+  @Override
+  public int countRows(String namespace, String table) throws Exception {
+    String sql = "SELECT COUNT(*) FROM " + rdbEngine.encloseFullTableName(namespace, table);
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, Integer, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    rdbEngine,
+                    sql,
+                    requiresExplicitCommit,
+                    rs -> {
+                      rs.next();
+                      return rs.getInt(1);
+                    }));
+  }
+
   private void execute(String sql) throws SQLException {
     withConnection(
         dataSource,
