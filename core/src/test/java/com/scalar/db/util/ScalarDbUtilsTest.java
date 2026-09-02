@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -22,14 +23,18 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
+import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.StorageInfoImpl;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.CollationComparator;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.IntColumn;
@@ -40,6 +45,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("ReferenceEquality")
@@ -675,5 +682,204 @@ public class ScalarDbUtilsTest {
 
     // Assert
     assertThat(actual).containsOnly(entry("jdbc", admin));
+  }
+
+  private static CollationComparator icuPrimaryComparator() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]");
+    return CollationComparator.from(new DatabaseConfig(props));
+  }
+
+  private static CollationComparator binaryComparator() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    props.setProperty(DatabaseConfig.COLLATION, "BINARY");
+    return CollationComparator.from(new DatabaseConfig(props));
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_EqAndNeOnTextColumnWithBinaryCollation_ShouldStayByteExact() {
+    // Arrange: a present BINARY comparator keeps EQ/NE byte-exact at this site: 'Apple' != 'apple'.
+    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
+    Set<Conjunction> neConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isNotEqualToText("apple")));
+    CollationComparator binary = binaryComparator();
+
+    // Act
+    boolean eqMatched =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, binary);
+    boolean neMatched =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, binary);
+
+    // Assert
+    assertThat(eqMatched).isFalse();
+    assertThat(neMatched).isTrue();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_EqOnTextColumnWithCaseInsensitiveIcu_ShouldMatchCaseDifferingValue() {
+    // Arrange
+    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
+    CollationComparator caseInsensitive = icuPrimaryComparator();
+
+    // Act
+    // Under a case-insensitive ICU PRIMARY collation, equality follows the collation: 'Apple' =
+    // 'apple' (AE1). There is no separate deterministic mode.
+    boolean matchedWithCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, caseInsensitive);
+    // BINARY comparator: byte-exact, so 'Apple' != 'apple'.
+    boolean matchedWithBinaryCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, binaryComparator());
+
+    // Assert
+    assertThat(matchedWithCollation).isTrue();
+    assertThat(matchedWithBinaryCollation).isFalse();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_NeOnTextColumnWithCaseInsensitiveIcu_ShouldBeExactNegationOfEq() {
+    // Arrange
+    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> neConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isNotEqualToText("apple")));
+    CollationComparator caseInsensitive = icuPrimaryComparator();
+
+    // Act
+    // NE is the exact negation of the collation-aware EQ: 'Apple' = 'apple', so 'Apple' != 'apple'
+    // is false.
+    boolean neMatchedWithCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, caseInsensitive);
+    // BINARY comparator: byte-exact, so 'Apple' != 'apple' is true.
+    boolean neMatchedWithBinaryCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, binaryComparator());
+
+    // Assert
+    assertThat(neMatchedWithCollation).isFalse();
+    assertThat(neMatchedWithBinaryCollation).isTrue();
+  }
+
+  @Test
+  public void columnsMatchAnyOfConjunctions_NonTextEqWithCollation_ShouldStayByteExact() {
+    // Arrange: the collation governs TEXT equality only; INT EQ is unaffected.
+    Map<String, Column<?>> matchingColumns = ImmutableMap.of("col", IntColumn.of("col", 5));
+    Map<String, Column<?>> nonMatchingColumns = ImmutableMap.of("col", IntColumn.of("col", 6));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToInt(5)));
+    CollationComparator caseInsensitive = icuPrimaryComparator();
+
+    // Act Assert
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                matchingColumns, eqConjunctions, caseInsensitive))
+        .isTrue();
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nonMatchingColumns, eqConjunctions, caseInsensitive))
+        .isFalse();
+  }
+
+  @Test
+  public void columnsMatchAnyOfConjunctions_IsNullAndLikeWithCollation_ShouldBeUnaffected() {
+    // Arrange
+    CollationComparator caseInsensitive = icuPrimaryComparator();
+
+    // IS_NULL: a null TEXT column matches an IS_NULL condition; the collation must not change this.
+    Map<String, Column<?>> nullColumns = ImmutableMap.of("col", TextColumn.ofNull("col"));
+    Set<Conjunction> isNullConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isNullText()));
+
+    // LIKE stays case-sensitive regardless of the collation: 'Apple' does not match 'a%'.
+    Map<String, Column<?>> textColumns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> likeConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isLikeText("a%")));
+
+    // Act Assert
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, isNullConjunctions, caseInsensitive))
+        .isTrue();
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                textColumns, likeConjunctions, caseInsensitive))
+        .isEqualTo(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                textColumns, likeConjunctions, binaryComparator()));
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                textColumns, likeConjunctions, caseInsensitive))
+        .isFalse();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_NullTextValueWithEqAndCollation_ShouldStayByteExactWithoutNpe() {
+    // Arrange: a null column value with an '=' condition must stay byte-exact (no NPE), because
+    // collation equality applies only to two non-null text values.
+    Map<String, Column<?>> nullColumns = ImmutableMap.of("col", TextColumn.ofNull("col"));
+    Set<Conjunction> eqConjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
+    CollationComparator caseInsensitive = icuPrimaryComparator();
+
+    // Act Assert
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, eqConjunctions, caseInsensitive))
+        .isEqualTo(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, eqConjunctions, binaryComparator()));
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                nullColumns, eqConjunctions, caseInsensitive))
+        .isFalse();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_RangeOnTextColumnWithCaseInsensitiveCollation_ShouldMatchCaseDifferingValue() {
+    // Arrange
+    Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
+    Set<Conjunction> conjunctions =
+        ImmutableSet.of(
+            Conjunction.of(ConditionBuilder.column("col").isGreaterThanOrEqualToText("apple")));
+    CollationComparator comparator = icuPrimaryComparator();
+
+    // Act
+    // Under a case-insensitive ICU PRIMARY collation, 'Apple' >= 'apple'.
+    boolean matchedWithCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, comparator);
+    // Under the BINARY collation (byte order), 'Apple' (0x41) < 'apple' (0x61), so it is excluded.
+    // This is the pre-change behavior and demonstrates the range branch was actually flipped by
+    // collation.
+    boolean matchedWithBinaryCollation =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, binaryComparator());
+
+    // Assert
+    assertThat(matchedWithCollation).isTrue();
+    assertThat(matchedWithBinaryCollation).isFalse();
+  }
+
+  @Test
+  public void
+      columnsMatchAnyOfConjunctions_RangeOnNonTextColumnWithCollation_ShouldUseNaturalOrder() {
+    // Arrange: collation only affects TEXT columns; INT range stays natural.
+    Map<String, Column<?>> columns = ImmutableMap.of("col", IntColumn.of("col", 5));
+    Set<Conjunction> conjunctions =
+        ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isGreaterThanInt(3)));
+    CollationComparator comparator = icuPrimaryComparator();
+
+    // Act Assert
+    assertThat(ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, comparator))
+        .isTrue();
   }
 }
