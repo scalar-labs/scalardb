@@ -543,15 +543,14 @@ public class DatabaseConfigTest {
     // Act
     DatabaseConfig config = new DatabaseConfig(props);
 
-    // Assert: an unset scalar.db.collation defaults to BINARY.
+    // Assert
     assertThat(config.getCollation()).isEqualTo(Collation.BINARY);
     assertThat(config.getCollationIcuLocale()).isEmpty();
     assertThat(config.getCollationIcuRules()).isEmpty();
   }
 
   @Test
-  public void
-      constructor_PropertiesWithIcuCollationAndNoLocaleOrStrengthGiven_ShouldLoadProperly() {
+  public void constructor_PropertiesWithIcuCollationAndNoLocaleGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);

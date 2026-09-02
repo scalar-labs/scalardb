@@ -31,37 +31,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A thread-safe, immutable comparator that orders text according to the configured {@link
- * Collation}.
- *
- * <p>This is the shared ordering primitive consumed by the in-memory comparison sites (object
- * storage scan sorting and range filtering, in-memory range filtering, and the Consensus Commit
- * snapshot's scan-after-write range check). All three sites order text identically because they all
- * build on {@link #textComparator()} through {@link #columnComparator()} and {@link
- * #keyComparator()}.
- *
- * <ul>
- *   <li>{@link Collation#BINARY} orders text by unsigned UTF-8 byte sequence, using Guava's {@link
- *       UnsignedBytes#lexicographicalComparator()} over {@link
- *       String#getBytes(java.nio.charset.Charset)} with UTF-8. This intentionally diverges from
- *       Java's natural UTF-16 code-unit order above U+FFFF, matching byte-order backends.
- *   <li>{@link Collation#ICU} orders text according to a frozen ICU {@link Collator} built from the
- *       configured locale, optionally extended by a custom {@link RuleBasedCollator} tailoring-rule
- *       string that builds on the locale's collation. The collator is frozen at construction time
- *       so it is immutable and safe for concurrent {@code compare} calls.
- * </ul>
- *
- * <p>A comparator always exists: when {@code scalar.db.collation} is unset, the configuration
- * defaults to {@link Collation#BINARY}, so {@link #from(DatabaseConfig)} never returns absent.
+ * Collation}, together with the text equality and canonical-form operations that follow from that
+ * order.
  */
 @Immutable
 @ThreadSafe
 public final class CollationComparator {
   private static final Logger logger = LoggerFactory.getLogger(CollationComparator.class);
 
-  /**
-   * Resource carrying the ICU4J version this build was verified against, expanded from the Gradle
-   * {@code icu4jVersion} property at build time.
-   */
   private static final String VERIFIED_ICU_VERSION_RESOURCE = "scalardb-collation.properties";
 
   private static final AtomicBoolean ICU_VERSION_CHECKED = new AtomicBoolean();
@@ -107,10 +84,6 @@ public final class CollationComparator {
     Collation collation = config.getCollation();
     switch (collation) {
       case BINARY:
-        // BINARY equality must be exact String equality: UTF-8 encoding is injective for
-        // well-formed strings, but String#getBytes replaces unpaired surrogates with '?', which
-        // would conflate distinct ill-formed strings if equality went through the comparator.
-        // BINARY has no canonical text form: identity is the value itself.
         return new CollationComparator(binaryTextComparator(), true, null);
       case ICU:
         {
@@ -172,19 +145,16 @@ public final class CollationComparator {
   }
 
   /**
-   * Returns whether the ICU4J library on the classpath differs from the given version.
-   *
-   * <p>Package-private and pure so it can be unit-tested without manipulating the classpath.
-   *
-   * @param version an ICU version string (e.g. {@code "77.1"})
-   * @return true if the loaded ICU4J version differs from the given version
-   * @throws IllegalArgumentException if the given version string is malformed
+   * Returns whether the ICU4J library on the classpath differs from the given version. Package-
+   * private and pure so it can be unit-tested without manipulating the classpath.
    */
   static boolean loadedIcuVersionDiffersFrom(String version) {
     return !VersionInfo.getInstance(version).equals(VersionInfo.ICU_VERSION);
   }
 
   private static Comparator<String> binaryTextComparator() {
+    // Unsigned UTF-8 byte order diverges from Java's natural UTF-16 code-unit order above U+FFFF.
+    // Byte-order backends order text this way.
     Comparator<byte[]> byteComparator = UnsignedBytes.lexicographicalComparator();
     return (left, right) ->
         byteComparator.compare(
@@ -195,15 +165,12 @@ public final class CollationComparator {
     Collator collator = buildIcuCollator(config);
     logResolvedIcuCollator(config, collator);
 
-    // Freeze so the collator is immutable and safe for concurrent compare: an unfrozen ICU
-    // Collator is mutable and not thread-safe, while a frozen one is safe for concurrent compare.
+    // An unfrozen ICU Collator is mutable and not thread-safe; a frozen one is safe for
+    // concurrent compare.
     return collator.freeze();
   }
 
   private static Collator buildIcuCollator(DatabaseConfig config) {
-    // The base collation is the configured locale's collation, or the root collation when no locale
-    // is configured. Custom tailoring rules, when present, extend that base rather than replacing
-    // it, so they fine-tune ordering beyond the locale rather than instead of it.
     Optional<String> localeName = config.getCollationIcuLocale();
     Collator base =
         localeName.isPresent()
@@ -215,8 +182,8 @@ public final class CollationComparator {
       return base;
     }
 
-    // Compose: prepend the base collation's rules so the custom tailoring builds on the locale.
-    // For the root base this is empty, so rules-only ordering is unchanged.
+    // Prepend the base collation's rules so the custom tailoring extends the locale rather than
+    // replacing it. For the root base this is empty, leaving rules-only ordering untailored.
     String baseRules =
         base instanceof RuleBasedCollator ? ((RuleBasedCollator) base).getRules() : "";
     RuleBasedCollator composed;
@@ -277,12 +244,10 @@ public final class CollationComparator {
    * Rejects a locale whose collation setting is combined with a custom tailoring-rule string. A
    * setting written into the locale ({@code -u-kn-}, {@code -u-ks-}, {@code -u-kf-}, {@code
    * -u-kr-}, and the rest) is honored on its own, matching how PostgreSQL's ICU provider expects
-   * them to be written, so the locale stays copy-pasteable from a backend collation. Combined with
-   * rules it cannot be honored, and failing here beats resolving to something the operator did not
-   * ask for.
-   *
-   * <p>A {@code -u-co-} tailoring is rule data rather than a setting and is unaffected, as are
-   * keywords that do not concern collation (a calendar, a numbering system).
+   * them to be written, so the locale stays copy-pasteable from a backend collation. ICU carries
+   * such a setting on the collator instance rather than in the rule text a composed collator is
+   * rebuilt from, so a custom rule string drops it, and failing here beats resolving to something
+   * the operator did not ask for.
    */
   private static void rejectLocaleSettingsCombinedWithRules(
       DatabaseConfig config, String localeName, ULocale locale) {
@@ -294,9 +259,6 @@ public final class CollationComparator {
       return;
     }
 
-    // ICU keeps settings on the collator instance, not in the rule text a composed collator is
-    // rebuilt from, so a custom rule string drops them. PostgreSQL 17 degrades silently in exactly
-    // this case; docs/collation-postgres-locale-rules-test.sql measures it.
     throw new IllegalArgumentException(
         CoreError.COLLATION_ICU_LOCALE_SETTING_WITH_RULES_NOT_SUPPORTED.buildMessage(
             localeName, String.join(", ", settingKeywords)));
@@ -378,11 +340,9 @@ public final class CollationComparator {
   private static Comparator<Column<?>> buildColumnComparator(Comparator<String> nullsFirstText) {
     return (left, right) -> {
       if (left.getDataType() == DataType.TEXT && right.getDataType() == DataType.TEXT) {
-        // Preserve TextColumn's null-first semantics; value ordering is collation-aware. Names are
-        // equal at the call sites, so we compare values only (identity is unchanged).
+        // Column names are equal at every call site, so only the values are compared.
         return nullsFirstText.compare(left.getTextValue(), right.getTextValue());
       }
-      // Non-text columns keep natural ordering.
       return Ordering.natural().compare(left, right);
     };
   }

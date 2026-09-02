@@ -1048,11 +1048,6 @@ public class KeyTest {
 
   @Test
   public void equals_CollateEqualButByteDifferentTextKeysGiven_ShouldReturnFalse() {
-    // Boundary proof (U5, Covers R5): 'Apple' and 'apple' collate-equal under a case-insensitive
-    // collation but differ in bytes. Key identity stays byte-exact regardless of the collation
-    // setting, so the two keys are NOT equal. equals()/hashCode() are unchanged from today's
-    // byte-exact behavior -- no relationship between the two byte-different keys' hashCodes is
-    // asserted; only the equal-object hashCode consistency contract is checked.
     // Arrange
     Key upper = Key.ofText(ANY_NAME_1, "Apple");
     Key lower = Key.ofText(ANY_NAME_1, "apple");

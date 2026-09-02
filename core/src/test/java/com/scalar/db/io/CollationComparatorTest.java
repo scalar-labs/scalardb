@@ -42,24 +42,20 @@ public class CollationComparatorTest {
     return Integer.compare(value, 0);
   }
 
-  // ---- Unset (defaults to BINARY) ----
-
   @Test
   public void from_WhenCollationUnset_ShouldReturnBinaryComparator() {
-    // Arrange: scalar.db.collation unset defaults to BINARY, so a comparator always exists.
+    // Arrange
     DatabaseConfig config = config(new Properties());
 
     // Act
     CollationComparator comparator = CollationComparator.from(config);
 
-    // Assert: byte-exact equality and unsigned UTF-8 byte order, i.e. the BINARY collation.
+    // Assert
     assertThat(comparator).isNotNull();
     assertThat(comparator.textEquals("Apple", "apple")).isFalse();
     assertThat(comparator.textEquals("apple", "apple")).isTrue();
     assertThat(comparator.textComparator().compare("A", "a")).isNegative();
   }
-
-  // ---- Collation-aware equality (textEquals follows the collation) ----
 
   @Test
   public void textEquals_WhenIcuCaseInsensitive_ShouldFollowCollation() {
@@ -71,23 +67,20 @@ public class CollationComparatorTest {
                     DatabaseConfig.COLLATION, "ICU",
                     DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]")));
 
-    // Act Assert: equality follows the collation whenever one is configured (no flag).
+    // Act Assert
     assertThat(comparator.textEquals("Apple", "apple")).isTrue();
     assertThat(comparator.textEquals("apple", "banana")).isFalse();
   }
 
   @Test
   public void textEquals_WhenBinary_ShouldBeByteExact() {
-    // Arrange (Covers KTD2/AE2): BINARY collation equality is byte-exact.
+    // Arrange
     CollationComparator comparator =
         CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
 
     // Act Assert
     assertThat(comparator.textEquals("Apple", "apple")).isFalse();
     assertThat(comparator.textEquals("apple", "apple")).isTrue();
-    // For well-formed strings, byte-exact equality agrees with String equality across non-ASCII
-    // and supplementary-plane (4-byte UTF-8) text, so it matches ScalarDB's unset byte-exact
-    // behavior there too.
     assertThat(comparator.textEquals("café", "café")).isTrue();
     assertThat(comparator.textEquals("café", "cafe")).isFalse();
     assertThat(comparator.textEquals("😀", "😀")).isTrue();
@@ -97,8 +90,7 @@ public class CollationComparatorTest {
   @Test
   public void textEquals_WhenBinaryWithUnpairedSurrogates_ShouldMatchStringEquals() {
     // Arrange: String#getBytes(UTF_8) replaces every unpaired surrogate with '?', so distinct
-    // ill-formed strings encode to the same bytes. BINARY equality must stay exact String
-    // equality (the pre-collation default), not the conflating byte view.
+    // ill-formed strings encode to the same bytes.
     CollationComparator comparator =
         CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
 
@@ -108,8 +100,6 @@ public class CollationComparatorTest {
     assertThat(comparator.textEquals("a\uD800", "a?")).isFalse();
     assertThat(comparator.textEquals("\uD800", "\uD800")).isTrue();
   }
-
-  // ---- BINARY happy path ----
 
   @Test
   public void textComparator_WhenBinary_ShouldOrderAsciiByByteValue() {
@@ -125,8 +115,6 @@ public class CollationComparatorTest {
     assertThat(textComparator.compare("a", "a")).isZero();
     assertThat(textComparator.compare("apple", "banana")).isNegative();
   }
-
-  // ---- ICU PRIMARY / TERTIARY ----
 
   @Test
   public void textComparator_WhenIcuPrimaryStrength_ShouldTreatCaseAndAccentAsEqualOrdering() {
@@ -160,8 +148,6 @@ public class CollationComparatorTest {
     assertThat(textComparator.compare("a", "A")).isNotZero();
   }
 
-  // ---- Supplementary plane divergence (BINARY vs Java natural order) ----
-
   @Test
   public void textComparator_WhenBinary_ShouldDivergeFromJavaNaturalOrderAboveBmp() {
     // Arrange
@@ -174,16 +160,13 @@ public class CollationComparatorTest {
     // Act Assert
     // Under BINARY (UTF-8 bytes), EF BF BF < F0 90 80 80, so U+FFFF < U+10000.
     assertThat(textComparator.compare(uFFFF, u10000)).isNegative();
-    // Java String.compareTo orders them the other way (surrogate 0xD800 < 0xFFFF),
-    // documenting the divergence.
+    // Java String.compareTo orders them the other way (surrogate 0xD800 < 0xFFFF).
     assertThat(u10000.compareTo(uFFFF)).isNegative();
   }
 
-  // ---- Custom tailoring rules ----
-
   @Test
   public void textComparator_WhenIcuWithCustomRules_ShouldProduceTailoredOrder() {
-    // Arrange: reorder so 'b' sorts before 'a'.
+    // Arrange
     CollationComparator comparator =
         CollationComparator.from(
             config(
@@ -212,7 +195,7 @@ public class CollationComparatorTest {
 
   @Test
   public void textComparator_WhenIcuWithLocaleAndCustomRules_ShouldComposeBaseLocaleWithRules() {
-    // Arrange: the same custom rule (reorder so 'b' sorts before 'a') with and without a locale.
+    // Arrange
     Comparator<String> localePlusRules =
         CollationComparator.from(
                 config(
@@ -229,19 +212,15 @@ public class CollationComparatorTest {
                         DatabaseConfig.COLLATION_ICU_RULES, "& b < a")))
             .textComparator();
 
-    // Assert: the custom rule applies in both cases.
+    // Assert
     assertThat(localePlusRules.compare("b", "a")).isNegative();
     assertThat(rulesOnly.compare("b", "a")).isNegative();
 
-    // The Swedish base collation is retained when rules are present (Swedish sorts 'z' before 'ö'),
-    // unlike the root base used when only rules are set (root sorts 'ö' before 'z'). This proves
-    // the
-    // locale is composed with the rules rather than ignored.
+    // Swedish sorts 'z' before 'ö'; the root base used when only rules are set sorts 'ö' before
+    // 'z'.
     assertThat(localePlusRules.compare("z", "ö")).isNegative();
     assertThat(rulesOnly.compare("z", "ö")).isPositive();
   }
-
-  // ---- Canonical text form (increment B: ICU-only, per-thread) ----
 
   private static CollationComparator icuPrimary() {
     return CollationComparator.from(
@@ -256,7 +235,7 @@ public class CollationComparatorTest {
     // Arrange
     CollationComparator comparator = icuPrimary();
 
-    // Act Assert: collate-equal values share one canonical form; distinct values do not.
+    // Act Assert
     assertThat(comparator.hasCanonicalTextForm()).isTrue();
     assertThat(comparator.canonicalTextFormOf("Apple"))
         .isEqualTo(comparator.canonicalTextFormOf("apple"));
@@ -274,15 +253,14 @@ public class CollationComparatorTest {
                     DatabaseConfig.COLLATION, "ICU",
                     DatabaseConfig.COLLATION_ICU_RULES, "[strength 3]")));
 
-    // Act Assert: strength is honored by the canonical form.
+    // Act Assert
     assertThat(comparator.canonicalTextFormOf("Apple"))
         .isNotEqualTo(comparator.canonicalTextFormOf("apple"));
   }
 
   @Test
   public void canonicalTextForm_WhenIcuWithLocaleAndRules_ShouldFollowTailoredCollator() {
-    // Arrange: with '& b < a', 'b' and 'a' stay distinct but tailored; the canonical form must
-    // come from the same tailored collator as ordering, so equality classes match compare()==0.
+    // Arrange: the canonical form must come from the same tailored collator as the ordering.
     CollationComparator comparator =
         CollationComparator.from(
             config(
@@ -299,8 +277,7 @@ public class CollationComparatorTest {
 
   @Test
   public void canonicalTextForm_InvariantSweep_CanonicalEqualityMatchesCompareZero() {
-    // Arrange: across ASCII, accented, and supplementary-plane text, canonical-bytes equality must
-    // coincide exactly with compare == 0 (KTD2 invariant).
+    // Arrange
     CollationComparator comparator = icuPrimary();
     String[] corpus = {
       "apple", "Apple", "APPLE", "banana", "café", "cafe", "", "á", "a", "😀", "𐀀"
@@ -321,7 +298,7 @@ public class CollationComparatorTest {
 
   @Test
   public void canonicalTextForm_WhenBinary_ShouldSignalNoMaterialization() {
-    // Arrange (BINARY identity is the value itself; nothing is materialized).
+    // Arrange
     CollationComparator comparator =
         CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
 
@@ -334,7 +311,7 @@ public class CollationComparatorTest {
   @Test
   public void canonicalTextForm_ConcurrentGeneration_ShouldMatchSingleThreadedOutput()
       throws Exception {
-    // Arrange: per-thread collators must produce identical canonical bytes across threads.
+    // Arrange
     CollationComparator comparator = icuPrimary();
     String[] values = {"apple", "Apple", "café", "😀", "banana"};
     List<byte[]> expected = new ArrayList<>();
@@ -364,8 +341,6 @@ public class CollationComparatorTest {
       executor.shutdownNow();
     }
   }
-
-  // ---- Locale ----
 
   @Test
   public void from_WhenIcuWithLocale_ShouldBuildComparator() {
@@ -604,8 +579,7 @@ public class CollationComparatorTest {
   @ValueSource(strings = {"de-u-kn-true", "de-u-ks-level1", "de-u-co-phonebk-kn-true"})
   public void from_WhenIcuWithLocaleSettingAndRules_ShouldThrowIllegalArgumentException(
       String locale) {
-    // Arrange: ICU carries settings on the collator, not in the rule text a composed collator is
-    // rebuilt from. PostgreSQL 17 drops them silently here; this rejects instead.
+    // Arrange
     DatabaseConfig config =
         config(
             props(
@@ -653,7 +627,7 @@ public class CollationComparatorTest {
 
   @Test
   public void from_WhenIcuWithCollationKeywordAndRules_ShouldKeepTheTailoring() {
-    // Arrange Act: a -u-co- tailoring is rule data, so it survives composition with custom rules.
+    // Arrange Act
     CollationComparator comparator =
         CollationComparator.from(
             config(
@@ -668,7 +642,7 @@ public class CollationComparatorTest {
 
   @Test
   public void from_WhenIcuWithNumericOrderingRuleOption_ShouldOrderDigitRunsNumerically() {
-    // Arrange Act: the rule string is where a collation setting belongs alongside a tailoring.
+    // Arrange Act
     CollationComparator comparator =
         CollationComparator.from(
             config(
@@ -680,8 +654,6 @@ public class CollationComparatorTest {
     // Assert
     assertThat(comparator.textComparator().compare("file2", "file10")).isNegative();
   }
-
-  // ---- Concurrency (guards KTD5) ----
 
   @Test
   public void textComparator_WhenFrozenIcuSharedAcrossThreads_ShouldBeConsistent()
@@ -721,8 +693,6 @@ public class CollationComparatorTest {
       assertThat(result.get()).isTrue();
     }
   }
-
-  // ---- Consistency across text / column / key comparators (guards drift) ----
 
   @Test
   public void columnAndKeyComparators_ShouldBeSignConsistentWithTextComparator_Binary() {
@@ -766,8 +736,6 @@ public class CollationComparatorTest {
     }
   }
 
-  // ---- columnComparator preserves TextColumn null-first semantics ----
-
   @Test
   public void columnComparator_ShouldOrderNullTextFirst() {
     // Arrange
@@ -783,8 +751,6 @@ public class CollationComparatorTest {
     assertThat(columnComparator.compare(nullColumn, TextColumn.ofNull("c"))).isZero();
   }
 
-  // ---- columnComparator delegates non-text to natural order ----
-
   @Test
   public void columnComparator_WhenNonTextColumns_ShouldUseNaturalOrder() {
     // Arrange
@@ -798,8 +764,6 @@ public class CollationComparatorTest {
     assertThat(sign(columnComparator.compare(one, two))).isEqualTo(sign(one.compareTo(two)));
     assertThat(columnComparator.compare(one, two)).isNegative();
   }
-
-  // ---- keyComparator lexicographical across multiple columns ----
 
   @Test
   public void keyComparator_ShouldOrderLexicographicallyAcrossColumns() {

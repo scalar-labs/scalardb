@@ -19,8 +19,7 @@ updates:
     ignore:
       - dependency-name: "software.amazon.awssdk:*"
         update-types: [ "version-update:semver-patch" ]
-      # ICU4J collation behavior may shift in any release, including maintenance ones, so its
-      # version is bumped manually, only at a ScalarDB major version
+      # Bumped manually; see the icu4jVersion property in build.gradle
       - dependency-name: "com.ibm.icu:icu4j"
 
   # For GitHub Actions, update all actions on the default, support and release branches
