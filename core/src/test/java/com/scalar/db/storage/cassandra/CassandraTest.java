@@ -64,6 +64,20 @@ public class CassandraTest {
   }
 
   @Test
+  public void constructor_WithIcuCollationConfigured_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    properties.setProperty(DatabaseConfig.STORAGE, "cassandra");
+    properties.setProperty(DatabaseConfig.COLLATION, "ICU");
+
+    // Act Assert
+    assertThatThrownBy(() -> new Cassandra(new DatabaseConfig(properties)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
+  }
+
+  @Test
   public void get_WithoutConjunction_ShouldHandledWithOriginalGet() throws ExecutionException {
     // Arrange
     Get get =

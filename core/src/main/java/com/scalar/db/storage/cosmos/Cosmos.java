@@ -22,6 +22,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Collation;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.List;
@@ -54,6 +55,13 @@ public class Cosmos extends AbstractDistributedStorage {
     if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
           CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
+    }
+
+    // Cosmos DB orders text only by bytes / code points, so ICU can never match it
+    if (databaseConfig.getCollation() == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(
+              databaseConfig.getStorage()));
     }
 
     CosmosConfig config = new CosmosConfig(databaseConfig);
