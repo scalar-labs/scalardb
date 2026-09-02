@@ -38,6 +38,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
@@ -76,6 +77,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final ConsensusCommitOperationChecker operationChecker;
   @Nullable private final CoordinatorGroupCommitter groupCommitter;
   private final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
+  private final CollationComparator collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -95,6 +97,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -102,7 +105,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();
@@ -113,7 +117,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -135,6 +140,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -142,7 +148,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit = createCommitHandler(config, storageInfoProvider);
     isolation = config.getIsolation();
@@ -153,7 +160,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -186,6 +194,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     this.groupCommitter = groupCommitter;
     this.coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    this.collationComparator = CollationComparator.from(databaseConfig);
     this.isolation = isolation;
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -195,13 +204,15 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
   }
 
   // `groupCommitter` must be set before calling this method.
   private CommitHandler createCommitHandler(
       ConsensusCommitConfig config, StorageInfoProvider storageInfoProvider) {
-    MutationsGrouper mutationsGrouper = new MutationsGrouper(storageInfoProvider);
+    MutationsGrouper mutationsGrouper =
+        new MutationsGrouper(storageInfoProvider, collationComparator);
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
           storage,
@@ -309,7 +320,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       txId = groupCommitter.reserve(txId);
       groupCommitSlotReserved = true;
     }
-    Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, tableMetadataManager, parallelExecutor, collationComparator);
     TransactionContext context =
         new TransactionContext(
             txId, snapshot, isolation, readOnly, oneOperation, groupCommitSlotReserved);

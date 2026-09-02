@@ -34,6 +34,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
@@ -84,6 +85,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
   private final CrudHandler crud;
   private final ParticipantCommitHandler commit;
   private final ConsensusCommitOperationChecker operationChecker;
+  private final CollationComparator collationComparator;
 
   private final ConcurrentMap<String, ParticipantContext> contexts = new ConcurrentHashMap<>();
 
@@ -101,6 +103,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     this.recoveryExecutor =
         new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
+    this.collationComparator = CollationComparator.from(databaseConfig);
     this.crud =
         new CrudHandler(
             storage,
@@ -108,14 +111,15 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     this.commit =
         new ParticipantCommitHandler(
             storage,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(storageInfoProvider),
+            new MutationsGrouper(storageInfoProvider, collationComparator),
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -124,7 +128,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
   }
 
   @VisibleForTesting
@@ -135,7 +140,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
       ParticipantCommitHandler commit,
-      ConsensusCommitOperationChecker operationChecker) {
+      ConsensusCommitOperationChecker operationChecker,
+      CollationComparator collationComparator) {
     this.config = checkNotNull(config);
     this.participantId = resolveParticipantId(config);
     this.storage = null;
@@ -146,6 +152,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.operationChecker = checkNotNull(operationChecker);
+    this.collationComparator = checkNotNull(collationComparator);
   }
 
   private static String resolveParticipantId(ConsensusCommitConfig config) {
@@ -165,7 +172,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
   @Override
   public void join(String transactionId, boolean readOnly, Map<String, String> attributes)
       throws TransactionException {
-    Snapshot snapshot = new Snapshot(transactionId, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(transactionId, tableMetadataManager, parallelExecutor, collationComparator);
     // The isolation level can be overridden per transaction via the transaction-isolation
     // attribute; otherwise it falls back to the participant's configured default.
     Isolation isolation =

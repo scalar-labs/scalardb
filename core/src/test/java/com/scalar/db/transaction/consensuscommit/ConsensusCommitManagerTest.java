@@ -13,6 +13,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
@@ -43,6 +44,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
 import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
@@ -77,6 +79,10 @@ public class ConsensusCommitManagerTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // The manager builds its CollationComparator from the database configuration; a mocked
+    // config must expose the BINARY default explicitly.
+    when(databaseConfig.getCollation()).thenReturn(Collation.BINARY);
 
     manager =
         new ConsensusCommitManager(
@@ -2587,5 +2593,38 @@ public class ConsensusCommitManagerTest {
 
     // Assert
     verify(commit).setBeforePreparationHook(beforePreparationHook);
+  }
+
+  @Test
+  public void scan_WithLikeConditionAndIcuCollationConfigured_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
+    // Arrange
+    when(databaseConfig.getCollation()).thenReturn(Collation.ICU);
+    ConsensusCommitManager icuManager =
+        new ConsensusCommitManager(
+            storage,
+            admin,
+            consensusCommitConfig,
+            databaseConfig,
+            coordinator,
+            parallelExecutor,
+            recoveryExecutor,
+            crud,
+            commit,
+            Isolation.SNAPSHOT,
+            null);
+    ConsensusCommit transaction = (ConsensusCommit) icuManager.begin();
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column("col").isLikeText("app%"))
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.scan(scan))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("scalar.db.collation");
   }
 }

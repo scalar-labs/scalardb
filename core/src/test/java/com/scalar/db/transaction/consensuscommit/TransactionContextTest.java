@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,6 +24,12 @@ public class TransactionContextTest {
   private static final String ANY_TEXT = "text";
 
   @Mock private Snapshot snapshot;
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new DatabaseConfig(props));
+  }
 
   private Get prepareGet() {
     return Get.newBuilder()
@@ -91,10 +100,11 @@ public class TransactionContextTest {
       isValidationRequired_WhenSerializableIsolationWithGetNotInWriteOrDeleteSet_ShouldReturnTrue() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
 
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(true);
+    when(snapshot.getCollationComparator()).thenReturn(binaryCollation());
     when(snapshot.getGetSet())
         .thenReturn(
             Collections.singletonList(
@@ -117,10 +127,11 @@ public class TransactionContextTest {
       isValidationRequired_WhenSerializableIsolationWithAllGetsInWriteSet_ShouldReturnFalse() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
 
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(true);
+    when(snapshot.getCollationComparator()).thenReturn(binaryCollation());
     when(snapshot.getGetSet())
         .thenReturn(
             Collections.singletonList(
@@ -142,10 +153,11 @@ public class TransactionContextTest {
       isValidationRequired_WhenSerializableIsolationWithAllGetsInDeleteSet_ShouldReturnFalse() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
 
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(true);
+    when(snapshot.getCollationComparator()).thenReturn(binaryCollation());
     when(snapshot.getGetSet())
         .thenReturn(
             Collections.singletonList(

@@ -33,6 +33,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -89,7 +91,14 @@ class ConsensusCommitParticipantTest {
             recoveryExecutor,
             crud,
             commit,
-            operationChecker);
+            operationChecker,
+            binaryCollation());
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(com.scalar.db.config.DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new com.scalar.db.config.DatabaseConfig(props));
   }
 
   @Test
@@ -115,7 +124,8 @@ class ConsensusCommitParticipantTest {
                     recoveryExecutor,
                     crud,
                     commit,
-                    operationChecker))
+                    operationChecker,
+                    binaryCollation()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -643,8 +653,8 @@ class ConsensusCommitParticipantTest {
     // builds its entry without consulting the table metadata.
     TransactionContext context = getContext(ANY_TX_ID);
     Put put = Put.newBuilder(buildPutFromInsert(insert)).textValue("tx_id", "meta").build();
-    context.snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    context.snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    context.snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    context.snapshot.putIntoDeleteSet(new Snapshot.Key(delete, binaryCollation()), delete);
 
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
@@ -938,7 +948,7 @@ class ConsensusCommitParticipantTest {
             .partitionKey(Key.ofInt("pk", 1))
             .intValue("v", 100)
             .build();
-    getContext(txId).snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    getContext(txId).snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());
