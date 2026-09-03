@@ -766,6 +766,45 @@ public class CollationComparatorTest {
   }
 
   @Test
+  public void columnAndKeyComparators_WhenBinary_ShouldMatchLegacyCompareToWithinBmp() {
+    // Arrange: BMP text only, because above the BMP unsigned UTF-8 byte order and
+    // String#compareTo diverge by design, and one shared column name, because columnComparator()
+    // compares text values only. The trailing INT column carries the same value on both sides so
+    // that collate-equal text yields fully equal keys, covering the tie.
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
+    Comparator<Column<?>> columnComparator = comparator.columnComparator();
+    Comparator<Key> keyComparator = comparator.keyComparator();
+    List<TextColumn> corpus =
+        Arrays.asList(
+            TextColumn.ofNull("c"),
+            TextColumn.of("c", ""),
+            TextColumn.of("c", "APPLE"),
+            TextColumn.of("c", "Apple"),
+            TextColumn.of("c", "apple"),
+            TextColumn.of("c", "apple "),
+            TextColumn.of("c", "banana"),
+            TextColumn.of("c", "ápple"),
+            TextColumn.of("c", "é"),
+            TextColumn.of("c", "￿")); // U+FFFF, the last BMP code point
+
+    // Act Assert
+    for (TextColumn left : corpus) {
+      for (TextColumn right : corpus) {
+        assertThat(sign(columnComparator.compare(left, right)))
+            .as("column vs TextColumn#compareTo for (%s, %s)", left, right)
+            .isEqualTo(sign(left.compareTo(right)));
+
+        Key leftKey = Key.newBuilder().add(left).addInt("i", 1).build();
+        Key rightKey = Key.newBuilder().add(right).addInt("i", 1).build();
+        assertThat(sign(keyComparator.compare(leftKey, rightKey)))
+            .as("key vs Key#compareTo for (%s, %s)", left, right)
+            .isEqualTo(sign(leftKey.compareTo(rightKey)));
+      }
+    }
+  }
+
+  @Test
   public void keyComparator_ShouldOrderLexicographicallyAcrossColumns() {
     // Arrange
     CollationComparator comparator =
