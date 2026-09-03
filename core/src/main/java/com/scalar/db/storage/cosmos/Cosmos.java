@@ -57,7 +57,7 @@ public class Cosmos extends AbstractDistributedStorage {
           CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
 
-    // Cosmos DB orders text only by bytes / code points, so ICU can never match it
+    // Cassandra orders text only by binary UTF-8 bytes
     if (databaseConfig.getCollation() == Collation.ICU) {
       throw new IllegalArgumentException(
           CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(

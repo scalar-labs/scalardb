@@ -41,9 +41,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
           CoreError.OBJECT_STORAGE_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
     // Object storage record identity is byte-exact (partition objects are named by the raw
-    // partition-key text and records are keyed by the raw concatenated key text), so it cannot
-    // provide the one-row-per-collation-class uniqueness and collation-aware point-read
-    // resolution that ICU-mode key identity requires
+    // partition-key text and records are keyed by the raw concatenated key text), so in case of a
+    // ICU non-deterministic collation (e.g. case insensitive), we would need to make the on-disk record key
+    // collation aware, which would need rebuilding on configuration changes
     if (databaseConfig.getCollation() == Collation.ICU) {
       throw new IllegalArgumentException(
           CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(

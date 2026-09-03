@@ -55,7 +55,7 @@ public class Cassandra extends AbstractDistributedStorage {
           CoreError.CASSANDRA_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
 
-    // Cassandra orders text only by unsigned UTF-8 bytes (UTF8Type), so ICU can never match it
+    // Cassandra orders text only by binary UTF-8 bytes
     if (config.getCollation() == Collation.ICU) {
       throw new IllegalArgumentException(
           CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(config.getStorage()));

@@ -135,7 +135,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
     // COLLATE, so there is no UCA-based collation the ICU mode could approximate.
     if (collation == Collation.ICU) {
       throw new IllegalArgumentException(
-          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage("jdbc (Cloud Spanner)"));
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage("jdbc (Spanner)"));
     }
   }
 
