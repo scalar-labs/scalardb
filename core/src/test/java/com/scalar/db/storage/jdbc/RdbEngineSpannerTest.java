@@ -17,6 +17,7 @@ import com.google.rpc.Code;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -48,6 +49,18 @@ public class RdbEngineSpannerTest {
   @AfterEach
   void tearDown() {
     SpannerCredentialsProvider.clear();
+  }
+
+  @Test
+  void throwIfCollationNotSupported_GivenIcu_ShouldThrowIllegalArgumentException() {
+    assertThatThrownBy(() -> rdbEngine.throwIfCollationNotSupported(Collation.ICU))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void throwIfCollationNotSupported_GivenBinary_ShouldNotThrowAnyException() {
+    assertThatCode(() -> rdbEngine.throwIfCollationNotSupported(Collation.BINARY))
+        .doesNotThrowAnyException();
   }
 
   @Test

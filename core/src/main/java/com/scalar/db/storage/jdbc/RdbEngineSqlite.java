@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -180,6 +181,16 @@ class RdbEngineSqlite extends AbstractRdbEngine {
     if (tableName.contains(NAMESPACE_SEPARATOR)) {
       throw new IllegalArgumentException(
           CoreError.JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE.buildMessage(tableName));
+    }
+  }
+
+  @Override
+  public void throwIfCollationNotSupported(Collation collation) {
+    // SQLite compares text with memcmp over UTF-8 bytes (custom collations aside); it has no
+    // UCA-based collation the ICU mode could approximate.
+    if (collation == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage("jdbc (SQLite)"));
     }
   }
 

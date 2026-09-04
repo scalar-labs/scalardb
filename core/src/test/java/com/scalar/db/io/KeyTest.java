@@ -1045,4 +1045,16 @@ public class KeyTest {
     assertThatThrownBy(() -> new Key((List<Value<?>>) null))
         .isInstanceOf(NullPointerException.class);
   }
+
+  @Test
+  public void equals_CollateEqualButByteDifferentTextKeysGiven_ShouldReturnFalse() {
+    // Arrange
+    Key upper = Key.ofText(ANY_NAME_1, "Apple");
+    Key lower = Key.ofText(ANY_NAME_1, "apple");
+
+    // Act Assert
+    assertThat(upper.equals(lower)).isFalse();
+    assertThat(upper.equals(Key.ofText(ANY_NAME_1, "Apple"))).isTrue();
+    assertThat(upper.hashCode()).isEqualTo(Key.ofText(ANY_NAME_1, "Apple").hashCode());
+  }
 }
