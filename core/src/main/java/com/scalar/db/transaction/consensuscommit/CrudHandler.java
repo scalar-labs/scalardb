@@ -834,9 +834,6 @@ public class CrudHandler {
     assert selection.getPartitionKey().getColumns().size() == 1;
     Column<?> indexColumn = selection.getPartitionKey().getColumns().get(0);
     Column<?> resultColumn = result.getColumns().get(indexColumn.getName());
-    // Collation-aware: on a CI-collated backend the storage returns the STORED spelling of the
-    // index value, which may be byte-different but collate-equal to the queried one; byte-exact
-    // comparison here silently filtered such rows out.
     return resultColumn != null
         && ScalarDbUtils.columnEquals(resultColumn, indexColumn, collationComparator);
   }

@@ -57,7 +57,7 @@ public class ConsensusCommitOperationChecker {
    * Rejects a LIKE or NOT_LIKE condition under the ICU collation. This layer re-evaluates a
    * selection's conditions itself, and that evaluation stays byte-exact for pattern matching at any
    * collation, so on a backend whose own collation governs LIKE the two disagree. Every isolation
-   * level is affected. See ADR-10 in docs/collation-adr.md.
+   * level is affected.
    */
   private void throwIfLikeConditionUnderIcuCollation(Selection selection) {
     if (collation != Collation.ICU) {
