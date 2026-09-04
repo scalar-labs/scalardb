@@ -610,6 +610,84 @@ public class MutationsGrouperTest {
     assertThat(result).isFalse();
   }
 
+  private StorageInfo mockStorageInfo(StorageInfo.MutationAtomicityUnit unit) {
+    StorageInfo storageInfo = mock(StorageInfo.class);
+    when(storageInfo.getMutationAtomicityUnit()).thenReturn(unit);
+    when(storageInfo.getMaxAtomicMutationsCount()).thenReturn(100);
+    when(storageInfo.getStorageName()).thenReturn("storage1");
+    return storageInfo;
+  }
+
+  @Test
+  public void
+      groupMutations_WithPartitionAtomicityAndCaseDifferingPartitionKeys_ShouldGroupIntoTwoBatches()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mockStorageInfo(StorageInfo.MutationAtomicityUnit.PARTITION);
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    Mutation mutation1 =
+        createMutation(namespace, table, Key.ofText("pk", "Apple"), Optional.empty());
+    Mutation mutation2 =
+        createMutation(namespace, table, Key.ofText("pk", "apple"), Optional.empty());
+
+    // Act
+    List<List<Mutation>> result = grouper.groupMutations(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).hasSize(2);
+    assertThat(result.get(0)).containsExactly(mutation1);
+    assertThat(result.get(1)).containsExactly(mutation2);
+  }
+
+  @Test
+  public void
+      groupMutations_WithRecordAtomicityAndCaseDifferingClusteringKeys_ShouldGroupIntoTwoBatches()
+          throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mockStorageInfo(StorageInfo.MutationAtomicityUnit.RECORD);
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    Key partitionKey = Key.ofText("pk", "p1");
+    Mutation mutation1 =
+        createMutation(namespace, table, partitionKey, Optional.of(Key.ofText("ck", "a")));
+    Mutation mutation2 =
+        createMutation(namespace, table, partitionKey, Optional.of(Key.ofText("ck", "A")));
+
+    // Act
+    List<List<Mutation>> result = grouper.groupMutations(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).hasSize(2);
+    assertThat(result.get(0)).containsExactly(mutation1);
+    assertThat(result.get(1)).containsExactly(mutation2);
+  }
+
+  @Test
+  public void canBeGroupedAltogether_WithCaseDifferingPartitionKeys_ShouldReturnFalse()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    StorageInfo storageInfo = mockStorageInfo(StorageInfo.MutationAtomicityUnit.PARTITION);
+    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
+
+    Mutation mutation1 =
+        createMutation(namespace, table, Key.ofText("pk", "Apple"), Optional.empty());
+    Mutation mutation2 =
+        createMutation(namespace, table, Key.ofText("pk", "apple"), Optional.empty());
+
+    // Act
+    boolean result = grouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
+
+    // Assert
+    assertThat(result).isFalse();
+  }
+
   private Mutation createMutation(
       String namespace, String table, Key partitionKey, Optional<Key> clusteringKey) {
     Mutation mutation = mock(Put.class);

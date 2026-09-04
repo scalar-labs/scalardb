@@ -20,10 +20,14 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.TextColumn;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import javax.annotation.Nullable;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +55,7 @@ public class MutationConditionsValidatorTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    validator = new MutationConditionsValidator();
+    validator = new MutationConditionsValidator(binaryCollation());
   }
 
   @Test
@@ -213,7 +217,13 @@ public class MutationConditionsValidatorTest {
       boolean isConditionSatisfied) {
     // Act Assert
     Column<?> existingRecordColumn = mock(Column.class);
-    Column<?> conditionalExpressionColumn = mock(Column.class);
+    // Mockito cannot stub equals, so for these non-TEXT mocks column equality is modeled by
+    // passing the SAME column instance and inequality by a distinct mock.
+    boolean modelsEqualColumns =
+        (operator == Operator.EQ || operator == Operator.NE)
+            && Integer.valueOf(0).equals(compareResult);
+    Column<?> conditionalExpressionColumn =
+        modelsEqualColumns ? existingRecordColumn : mock(Column.class);
     when(conditionalExpressionColumn.getName()).thenReturn(C1);
     when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, existingRecordColumn));
     ConditionalExpression conditionalExpression = mock(ConditionalExpression.class);
@@ -247,17 +257,14 @@ public class MutationConditionsValidatorTest {
         .thenReturn(
             ImmutableMap.of(
                 C1, existingRecordColumn1, C2, existingRecordColumn2, C3, existingRecordColumn3));
-    // The first condition operator is 'Equal'
+    // The first condition operator is 'Equal'; a satisfied EQ is modeled by the SAME mock
+    // instance (see assertConditionIsSatisfied).
     ConditionalExpression conditionalExpression1 = mock(ConditionalExpression.class);
-    Column<?> conditionalExpressionColumn1 = mock(Column.class);
+    Column<?> conditionalExpressionColumn1 =
+        isCondition1Satisfied ? existingRecordColumn1 : mock(Column.class);
     when(conditionalExpressionColumn1.getName()).thenReturn(C1);
     doReturn(conditionalExpressionColumn1).when(conditionalExpression1).getColumn();
     when(conditionalExpression1.getOperator()).thenReturn(Operator.EQ);
-    if (isCondition1Satisfied) {
-      when(existingRecordColumn1.compareTo(any())).thenReturn(0);
-    } else {
-      when(existingRecordColumn1.compareTo(any())).thenReturn(-1);
-    }
     // The second condition operator is 'GreaterThan'
     ConditionalExpression conditionalExpression2 = mock(ConditionalExpression.class);
     Column<?> conditionalExpressionColumn2 = mock(Column.class);
@@ -325,5 +332,172 @@ public class MutationConditionsValidatorTest {
     } else {
       validator.checkIfConditionIsSatisfied((Delete) mutation, existingRecord, TRANSACTION_ID);
     }
+  }
+
+  private static CollationComparator caseInsensitiveIcuCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.COLLATION, "ICU");
+    props.setProperty(DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]");
+    return CollationComparator.from(new DatabaseConfig(props));
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    props.setProperty(DatabaseConfig.COLLATION, "BINARY");
+    return CollationComparator.from(new DatabaseConfig(props));
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithBinaryCollationAndEqOnText_ShouldStayByteExactAndThrow() {
+    // Arrange
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(binaryCollation());
+    prepareExistingTextColumn("Apple");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  private void prepareExistingTextColumn(String value) {
+    when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, TextColumn.of(C1, value)));
+  }
+
+  private Put putIfExpression(ConditionalExpression expression) {
+    Put put = mock(Put.class);
+    when(put.getCondition())
+        .thenReturn(Optional.of(ConditionBuilder.putIf(ImmutableList.of(expression))));
+    return put;
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndGtOnText_ShouldNotThrowWhereNaturalWould() {
+    // Arrange: 'B'(0x42) sorts before 'a'(0x61) in byte order but after it at PRIMARY strength.
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
+    prepareExistingTextColumn("B");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isGreaterThanText("a"));
+
+    // Act Assert
+    Assertions.assertThatCode(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithBinaryCollationAndGtOnText_ShouldThrowUnsatisfiedConditionException() {
+    // Arrange
+    MutationConditionsValidator naturalValidator =
+        new MutationConditionsValidator(binaryCollation());
+    prepareExistingTextColumn("B");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isGreaterThanText("a"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () -> naturalValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  private Delete deleteIfExpression(ConditionalExpression expression) {
+    Delete delete = mock(Delete.class);
+    when(delete.getCondition())
+        .thenReturn(Optional.of(ConditionBuilder.deleteIf(ImmutableList.of(expression))));
+    return delete;
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndEqOnText_ShouldNotThrowWhereByteExactWould() {
+    // Arrange
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
+    prepareExistingTextColumn("Apple");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
+
+    // Act Assert
+    Assertions.assertThatCode(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithBinaryCollationAndEqOnText_ShouldThrowUnsatisfiedConditionException() {
+    // Arrange
+    MutationConditionsValidator naturalValidator =
+        new MutationConditionsValidator(binaryCollation());
+    prepareExistingTextColumn("Apple");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () -> naturalValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndNeOnText_ShouldBehaveAsNegationOfEq() {
+    // Arrange
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
+    prepareExistingTextColumn("Apple");
+    Delete delete = deleteIfExpression(ConditionBuilder.column(C1).isNotEqualToText("apple"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(
+                    delete, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void validateConditionIsSatisfied_WithCollationAndEqOnNonText_ShouldStayByteExact() {
+    // Arrange
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
+    when(existingRecord.getColumns())
+        .thenReturn(ImmutableMap.of(C1, com.scalar.db.io.IntColumn.of(C1, 5)));
+    Put putSatisfied = putIfExpression(ConditionBuilder.column(C1).isEqualToInt(5));
+    Put putUnsatisfied = putIfExpression(ConditionBuilder.column(C1).isEqualToInt(6));
+
+    // Act Assert
+    Assertions.assertThatCode(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(
+                    putSatisfied, existingRecord, TRANSACTION_ID))
+        .doesNotThrowAnyException();
+    Assertions.assertThatThrownBy(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(
+                    putUnsatisfied, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithCollationAndEqOnNullExistingText_ShouldStayByteExactWithoutNpe() {
+    // Arrange
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(caseInsensitiveIcuCollation());
+    when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, TextColumn.ofNull(C1)));
+    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
+
+    // Act Assert
+    Assertions.assertThatThrownBy(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .isInstanceOf(UnsatisfiedConditionException.class);
   }
 }

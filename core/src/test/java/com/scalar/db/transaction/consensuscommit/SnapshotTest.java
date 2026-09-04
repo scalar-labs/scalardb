@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,9 +30,11 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntColumn;
@@ -47,6 +50,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -130,6 +134,10 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot() {
+    return prepareSnapshot(binaryCollation());
+  }
+
+  private Snapshot prepareSnapshot(CollationComparator collationComparator) {
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -142,6 +150,7 @@ public class SnapshotTest {
             ANY_ID,
             tableMetadataManager,
             new ParallelExecutor(config),
+            collationComparator,
             readSet,
             getSet,
             scanSet,
@@ -341,7 +350,7 @@ public class SnapshotTest {
   public void putIntoReadSet_ResultGiven_ShouldHoldWhatsGivenInReadSet() {
     // Arrange
     snapshot = prepareSnapshot();
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
 
     // Act
@@ -370,7 +379,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key key = new Snapshot.Key(put);
+    Snapshot.Key key = new Snapshot.Key(put, binaryCollation());
 
     // Act
     snapshot.putIntoWriteSet(key, put);
@@ -384,7 +393,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put1 = preparePut();
-    Snapshot.Key key = new Snapshot.Key(put1);
+    Snapshot.Key key = new Snapshot.Key(put1, binaryCollation());
 
     Key partitionKey = Key.ofText(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
@@ -421,7 +430,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(delete);
+    Snapshot.Key deleteKey = new Snapshot.Key(delete, binaryCollation());
     snapshot.putIntoDeleteSet(deleteKey, delete);
 
     // Put with only ANY_NAME_3 specified (ANY_NAME_4 is not specified)
@@ -435,7 +444,7 @@ public class SnapshotTest {
             .clusteringKey(clusteringKey)
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .build();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
 
     // Act
     snapshot.putIntoWriteSet(putKey, put);
@@ -462,7 +471,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(delete);
+    Snapshot.Key deleteKey = new Snapshot.Key(delete, binaryCollation());
     snapshot.putIntoDeleteSet(deleteKey, delete);
 
     // Put with insert mode enabled
@@ -477,7 +486,7 @@ public class SnapshotTest {
             .textValue(ANY_NAME_3, ANY_TEXT_3)
             .enableInsertMode()
             .build();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
 
     // Act
     snapshot.putIntoWriteSet(putKey, put);
@@ -500,7 +509,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Put put = preparePut();
     Put putWithInsertModeEnabled = Put.newBuilder(put).enableInsertMode().build();
-    Snapshot.Key key = new Snapshot.Key(put);
+    Snapshot.Key key = new Snapshot.Key(put, binaryCollation());
 
     // Act Assert
     snapshot.putIntoWriteSet(key, put);
@@ -529,7 +538,7 @@ public class SnapshotTest {
             .enableImplicitPreRead()
             .build();
 
-    Snapshot.Key key = new Snapshot.Key(putWithInsertModeEnabled);
+    Snapshot.Key key = new Snapshot.Key(putWithInsertModeEnabled, binaryCollation());
 
     // Act
     snapshot.putIntoWriteSet(key, putWithInsertModeEnabled);
@@ -553,7 +562,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    Snapshot.Key key = new Snapshot.Key(delete, binaryCollation());
 
     // Act
     snapshot.putIntoDeleteSet(key, delete);
@@ -567,11 +576,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+    Snapshot.Key putKey = new Snapshot.Key(preparePut(), binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
 
     Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete(), binaryCollation());
 
     // Act
     snapshot.putIntoDeleteSet(deleteKey, delete);
@@ -589,7 +598,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    Snapshot.Key key = new Snapshot.Key(delete, binaryCollation());
 
     Put putWithInsertModeEnabled = Put.newBuilder(preparePut()).enableInsertMode().build();
     snapshot.putIntoWriteSet(key, putWithInsertModeEnabled);
@@ -605,7 +614,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
     LinkedHashMap<Snapshot.Key, TransactionResult> expected =
         Maps.newLinkedHashMap(Collections.singletonMap(key, result));
 
@@ -621,7 +630,7 @@ public class SnapshotTest {
       throws CrudException {
     // Arrange
     snapshot = prepareSnapshot();
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), binaryCollation());
 
     // Act
     Optional<TransactionResult> actual = snapshot.getResult(key);
@@ -636,7 +645,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), binaryCollation());
     snapshot.putIntoWriteSet(key, put);
 
     // Act
@@ -661,7 +670,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePutForMergeTest();
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoReadSet(key, Optional.of(result));
     snapshot.putIntoWriteSet(key, put);
@@ -680,7 +689,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    Snapshot.Key key = new Snapshot.Key(delete, binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoReadSet(key, Optional.of(result));
     snapshot.putIntoDeleteSet(key, delete);
@@ -698,7 +707,7 @@ public class SnapshotTest {
           throws CrudException {
     // Arrange
     snapshot = prepareSnapshot();
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoReadSet(key, Optional.of(result));
 
@@ -715,7 +724,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
 
     // Act
     Optional<TransactionResult> actual = snapshot.getResult(key, get);
@@ -731,7 +740,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Put put = preparePut();
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
     snapshot.putIntoWriteSet(key, put);
 
     // Act
@@ -758,7 +767,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Put put = preparePutForMergeTest();
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(key, put);
@@ -778,7 +787,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoDeleteSet(key, delete);
@@ -797,7 +806,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoGetSet(get, Optional.of(result));
 
@@ -817,7 +826,7 @@ public class SnapshotTest {
     Put put = preparePutForMergeTest();
     ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_5);
     Get get = Get.newBuilder(prepareGet()).where(condition).build();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(key, put);
@@ -836,7 +845,7 @@ public class SnapshotTest {
           throws CrudException {
     // Arrange
     snapshot = prepareSnapshot();
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_1).isEqualToText(ANY_TEXT_2);
     Get get = Get.newBuilder(prepareGet()).where(condition).build();
@@ -858,7 +867,7 @@ public class SnapshotTest {
     Put put = preparePutForMergeTest();
     ConditionalExpression condition = ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3);
     Get get = Get.newBuilder(prepareGet()).where(condition).build();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.putIntoGetSet(get, Optional.of(result));
     snapshot.putIntoWriteSet(key, put);
@@ -982,10 +991,11 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet(), binaryCollation()), Optional.of(result));
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(prepareAnotherGet(), binaryCollation()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, binaryCollation()), delete);
     configureBehavior();
 
     // Act
@@ -1004,10 +1014,11 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet(), binaryCollation()), Optional.of(result));
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(prepareAnotherGet(), binaryCollation()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, binaryCollation()), delete);
 
     // Act
     snapshot.to(commitComposer);
@@ -1025,10 +1036,11 @@ public class SnapshotTest {
     Put put = preparePut();
     Delete delete = prepareAnotherDelete();
     TransactionResult result = prepareResult(ANY_ID);
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet()), Optional.of(result));
-    snapshot.putIntoReadSet(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(prepareGet(), binaryCollation()), Optional.of(result));
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(prepareAnotherGet(), binaryCollation()), Optional.of(result));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, binaryCollation()), delete);
     configureBehavior();
 
     // Act
@@ -1049,7 +1061,7 @@ public class SnapshotTest {
     TransactionResult result = prepareResult(ANY_ID);
     TransactionResult txResult = new TransactionResult(result);
     snapshot.putIntoGetSet(get, Optional.of(txResult));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getForStorage =
         Get.newBuilder(prepareAnotherGet()).consistency(Consistency.LINEARIZABLE).build();
@@ -1071,7 +1083,7 @@ public class SnapshotTest {
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
     snapshot.putIntoGetSet(get, Optional.of(txResult));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
     Get getForStorage =
@@ -1094,7 +1106,7 @@ public class SnapshotTest {
     Get get = prepareAnotherGet();
     Put put = preparePut();
     snapshot.putIntoGetSet(get, Optional.empty());
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
     Get getForStorage =
@@ -1208,7 +1220,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID + "x");
-    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1231,7 +1243,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
@@ -1256,7 +1268,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID);
@@ -1306,7 +1318,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1358,7 +1370,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1384,7 +1396,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Scan scan = prepareScan();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key, txResult)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -1410,8 +1422,8 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
 
@@ -1475,8 +1487,8 @@ public class SnapshotTest {
                     TextColumn.of(Attribute.ID, "id2")),
                 TABLE_METADATA));
 
-    Snapshot.Key key1 = new Snapshot.Key(scan1, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scan2, result2, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan1, result1, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key2 = new Snapshot.Key(scan2, result2, TABLE_METADATA, binaryCollation());
 
     snapshot.putIntoScanSet(
         scan1,
@@ -1525,7 +1537,7 @@ public class SnapshotTest {
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult txResult = new TransactionResult(result);
     snapshot.putIntoGetSet(get, Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getForStorage = Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build();
     when(storage.get(getForStorage)).thenReturn(Optional.of(txResult));
@@ -1547,7 +1559,7 @@ public class SnapshotTest {
     TransactionResult result = prepareResultWithNullMetadata();
     TransactionResult changedResult = prepareResult(ANY_ID);
     snapshot.putIntoGetSet(get, Optional.of(result));
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Get getForStorage = Get.newBuilder(get).consistency(Consistency.LINEARIZABLE).build();
     when(storage.get(getForStorage)).thenReturn(Optional.of(changedResult));
@@ -1568,7 +1580,7 @@ public class SnapshotTest {
     Scan scan = prepareScanWithLimit(1);
     TransactionResult result1 = prepareResult(ANY_ID + "x");
     TransactionResult result2 = prepareResult(ANY_ID + "x");
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(Collections.singletonMap(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanForStorage =
@@ -1597,7 +1609,7 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
     TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_2);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanForStorage =
@@ -1628,7 +1640,7 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_4);
     TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_2);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanForStorage =
@@ -1658,8 +1670,8 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult insertedResult = prepareResult(ANY_ID + "xx", ANY_TEXT_1, ANY_TEXT_4);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -1691,8 +1703,8 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
     TransactionResult insertedResult = prepareResult(ANY_ID, ANY_TEXT_1, ANY_TEXT_4);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2)));
     DistributedStorage storage = mock(DistributedStorage.class);
@@ -1724,9 +1736,9 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
     TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
-    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
@@ -1758,9 +1770,9 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
     TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
-    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
@@ -1799,9 +1811,9 @@ public class SnapshotTest {
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_2, ANY_TEXT_1);
     TransactionResult result3 = prepareResult(ANY_ID + "x", ANY_TEXT_3, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA);
-    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2, TABLE_METADATA, binaryCollation());
+    Snapshot.Key key3 = new Snapshot.Key(scan, result3, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(
         scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
@@ -1837,7 +1849,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_2);
     TransactionResult result2 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_3);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
     DistributedStorage storage = mock(DistributedStorage.class);
     Scan scanForStorage = Scan.newBuilder(scan).consistency(Consistency.LINEARIZABLE).build();
@@ -1903,7 +1915,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Scan scan = prepareScanWithIndex();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
 
     Scanner scanner = mock(Scanner.class);
@@ -1945,7 +1957,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     Scan scan = prepareScanWithIndex();
     TransactionResult result1 = prepareResult(ANY_ID + "x", ANY_TEXT_1, ANY_TEXT_1);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA, binaryCollation());
     snapshot.putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1)));
 
     Scanner scanner = mock(Scanner.class);
@@ -1984,11 +1996,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Delete delete = prepareDelete();
-    Snapshot.Key deleteKey = new Snapshot.Key(delete);
+    Snapshot.Key deleteKey = new Snapshot.Key(delete, binaryCollation());
     snapshot.putIntoDeleteSet(deleteKey, delete);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act Assert
     Throwable thrown =
@@ -2005,11 +2017,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act Assert
     Throwable thrown =
@@ -2026,7 +2038,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePutWithPartitionKeyOnly();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareScan();
 
@@ -2045,7 +2057,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder()
@@ -2069,7 +2081,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder()
@@ -2094,7 +2106,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
         Scan.newBuilder(prepareScan())
@@ -2155,7 +2167,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
         Scan.newBuilder()
@@ -2204,7 +2216,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan1 =
         Scan.newBuilder()
@@ -2251,7 +2263,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder()
@@ -2260,7 +2272,7 @@ public class SnapshotTest {
             .indexKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act
     Throwable thrown =
@@ -2283,7 +2295,7 @@ public class SnapshotTest {
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .build();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder()
@@ -2292,7 +2304,7 @@ public class SnapshotTest {
             .indexKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act Assert
     Throwable thrown =
@@ -2323,8 +2335,8 @@ public class SnapshotTest {
             .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .textValue(ANY_NAME_4, ANY_TEXT_4)
             .build();
-    Snapshot.Key putKey1 = new Snapshot.Key(put1);
-    Snapshot.Key putKey2 = new Snapshot.Key(put2);
+    Snapshot.Key putKey1 = new Snapshot.Key(put1, binaryCollation());
+    Snapshot.Key putKey2 = new Snapshot.Key(put2, binaryCollation());
     snapshot.putIntoWriteSet(putKey1, put1);
     snapshot.putIntoWriteSet(putKey2, put2);
     Scan scan =
@@ -2334,7 +2346,7 @@ public class SnapshotTest {
             .indexKey(Key.ofText(ANY_NAME_4, ANY_TEXT_4))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act
     Throwable thrown =
@@ -2367,8 +2379,8 @@ public class SnapshotTest {
             .textValue(ANY_NAME_3, ANY_TEXT_4)
             .textValue(ANY_NAME_4, ANY_TEXT_4)
             .build();
-    Snapshot.Key putKey1 = new Snapshot.Key(put1);
-    Snapshot.Key putKey2 = new Snapshot.Key(put2);
+    Snapshot.Key putKey1 = new Snapshot.Key(put1, binaryCollation());
+    Snapshot.Key putKey2 = new Snapshot.Key(put2, binaryCollation());
     snapshot.putIntoWriteSet(putKey1, put1);
     snapshot.putIntoWriteSet(putKey2, put2);
     Scan scan =
@@ -2379,7 +2391,7 @@ public class SnapshotTest {
             .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(ANY_TEXT_3))
             .build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act
     Throwable thrown =
@@ -2396,12 +2408,12 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scanAll =
         ScanAll.newBuilder().namespace(ANY_NAMESPACE_NAME).table(ANY_TABLE_NAME).all().build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA, binaryCollation());
 
     // Act Assert
     Throwable thrown =
@@ -2420,12 +2432,12 @@ public class SnapshotTest {
     snapshot = prepareSnapshot();
     // "text2"
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scanAll =
         ScanAll.newBuilder().namespace(ANY_NAMESPACE_NAME_2).table(ANY_TABLE_NAME_2).all().build();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scanAll, result, TABLE_METADATA, binaryCollation());
 
     // Act Assert
     Throwable thrown =
@@ -2442,11 +2454,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan();
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act
     Throwable thrown =
@@ -2463,11 +2475,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME_2, ANY_TABLE_NAME);
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act
     Throwable thrown =
@@ -2484,11 +2496,11 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = prepareCrossPartitionScan(ANY_NAMESPACE_NAME, ANY_TABLE_NAME_2);
     TransactionResult result = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, binaryCollation());
 
     // Act
     Throwable thrown =
@@ -2505,7 +2517,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePutWithIntColumns();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -2539,7 +2551,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -2562,7 +2574,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -2585,7 +2597,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePut();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan =
         Scan.newBuilder(prepareCrossPartitionScan())
@@ -2608,7 +2620,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot();
     Put put = preparePutWithIntColumns();
-    Snapshot.Key putKey = new Snapshot.Key(put);
+    Snapshot.Key putKey = new Snapshot.Key(put, binaryCollation());
     snapshot.putIntoWriteSet(putKey, put);
     Scan scan = Scan.newBuilder(prepareCrossPartitionScan()).clearConditions().build();
 
@@ -2733,5 +2745,954 @@ public class SnapshotTest {
 
     // Assert
     assertThat(result).isFalse();
+  }
+
+  private static DatabaseConfig collationConfig(String... keyValues) {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    for (int i = 0; i < keyValues.length; i += 2) {
+      props.setProperty(keyValues[i], keyValues[i + 1]);
+    }
+    return new DatabaseConfig(props);
+  }
+
+  private static CollationComparator caseInsensitiveIcuCollation() {
+    return CollationComparator.from(
+        collationConfig(
+            DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]"));
+  }
+
+  private static CollationComparator binaryCollation() {
+    return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY"));
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithRangeAndCaseInsensitiveCollationGivenAndCaseDifferingWrittenKeyInRange_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", "banana"]
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .end(Key.ofText(ANY_NAME_2, "banana"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithRangeAndBinaryCollationGivenAndCaseDifferingWrittenKey_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", "banana"]
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .end(Key.ofText(ANY_NAME_2, "banana"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_StartInclusiveBoundaryKeyCollatesEqualButNotByteIdentical_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", infinite)
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      putIntoWriteSetAndReadSet_CollateEqualButByteDifferentKeys_ShouldRemainDistinctUnderBinary()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put putUpper = preparePut(ANY_TEXT_1, "Apple");
+    Put putLower = preparePut(ANY_TEXT_1, "apple");
+    Snapshot.Key keyUpper = new Snapshot.Key(putUpper, binaryCollation());
+    Snapshot.Key keyLower = new Snapshot.Key(putLower, binaryCollation());
+
+    // Act
+    snapshot.putIntoWriteSet(keyUpper, putUpper);
+    snapshot.putIntoWriteSet(keyLower, putLower);
+    snapshot.putIntoReadSet(keyUpper, Optional.empty());
+    snapshot.putIntoReadSet(keyLower, Optional.empty());
+
+    // Assert
+    assertThat(keyUpper).isNotEqualTo(keyLower);
+    assertThat(writeSet).hasSize(2);
+    assertThat(readSet).hasSize(2);
+    assertThat(snapshot.containsKeyInWriteSet(keyUpper)).isTrue();
+    assertThat(snapshot.containsKeyInWriteSet(keyLower)).isTrue();
+    assertThat(snapshot.containsKeyInReadSet(keyUpper)).isTrue();
+    assertThat(snapshot.containsKeyInReadSet(keyLower)).isTrue();
+
+    Map<Snapshot.Key, TransactionResult> results = new HashMap<>();
+    results.put(keyUpper, prepareResult(ANY_ID, ANY_TEXT_1, "Apple"));
+    assertThat(results.containsKey(keyUpper)).isTrue();
+    assertThat(results.containsKey(keyLower)).isFalse();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithRangeAndBinaryCollationGivenAndCaseDifferingWrittenKey_ShouldReproduceByteExactBehavior()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePut(ANY_TEXT_1, "Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // ["apple", "banana"]
+            .start(Key.ofText(ANY_NAME_2, "apple"), true)
+            .end(Key.ofText(ANY_NAME_2, "banana"), true)
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  // The conjunction tests below turn on one fact: "B" sorts before "a" in byte order (0x42 <
+  // 0x61) but after it at PRIMARY strength, so a value "B" matches `col > 'a'` only under the
+  // collation.
+
+  private Put preparePutWithName3(String name3Value) {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+        .textValue(ANY_NAME_3, name3Value)
+        .textValue(ANY_NAME_4, ANY_TEXT_4)
+        .build();
+  }
+
+  private TransactionResult prepareResultWithName3(String txId, String name3Value) {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, name3Value))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, txId))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanRangeConjunctionAndCaseInsensitiveCollation_WrittenValueMatchesOnlyUnderCollation_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanRangeConjunctionAndBinaryCollation_ShouldReproduceByteExactBehavior()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanAllRangeConjunctionAndCaseInsensitiveCollation_WrittenValueMatchesOnlyUnderCollation_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> snapshot.verifyNoOverlap(scanAll, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanEqualityConjunctionUnderCaseInsensitiveCollation_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithName3("B");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("b"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_CrossPartitionScanEqualityConjunctionUnderCaseInsensitiveCollation_ShouldThrowException()
+          throws CrudException {
+    // Arrange: preparePut sets ANY_NAME_3 = ANY_TEXT_3 ("text3").
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePut(ANY_TEXT_1, ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder(prepareCrossPartitionScan())
+            .clearConditions()
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("TEXT3"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      getResult_MergedResultRangeConjunctionUnderCaseInsensitiveCollation_ShouldMatchUnderCollation()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithName3("B");
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get, caseInsensitiveIcuCollation());
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID)));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isPresent();
+  }
+
+  @Test
+  public void
+      getResult_MergedResultRangeConjunctionUnderBinaryCollation_ShouldReproduceByteExactBehavior()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePutWithName3("B");
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get, binaryCollation());
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID)));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void
+      getResult_MergedResultEqualityConjunctionUnderCaseInsensitiveCollation_ShouldMatchUnderCollation()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithName3("B");
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("b"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get, caseInsensitiveIcuCollation());
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID)));
+    snapshot.putIntoWriteSet(key, put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isPresent();
+  }
+
+  @Test
+  public void
+      toSerializable_GetRangeConjunctionUnderCaseInsensitiveCollation_LatestMatchesOnlyUnderCollation_ShouldThrowValidationConflictException()
+          throws ExecutionException, CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoGetSet(get, Optional.empty());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Get getForStorage = ConsensusCommitUtils.prepareGetForStorage(get, TABLE_METADATA);
+    when(storage.get(getForStorage))
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")));
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+  }
+
+  @Test
+  public void
+      toSerializable_GetRangeConjunctionUnderBinaryCollation_ShouldReproduceByteExactBehavior()
+          throws ExecutionException, CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Get get =
+        Get.newBuilder(prepareGet())
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoGetSet(get, Optional.empty());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Get getForStorage = ConsensusCommitUtils.prepareGetForStorage(get, TABLE_METADATA);
+    when(storage.get(getForStorage))
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")));
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      toSerializable_ScanRangeConjunctionUnderCaseInsensitiveCollation_LatestMatchesOnlyUnderCollation_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoScanSet(scan, new LinkedHashMap<>());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+  }
+
+  @Test
+  public void
+      toSerializable_ScanRangeConjunctionUnderBinaryCollation_ShouldReproduceByteExactBehavior()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isGreaterThanText("a"))
+            .build();
+    snapshot.putIntoScanSet(scan, new LinkedHashMap<>());
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one())
+        .thenReturn(Optional.of(prepareResultWithName3(ANY_ID + "x", "B")))
+        .thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      putIntoWriteSetAndReadSet_CollateEqualByteDifferentKeysUnderCaseInsensitiveIcu_ShouldBeOneLogicalKey()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put putUpper = preparePutWithClusteringKeyAndName3("Apple", "v1");
+    Put putLower = preparePutWithClusteringKeyAndName3("apple", "v2");
+    Snapshot.Key keyUpper = new Snapshot.Key(putUpper, caseInsensitiveIcuCollation());
+    Snapshot.Key keyLower = new Snapshot.Key(putLower, caseInsensitiveIcuCollation());
+
+    // Act
+    snapshot.putIntoWriteSet(keyUpper, putUpper);
+    snapshot.putIntoWriteSet(keyLower, putLower);
+    snapshot.putIntoReadSet(keyUpper, Optional.empty());
+    snapshot.putIntoReadSet(keyLower, Optional.empty());
+
+    // Assert
+    assertThat(keyUpper).isEqualTo(keyLower);
+    assertThat(writeSet).hasSize(1);
+    assertThat(readSet).hasSize(1);
+    assertThat(snapshot.containsKeyInWriteSet(keyUpper)).isTrue();
+    assertThat(snapshot.containsKeyInWriteSet(keyLower)).isTrue();
+    assertThat(snapshot.containsKeyInReadSet(keyUpper)).isTrue();
+    assertThat(snapshot.containsKeyInReadSet(keyLower)).isTrue();
+
+    Put mergedPut = writeSet.get(keyUpper);
+    assertThat(mergedPut).isNotNull();
+    assertThat(writeSet.get(keyLower)).isSameAs(mergedPut);
+    assertThat(mergedPut.getColumns().get(ANY_NAME_3)).isEqualTo(TextColumn.of(ANY_NAME_3, "v2"));
+
+    Map<Snapshot.Key, TransactionResult> results = new HashMap<>();
+    results.put(keyUpper, prepareResult(ANY_ID, ANY_TEXT_1, "Apple"));
+    assertThat(results.containsKey(keyUpper)).isTrue();
+    assertThat(results.containsKey(keyLower)).isTrue();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_EqualityConjunctionMatchingOnlyUnderCaseInsensitiveIcu_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithName3("Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_EqualityConjunctionScanAfterWriteUnderBinaryCollation_ShouldReproduceByteExactBehavior()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePutWithName3("Apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  private Put preparePutWithClusteringKeyAndName3(
+      String clusteringKeyColumnValue, String name3Value) {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .clusteringKey(Key.ofText(ANY_NAME_2, clusteringKeyColumnValue))
+        .textValue(ANY_NAME_3, name3Value)
+        .build();
+  }
+
+  private TransactionResult prepareResultWithClusteringKeyAndName3(
+      String txId, String clusteringKeyColumnValue, String name3Value) {
+    ImmutableMap<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, clusteringKeyColumnValue))
+            .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, name3Value))
+            .put(ANY_NAME_4, TextColumn.of(ANY_NAME_4, ANY_TEXT_4))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, txId))
+            .build();
+    return new TransactionResult(new ResultImpl(columns, TABLE_METADATA));
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithIndexAndCollateEqualIndexValueUnderCaseInsensitiveIcu_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_4, "Apple")
+            .build();
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_4, "apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithIndexAndCollateEqualIndexValueUnderBinaryCollation_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put =
+        Put.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_2))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
+            .textValue(ANY_NAME_4, "Apple")
+            .build();
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_4, "apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanOfCollateEqualPartitionKeyUnderCaseInsensitiveIcu_ShouldThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePut("apple", ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, "Apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanOfCollateEqualPartitionKeyUnderBinaryCollation_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePut("apple", ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, "Apple"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_PlainScanOfDistinctUnpairedSurrogatePartitionKeyUnderBinary_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange: the unpaired surrogates U+D800 and U+DC00 are distinct strings that
+    // String#getBytes(UTF_8) would encode identically, so BINARY equality must not go through bytes
+    snapshot = prepareSnapshot(binaryCollation());
+    Put put = preparePut("\uD800", ANY_TEXT_2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, "\uDC00"))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      toSerializable_OwnWriteRescannedUnderStoredSpellingUnderCaseInsensitiveIcu_ShouldBeClassifiedAsOwnUpdate()
+          throws ExecutionException {
+    // Arrange: the writeSet is deliberately left EMPTY. A byte-equal writeSet entry would rescue
+    // the original entry via validateScanResults' leftover loop, making this test pass vacuously
+    // at any collation.
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+    TransactionResult originalResult = prepareResult(ANY_ID + "x", ANY_TEXT_1, "apple");
+    Snapshot.Key originalKey =
+        new Snapshot.Key(scan, originalResult, TABLE_METADATA, caseInsensitiveIcuCollation());
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(Collections.singletonMap(originalKey, originalResult)));
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult latestOwnResult = prepareResult(ANY_ID, ANY_TEXT_1, "Apple");
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(latestOwnResult)).thenReturn(Optional.empty());
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scanForStorage);
+  }
+
+  @Test
+  public void
+      toSerializable_OwnWriteRescannedUnderStoredSpellingUnderBinary_ShouldThrowValidationConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(binaryCollation());
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+    TransactionResult originalResult = prepareResult(ANY_ID + "x", ANY_TEXT_1, "apple");
+    Snapshot.Key originalKey =
+        new Snapshot.Key(scan, originalResult, TABLE_METADATA, binaryCollation());
+    snapshot.putIntoScanSet(
+        scan, Maps.newLinkedHashMap(Collections.singletonMap(originalKey, originalResult)));
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult latestOwnResult = prepareResult(ANY_ID, ANY_TEXT_1, "Apple");
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.one()).thenReturn(Optional.of(latestOwnResult)).thenReturn(Optional.empty());
+    Scan scanForStorage = ConsensusCommitUtils.prepareScanForStorage(scan, TABLE_METADATA);
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializable(storage))
+        .isInstanceOf(ValidationConflictException.class);
+
+    // Assert
+    verify(storage).scan(scanForStorage);
+  }
+
+  @Test
+  public void
+      toSerializable_GetWithCollateEqualBufferedWriteUnderCaseInsensitiveIcu_ShouldSkipGetValidation()
+          throws ExecutionException, CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, "Apple"))
+            .build();
+    snapshot.putIntoGetSet(get, Optional.of(prepareResult(ANY_ID + "x", ANY_TEXT_1, "Apple")));
+    Put put = preparePut(ANY_TEXT_1, "apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializable(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage, never()).get(any());
+  }
+
+  @Test
+  public void
+      putIntoDeleteSet_DeleteWithCollateEqualKeyGivenAfterPutUnderCaseInsensitiveIcu_ShouldSupersedeWrite()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePut(ANY_TEXT_1, "apple");
+    Snapshot.Key putKey = new Snapshot.Key(put, caseInsensitiveIcuCollation());
+    snapshot.putIntoWriteSet(putKey, put);
+    Delete delete = prepareDelete(ANY_TEXT_1, "Apple");
+    Snapshot.Key deleteKey = new Snapshot.Key(delete, caseInsensitiveIcuCollation());
+
+    // Act
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+
+    // Assert
+    assertThat(writeSet).isEmpty();
+    assertThat(deleteSet).hasSize(1);
+    assertThat(deleteSet.get(deleteKey)).isEqualTo(delete);
+    assertThat(snapshot.containsKeyInDeleteSet(putKey)).isTrue();
+    assertThat(snapshot.containsKeyInWriteSet(putKey)).isFalse();
+  }
+
+  @Test
+  public void
+      putIntoWriteSet_PutWithCollateEqualKeyGivenAfterDeleteUnderCaseInsensitiveIcu_ShouldMoveToWriteSetWithNullColumns()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Delete delete = prepareDelete(ANY_TEXT_1, "apple");
+    Snapshot.Key deleteKey = new Snapshot.Key(delete, caseInsensitiveIcuCollation());
+    snapshot.putIntoDeleteSet(deleteKey, delete);
+    Put put = preparePutWithClusteringKeyAndName3("Apple", ANY_TEXT_3);
+    Snapshot.Key putKey = new Snapshot.Key(put, caseInsensitiveIcuCollation());
+
+    // Act
+    snapshot.putIntoWriteSet(putKey, put);
+
+    // Assert
+    assertThat(deleteSet).isEmpty();
+    assertThat(writeSet).hasSize(1);
+    assertThat(writeSet).containsKey(deleteKey);
+    Put actualPut = writeSet.get(putKey);
+    assertThat(actualPut.getColumns().get(ANY_NAME_3))
+        .isEqualTo(TextColumn.of(ANY_NAME_3, ANY_TEXT_3));
+    assertThat(actualPut.getColumns().get(ANY_NAME_4)).isEqualTo(TextColumn.ofNull(ANY_NAME_4));
+    assertThat(ConsensusCommitOperationAttributes.isInsertModeEnabled(actualPut)).isFalse();
+    assertThat(ConsensusCommitOperationAttributes.isImplicitPreReadEnabled(actualPut)).isTrue();
+  }
+
+  @Test
+  public void
+      getResult_GetUnderStoredSpellingWithConjunctionMatchingMergedOwnWriteUnderCaseInsensitiveIcu_ShouldReturnMergedResult()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put put = preparePutWithClusteringKeyAndName3("apple", "B");
+    Get get =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .clusteringKey(Key.ofText(ANY_NAME_2, "Apple"))
+            .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText("b"))
+            .build();
+    Snapshot.Key key = new Snapshot.Key(get, caseInsensitiveIcuCollation());
+    snapshot.putIntoGetSet(
+        get, Optional.of(prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "zzz")));
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, caseInsensitiveIcuCollation()), put);
+
+    // Act
+    Optional<TransactionResult> actual = snapshot.getResult(key, get);
+
+    // Assert
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getText(ANY_NAME_3)).isEqualTo("B");
+  }
+
+  @Test
+  public void readYourOwnWrite_CollateEqualKeyFromStorage_ShouldSeeOwnBufferedWrite()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Snapshot.Key storageKey =
+        new Snapshot.Key(
+            preparePutWithClusteringKeyAndName3("Apple", "ignored"), caseInsensitiveIcuCollation());
+    snapshot.putIntoReadSet(
+        storageKey,
+        Optional.of(prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "stale")));
+    Put ownWrite = preparePutWithClusteringKeyAndName3("apple", "updated");
+    snapshot.putIntoWriteSet(new Snapshot.Key(ownWrite, caseInsensitiveIcuCollation()), ownWrite);
+
+    // Act
+    Optional<TransactionResult> result = snapshot.getResult(storageKey);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get().getText(ANY_NAME_3))
+        .as("read-your-own-writes must reflect the buffered write, as the CI backend would")
+        .isEqualTo("updated");
+  }
+
+  @Test
+  public void prepare_CollateEqualReadAndWriteKeys_ComposerShouldReceiveBeforeImage()
+      throws ExecutionException, CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    TransactionResult beforeImage =
+        prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "old");
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(
+            preparePutWithClusteringKeyAndName3("Apple", "ignored"), caseInsensitiveIcuCollation()),
+        Optional.of(beforeImage));
+    Put ownWrite = preparePutWithClusteringKeyAndName3("apple", "new");
+    snapshot.putIntoWriteSet(new Snapshot.Key(ownWrite, caseInsensitiveIcuCollation()), ownWrite);
+
+    // Act
+    snapshot.to(prepareComposer);
+
+    // Assert: the composer receives the before image, not null, which would flip it into the
+    // putIfNotExists insert branch.
+    verify(prepareComposer).add(ownWrite, beforeImage);
+  }
+
+  @Test
+  public void writeSet_TwoCollateEqualPuts_ShouldMergeIntoOneLogicalEntry() throws CrudException {
+    // Arrange + Act
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Put first = preparePutWithClusteringKeyAndName3("banana", "v1");
+    Put second = preparePutWithClusteringKeyAndName3("BANANA", "v2");
+    snapshot.putIntoWriteSet(new Snapshot.Key(first, caseInsensitiveIcuCollation()), first);
+    snapshot.putIntoWriteSet(new Snapshot.Key(second, caseInsensitiveIcuCollation()), second);
+
+    // Assert
+    assertThat(writeSet)
+        .as("collate-equal puts must merge into one logical write, as the CI backend holds one row")
+        .hasSize(1);
+
+    Snapshot.Key firstKey = new Snapshot.Key(first, caseInsensitiveIcuCollation());
+    Snapshot.Key secondKey = new Snapshot.Key(second, caseInsensitiveIcuCollation());
+    Put mergedPut = writeSet.get(firstKey);
+    assertThat(mergedPut).isNotNull();
+    assertThat(writeSet.get(secondKey)).isSameAs(mergedPut);
+    assertThat(mergedPut.getColumns().get(ANY_NAME_3)).isEqualTo(TextColumn.of(ANY_NAME_3, "v2"));
+  }
+
+  @Test
+  public void verifyNoOverlap_ScanSeesRowDeletedUnderCollateEqualKey_ShouldThrow() {
+    // Arrange
+    snapshot = prepareSnapshot(caseInsensitiveIcuCollation());
+    Delete ownDelete = prepareDelete(ANY_TEXT_1, "apple");
+    snapshot.putIntoDeleteSet(
+        new Snapshot.Key(ownDelete, caseInsensitiveIcuCollation()), ownDelete);
+    LinkedHashMap<Snapshot.Key, TransactionResult> scanResults = new LinkedHashMap<>();
+    scanResults.put(
+        new Snapshot.Key(
+            preparePutWithClusteringKeyAndName3("Apple", "ignored"), caseInsensitiveIcuCollation()),
+        prepareResultWithClusteringKeyAndName3(ANY_ID + "x", "Apple", "v"));
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .build();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.verifyNoOverlap(scan, scanResults));
+
+    // Assert
+    assertThat(thrown)
+        .as("scan-after-delete on a collate-equal key must be detected as an overlap")
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

@@ -29,6 +29,7 @@ import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.common.checker.ConditionChecker;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -37,6 +38,7 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -59,7 +61,11 @@ public class ConsensusCommitOperationCheckerTest {
     checker =
         spy(
             new ConsensusCommitOperationChecker(
-                metadataManager, virtualTableInfoManager, storageInfoProvider, false));
+                metadataManager,
+                virtualTableInfoManager,
+                storageInfoProvider,
+                false,
+                Collation.BINARY));
     when(checker.createConditionChecker(any())).thenReturn(conditionChecker);
     when(metadataManager.getTransactionTableMetadata(any())).thenReturn(tableMetadata);
     LinkedHashSet<String> metadataColumns = new LinkedHashSet<>();
@@ -314,7 +320,11 @@ public class ConsensusCommitOperationCheckerTest {
     checker =
         spy(
             new ConsensusCommitOperationChecker(
-                metadataManager, virtualTableInfoManager, storageInfoProvider, true));
+                metadataManager,
+                virtualTableInfoManager,
+                storageInfoProvider,
+                true,
+                Collation.BINARY));
 
     Get get =
         Get.newBuilder()
@@ -497,7 +507,11 @@ public class ConsensusCommitOperationCheckerTest {
     checker =
         spy(
             new ConsensusCommitOperationChecker(
-                metadataManager, virtualTableInfoManager, storageInfoProvider, true));
+                metadataManager,
+                virtualTableInfoManager,
+                storageInfoProvider,
+                true,
+                Collation.BINARY));
 
     Scan scan =
         Scan.newBuilder()
@@ -927,5 +941,225 @@ public class ConsensusCommitOperationCheckerTest {
 
     // Act Assert
     assertThatCode(() -> checker.check(delete)).doesNotThrowAnyException();
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = MutationAtomicityUnit.class,
+      names = {"RECORD", "PARTITION"})
+  public void
+      checkForMutation_WithKeyedMutationAtomicityUnitUnderIcuCollation_ShouldThrowIllegalArgumentException(
+          MutationAtomicityUnit unit) throws Exception {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .intValue(ANY_COL_1, 1)
+            .build();
+    when(storageInfoProvider.getStorageInfo("ns"))
+        .thenReturn(new StorageInfoImpl("storage", unit, Integer.MAX_VALUE, true));
+
+    // Act Assert
+    assertThatThrownBy(() -> icuChecker().check(put))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation")
+        .hasMessageContaining(unit.toString());
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = MutationAtomicityUnit.class,
+      names = {"TABLE", "NAMESPACE", "STORAGE"})
+  public void checkForMutation_WithWiderMutationAtomicityUnitUnderIcuCollation_ShouldNotThrow(
+      MutationAtomicityUnit unit) throws Exception {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .intValue(ANY_COL_1, 1)
+            .build();
+    when(storageInfoProvider.getStorageInfo("ns"))
+        .thenReturn(new StorageInfoImpl("storage", unit, Integer.MAX_VALUE, true));
+
+    // Act Assert
+    assertThatCode(() -> icuChecker().check(put)).doesNotThrowAnyException();
+  }
+
+  private ConsensusCommitOperationChecker icuChecker() throws Exception {
+    ConsensusCommitOperationChecker icuChecker =
+        spy(
+            new ConsensusCommitOperationChecker(
+                metadataManager,
+                virtualTableInfoManager,
+                storageInfoProvider,
+                false,
+                Collation.ICU));
+    when(icuChecker.createConditionChecker(any())).thenReturn(conditionChecker);
+    return icuChecker;
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void checkForScan_WithLikeConditionUnderIcuCollation_ShouldThrowIllegalArgumentException(
+      Isolation isolation) throws Exception {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build();
+    TransactionContext context = new TransactionContext("txId", null, isolation, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> icuChecker().check(scan, context))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("scalar.db.collation")
+        .hasMessageContaining("LIKE")
+        .hasMessageContaining(ANY_COL_1);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void checkForGet_WithNotLikeConditionUnderIcuCollation_ShouldThrowIllegalArgumentException(
+      Isolation isolation) throws Exception {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .where(ConditionBuilder.column(ANY_COL_1).isNotLikeText("app%"))
+            .build();
+    TransactionContext context = new TransactionContext("txId", null, isolation, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> icuChecker().check(get, context))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("scalar.db.collation")
+        .hasMessageContaining("NOT_LIKE");
+  }
+
+  @Test
+  public void
+      checkForScanAll_WithLikeConditionUnderIcuCollation_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> icuChecker().check(scan, context))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("LIKE");
+  }
+
+  @Test
+  public void
+      checkForScan_WithLikeConditionAlongsideOtherConditionsUnderIcuCollation_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column(ANY_COL_2).isGreaterThanInt(1))
+            .and(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> icuChecker().check(scan, context))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(ANY_COL_1);
+  }
+
+  @Test
+  public void
+      checkForScan_WithLikeConditionInOneOfSeveralConjunctionsUnderIcuCollation_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column(ANY_COL_2).isEqualToInt(1))
+            .or(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> icuChecker().check(scan, context))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(ANY_COL_1);
+  }
+
+  @Test
+  public void checkForScan_WithEqualityAndRangeConditionsUnderIcuCollation_ShouldNotThrowException()
+      throws Exception {
+    // Arrange
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column(ANY_COL_1).isEqualToText("apple"))
+            .and(ConditionBuilder.column(ANY_COL_2).isGreaterThanInt(1))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatCode(() -> icuChecker().check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void checkForScan_WithLikeConditionUnderBinaryCollation_ShouldNotThrowException() {
+    // Arrange
+    Scan scan =
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(scan, context)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void checkForGet_WithLikeConditionUnderBinaryCollation_ShouldNotThrowException() {
+    // Arrange
+    Get get =
+        Get.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .where(ConditionBuilder.column(ANY_COL_1).isNotLikeText("app%"))
+            .build();
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatCode(() -> checker.check(get, context)).doesNotThrowAnyException();
   }
 }

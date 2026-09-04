@@ -53,6 +53,7 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
@@ -11574,7 +11575,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     commit = spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
     return new ConsensusCommitManager(
         storage,
@@ -11594,7 +11596,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       TransactionTableMetadataManager tableMetadataManager,
       @Nullable CoordinatorGroupCommitter groupCommitter,
       boolean onePhaseCommitEnabled) {
-    MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    MutationsGrouper mutationsGrouper =
+        new MutationsGrouper(new StorageInfoProvider(admin));
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
