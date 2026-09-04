@@ -9,11 +9,14 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -21,8 +24,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -47,7 +53,7 @@ public class SelectStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(wrapper, metadataManager);
+    handler = new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
@@ -442,5 +448,224 @@ public class SelectStatementHandlerTest {
     // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).hasSize(3);
+  }
+
+  // ---- Collation-aware ordering and filtering ----
+
+  private static final String ANY_HOST = "localhost";
+
+  private DatabaseConfig collationConfig(String... keyValues) {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    for (int i = 0; i < keyValues.length; i += 2) {
+      props.setProperty(keyValues[i], keyValues[i + 1]);
+    }
+    return new DatabaseConfig(props);
+  }
+
+  private CollationComparator binaryCollation() {
+    return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY"));
+  }
+
+  private CollationComparator icuPrimaryCollation() {
+    return CollationComparator.from(
+        collationConfig(
+            DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]"));
+  }
+
+  private void stubPartition(ObjectStoragePartition partition) throws Exception {
+    String serialized = Serializer.serialize(partition);
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(serialized, "version1");
+    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+  }
+
+  private ObjectStoragePartition partitionWithClusteringTexts(String... clusteringTexts) {
+    ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
+    for (String text : clusteringTexts) {
+      Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+      Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, text);
+      addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
+    }
+    return partition;
+  }
+
+  private List<String> scanClusteringTexts(SelectStatementHandler h, Scan scan) throws Exception {
+    Scanner scanner = h.handle(scan);
+    return scanner.all().stream().map(r -> r.getText(ANY_NAME_2)).collect(Collectors.toList());
+  }
+
+  @Test
+  public void handle_ScanUnderBinaryAndIcuCollation_ShouldReturnDifferentOrders() throws Exception {
+    // Arrange
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    // Distinct first letters (case-insensitively): apple(a), Banana(b), cherry(c), Date(d).
+    stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
+
+    SelectStatementHandler binaryHandler =
+        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
+    SelectStatementHandler icuHandler =
+        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
+
+    // Act
+    List<String> binaryOrder = scanClusteringTexts(binaryHandler, prepareScan());
+    List<String> icuOrder = scanClusteringTexts(icuHandler, prepareScan());
+
+    // Assert
+    // BINARY orders by unsigned UTF-8 bytes: uppercase (0x42 'B', 0x44 'D') before lowercase
+    // (0x61 'a', 0x63 'c').
+    assertThat(binaryOrder).containsExactly("Banana", "Date", "apple", "cherry");
+    // ICU PRIMARY is case-insensitive: alphabetical regardless of case.
+    assertThat(icuOrder).containsExactly("apple", "Banana", "cherry", "Date");
+    assertThat(binaryOrder).isNotEqualTo(icuOrder);
+  }
+
+  @Test
+  public void handle_ScanUnderUnsetCollation_ShouldReturnBinaryOrder() throws Exception {
+    // Arrange (Covers AE3: an unset collation defaults to BINARY, i.e. UTF-8 byte order.)
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
+
+    SelectStatementHandler unsetHandler =
+        new SelectStatementHandler(
+            wrapper, metadataManager, CollationComparator.from(collationConfig()));
+
+    // Act
+    List<String> order = scanClusteringTexts(unsetHandler, prepareScan());
+
+    // Assert
+    // BINARY (UTF-8 byte) order == natural UTF-16 order for these ASCII values:
+    // uppercase before lowercase.
+    assertThat(order).containsExactly("Banana", "Date", "apple", "cherry");
+  }
+
+  @Test
+  public void handle_ScanWithDescOrderingUnderIcuCollation_ShouldReturnDescendingCollationOrder()
+      throws Exception {
+    // Arrange
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.DESC);
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
+
+    SelectStatementHandler icuHandler =
+        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
+
+    // Act
+    List<String> order = scanClusteringTexts(icuHandler, prepareScan());
+
+    // Assert: DESC clustering order honored under collation (reverse of ICU ascending order).
+    assertThat(order).containsExactly("Date", "cherry", "Banana", "apple");
+  }
+
+  @Test
+  public void handle_ScanWithMixedTextAndNonTextClusteringKeys_ShouldOrderCorrectly()
+      throws Exception {
+    // Arrange: clustering keys [name2 INT (asc), ck2 TEXT (asc)].
+    String textClusteringKeyName = "ck2";
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, textClusteringKeyName)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.ASC);
+    when(metadata.getClusteringOrder(textClusteringKeyName)).thenReturn(Scan.Ordering.Order.ASC);
+    when(metadata.getColumnDataType(ANY_NAME_2)).thenReturn(DataType.INT);
+    when(metadata.getColumnDataType(textClusteringKeyName)).thenReturn(DataType.TEXT);
+    when(metadata.getColumnDataType(ANY_NAME_1)).thenReturn(DataType.TEXT);
+    when(metadata.getColumnNames())
+        .thenReturn(
+            new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, textClusteringKeyName)));
+
+    ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
+    addMixedRecord(partition, "id-1-banana", 1, "banana");
+    addMixedRecord(partition, "id-1-Apple", 1, "Apple");
+    addMixedRecord(partition, "id-2-aaa", 2, "aaa");
+    stubPartition(partition);
+
+    SelectStatementHandler icuHandler =
+        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
+
+    // Act
+    Scanner scanner = icuHandler.handle(prepareScan());
+    List<Result> results = scanner.all();
+
+    // Assert: order by INT asc, then TEXT collation (case-insensitive):
+    // (1,Apple),(1,banana),(2,aaa)
+    assertThat(results.stream().map(r -> r.getInt(ANY_NAME_2)).collect(Collectors.toList()))
+        .containsExactly(1, 1, 2);
+    assertThat(
+            results.stream()
+                .map(r -> r.getText(textClusteringKeyName))
+                .collect(Collectors.toList()))
+        .containsExactly("Apple", "banana", "aaa");
+  }
+
+  private void addMixedRecord(
+      ObjectStoragePartition partition, String id, int intValue, String textValue) {
+    Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+    Map<String, Object> clusteringKey = new HashMap<>();
+    clusteringKey.put(ANY_NAME_2, intValue);
+    clusteringKey.put("ck2", textValue);
+    ObjectStorageRecord record =
+        ObjectStorageRecord.newBuilder()
+            .id(id)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .values(new HashMap<>())
+            .build();
+    partition.putRecord(id, record);
+  }
+
+  @Test
+  public void handle_ScanWithStartInclusiveUnderIcuCollation_ShouldIncludeCaseDifferingBoundary()
+      throws Exception {
+    // Arrange (Covers AE1 range-filter: 'Apple' included in '>= apple' under case-insensitive.)
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    stubPartition(partitionWithClusteringTexts("Apple", "banana"));
+
+    Scan scan = Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, "apple"), true).build();
+
+    SelectStatementHandler icuHandler =
+        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
+    SelectStatementHandler binaryHandler =
+        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
+
+    // Act
+    List<String> icuOrder = scanClusteringTexts(icuHandler, scan);
+    List<String> binaryOrder = scanClusteringTexts(binaryHandler, scan);
+
+    // Assert
+    // ICU PRIMARY: 'Apple' collates equal to 'apple', so it is in range for a start-inclusive '>='.
+    assertThat(icuOrder).containsExactly("Apple", "banana");
+    // BINARY: 'Apple' (0x41...) < 'apple' (0x61...), so it is excluded; only 'banana' remains.
+    assertThat(binaryOrder).containsExactly("banana");
+  }
+
+  @Test
+  public void handle_ScanWithEndInclusiveUnderIcuCollation_ShouldIncludeCaseDifferingBoundary()
+      throws Exception {
+    // Arrange
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    stubPartition(partitionWithClusteringTexts("apple", "Zebra"));
+
+    Scan scan = Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, "zebra"), true).build();
+
+    SelectStatementHandler icuHandler =
+        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
+    SelectStatementHandler binaryHandler =
+        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
+
+    // Act
+    List<String> icuOrder = scanClusteringTexts(icuHandler, scan);
+    List<String> binaryOrder = scanClusteringTexts(binaryHandler, scan);
+
+    // Assert
+    // ICU PRIMARY: ascending order is apple < Zebra; 'Zebra' collates equal to 'zebra' so it is in
+    // range for an end-inclusive '<='.
+    assertThat(icuOrder).containsExactly("apple", "Zebra");
+    // BINARY: 'Zebra' (0x5A...) sorts before 'apple' (0x61...); both are <= 'zebra' (0x7A...).
+    assertThat(binaryOrder).containsExactly("Zebra", "apple");
   }
 }
