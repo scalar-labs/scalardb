@@ -3,8 +3,10 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -89,8 +91,7 @@ public class CollationComparatorTest {
 
   @Test
   public void textEquals_WhenBinaryWithUnpairedSurrogates_ShouldMatchStringEquals() {
-    // Arrange: String#getBytes(UTF_8) replaces every unpaired surrogate with '?', so distinct
-    // ill-formed strings encode to the same bytes.
+    // Arrange: distinct ill-formed strings, which String#getBytes(UTF_8) would encode identically
     CollationComparator comparator =
         CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
 
@@ -99,6 +100,60 @@ public class CollationComparatorTest {
     assertThat(comparator.textEquals("\uD800", "?")).isFalse();
     assertThat(comparator.textEquals("a\uD800", "a?")).isFalse();
     assertThat(comparator.textEquals("\uD800", "\uD800")).isTrue();
+  }
+
+  @Test
+  public void textComparator_WhenBinaryWithUnpairedSurrogates_ShouldNotConflateDistinctStrings() {
+    // Arrange: distinct ill-formed strings, which String#getBytes(UTF_8) would encode identically
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
+    Comparator<String> textComparator = comparator.textComparator();
+
+    // Act Assert
+    assertThat(textComparator.compare("\uD800", "\uDC00")).isNegative();
+    assertThat(textComparator.compare("\uD800", "?")).isNotZero();
+    assertThat(textComparator.compare("a\uD800", "a?")).isNotZero();
+    assertThat(textComparator.compare("\uD800", "\uD800")).isZero();
+  }
+
+  @Test
+  public void textComparator_WhenBinaryWithWellFormedText_ShouldMatchUnsignedUtf8ByteOrder() {
+    // Arrange
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
+    Comparator<String> textComparator = comparator.textComparator();
+    Comparator<byte[]> byteComparator = UnsignedBytes.lexicographicalComparator();
+    List<String> corpus =
+        Arrays.asList(
+            "",
+            "A",
+            "a",
+            "apple",
+            "apple ",
+            "banana",
+            "ápple",
+            "é",
+            "\u07FF",
+            "\u0800",
+            "\uFFFF",
+            "\uD800\uDC00",
+            "😀",
+            "\uD800\uDC00a",
+            "a\uFFFF",
+            "a😀");
+
+    // Act Assert
+    for (String left : corpus) {
+      for (String right : corpus) {
+        assertThat(sign(textComparator.compare(left, right)))
+            .as("(%s, %s)", left, right)
+            .isEqualTo(
+                sign(
+                    byteComparator.compare(
+                        left.getBytes(StandardCharsets.UTF_8),
+                        right.getBytes(StandardCharsets.UTF_8))));
+      }
+    }
   }
 
   @Test
@@ -766,11 +821,10 @@ public class CollationComparatorTest {
   }
 
   @Test
-  public void columnAndKeyComparators_WhenBinary_ShouldMatchLegacyCompareToWithinBmp() {
-    // Arrange: BMP text only, because above the BMP unsigned UTF-8 byte order and
-    // String#compareTo diverge by design, and one shared column name, because columnComparator()
-    // compares text values only. The trailing INT column carries the same value on both sides so
-    // that collate-equal text yields fully equal keys, covering the tie.
+  public void columnAndKeyComparators_WhenBinary_ShouldMatchNaturalOrder() {
+    // Arrange: one shared column name, because columnComparator() compares text values only. The
+    // trailing INT column carries the same value on both sides so that equal text yields fully
+    // equal keys, covering the tie.
     CollationComparator comparator =
         CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
     Comparator<Column<?>> columnComparator = comparator.columnComparator();
@@ -786,7 +840,12 @@ public class CollationComparatorTest {
             TextColumn.of("c", "banana"),
             TextColumn.of("c", "ápple"),
             TextColumn.of("c", "é"),
-            TextColumn.of("c", "￿")); // U+FFFF, the last BMP code point
+            TextColumn.of("c", "\uFFFF"),
+            TextColumn.of("c", "\uD800\uDC00"), // U+10000, the first supplementary code point
+            TextColumn.of("c", "😀"),
+            TextColumn.of("c", "a\uD800"), // unpaired high surrogate
+            TextColumn.of("c", "a\uDC00"), // unpaired low surrogate
+            TextColumn.of("c", "a?"));
 
     // Act Assert
     for (TextColumn left : corpus) {

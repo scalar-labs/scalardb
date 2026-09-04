@@ -1,7 +1,6 @@
 package com.scalar.db.io;
 
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.UnsignedBytes;
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.text.RuleBasedCollator;
 import com.ibm.icu.util.IllformedLocaleException;
@@ -11,7 +10,6 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -84,7 +82,7 @@ public final class CollationComparator {
     Collation collation = config.getCollation();
     switch (collation) {
       case BINARY:
-        return new CollationComparator(binaryTextComparator(), true, null);
+        return new CollationComparator(TextColumn::compareByCodePoint, true, null);
       case ICU:
         {
           warnOnIcuVersionMismatch();
@@ -150,15 +148,6 @@ public final class CollationComparator {
    */
   static boolean loadedIcuVersionDiffersFrom(String version) {
     return !VersionInfo.getInstance(version).equals(VersionInfo.ICU_VERSION);
-  }
-
-  private static Comparator<String> binaryTextComparator() {
-    // Unsigned UTF-8 byte order diverges from Java's natural UTF-16 code-unit order above U+FFFF.
-    // Byte-order backends order text this way.
-    Comparator<byte[]> byteComparator = UnsignedBytes.lexicographicalComparator();
-    return (left, right) ->
-        byteComparator.compare(
-            left.getBytes(StandardCharsets.UTF_8), right.getBytes(StandardCharsets.UTF_8));
   }
 
   private static Collator buildFrozenIcuCollator(DatabaseConfig config) {
