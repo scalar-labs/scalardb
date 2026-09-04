@@ -21,6 +21,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -32,9 +33,11 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,7 +76,7 @@ class ParticipantCommitHandlerTest {
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     parallelExecutor = new ParallelExecutor(config);
-    mutationsGrouper = spy(new MutationsGrouper(storageInfoProvider));
+    mutationsGrouper = spy(new MutationsGrouper(storageInfoProvider, binaryCollation()));
     handler = newHandler(/* onePhaseCommitEnabled= */ false);
 
     when(storageInfoProvider.getStorageInfo(ANY_NAMESPACE_NAME))
@@ -124,15 +127,22 @@ class ParticipantCommitHandlerTest {
   }
 
   private Snapshot prepareSnapshot() {
-    return new Snapshot(ANY_ID, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(
+        ANY_ID, tableMetadataManager, new ParallelExecutor(config), binaryCollation());
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
     Put put1 = preparePut1();
     Put put2 = preparePut2();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
-    snapshot.putIntoWriteSet(new Snapshot.Key(put2), put2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put1, binaryCollation()), put1);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put2, binaryCollation()), put2);
     snapshot.putIntoGetSet(prepareGet(), Optional.empty());
     return snapshot;
   }
@@ -413,8 +423,8 @@ class ParticipantCommitHandlerTest {
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .build();
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
-    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.empty());
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, binaryCollation()), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete, binaryCollation()), Optional.empty());
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert

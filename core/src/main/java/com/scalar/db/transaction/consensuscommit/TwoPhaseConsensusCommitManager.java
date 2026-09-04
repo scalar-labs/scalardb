@@ -35,6 +35,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.util.ThrowableFunction;
@@ -65,6 +66,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final ConsensusCommitOperationChecker operationChecker;
+  private final CollationComparator collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
@@ -81,6 +83,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -88,7 +91,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(
@@ -96,7 +100,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(storageInfoProvider),
+            new MutationsGrouper(storageInfoProvider, collationComparator),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
@@ -106,7 +110,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -124,6 +129,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
+    collationComparator = CollationComparator.from(databaseConfig);
     crud =
         new CrudHandler(
             storage,
@@ -131,7 +137,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            collationComparator);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
         new CommitHandler(
@@ -139,7 +146,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(storageInfoProvider),
+            new MutationsGrouper(storageInfoProvider, collationComparator),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
@@ -149,7 +156,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
 
     ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
@@ -178,6 +186,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     this.recoveryExecutor = recoveryExecutor;
     this.crud = crud;
     this.commit = commit;
+    this.collationComparator = CollationComparator.from(databaseConfig);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -186,7 +195,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled());
+            config.isIncludeMetadataEnabled(),
+            databaseConfig.getCollation());
   }
 
   private void throwIfGroupCommitIsEnabled() {
@@ -235,7 +245,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   @VisibleForTesting
   TwoPhaseCommitTransaction begin(
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
-    Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, tableMetadataManager, parallelExecutor, collationComparator);
     TransactionContext context =
         new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation, false);
     TwoPhaseConsensusCommit transaction =
