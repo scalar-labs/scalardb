@@ -4,6 +4,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.CollationComparator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -66,11 +67,15 @@ public class ObjectStoragePartitionSnapshot {
     return ObjectStorageUtils.getObjectKey(namespaceName, tableName, partitionKey);
   }
 
-  public void applyPut(Put put, TableMetadata tableMetadata) throws NoMutationException {
-    partition.applyPut(put, tableMetadata);
+  public void applyPut(
+      Put put, TableMetadata tableMetadata, CollationComparator collationComparator)
+      throws NoMutationException {
+    partition.applyPut(put, tableMetadata, collationComparator);
   }
 
-  public void applyDelete(Delete delete, TableMetadata tableMetadata) throws NoMutationException {
-    partition.applyDelete(delete, tableMetadata);
+  public void applyDelete(
+      Delete delete, TableMetadata tableMetadata, CollationComparator collationComparator)
+      throws NoMutationException {
+    partition.applyDelete(delete, tableMetadata, collationComparator);
   }
 }

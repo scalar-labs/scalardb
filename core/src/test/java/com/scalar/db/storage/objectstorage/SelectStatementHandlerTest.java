@@ -9,11 +9,14 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -21,8 +24,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -47,7 +53,7 @@ public class SelectStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(wrapper, metadataManager);
+    handler = new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
@@ -442,5 +448,114 @@ public class SelectStatementHandlerTest {
     // Assert
     assertThat(scanner).isNotNull();
     assertThat(scanner.all()).hasSize(3);
+  }
+
+  private static final String ANY_HOST = "localhost";
+
+  private DatabaseConfig collationConfig(String... keyValues) {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    for (int i = 0; i < keyValues.length; i += 2) {
+      props.setProperty(keyValues[i], keyValues[i + 1]);
+    }
+    return new DatabaseConfig(props);
+  }
+
+  private CollationComparator binaryCollation() {
+    return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY"));
+  }
+
+  private void stubPartition(ObjectStoragePartition partition) throws Exception {
+    String serialized = Serializer.serialize(partition);
+    ObjectStorageWrapperResponse response =
+        new ObjectStorageWrapperResponse(serialized, "version1");
+    when(wrapper.get(anyString())).thenReturn(Optional.of(response));
+  }
+
+  private ObjectStoragePartition partitionWithClusteringTexts(String... clusteringTexts) {
+    ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
+    for (String text : clusteringTexts) {
+      Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+      Map<String, Object> clusteringKey = Collections.singletonMap(ANY_NAME_2, text);
+      addRecordToPartition(partition, partitionKey, clusteringKey, new HashMap<>());
+    }
+    return partition;
+  }
+
+  private List<String> scanClusteringTexts(SelectStatementHandler h, Scan scan) throws Exception {
+    Scanner scanner = h.handle(scan);
+    return scanner.all().stream().map(r -> r.getText(ANY_NAME_2)).collect(Collectors.toList());
+  }
+
+  @Test
+  public void handle_ScanUnderUnsetCollation_ShouldReturnBinaryOrder() throws Exception {
+    // Arrange
+    when(metadata.getColumnNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
+    stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
+
+    SelectStatementHandler unsetHandler =
+        new SelectStatementHandler(
+            wrapper, metadataManager, CollationComparator.from(collationConfig()));
+
+    // Act
+    List<String> order = scanClusteringTexts(unsetHandler, prepareScan());
+
+    // Assert
+    assertThat(order).containsExactly("Banana", "Date", "apple", "cherry");
+  }
+
+  @Test
+  public void handle_ScanWithIntThenTextClusteringKeys_ShouldOrderByIntThenText() throws Exception {
+    // Arrange
+    String textClusteringKeyName = "ck2";
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, textClusteringKeyName)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.ASC);
+    when(metadata.getClusteringOrder(textClusteringKeyName)).thenReturn(Scan.Ordering.Order.ASC);
+    when(metadata.getColumnDataType(ANY_NAME_2)).thenReturn(DataType.INT);
+    when(metadata.getColumnDataType(textClusteringKeyName)).thenReturn(DataType.TEXT);
+    when(metadata.getColumnDataType(ANY_NAME_1)).thenReturn(DataType.TEXT);
+    when(metadata.getColumnNames())
+        .thenReturn(
+            new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, textClusteringKeyName)));
+
+    ObjectStoragePartition partition = new ObjectStoragePartition(new HashMap<>());
+    addMixedRecord(partition, "id-1-banana", 1, "banana");
+    addMixedRecord(partition, "id-1-Apple", 1, "Apple");
+    addMixedRecord(partition, "id-2-aaa", 2, "aaa");
+    stubPartition(partition);
+
+    SelectStatementHandler handler =
+        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
+
+    // Act
+    Scanner scanner = handler.handle(prepareScan());
+    List<Result> results = scanner.all();
+
+    // Assert
+    assertThat(results.stream().map(r -> r.getInt(ANY_NAME_2)).collect(Collectors.toList()))
+        .containsExactly(1, 1, 2);
+    assertThat(
+            results.stream()
+                .map(r -> r.getText(textClusteringKeyName))
+                .collect(Collectors.toList()))
+        .containsExactly("Apple", "banana", "aaa");
+  }
+
+  private void addMixedRecord(
+      ObjectStoragePartition partition, String id, int intValue, String textValue) {
+    Map<String, Object> partitionKey = Collections.singletonMap(ANY_NAME_1, ANY_TEXT_1);
+    Map<String, Object> clusteringKey = new HashMap<>();
+    clusteringKey.put(ANY_NAME_2, intValue);
+    clusteringKey.put("ck2", textValue);
+    ObjectStorageRecord record =
+        ObjectStorageRecord.newBuilder()
+            .id(id)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .values(new HashMap<>())
+            .build();
+    partition.putRecord(id, record);
   }
 }

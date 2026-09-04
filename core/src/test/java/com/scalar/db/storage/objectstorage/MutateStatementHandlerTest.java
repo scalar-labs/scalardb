@@ -14,8 +14,10 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -24,6 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -57,7 +60,7 @@ public class MutateStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new MutateStatementHandler(wrapper, metadataManager);
+    handler = new MutateStatementHandler(wrapper, metadataManager, binaryCollation());
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
@@ -66,6 +69,12 @@ public class MutateStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(metadata.getColumnDataType(ANY_NAME_3)).thenReturn(DataType.INT);
     when(metadata.getColumnDataType(ANY_NAME_4)).thenReturn(DataType.INT);
+  }
+
+  private static CollationComparator binaryCollation() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    return CollationComparator.from(new DatabaseConfig(props));
   }
 
   private Put preparePut() {
