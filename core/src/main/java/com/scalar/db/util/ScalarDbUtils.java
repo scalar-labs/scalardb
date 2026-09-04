@@ -380,9 +380,9 @@ public final class ScalarDbUtils {
   // TODO Temporary code, will be changed in a later PR
   /**
    * Returns whether the given columns match any of the given conjunctions under {@link
-   * Collation#BINARY} semantics. Bridge for callers that do not hold a {@link CollationComparator}
-   * yet; every caller is expected to migrate to the three-argument form, at which point this
-   * overload is deleted.
+   * Collation#BINARY} semantics. This overload bridges callers without a {@link
+   * CollationComparator}, and it is deleted once every caller has migrated to the three-argument
+   * form.
    *
    * @param columns the columns of a record keyed by column name
    * @param conjunctions the conjunctions to evaluate
