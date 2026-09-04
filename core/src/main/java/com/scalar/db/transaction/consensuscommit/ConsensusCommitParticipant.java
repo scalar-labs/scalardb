@@ -119,7 +119,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             storage,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(storageInfoProvider, collationComparator),
+            new MutationsGrouper(storageInfoProvider),
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());

@@ -229,6 +229,7 @@ public class ConsensusCommitOperationChecker {
    */
   public void check(Mutation mutation) throws ExecutionException {
     throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(mutation);
+    throwIfKeyedMutationAtomicityUnitUnderIcuCollation(mutation);
 
     if (mutation instanceof Put) {
       check((Put) mutation);
@@ -300,6 +301,28 @@ public class ConsensusCommitOperationChecker {
   @VisibleForTesting
   ConditionChecker createConditionChecker(TableMetadata tableMetadata) {
     return new ConditionChecker(tableMetadata);
+  }
+
+  private void throwIfKeyedMutationAtomicityUnitUnderIcuCollation(Mutation mutation)
+      throws ExecutionException {
+    if (collation != Collation.ICU) {
+      return;
+    }
+    assert mutation.forNamespace().isPresent();
+    StorageInfo storageInfo = storageInfoProvider.getStorageInfo(mutation.forNamespace().get());
+    StorageInfo.MutationAtomicityUnit unit = storageInfo.getMutationAtomicityUnit();
+    if (unit == StorageInfo.MutationAtomicityUnit.RECORD
+        || unit == StorageInfo.MutationAtomicityUnit.PARTITION) {
+      // No storage with a record or partition atomicity supports ICU collation
+      // If we support such storage in the future, we need to make the MutationsGrouper collation
+      // aware
+      throw new UnsupportedOperationException(
+          "The ICU collation is not supported for a storage that applies mutations atomically only "
+              + "within a record or a partition. Storage: "
+              + storageInfo.getStorageName()
+              + "; Mutation atomicity unit: "
+              + unit);
+    }
   }
 
   private void throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(

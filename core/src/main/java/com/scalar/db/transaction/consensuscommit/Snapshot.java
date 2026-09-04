@@ -5,6 +5,8 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperation
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
 import com.scalar.db.api.ConditionalExpression;
@@ -1005,9 +1007,13 @@ public class Snapshot {
     private final com.scalar.db.io.Key partitionKey;
     private final Optional<com.scalar.db.io.Key> clusteringKey;
 
-    @Nullable private final List<Object> canonicalIdentity;
+    /**
+     * Memoized: a key is built for every result row of a scan, but only the ones actually looked up
+     * or compared need their canonical identity.
+     */
+    @Nullable private final Supplier<List<Object>> canonicalIdentity;
 
-    /** Non-null exactly when {@link #canonicalIdentity} is non-null. */
+    /** Non-null exactly when the collation defines a canonical text form. */
     @Nullable private final CollationComparator collationComparator;
 
     public Key(Get get, CollationComparator collationComparator) {
@@ -1069,8 +1075,10 @@ public class Snapshot {
       this.clusteringKey = clusteringKey;
       if (collationComparator.hasCanonicalTextForm()) {
         this.canonicalIdentity =
-            buildCanonicalIdentity(
-                namespace, table, partitionKey, clusteringKey, collationComparator);
+            Suppliers.memoize(
+                () ->
+                    buildCanonicalIdentity(
+                        namespace, table, partitionKey, clusteringKey, collationComparator));
         this.collationComparator = collationComparator;
       } else {
         this.canonicalIdentity = null;
@@ -1092,20 +1100,6 @@ public class Snapshot {
       // Keeps an absent clustering key distinct from a present-but-empty one.
       components.add(clusteringKey.isPresent());
       clusteringKey.ifPresent(key -> addCanonicalColumns(components, key, comparator));
-      return components;
-    }
-
-    /**
-     * Returns an identity object for a storage key: the key itself when identity is byte-exact
-     * ({@code BINARY}), or its canonical component list under {@code ICU}. Lets {@link
-     * MutationsGrouper} group by the same identity the snapshot maps use.
-     */
-    static Object canonicalKeyIdentityOf(com.scalar.db.io.Key key, CollationComparator comparator) {
-      if (!comparator.hasCanonicalTextForm()) {
-        return key;
-      }
-      List<Object> components = new ArrayList<>();
-      addCanonicalColumns(components, key, comparator);
       return components;
     }
 
@@ -1143,7 +1137,7 @@ public class Snapshot {
     @Override
     public int hashCode() {
       if (canonicalIdentity != null) {
-        return canonicalIdentity.hashCode();
+        return canonicalIdentity.get().hashCode();
       }
       return Objects.hash(namespace, table, partitionKey, clusteringKey);
     }
@@ -1162,7 +1156,7 @@ public class Snapshot {
         // equal would break the equals/hashCode contract.
         return this.canonicalIdentity != null
             && another.canonicalIdentity != null
-            && this.canonicalIdentity.equals(another.canonicalIdentity);
+            && this.canonicalIdentity.get().equals(another.canonicalIdentity.get());
       }
       return this.namespace.equals(another.namespace)
           && this.table.equals(another.table)
@@ -1184,6 +1178,11 @@ public class Snapshot {
                 o.clusteringKey.orElse(null),
                 Comparator.nullsFirst(keyComparator))
             .result();
+      }
+      if (this.collationComparator != null || o.collationComparator != null) {
+        // Consistent with equals, which never treats a mixed pair as equal: natural ordering would
+        // report the two as equal even though one collates and the other is byte-exact.
+        return this.collationComparator != null ? 1 : -1;
       }
       return ComparisonChain.start()
           .compare(this.namespace, o.namespace)

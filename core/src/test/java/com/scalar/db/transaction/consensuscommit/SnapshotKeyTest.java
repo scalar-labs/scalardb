@@ -8,7 +8,9 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
+import java.util.Arrays;
 import java.util.Properties;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.Test;
 
@@ -413,5 +415,18 @@ public class SnapshotKeyTest {
     // raw fields, so treating a mixed pair as equal would break the equals/hashCode contract.
     assertThat(icuKey).isNotEqualTo(binaryKey);
     assertThat(binaryKey).isNotEqualTo(icuKey);
+  }
+
+  @Test
+  public void compareTo_ByteIdenticalKeysBuiltWithDifferentComparators_ShouldNotReturnZero() {
+    // Arrange
+    Snapshot.Key icuKey = new Snapshot.Key(prepareGet(), icuPrimaryCollation());
+    Snapshot.Key binaryKey = new Snapshot.Key(prepareGet(), binaryCollation());
+
+    // Act Assert: ordering must agree with equals here, or one key would shadow the other in a
+    // sorted collection.
+    assertThat(icuKey.compareTo(binaryKey)).isPositive();
+    assertThat(binaryKey.compareTo(icuKey)).isNegative();
+    assertThat(new TreeSet<>(Arrays.asList(icuKey, binaryKey))).hasSize(2);
   }
 }

@@ -4,7 +4,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,15 +22,8 @@ public class MutationsGrouper {
 
   private final StorageInfoProvider storageInfoProvider;
 
-  // Under ICU, collate-equal partition/clustering keys target the same physical partition or
-  // record on an aligned backend, so they must group together for batch atomicity and
-  // one-phase-commit eligibility.
-  private final CollationComparator collationComparator;
-
-  public MutationsGrouper(
-      StorageInfoProvider storageInfoProvider, CollationComparator collationComparator) {
+  public MutationsGrouper(StorageInfoProvider storageInfoProvider) {
     this.storageInfoProvider = storageInfoProvider;
-    this.collationComparator = collationComparator;
   }
 
   public List<List<Mutation>> groupMutations(Collection<Mutation> mutations)
@@ -43,7 +35,7 @@ public class MutationsGrouper {
       assert mutation.forNamespace().isPresent();
       StorageInfo storageInfo = storageInfoProvider.getStorageInfo(mutation.forNamespace().get());
 
-      MutationGroup group = new MutationGroup(mutation, storageInfo, collationComparator);
+      MutationGroup group = new MutationGroup(mutation, storageInfo);
       List<List<Mutation>> batches = groupToBatches.computeIfAbsent(group, g -> new ArrayList<>());
       int maxCount = group.storageInfo.getMaxAtomicMutationsCount();
 
@@ -69,7 +61,7 @@ public class MutationsGrouper {
     assert firstMutation.forNamespace().isPresent();
     StorageInfo storageInfo =
         storageInfoProvider.getStorageInfo(firstMutation.forNamespace().get());
-    MutationGroup firstGroup = new MutationGroup(firstMutation, storageInfo, collationComparator);
+    MutationGroup firstGroup = new MutationGroup(firstMutation, storageInfo);
 
     int maxCount = firstGroup.storageInfo.getMaxAtomicMutationsCount();
     int mutationCount = 1;
@@ -79,8 +71,7 @@ public class MutationsGrouper {
       assert otherMutation.forNamespace().isPresent();
       StorageInfo otherStorageInfo =
           storageInfoProvider.getStorageInfo(otherMutation.forNamespace().get());
-      MutationGroup otherGroup =
-          new MutationGroup(otherMutation, otherStorageInfo, collationComparator);
+      MutationGroup otherGroup = new MutationGroup(otherMutation, otherStorageInfo);
 
       if (!firstGroup.equals(otherGroup)) {
         return false; // Found a mutation that does not belong to the first group
@@ -102,11 +93,7 @@ public class MutationsGrouper {
     @Nullable public final Key partitionKey;
     @Nullable public final Optional<Key> clusteringKey;
 
-    @Nullable private final Object partitionKeyIdentity;
-    @Nullable private final Optional<Object> clusteringKeyIdentity;
-
-    private MutationGroup(
-        Mutation mutation, StorageInfo storageInfo, CollationComparator collationComparator) {
+    private MutationGroup(Mutation mutation, StorageInfo storageInfo) {
       assert mutation.forNamespace().isPresent() && mutation.forTable().isPresent();
 
       switch (storageInfo.getMutationAtomicityUnit()) {
@@ -149,15 +136,6 @@ public class MutationsGrouper {
           throw new AssertionError(
               "Unknown mutation atomicity unit: " + storageInfo.getMutationAtomicityUnit());
       }
-      this.partitionKeyIdentity =
-          partitionKey == null
-              ? null
-              : Snapshot.Key.canonicalKeyIdentityOf(partitionKey, collationComparator);
-      this.clusteringKeyIdentity =
-          clusteringKey == null
-              ? null
-              : clusteringKey.map(
-                  key -> Snapshot.Key.canonicalKeyIdentityOf(key, collationComparator));
     }
 
     @Override
@@ -172,18 +150,14 @@ public class MutationsGrouper {
       return Objects.equals(storageInfo.getStorageName(), that.storageInfo.getStorageName())
           && Objects.equals(namespace, that.namespace)
           && Objects.equals(table, that.table)
-          && Objects.equals(partitionKeyIdentity, that.partitionKeyIdentity)
-          && Objects.equals(clusteringKeyIdentity, that.clusteringKeyIdentity);
+          && Objects.equals(partitionKey, that.partitionKey)
+          && Objects.equals(clusteringKey, that.clusteringKey);
     }
 
     @Override
     public int hashCode() {
       return Objects.hash(
-          storageInfo.getStorageName(),
-          namespace,
-          table,
-          partitionKeyIdentity,
-          clusteringKeyIdentity);
+          storageInfo.getStorageName(), namespace, table, partitionKey, clusteringKey);
     }
   }
 }

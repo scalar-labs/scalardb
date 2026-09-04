@@ -8,16 +8,13 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.common.StorageInfoProvider;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -33,26 +30,7 @@ public class MutationsGrouperTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    grouper = new MutationsGrouper(storageInfoProvider, binaryCollation());
-  }
-
-  private static DatabaseConfig collationConfig(String... keyValues) {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    for (int i = 0; i < keyValues.length; i += 2) {
-      props.setProperty(keyValues[i], keyValues[i + 1]);
-    }
-    return new DatabaseConfig(props);
-  }
-
-  private static CollationComparator binaryCollation() {
-    return CollationComparator.from(collationConfig());
-  }
-
-  private static CollationComparator caseInsensitiveIcuCollation() {
-    return CollationComparator.from(
-        collationConfig(
-            DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]"));
+    grouper = new MutationsGrouper(storageInfoProvider);
   }
 
   @Test
@@ -642,32 +620,7 @@ public class MutationsGrouperTest {
 
   @Test
   public void
-      groupMutations_WithPartitionAtomicityAndCollateEqualPartitionKeysUnderCaseInsensitiveIcu_ShouldGroupIntoOneBatch()
-          throws ExecutionException {
-    // Arrange
-    String namespace = "ns";
-    String table = "table";
-    StorageInfo storageInfo = mockStorageInfo(StorageInfo.MutationAtomicityUnit.PARTITION);
-    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
-    MutationsGrouper icuGrouper =
-        new MutationsGrouper(storageInfoProvider, caseInsensitiveIcuCollation());
-
-    Mutation mutation1 =
-        createMutation(namespace, table, Key.ofText("pk", "Apple"), Optional.empty());
-    Mutation mutation2 =
-        createMutation(namespace, table, Key.ofText("pk", "apple"), Optional.empty());
-
-    // Act
-    List<List<Mutation>> result = icuGrouper.groupMutations(Arrays.asList(mutation1, mutation2));
-
-    // Assert
-    assertThat(result).hasSize(1);
-    assertThat(result.get(0)).containsExactly(mutation1, mutation2);
-  }
-
-  @Test
-  public void
-      groupMutations_WithPartitionAtomicityAndCollateEqualPartitionKeysUnderBinary_ShouldGroupIntoTwoBatches()
+      groupMutations_WithPartitionAtomicityAndCaseDifferingPartitionKeys_ShouldGroupIntoTwoBatches()
           throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -691,33 +644,7 @@ public class MutationsGrouperTest {
 
   @Test
   public void
-      groupMutations_WithRecordAtomicityAndCollateEqualClusteringKeysUnderCaseInsensitiveIcu_ShouldGroupIntoOneBatch()
-          throws ExecutionException {
-    // Arrange
-    String namespace = "ns";
-    String table = "table";
-    StorageInfo storageInfo = mockStorageInfo(StorageInfo.MutationAtomicityUnit.RECORD);
-    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
-    MutationsGrouper icuGrouper =
-        new MutationsGrouper(storageInfoProvider, caseInsensitiveIcuCollation());
-
-    Key partitionKey = Key.ofText("pk", "p1");
-    Mutation mutation1 =
-        createMutation(namespace, table, partitionKey, Optional.of(Key.ofText("ck", "a")));
-    Mutation mutation2 =
-        createMutation(namespace, table, partitionKey, Optional.of(Key.ofText("ck", "A")));
-
-    // Act
-    List<List<Mutation>> result = icuGrouper.groupMutations(Arrays.asList(mutation1, mutation2));
-
-    // Assert
-    assertThat(result).hasSize(1);
-    assertThat(result.get(0)).containsExactly(mutation1, mutation2);
-  }
-
-  @Test
-  public void
-      groupMutations_WithRecordAtomicityAndCollateEqualClusteringKeysUnderBinary_ShouldGroupIntoTwoBatches()
+      groupMutations_WithRecordAtomicityAndCaseDifferingClusteringKeys_ShouldGroupIntoTwoBatches()
           throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -741,31 +668,7 @@ public class MutationsGrouperTest {
   }
 
   @Test
-  public void
-      canBeGroupedAltogether_WithCollateEqualPartitionKeysUnderCaseInsensitiveIcu_ShouldReturnTrue()
-          throws ExecutionException {
-    // Arrange
-    String namespace = "ns";
-    String table = "table";
-    StorageInfo storageInfo = mockStorageInfo(StorageInfo.MutationAtomicityUnit.PARTITION);
-    when(storageInfoProvider.getStorageInfo(namespace)).thenReturn(storageInfo);
-    MutationsGrouper icuGrouper =
-        new MutationsGrouper(storageInfoProvider, caseInsensitiveIcuCollation());
-
-    Mutation mutation1 =
-        createMutation(namespace, table, Key.ofText("pk", "Apple"), Optional.empty());
-    Mutation mutation2 =
-        createMutation(namespace, table, Key.ofText("pk", "apple"), Optional.empty());
-
-    // Act
-    boolean result = icuGrouper.canBeGroupedAltogether(Arrays.asList(mutation1, mutation2));
-
-    // Assert
-    assertThat(result).isTrue();
-  }
-
-  @Test
-  public void canBeGroupedAltogether_WithCollateEqualPartitionKeysUnderBinary_ShouldReturnFalse()
+  public void canBeGroupedAltogether_WithCaseDifferingPartitionKeys_ShouldReturnFalse()
       throws ExecutionException {
     // Arrange
     String namespace = "ns";

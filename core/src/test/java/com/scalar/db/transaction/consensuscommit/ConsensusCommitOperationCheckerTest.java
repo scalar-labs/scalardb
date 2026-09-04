@@ -943,6 +943,52 @@ public class ConsensusCommitOperationCheckerTest {
     assertThatCode(() -> checker.check(delete)).doesNotThrowAnyException();
   }
 
+  @ParameterizedTest
+  @EnumSource(
+      value = MutationAtomicityUnit.class,
+      names = {"RECORD", "PARTITION"})
+  public void
+      checkForMutation_WithKeyedMutationAtomicityUnitUnderIcuCollation_ShouldThrowIllegalArgumentException(
+          MutationAtomicityUnit unit) throws Exception {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .intValue(ANY_COL_1, 1)
+            .build();
+    when(storageInfoProvider.getStorageInfo("ns"))
+        .thenReturn(new StorageInfoImpl("storage", unit, Integer.MAX_VALUE, true));
+
+    // Act Assert
+    assertThatThrownBy(() -> icuChecker().check(put))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation")
+        .hasMessageContaining(unit.toString());
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = MutationAtomicityUnit.class,
+      names = {"TABLE", "NAMESPACE", "STORAGE"})
+  public void checkForMutation_WithWiderMutationAtomicityUnitUnderIcuCollation_ShouldNotThrow(
+      MutationAtomicityUnit unit) throws Exception {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .intValue(ANY_COL_1, 1)
+            .build();
+    when(storageInfoProvider.getStorageInfo("ns"))
+        .thenReturn(new StorageInfoImpl("storage", unit, Integer.MAX_VALUE, true));
+
+    // Act Assert
+    assertThatCode(() -> icuChecker().check(put)).doesNotThrowAnyException();
+  }
+
   private ConsensusCommitOperationChecker icuChecker() throws Exception {
     ConsensusCommitOperationChecker icuChecker =
         spy(

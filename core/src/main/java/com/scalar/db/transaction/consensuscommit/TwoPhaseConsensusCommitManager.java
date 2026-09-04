@@ -100,7 +100,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(storageInfoProvider, collationComparator),
+            new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
@@ -146,7 +146,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
-            new MutationsGrouper(storageInfoProvider, collationComparator),
+            new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
     VirtualTableInfoManager virtualTableInfoManager =
