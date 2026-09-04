@@ -3786,19 +3786,11 @@ public class CrudHandlerTest {
     assertThat(result.get()).isEqualTo(recoveredResult);
   }
 
-  // ---- Index-key match follows the collation (increment B, B-U4) ----
-  //
-  // resultMatchesIndexKey compares the queried index value against the storage column via
-  // ScalarDbUtils.columnEquals: collation-aware for TEXT under ICU, byte-exact under BINARY. On a
-  // CI-collated backend, storage returns the STORED spelling of the index value ('Apple') for a
-  // query typed as 'apple'; byte-exact comparison silently filtered such rows out.
-
   @Test
   void
       read_GetWithIndexAndRolledBackRecordWithCollateEqualIndexKeyUnderCaseInsensitiveIcu_ShouldReturnResult()
           throws Exception {
-    // Arrange: an ICU (case-insensitive) handler; the Get queries index value 'apple' but the
-    // storage row holds the stored spelling 'Apple'.
+    // Arrange
     handler =
         new CrudHandler(
             storage,
@@ -3845,8 +3837,7 @@ public class CrudHandlerTest {
     Optional<TransactionResult> result =
         handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
-    // Assert: 'Apple' collates-equal to the queried 'apple', so the row is ACCEPTED (no
-    // indexKeyFilteredOut path) and the result is returned and cached.
+    // Assert
     assertThat(result).isPresent();
     assertThat(result.get()).isEqualTo(recoveredResult);
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
@@ -3857,9 +3848,7 @@ public class CrudHandlerTest {
   void
       read_GetWithIndexAndRolledBackRecordWithCollateEqualIndexKeyUnderBinary_ShouldFilterOutResult()
           throws Exception {
-    // Arrange: same spellings under the default BINARY comparator ('apple' vs 'Apple' are
-    // byte-different), so the post-rollback index-key filter must still REJECT the row -- the
-    // current release behavior.
+    // Arrange
     Get getWithIndex =
         Get.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
@@ -3895,8 +3884,7 @@ public class CrudHandlerTest {
     Optional<TransactionResult> result =
         handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
 
-    // Assert: byte-exact identity rejects the case-differing row (indexKeyFilteredOut), and
-    // nothing may be cached as absent for this key because the record still exists.
+    // Assert
     assertThat(result).isEmpty();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());

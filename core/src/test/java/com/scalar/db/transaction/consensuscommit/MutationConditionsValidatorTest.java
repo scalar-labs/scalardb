@@ -217,9 +217,8 @@ public class MutationConditionsValidatorTest {
       boolean isConditionSatisfied) {
     // Act Assert
     Column<?> existingRecordColumn = mock(Column.class);
-    // EQ/NE are decided by ScalarDbUtils.columnEquals, which falls back to Column#equals for
-    // these non-TEXT mocks (Mockito cannot stub equals), so column equality is modeled by
-    // passing the SAME column instance; inequality by a distinct mock.
+    // Mockito cannot stub equals, so for these non-TEXT mocks column equality is modeled by
+    // passing the SAME column instance and inequality by a distinct mock.
     boolean modelsEqualColumns =
         (operator == Operator.EQ || operator == Operator.NE)
             && Integer.valueOf(0).equals(compareResult);
@@ -258,10 +257,8 @@ public class MutationConditionsValidatorTest {
         .thenReturn(
             ImmutableMap.of(
                 C1, existingRecordColumn1, C2, existingRecordColumn2, C3, existingRecordColumn3));
-    // The first condition operator is 'Equal'. EQ is decided by ScalarDbUtils.columnEquals, which
-    // falls back to Column#equals for these non-TEXT mocks (Mockito cannot stub equals), so a
-    // satisfied condition is modeled by passing the SAME column instance and an unsatisfied one by
-    // a distinct mock.
+    // The first condition operator is 'Equal'; a satisfied EQ is modeled by the SAME mock
+    // instance (see assertConditionIsSatisfied).
     ConditionalExpression conditionalExpression1 = mock(ConditionalExpression.class);
     Column<?> conditionalExpressionColumn1 =
         isCondition1Satisfied ? existingRecordColumn1 : mock(Column.class);
@@ -337,8 +334,6 @@ public class MutationConditionsValidatorTest {
     }
   }
 
-  // ---- Collation-aware range operators on TEXT ----
-
   private static CollationComparator caseInsensitiveIcuCollation() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
@@ -357,8 +352,7 @@ public class MutationConditionsValidatorTest {
   @Test
   public void
       validateConditionIsSatisfied_WithBinaryCollationAndEqOnText_ShouldStayByteExactAndThrow() {
-    // Arrange: a present BINARY collation keeps EQ byte-exact: existing "Apple" != "apple", so the
-    // putIf condition is unsatisfied.
+    // Arrange
     MutationConditionsValidator collationValidator =
         new MutationConditionsValidator(binaryCollation());
     prepareExistingTextColumn("Apple");
@@ -385,9 +379,7 @@ public class MutationConditionsValidatorTest {
   @Test
   public void
       validateConditionIsSatisfied_WithCaseInsensitiveCollationAndGtOnText_ShouldNotThrowWhereNaturalWould() {
-    // Arrange: existing TEXT value "B", condition col > "a". Under natural UTF-16/byte order
-    // 'B'(0x42) < 'a'(0x61), so under a case-insensitive ICU collation ('b' > 'a') the condition
-    // is satisfied.
+    // Arrange: 'B'(0x42) sorts before 'a'(0x61) in byte order but after it at PRIMARY strength.
     MutationConditionsValidator collationValidator =
         new MutationConditionsValidator(caseInsensitiveIcuCollation());
     prepareExistingTextColumn("B");
@@ -403,8 +395,7 @@ public class MutationConditionsValidatorTest {
   @Test
   public void
       validateConditionIsSatisfied_WithBinaryCollationAndGtOnText_ShouldThrowUnsatisfiedConditionException() {
-    // Arrange: a BINARY-collation validator keeps byte order: 'B'(0x42) < 'a'(0x61), so
-    // col > "a" is unsatisfied.
+    // Arrange
     MutationConditionsValidator naturalValidator =
         new MutationConditionsValidator(binaryCollation());
     prepareExistingTextColumn("B");
@@ -416,8 +407,6 @@ public class MutationConditionsValidatorTest {
         .isInstanceOf(UnsatisfiedConditionException.class);
   }
 
-  // ---- Collation-aware EQ/NE on TEXT (equality follows the collation) ----
-
   private Delete deleteIfExpression(ConditionalExpression expression) {
     Delete delete = mock(Delete.class);
     when(delete.getCondition())
@@ -428,8 +417,7 @@ public class MutationConditionsValidatorTest {
   @Test
   public void
       validateConditionIsSatisfied_WithCaseInsensitiveCollationAndEqOnText_ShouldNotThrowWhereByteExactWould() {
-    // Arrange: existing TEXT value "Apple", condition col = "apple". Under a case-insensitive ICU
-    // collation these collate-equal, so the condition is satisfied.
+    // Arrange
     MutationConditionsValidator collationValidator =
         new MutationConditionsValidator(caseInsensitiveIcuCollation());
     prepareExistingTextColumn("Apple");
@@ -445,8 +433,7 @@ public class MutationConditionsValidatorTest {
   @Test
   public void
       validateConditionIsSatisfied_WithBinaryCollationAndEqOnText_ShouldThrowUnsatisfiedConditionException() {
-    // Arrange: a BINARY-collation validator keeps EQ byte-exact: existing "Apple" is not
-    // equal to "apple".
+    // Arrange
     MutationConditionsValidator naturalValidator =
         new MutationConditionsValidator(binaryCollation());
     prepareExistingTextColumn("Apple");
@@ -461,8 +448,7 @@ public class MutationConditionsValidatorTest {
   @Test
   public void
       validateConditionIsSatisfied_WithCaseInsensitiveCollationAndNeOnText_ShouldBehaveAsNegationOfEq() {
-    // Arrange: existing TEXT value "Apple", condition col != "apple". Under a case-insensitive ICU
-    // collation these collate-equal, so the NE guard is unsatisfied.
+    // Arrange
     MutationConditionsValidator collationValidator =
         new MutationConditionsValidator(caseInsensitiveIcuCollation());
     prepareExistingTextColumn("Apple");
@@ -478,7 +464,7 @@ public class MutationConditionsValidatorTest {
 
   @Test
   public void validateConditionIsSatisfied_WithCollationAndEqOnNonText_ShouldStayByteExact() {
-    // Arrange: non-TEXT EQ is unaffected by the collation. existing INT 5 = 5 is satisfied.
+    // Arrange
     MutationConditionsValidator collationValidator =
         new MutationConditionsValidator(caseInsensitiveIcuCollation());
     when(existingRecord.getColumns())
@@ -502,8 +488,7 @@ public class MutationConditionsValidatorTest {
   @Test
   public void
       validateConditionIsSatisfied_WithCollationAndEqOnNullExistingText_ShouldStayByteExactWithoutNpe() {
-    // Arrange: a null existing TEXT value with a `= 'apple'` condition stays byte-exact
-    // (unsatisfied) and must not throw NPE under a collation.
+    // Arrange
     MutationConditionsValidator collationValidator =
         new MutationConditionsValidator(caseInsensitiveIcuCollation());
     when(existingRecord.getColumns()).thenReturn(ImmutableMap.of(C1, TextColumn.ofNull(C1)));

@@ -23,9 +23,9 @@ public class MutationsGrouper {
 
   private final StorageInfoProvider storageInfoProvider;
 
-  // Grouping identity follows the collation, like the snapshot maps: under ICU, collate-equal
-  // partition/clustering keys target the same physical partition/record on an aligned backend and
-  // must group together (batch atomicity, one-phase-commit eligibility).
+  // Under ICU, collate-equal partition/clustering keys target the same physical partition or
+  // record on an aligned backend, so they must group together for batch atomicity and
+  // one-phase-commit eligibility.
   private final CollationComparator collationComparator;
 
   public MutationsGrouper(
@@ -102,8 +102,6 @@ public class MutationsGrouper {
     @Nullable public final Key partitionKey;
     @Nullable public final Optional<Key> clusteringKey;
 
-    // Collation-aware identities of the keys above (see Snapshot.Key#canonicalKeyIdentityOf):
-    // the Key itself under BINARY, the canonical component list under ICU.
     @Nullable private final Object partitionKeyIdentity;
     @Nullable private final Optional<Object> clusteringKeyIdentity;
 

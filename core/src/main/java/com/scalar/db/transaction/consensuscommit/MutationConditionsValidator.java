@@ -28,13 +28,6 @@ public class MutationConditionsValidator {
 
   private final CollationComparator collationComparator;
 
-  /**
-   * Creates a validator that uses the given collation for range operators (GT/GTE/LT/LTE) and for
-   * EQ/NE on TEXT columns. Collation equality is byte-exact for BINARY and collation-aware for ICU.
-   * Identity operators (IS_NULL/IS_NOT_NULL) are always unchanged.
-   *
-   * @param collationComparator the collation comparator
-   */
   public MutationConditionsValidator(CollationComparator collationComparator) {
     this.collationComparator = collationComparator;
   }
@@ -168,10 +161,6 @@ public class MutationConditionsValidator {
     }
   }
 
-  /**
-   * Decides {@code EQ} (and, negated, {@code NE}) for a conditional mutation, following the
-   * collation (see {@link ScalarDbUtils#columnEquals}).
-   */
   private boolean equalsForCondition(Column<?> existing, Column<?> conditionValue) {
     return ScalarDbUtils.columnEquals(existing, conditionValue, collationComparator);
   }

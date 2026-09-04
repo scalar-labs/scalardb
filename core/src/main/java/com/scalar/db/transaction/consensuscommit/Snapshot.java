@@ -61,13 +61,7 @@ public class Snapshot {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
-  // The collation comparator governing clustering-key range-membership ordering in the
-  // scan-after-write validation, and — under ICU — the canonical key identity used by the
-  // snapshot maps (see Key): collate-equal keys are one logical key. Under BINARY (the default)
-  // key identity and map keying stay byte-exact.
   private final CollationComparator collationComparator;
-
-  // The clustering-key comparator derived from the collation comparator.
   private final Comparator<com.scalar.db.io.Key> clusteringKeyComparator;
 
   // The read set stores information about the records that are read in this transaction. This is
@@ -247,7 +241,6 @@ public class Snapshot {
     return new ArrayList<>(getSet.entrySet());
   }
 
-  /** Returns the comparator governing this snapshot's ordering and key identity. */
   CollationComparator getCollationComparator() {
     return collationComparator;
   }
@@ -528,11 +521,8 @@ public class Snapshot {
         return true;
       }
 
-      // The range-membership check is a pure ordering test using the collation-derived
-      // clustering-key comparator (BINARY byte order by default, ICU when configured). Using
-      // ordering only (>= / <= / > / <) rather than mixing byte-equals with compareTo means a key
-      // that collates-equal to an inclusive boundary is judged in-range. This is ordering only; it
-      // keys no map and collapses no identity.
+      // Range membership is a pure ordering test: an inclusive boundary matches a written key
+      // that collates equal to it, even when the two are not byte-identical.
       if (isStartGiven && isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
@@ -563,10 +553,8 @@ public class Snapshot {
   }
 
   /**
-   * Key equality following the collation: byte-exact under {@code BINARY} (the comparator's
-   * ordering would conflate distinct ill-formed strings via UTF-8 replacement bytes, so equality
-   * must not go through it), collation-aware under {@code ICU} (collate-equal partition keys are
-   * the same physical partition on an aligned backend).
+   * Equality must not route through the comparator under {@code BINARY}: its UTF-8 ordering maps
+   * distinct ill-formed strings onto the same replacement bytes and would conflate them.
    */
   private boolean partitionKeyEquals(com.scalar.db.io.Key key, com.scalar.db.io.Key another) {
     if (collationComparator.hasCanonicalTextForm()) {
@@ -993,16 +981,14 @@ public class Snapshot {
   }
 
   /**
-   * The transaction layer's logical record key. Identity follows the configured collation: under
-   * {@code ICU}, TEXT key columns are identified by their canonical collation form, so
-   * collate-equal keys (request-typed vs storage-returned spellings of one physical row) are ONE
-   * logical key across the snapshot maps, joins, and guards — matching what a collation-aligned
-   * backend enforces. Under {@code BINARY} (the default) identity stays byte-exact. The visible
-   * fields and {@link #toString()} always keep the original bytes.
+   * The transaction layer's logical record key. Under {@code ICU}, TEXT key columns are identified
+   * by their canonical collation form, so the request-typed and storage-returned spellings of one
+   * physical row are one logical key. The visible fields and {@link #toString()} keep the original
+   * bytes.
    *
    * <p>All keys placed in one collection must be built with the same {@link CollationComparator}
-   * (production wiring guarantees this: one comparator per transaction manager). A canonical
-   * (ICU-built) key and a byte-exact (BINARY-built) key are never equal to each other.
+   * (one comparator per transaction manager); a canonical key and a byte-exact key are never equal
+   * to each other.
    */
   @Immutable
   public static final class Key implements Comparable<Key> {
@@ -1018,10 +1004,9 @@ public class Snapshot {
     private final com.scalar.db.io.Key partitionKey;
     private final Optional<com.scalar.db.io.Key> clusteringKey;
 
-    /** Collation-canonical identity components; null when identity is byte-exact (BINARY). */
     @Nullable private final List<Object> canonicalIdentity;
 
-    /** Non-null exactly when {@link #canonicalIdentity} is non-null; used by {@link #compareTo}. */
+    /** Non-null exactly when {@link #canonicalIdentity} is non-null. */
     @Nullable private final CollationComparator collationComparator;
 
     public Key(Get get, CollationComparator collationComparator) {
@@ -1103,18 +1088,16 @@ public class Snapshot {
       components.add(table);
       addCanonicalColumns(components, partitionKey, comparator);
       components.add(CLUSTERING_KEY_BOUNDARY);
-      // Presence marker: keeps an absent clustering key distinct from a present-but-empty one,
-      // consistent with compareTo and MutationsGrouper's identity.
+      // Keeps an absent clustering key distinct from a present-but-empty one.
       components.add(clusteringKey.isPresent());
       clusteringKey.ifPresent(key -> addCanonicalColumns(components, key, comparator));
       return components;
     }
 
     /**
-     * Returns an identity object for the given storage key under the collation: the key itself when
-     * identity is byte-exact ({@code BINARY}), or its canonical component list under {@code ICU} so
-     * collate-equal keys share one identity. Used by {@link MutationsGrouper} so mutation grouping
-     * follows the same identity as the snapshot maps.
+     * Returns an identity object for a storage key: the key itself when identity is byte-exact
+     * ({@code BINARY}), or its canonical component list under {@code ICU}. Lets {@link
+     * MutationsGrouper} group by the same identity the snapshot maps use.
      */
     static Object canonicalKeyIdentityOf(com.scalar.db.io.Key key, CollationComparator comparator) {
       if (!comparator.hasCanonicalTextForm()) {
@@ -1129,8 +1112,7 @@ public class Snapshot {
         List<Object> components, com.scalar.db.io.Key key, CollationComparator comparator) {
       for (Column<?> column : key.getColumns()) {
         if (column.getDataType() == DataType.TEXT && !column.hasNullValue()) {
-          // ByteBuffer gives the canonical bytes content-based equals/hashCode; the column name
-          // stays part of the identity via the entry.
+          // ByteBuffer gives the canonical bytes content-based equals/hashCode.
           components.add(
               new AbstractMap.SimpleImmutableEntry<>(
                   column.getName(),
@@ -1175,8 +1157,8 @@ public class Snapshot {
       }
       Key another = (Key) o;
       if (this.canonicalIdentity != null || another.canonicalIdentity != null) {
-        // Canonical and byte-exact keys are different identity universes: a mixed pair is never
-        // equal (keeps equals consistent with hashCode; production never mixes comparators).
+        // A mixed pair is never equal: the two hash from different sources, so treating them as
+        // equal would break the equals/hashCode contract.
         return this.canonicalIdentity != null
             && another.canonicalIdentity != null
             && this.canonicalIdentity.equals(another.canonicalIdentity);
@@ -1190,7 +1172,7 @@ public class Snapshot {
     @Override
     public int compareTo(Key o) {
       if (this.collationComparator != null && o.collationComparator != null) {
-        // Equals-consistent with the canonical identity: collate-equal keys compare as 0.
+        // Consistent with equals: collate-equal keys compare as 0.
         Comparator<com.scalar.db.io.Key> keyComparator = this.collationComparator.keyComparator();
         return ComparisonChain.start()
             .compare(this.namespace, o.namespace)
