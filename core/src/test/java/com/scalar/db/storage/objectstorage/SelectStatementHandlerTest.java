@@ -450,8 +450,6 @@ public class SelectStatementHandlerTest {
     assertThat(scanner.all()).hasSize(3);
   }
 
-  // ---- Collation-aware ordering and filtering ----
-
   private static final String ANY_HOST = "localhost";
 
   private DatabaseConfig collationConfig(String... keyValues) {
@@ -500,7 +498,6 @@ public class SelectStatementHandlerTest {
     // Arrange
     when(metadata.getColumnNames())
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
-    // Distinct first letters (case-insensitively): apple(a), Banana(b), cherry(c), Date(d).
     stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
 
     SelectStatementHandler binaryHandler =
@@ -513,17 +510,14 @@ public class SelectStatementHandlerTest {
     List<String> icuOrder = scanClusteringTexts(icuHandler, prepareScan());
 
     // Assert
-    // BINARY orders by unsigned UTF-8 bytes: uppercase (0x42 'B', 0x44 'D') before lowercase
-    // (0x61 'a', 0x63 'c').
     assertThat(binaryOrder).containsExactly("Banana", "Date", "apple", "cherry");
-    // ICU PRIMARY is case-insensitive: alphabetical regardless of case.
     assertThat(icuOrder).containsExactly("apple", "Banana", "cherry", "Date");
     assertThat(binaryOrder).isNotEqualTo(icuOrder);
   }
 
   @Test
   public void handle_ScanUnderUnsetCollation_ShouldReturnBinaryOrder() throws Exception {
-    // Arrange (Covers AE3: an unset collation defaults to BINARY, i.e. UTF-8 byte order.)
+    // Arrange
     when(metadata.getColumnNames())
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
     stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
@@ -536,8 +530,6 @@ public class SelectStatementHandlerTest {
     List<String> order = scanClusteringTexts(unsetHandler, prepareScan());
 
     // Assert
-    // BINARY (UTF-8 byte) order == natural UTF-16 order for these ASCII values:
-    // uppercase before lowercase.
     assertThat(order).containsExactly("Banana", "Date", "apple", "cherry");
   }
 
@@ -556,14 +548,14 @@ public class SelectStatementHandlerTest {
     // Act
     List<String> order = scanClusteringTexts(icuHandler, prepareScan());
 
-    // Assert: DESC clustering order honored under collation (reverse of ICU ascending order).
+    // Assert
     assertThat(order).containsExactly("Date", "cherry", "Banana", "apple");
   }
 
   @Test
-  public void handle_ScanWithMixedTextAndNonTextClusteringKeys_ShouldOrderCorrectly()
+  public void handle_ScanWithIntThenTextClusteringKeys_ShouldOrderByIntThenCollatedText()
       throws Exception {
-    // Arrange: clustering keys [name2 INT (asc), ck2 TEXT (asc)].
+    // Arrange
     String textClusteringKeyName = "ck2";
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, textClusteringKeyName)));
@@ -589,8 +581,7 @@ public class SelectStatementHandlerTest {
     Scanner scanner = icuHandler.handle(prepareScan());
     List<Result> results = scanner.all();
 
-    // Assert: order by INT asc, then TEXT collation (case-insensitive):
-    // (1,Apple),(1,banana),(2,aaa)
+    // Assert
     assertThat(results.stream().map(r -> r.getInt(ANY_NAME_2)).collect(Collectors.toList()))
         .containsExactly(1, 1, 2);
     assertThat(
@@ -619,7 +610,7 @@ public class SelectStatementHandlerTest {
   @Test
   public void handle_ScanWithStartInclusiveUnderIcuCollation_ShouldIncludeCaseDifferingBoundary()
       throws Exception {
-    // Arrange (Covers AE1 range-filter: 'Apple' included in '>= apple' under case-insensitive.)
+    // Arrange
     when(metadata.getColumnNames())
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
     stubPartition(partitionWithClusteringTexts("Apple", "banana"));
@@ -636,9 +627,7 @@ public class SelectStatementHandlerTest {
     List<String> binaryOrder = scanClusteringTexts(binaryHandler, scan);
 
     // Assert
-    // ICU PRIMARY: 'Apple' collates equal to 'apple', so it is in range for a start-inclusive '>='.
     assertThat(icuOrder).containsExactly("Apple", "banana");
-    // BINARY: 'Apple' (0x41...) < 'apple' (0x61...), so it is excluded; only 'banana' remains.
     assertThat(binaryOrder).containsExactly("banana");
   }
 
@@ -662,10 +651,7 @@ public class SelectStatementHandlerTest {
     List<String> binaryOrder = scanClusteringTexts(binaryHandler, scan);
 
     // Assert
-    // ICU PRIMARY: ascending order is apple < Zebra; 'Zebra' collates equal to 'zebra' so it is in
-    // range for an end-inclusive '<='.
     assertThat(icuOrder).containsExactly("apple", "Zebra");
-    // BINARY: 'Zebra' (0x5A...) sorts before 'apple' (0x61...); both are <= 'zebra' (0x7A...).
     assertThat(binaryOrder).containsExactly("Zebra", "apple");
   }
 }

@@ -130,9 +130,7 @@ public class FilterableScannerTest {
 
   @Test
   public void one_WithCollationComparator_ShouldFilterRangeByCollation() throws ExecutionException {
-    // Arrange: a case-insensitive ICU PRIMARY collation. The scan filters `col >= 'apple'` on a
-    // TEXT column. 'Apple' is excluded by byte order but included by the case-insensitive
-    // collation.
+    // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
@@ -156,7 +154,7 @@ public class FilterableScannerTest {
                 Conjunction.of(
                     ConditionBuilder.column("col").isGreaterThanOrEqualToText("apple"))));
 
-    // Act: with the collation, both rows pass; under BINARY, 'Apple' would be filtered out.
+    // Act
     FilterableScanner withCollation = new FilterableScanner(textScan, textScanner, comparator);
 
     // Assert
@@ -166,8 +164,7 @@ public class FilterableScannerTest {
   @Test
   public void one_WithBinaryCollationComparator_ShouldFilterRangeByByteOrder()
       throws ExecutionException {
-    // Arrange: BINARY collation. 'Apple' (0x41) < 'apple' (0x61) so it is excluded; 'zebra'
-    // passes.
+    // Arrange
     Scanner textScanner = mock(Scanner.class);
     Result apple = mock(Result.class);
     Result zebra = mock(Result.class);

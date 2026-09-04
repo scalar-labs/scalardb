@@ -762,8 +762,6 @@ public class ObjectStoragePartitionTest {
     assertThat(result).isFalse();
   }
 
-  // ---- Collation-aware range operators on TEXT ----
-
   private static CollationComparator caseInsensitiveIcuCollation() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
@@ -791,8 +789,7 @@ public class ObjectStoragePartitionTest {
   @Test
   public void
       areConditionsMet_WithCaseInsensitiveCollationAndGtConditionOnText_ShouldReturnTrueWhereNaturalWouldReturnFalse() {
-    // Arrange: actual TEXT "B", condition col > "a". Natural UTF-16/byte order has 'B'(0x42) <
-    // 'a'(0x61), so under a case-insensitive ICU collation ('b' > 'a') the condition is met.
+    // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("B");
@@ -809,8 +806,7 @@ public class ObjectStoragePartitionTest {
 
   @Test
   public void areConditionsMet_WithBinaryCollationAndGtConditionOnText_ShouldReturnFalse() {
-    // Arrange: the BINARY collation keeps byte order: 'B'(0x42) < 'a'(0x61), so col > "a" is not
-    // met.
+    // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("B");
@@ -827,7 +823,7 @@ public class ObjectStoragePartitionTest {
 
   @Test
   public void areConditionsMet_WithBinaryCollationAndEqConditionOnText_ShouldStayByteExact() {
-    // Arrange: BINARY collation equality is byte-exact: "B" != "b".
+    // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("B");
@@ -842,13 +838,10 @@ public class ObjectStoragePartitionTest {
     assertThat(result).isFalse();
   }
 
-  // ---- Collation-aware EQ/NE on TEXT (equality follows the collation) ----
-
   @Test
   public void
       areConditionsMet_WithCaseInsensitiveCollationAndEqConditionOnText_ShouldReturnTrueWhereByteExactWould() {
-    // Arrange: actual TEXT "Apple", condition col = "apple". Under a case-insensitive ICU collation
-    // "Apple" collate-equals "apple" so the condition is met.
+    // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
@@ -866,7 +859,7 @@ public class ObjectStoragePartitionTest {
   @Test
   public void
       areConditionsMet_WithBinaryCollationAndCaseDifferingEqConditionOnText_ShouldStayByteExact() {
-    // Arrange: the BINARY collation keeps byte-exact equality: "Apple" != "apple".
+    // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
@@ -884,9 +877,7 @@ public class ObjectStoragePartitionTest {
   @Test
   public void
       areConditionsMet_WithCaseInsensitiveCollationAndNeConditionOnText_ShouldBehaveAsNegationOfEq() {
-    // Arrange: actual TEXT "Apple", condition col != "apple". Under a case-insensitive ICU
-    // collation
-    // "Apple" collate-equals "apple", so the NE condition is not met (exact negation of EQ).
+    // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
@@ -904,7 +895,7 @@ public class ObjectStoragePartitionTest {
 
   @Test
   public void areConditionsMet_WithCollationAndEqConditionOnNonText_ShouldStayNatural() {
-    // Arrange: non-TEXT (INT) EQ is unaffected by the collation; different values do not match.
+    // Arrange
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createRecordForConditionTest(INT_VALUE_1);
     ConditionalExpression condition =
@@ -921,7 +912,7 @@ public class ObjectStoragePartitionTest {
 
   @Test
   public void areConditionsMet_WithCollationAndEqConditionAndNullTextValue_ShouldReturnFalse() {
-    // Arrange: null actual TEXT value with EQ stays byte-exact (no NPE) and returns false.
+    // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
     ObjectStorageRecord record = createTextRecordForConditionTest(null);

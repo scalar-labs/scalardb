@@ -396,18 +396,8 @@ public final class ScalarDbUtils {
   /**
    * Returns whether the given columns match any of the given conjunctions.
    *
-   * <p>The range operators ({@code GT}, {@code GTE}, {@code LT}, {@code LTE}) and the equality
-   * operators ({@code EQ}, {@code NE}) on non-null {@code TEXT} values are evaluated with the
-   * configured collation. For {@link com.scalar.db.io.Collation#BINARY} collation equality is
-   * byte-exact; for {@link com.scalar.db.io.Collation#ICU} it follows the collation
-   * (case-/accent-insensitive per strength/rules). A {@code null} text value on either side keeps
-   * byte-exact equality. All remaining operators ({@code IS_NULL}, {@code IS_NOT_NULL}, {@code
-   * LIKE}, {@code NOT_LIKE}) stay byte-exact.
-   *
-   * @param columns the columns of a record keyed by column name
-   * @param conjunctions the conjunctions to evaluate
-   * @param collationComparator the collation comparator
-   * @return {@code true} if the columns match any of the conjunctions
+   * <p>Range and equality operators on TEXT columns compare through the given comparator. {@code
+   * LIKE} and {@code NOT_LIKE} always match on exact characters, whatever the collation.
    */
   public static boolean columnsMatchAnyOfConjunctions(
       Map<String, Column<?>> columns,
@@ -466,9 +456,8 @@ public final class ScalarDbUtils {
   }
 
   /**
-   * Returns whether the two columns are equal under the configured collation: TEXT columns with two
-   * non-null values use the collation's equality (byte-exact for {@code BINARY}, collation-aware
-   * for {@code ICU}); everything else — non-TEXT columns and null text — stays byte-exact via
+   * Returns whether the two columns are equal under the given collation. Only TEXT columns holding
+   * two non-null values use the collation's equality; non-TEXT columns and null text compare with
    * {@link Column#equals}.
    *
    * @param column a column
@@ -481,8 +470,6 @@ public final class ScalarDbUtils {
     if (column.getDataType() == DataType.TEXT && other.getDataType() == DataType.TEXT) {
       String a = column.getTextValue();
       String b = other.getTextValue();
-      // Collation equality applies only to two non-null text values; null-handling stays
-      // byte-exact.
       if (a != null && b != null) {
         return collationComparator.textEquals(a, b) && column.getName().equals(other.getName());
       }

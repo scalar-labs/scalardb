@@ -704,7 +704,7 @@ public class ScalarDbUtilsTest {
   @Test
   public void
       columnsMatchAnyOfConjunctions_EqAndNeOnTextColumnWithBinaryCollation_ShouldStayByteExact() {
-    // Arrange: a present BINARY comparator keeps EQ/NE byte-exact at this site: 'Apple' != 'apple'.
+    // Arrange
     Map<String, Column<?>> columns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
     Set<Conjunction> eqConjunctions =
         ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
@@ -733,11 +733,8 @@ public class ScalarDbUtilsTest {
     CollationComparator caseInsensitive = icuPrimaryComparator();
 
     // Act
-    // Under a case-insensitive ICU PRIMARY collation, equality follows the collation: 'Apple' =
-    // 'apple' (AE1). There is no separate deterministic mode.
     boolean matchedWithCollation =
         ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, caseInsensitive);
-    // BINARY comparator: byte-exact, so 'Apple' != 'apple'.
     boolean matchedWithBinaryCollation =
         ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, eqConjunctions, binaryComparator());
 
@@ -756,11 +753,8 @@ public class ScalarDbUtilsTest {
     CollationComparator caseInsensitive = icuPrimaryComparator();
 
     // Act
-    // NE is the exact negation of the collation-aware EQ: 'Apple' = 'apple', so 'Apple' != 'apple'
-    // is false.
     boolean neMatchedWithCollation =
         ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, caseInsensitive);
-    // BINARY comparator: byte-exact, so 'Apple' != 'apple' is true.
     boolean neMatchedWithBinaryCollation =
         ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, neConjunctions, binaryComparator());
 
@@ -771,7 +765,7 @@ public class ScalarDbUtilsTest {
 
   @Test
   public void columnsMatchAnyOfConjunctions_NonTextEqWithCollation_ShouldStayByteExact() {
-    // Arrange: the collation governs TEXT equality only; INT EQ is unaffected.
+    // Arrange
     Map<String, Column<?>> matchingColumns = ImmutableMap.of("col", IntColumn.of("col", 5));
     Map<String, Column<?>> nonMatchingColumns = ImmutableMap.of("col", IntColumn.of("col", 6));
     Set<Conjunction> eqConjunctions =
@@ -794,12 +788,10 @@ public class ScalarDbUtilsTest {
     // Arrange
     CollationComparator caseInsensitive = icuPrimaryComparator();
 
-    // IS_NULL: a null TEXT column matches an IS_NULL condition; the collation must not change this.
     Map<String, Column<?>> nullColumns = ImmutableMap.of("col", TextColumn.ofNull("col"));
     Set<Conjunction> isNullConjunctions =
         ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isNullText()));
 
-    // LIKE stays case-sensitive regardless of the collation: 'Apple' does not match 'a%'.
     Map<String, Column<?>> textColumns = ImmutableMap.of("col", TextColumn.of("col", "Apple"));
     Set<Conjunction> likeConjunctions =
         ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isLikeText("a%")));
@@ -824,8 +816,7 @@ public class ScalarDbUtilsTest {
   @Test
   public void
       columnsMatchAnyOfConjunctions_NullTextValueWithEqAndCollation_ShouldStayByteExactWithoutNpe() {
-    // Arrange: a null column value with an '=' condition must stay byte-exact (no NPE), because
-    // collation equality applies only to two non-null text values.
+    // Arrange
     Map<String, Column<?>> nullColumns = ImmutableMap.of("col", TextColumn.ofNull("col"));
     Set<Conjunction> eqConjunctions =
         ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isEqualToText("apple")));
@@ -855,12 +846,8 @@ public class ScalarDbUtilsTest {
     CollationComparator comparator = icuPrimaryComparator();
 
     // Act
-    // Under a case-insensitive ICU PRIMARY collation, 'Apple' >= 'apple'.
     boolean matchedWithCollation =
         ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, comparator);
-    // Under the BINARY collation (byte order), 'Apple' (0x41) < 'apple' (0x61), so it is excluded.
-    // This is the pre-change behavior and demonstrates the range branch was actually flipped by
-    // collation.
     boolean matchedWithBinaryCollation =
         ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, binaryComparator());
 
@@ -872,7 +859,7 @@ public class ScalarDbUtilsTest {
   @Test
   public void
       columnsMatchAnyOfConjunctions_RangeOnNonTextColumnWithCollation_ShouldUseNaturalOrder() {
-    // Arrange: collation only affects TEXT columns; INT range stays natural.
+    // Arrange
     Map<String, Column<?>> columns = ImmutableMap.of("col", IntColumn.of("col", 5));
     Set<Conjunction> conjunctions =
         ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isGreaterThanInt(3)));

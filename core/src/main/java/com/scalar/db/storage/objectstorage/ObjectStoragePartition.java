@@ -161,7 +161,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (!columnEquals(actualColumn, expectedColumn, collationComparator)) {
+          if (!ScalarDbUtils.columnEquals(actualColumn, expectedColumn, collationComparator)) {
             return false;
           }
           break;
@@ -169,7 +169,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (columnEquals(actualColumn, expectedColumn, collationComparator)) {
+          if (ScalarDbUtils.columnEquals(actualColumn, expectedColumn, collationComparator)) {
             return false;
           }
           break;
@@ -224,12 +224,5 @@ public class ObjectStoragePartition {
     return true;
   }
 
-  /**
-   * Evaluates {@code EQ}/{@code NE} equality between two non-null columns, following the collation
-   * (see {@link ScalarDbUtils#columnEquals}).
-   */
-  private static boolean columnEquals(
-      Column<?> actual, Column<?> expected, CollationComparator cc) {
-    return ScalarDbUtils.columnEquals(actual, expected, cc);
-  }
+
 }

@@ -17,7 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Cross-site ordering conformance (Verification Contract).
+ * Cross-site ordering conformance.
  *
  * <p>The configured collation reaches three in-memory comparison sites, and all three build on the
  * single {@link CollationComparator} so they cannot drift:
@@ -37,7 +37,8 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 public class CollationConformanceTest {
 
-  // Shared corpus: mixed case, accent, empty string, and a supplementary-plane character (U+10000).
+  // The last two entries are U+10000, the first supplementary-plane code point, and U+FFFF, the
+  // last BMP one: UTF-16 and UTF-8 disagree on their relative order.
   private static final String[] CORPUS = {
     "apple", "Apple", "APPLE", "banana", "Banana", "", "á", "z", "𐀀", "￿"
   };
@@ -103,15 +104,11 @@ public class CollationConformanceTest {
     Comparator<Key> keyCmp = comparator.keyComparator();
     Comparator<String> textCmp = comparator.textComparator();
 
-    // (INT, TEXT) composite keys: the INT column orders first (natural), the TEXT column second
-    // (collation-aware). Non-text ordering is unaffected by the collation.
     Key k1 = Key.newBuilder().addInt("i", 1).addText("t", "Apple").build();
     Key k2 = Key.newBuilder().addInt("i", 2).addText("t", "apple").build();
     Key k3 = Key.newBuilder().addInt("i", 1).addText("t", "banana").build();
 
-    // Different leading INT dominates regardless of text collation.
     assertThat(sign(keyCmp.compare(k1, k2))).isEqualTo(-1);
-    // Same leading INT: tie broken by collated text.
     assertThat(sign(keyCmp.compare(k1, k3))).isEqualTo(sign(textCmp.compare("Apple", "banana")));
   }
 
@@ -125,8 +122,6 @@ public class CollationConformanceTest {
     Column<?> nullCol = TextColumn.ofNull("col");
     Column<?> valueCol = TextColumn.of("col", "apple");
 
-    // Null orders first (matching TextColumn's null-first semantics), consistently at both
-    // surfaces.
     assertThat(sign(columnCmp.compare(nullCol, valueCol))).isEqualTo(-1);
     assertThat(sign(columnCmp.compare(valueCol, nullCol))).isEqualTo(1);
     assertThat(sign(columnCmp.compare(nullCol, nullCol))).isEqualTo(0);
@@ -139,8 +134,6 @@ public class CollationConformanceTest {
 
   @Test
   void unsetCollation_DefaultsToBinaryOrder() {
-    // Unset -> the configuration defaults to BINARY, so a comparator always exists and every site
-    // orders by unsigned UTF-8 bytes, exactly as with an explicit BINARY collation.
     CollationComparator unset = CollationComparator.from(config(new Properties()));
     assertThat(unset).isNotNull();
 
@@ -153,7 +146,6 @@ public class CollationConformanceTest {
             .isEqualTo(sign(binaryCmp.compare(a, b)));
       }
     }
-    // Byte-exact equality under the default.
     assertThat(unset.textEquals("Apple", "apple")).isFalse();
     assertThat(unset.textEquals("apple", "apple")).isTrue();
   }
