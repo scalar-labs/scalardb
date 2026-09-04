@@ -3411,9 +3411,8 @@ public class SnapshotTest {
   public void
       verifyNoOverlap_PlainScanOfDistinctUnpairedSurrogatePartitionKeyUnderBinary_ShouldNotThrowException()
           throws CrudException {
-    // Arrange: the unpaired surrogates U+D800 and U+DC00 are distinct strings, but
-    // String#getBytes(UTF_8) maps both onto the same replacement bytes, so an equality routed
-    // through the BINARY byte comparator would conflate these two partitions.
+    // Arrange: the unpaired surrogates U+D800 and U+DC00 are distinct strings that
+    // String#getBytes(UTF_8) would encode identically, so BINARY equality must not go through bytes
     snapshot = prepareSnapshot(binaryCollation());
     Put put = preparePut("\uD800", ANY_TEXT_2);
     snapshot.putIntoWriteSet(new Snapshot.Key(put, binaryCollation()), put);

@@ -553,8 +553,9 @@ public class Snapshot {
   }
 
   /**
-   * Equality must not route through the comparator under {@code BINARY}: its UTF-8 ordering maps
-   * distinct ill-formed strings onto the same replacement bytes and would conflate them.
+   * Under {@code ICU}, collate-equal partition keys name the same physical partition on an aligned
+   * backend, so equality follows the collation. Under {@code BINARY}, identity is the value itself
+   * and {@link com.scalar.db.io.Key#equals} is the cheaper byte-exact check.
    */
   private boolean partitionKeyEquals(com.scalar.db.io.Key key, com.scalar.db.io.Key another) {
     if (collationComparator.hasCanonicalTextForm()) {
