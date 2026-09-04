@@ -223,6 +223,4 @@ public class ObjectStoragePartition {
     }
     return true;
   }
-
-
 }

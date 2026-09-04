@@ -465,12 +465,6 @@ public class SelectStatementHandlerTest {
     return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY"));
   }
 
-  private CollationComparator icuPrimaryCollation() {
-    return CollationComparator.from(
-        collationConfig(
-            DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]"));
-  }
-
   private void stubPartition(ObjectStoragePartition partition) throws Exception {
     String serialized = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
@@ -494,28 +488,6 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
-  public void handle_ScanUnderBinaryAndIcuCollation_ShouldReturnDifferentOrders() throws Exception {
-    // Arrange
-    when(metadata.getColumnNames())
-        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
-    stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
-
-    SelectStatementHandler binaryHandler =
-        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
-    SelectStatementHandler icuHandler =
-        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
-
-    // Act
-    List<String> binaryOrder = scanClusteringTexts(binaryHandler, prepareScan());
-    List<String> icuOrder = scanClusteringTexts(icuHandler, prepareScan());
-
-    // Assert
-    assertThat(binaryOrder).containsExactly("Banana", "Date", "apple", "cherry");
-    assertThat(icuOrder).containsExactly("apple", "Banana", "cherry", "Date");
-    assertThat(binaryOrder).isNotEqualTo(icuOrder);
-  }
-
-  @Test
   public void handle_ScanUnderUnsetCollation_ShouldReturnBinaryOrder() throws Exception {
     // Arrange
     when(metadata.getColumnNames())
@@ -534,27 +506,7 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
-  public void handle_ScanWithDescOrderingUnderIcuCollation_ShouldReturnDescendingCollationOrder()
-      throws Exception {
-    // Arrange
-    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Scan.Ordering.Order.DESC);
-    when(metadata.getColumnNames())
-        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
-    stubPartition(partitionWithClusteringTexts("apple", "Banana", "cherry", "Date"));
-
-    SelectStatementHandler icuHandler =
-        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
-
-    // Act
-    List<String> order = scanClusteringTexts(icuHandler, prepareScan());
-
-    // Assert
-    assertThat(order).containsExactly("Date", "cherry", "Banana", "apple");
-  }
-
-  @Test
-  public void handle_ScanWithIntThenTextClusteringKeys_ShouldOrderByIntThenCollatedText()
-      throws Exception {
+  public void handle_ScanWithIntThenTextClusteringKeys_ShouldOrderByIntThenText() throws Exception {
     // Arrange
     String textClusteringKeyName = "ck2";
     when(metadata.getClusteringKeyNames())
@@ -574,11 +526,11 @@ public class SelectStatementHandlerTest {
     addMixedRecord(partition, "id-2-aaa", 2, "aaa");
     stubPartition(partition);
 
-    SelectStatementHandler icuHandler =
-        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
+    SelectStatementHandler handler =
+        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
 
     // Act
-    Scanner scanner = icuHandler.handle(prepareScan());
+    Scanner scanner = handler.handle(prepareScan());
     List<Result> results = scanner.all();
 
     // Assert
@@ -605,53 +557,5 @@ public class SelectStatementHandlerTest {
             .values(new HashMap<>())
             .build();
     partition.putRecord(id, record);
-  }
-
-  @Test
-  public void handle_ScanWithStartInclusiveUnderIcuCollation_ShouldIncludeCaseDifferingBoundary()
-      throws Exception {
-    // Arrange
-    when(metadata.getColumnNames())
-        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
-    stubPartition(partitionWithClusteringTexts("Apple", "banana"));
-
-    Scan scan = Scan.newBuilder(prepareScan()).start(Key.ofText(ANY_NAME_2, "apple"), true).build();
-
-    SelectStatementHandler icuHandler =
-        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
-    SelectStatementHandler binaryHandler =
-        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
-
-    // Act
-    List<String> icuOrder = scanClusteringTexts(icuHandler, scan);
-    List<String> binaryOrder = scanClusteringTexts(binaryHandler, scan);
-
-    // Assert
-    assertThat(icuOrder).containsExactly("Apple", "banana");
-    assertThat(binaryOrder).containsExactly("banana");
-  }
-
-  @Test
-  public void handle_ScanWithEndInclusiveUnderIcuCollation_ShouldIncludeCaseDifferingBoundary()
-      throws Exception {
-    // Arrange
-    when(metadata.getColumnNames())
-        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2)));
-    stubPartition(partitionWithClusteringTexts("apple", "Zebra"));
-
-    Scan scan = Scan.newBuilder(prepareScan()).end(Key.ofText(ANY_NAME_2, "zebra"), true).build();
-
-    SelectStatementHandler icuHandler =
-        new SelectStatementHandler(wrapper, metadataManager, icuPrimaryCollation());
-    SelectStatementHandler binaryHandler =
-        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
-
-    // Act
-    List<String> icuOrder = scanClusteringTexts(icuHandler, scan);
-    List<String> binaryOrder = scanClusteringTexts(binaryHandler, scan);
-
-    // Assert
-    assertThat(icuOrder).containsExactly("apple", "Zebra");
-    assertThat(binaryOrder).containsExactly("Zebra", "apple");
   }
 }

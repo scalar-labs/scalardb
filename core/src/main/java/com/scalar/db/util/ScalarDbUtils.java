@@ -377,7 +377,7 @@ public final class ScalarDbUtils {
     properties.setProperty(DatabaseConfig.COLLATION, Collation.BINARY.name());
     return CollationComparator.from(new DatabaseConfig(properties));
   }
-
+  // TODO Temporary code, will be changed in a later PR
   /**
    * Returns whether the given columns match any of the given conjunctions under {@link
    * Collation#BINARY} semantics. Bridge for callers that do not hold a {@link CollationComparator}
@@ -460,6 +460,10 @@ public final class ScalarDbUtils {
    * two non-null values use the collation's equality; non-TEXT columns and null text compare with
    * {@link Column#equals}.
    *
+   * <p>Text values are compared without their column names, matching {@link
+   * CollationComparator#columnComparator()}, so that equality and the range operators built on that
+   * comparator cannot disagree.
+   *
    * @param column a column
    * @param other the column to compare against
    * @param collationComparator the collation comparator
@@ -471,7 +475,7 @@ public final class ScalarDbUtils {
       String a = column.getTextValue();
       String b = other.getTextValue();
       if (a != null && b != null) {
-        return collationComparator.textEquals(a, b) && column.getName().equals(other.getName());
+        return collationComparator.textEquals(a, b);
       }
     }
     return column.equals(other);

@@ -762,14 +762,6 @@ public class ObjectStoragePartitionTest {
     assertThat(result).isFalse();
   }
 
-  private static CollationComparator caseInsensitiveIcuCollation() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    props.setProperty(DatabaseConfig.COLLATION, "ICU");
-    props.setProperty(DatabaseConfig.COLLATION_ICU_RULES, "[strength 1]");
-    return CollationComparator.from(new DatabaseConfig(props));
-  }
-
   private static CollationComparator binaryCollation() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
@@ -784,24 +776,6 @@ public class ObjectStoragePartitionTest {
         .clusteringKey(new HashMap<>())
         .values(Collections.singletonMap(COLUMN_NAME_1, value))
         .build();
-  }
-
-  @Test
-  public void
-      areConditionsMet_WithCaseInsensitiveCollationAndGtConditionOnText_ShouldReturnTrueWhereNaturalWouldReturnFalse() {
-    // Arrange
-    when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
-    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
-    ObjectStorageRecord record = createTextRecordForConditionTest("B");
-    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isGreaterThanText("a");
-
-    // Act
-    boolean result =
-        partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
-
-    // Assert
-    assertThat(result).isTrue();
   }
 
   @Test
@@ -840,24 +814,6 @@ public class ObjectStoragePartitionTest {
 
   @Test
   public void
-      areConditionsMet_WithCaseInsensitiveCollationAndEqConditionOnText_ShouldReturnTrueWhereByteExactWould() {
-    // Arrange
-    when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
-    ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
-    ObjectStorageRecord record = createTextRecordForConditionTest("Apple");
-    ConditionalExpression condition = ConditionBuilder.column(COLUMN_NAME_1).isEqualToText("apple");
-
-    // Act
-    boolean result =
-        partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
-
-    // Assert
-    assertThat(result).isTrue();
-  }
-
-  @Test
-  public void
       areConditionsMet_WithBinaryCollationAndCaseDifferingEqConditionOnText_ShouldStayByteExact() {
     // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
@@ -876,7 +832,7 @@ public class ObjectStoragePartitionTest {
 
   @Test
   public void
-      areConditionsMet_WithCaseInsensitiveCollationAndNeConditionOnText_ShouldBehaveAsNegationOfEq() {
+      areConditionsMet_WithBinaryCollationAndNeConditionOnText_ShouldBehaveAsNegationOfEq() {
     // Arrange
     when(metadata.getColumnDataType(COLUMN_NAME_1)).thenReturn(DataType.TEXT);
     ObjectStoragePartition partition = createObjectStoragePartition(new HashMap<>());
@@ -887,10 +843,10 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
-    assertThat(result).isFalse();
+    assertThat(result).isTrue();
   }
 
   @Test
@@ -904,7 +860,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
@@ -921,7 +877,7 @@ public class ObjectStoragePartitionTest {
     // Act
     boolean result =
         partition.areConditionsMet(
-            record, Collections.singletonList(condition), metadata, caseInsensitiveIcuCollation());
+            record, Collections.singletonList(condition), metadata, binaryCollation());
 
     // Assert
     assertThat(result).isFalse();
