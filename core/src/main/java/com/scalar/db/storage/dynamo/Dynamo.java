@@ -61,7 +61,7 @@ public class Dynamo extends AbstractDistributedStorage {
           CoreError.DYNAMO_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
     }
 
-    // Cassandra orders text only by binary UTF-8 bytes
+    // DynamoDB orders text only by binary UTF-8 bytes
     if (databaseConfig.getCollation() == Collation.ICU) {
       throw new IllegalArgumentException(
           CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(

@@ -12,14 +12,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -40,9 +37,6 @@ public final class CollationComparator {
   private static final String VERIFIED_ICU_VERSION_RESOURCE = "scalardb-collation.properties";
 
   private static final AtomicBoolean ICU_VERSION_CHECKED = new AtomicBoolean();
-
-  private static final Set<String> ISO_LANGUAGES =
-      Collections.unmodifiableSet(new HashSet<>(Arrays.asList(ULocale.getISOLanguages())));
 
   private final Comparator<String> textComparator;
   private final Comparator<Column<?>> columnComparator;
@@ -208,7 +202,7 @@ public final class CollationComparator {
     if (language.isEmpty()) {
       // An explicitly root-rooted tag (und) requests the root collation, which is the same
       // collation used when no locale is configured at all, so there is nothing to reject.
-    } else if (!ISO_LANGUAGES.contains(language)) {
+    } else if (!Arrays.asList(ULocale.getISOLanguages()).contains(language)) {
       // VALID_LOCALE alone cannot see this: a collation keyword survives the fallback to root, so
       // an unknown language paired with a generically available type (zz-u-co-emoji) resolves to a
       // non-empty "@collation=emoji" and would pass an emptiness check.
@@ -337,10 +331,9 @@ public final class CollationComparator {
   }
 
   private static Comparator<Key> buildKeyComparator(Comparator<Column<?>> columnComparator) {
-    return (left, right) ->
-        Ordering.from(columnComparator)
-            .lexicographical()
-            .compare(left.getColumns(), right.getColumns());
+    Ordering<Iterable<Column<?>>> lexicographical =
+        Ordering.from(columnComparator).lexicographical();
+    return (left, right) -> lexicographical.compare(left.getColumns(), right.getColumns());
   }
 
   /**
