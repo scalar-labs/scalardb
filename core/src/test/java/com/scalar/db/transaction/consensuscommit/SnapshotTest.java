@@ -600,6 +600,77 @@ public class SnapshotTest {
   }
 
   @Test
+  public void
+      putIntoWriteSet_PutGivenAfterDeleteButGettingTableMetadataFailed_ShouldKeepDeleteInDeleteSet()
+          throws Exception {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Delete delete = prepareDelete();
+    Snapshot.Key key = new Snapshot.Key(delete);
+    snapshot.putIntoDeleteSet(key, delete);
+
+    when(tableMetadataManager.getTransactionTableMetadata(any(), any()))
+        .thenThrow(new ExecutionException("error"));
+
+    Put put = preparePut();
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.putIntoWriteSet(key, put));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(CrudException.class);
+
+    // The key must not disappear from both the write set and the delete set. Otherwise, the delete
+    // is silently lost, and the read-time membership test used by scanners would wrongly consider
+    // the key unwritten.
+    assertThat(deleteSet).containsKey(key);
+    assertThat(writeSet).doesNotContainKey(key);
+  }
+
+  @Test
+  public void putIntoDeleteSet_DeleteGivenAfterPutWithInsertModeEnabled_ShouldKeepPutInWriteSet()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Delete delete = prepareDelete();
+    Snapshot.Key key = new Snapshot.Key(delete);
+
+    Put putWithInsertModeEnabled = Put.newBuilder(preparePut()).enableInsertMode().build();
+    snapshot.putIntoWriteSet(key, putWithInsertModeEnabled);
+
+    // Act
+    Throwable thrown = catchThrowable(() -> snapshot.putIntoDeleteSet(key, delete));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+
+    // The rejection must happen before the key is removed from the write set
+    assertThat(writeSet).containsKey(key);
+    assertThat(deleteSet).doesNotContainKey(key);
+  }
+
+  @Test
+  public void
+      putIntoWriteSetAndDeleteSet_PutDeletePutGiven_ShouldAlwaysKeepKeyInWriteSetOrDeleteSet()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot();
+    Put put = preparePut();
+    Snapshot.Key key = new Snapshot.Key(put);
+    Delete delete = prepareDelete();
+
+    // Act Assert
+    snapshot.putIntoWriteSet(key, put);
+    assertThat(writeSet.containsKey(key) || deleteSet.containsKey(key)).isTrue();
+
+    snapshot.putIntoDeleteSet(key, delete);
+    assertThat(writeSet.containsKey(key) || deleteSet.containsKey(key)).isTrue();
+
+    snapshot.putIntoWriteSet(key, put);
+    assertThat(writeSet.containsKey(key) || deleteSet.containsKey(key)).isTrue();
+  }
+
+  @Test
   public void putIntoScanSet_ScanGiven_ShouldHoldWhatsGivenInScanSet() {
     // Arrange
     snapshot = prepareSnapshot();

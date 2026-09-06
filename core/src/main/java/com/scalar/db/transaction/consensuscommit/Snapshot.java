@@ -74,9 +74,17 @@ public class Snapshot {
   private final List<ScannerInfo> scannerSet;
 
   // The write set stores information about writes in this transaction.
+  //
+  // Invariant: a key must never leave writeSet ∪ deleteSet, not even transiently on an exception
+  // path. Scanners test membership of this union at the moment they produce a record to decide
+  // whether a write happened before or after the read, so a key that briefly belongs to neither set
+  // would be misread as never written. putIntoWriteSet and putIntoDeleteSet are currently the only
+  // mutators of these two maps and both preserve it; any new mutator must preserve it too. See
+  // putIntoWriteSet for the details.
   private final Map<Key, Put> writeSet;
 
-  // The delete set stores information about deletes in this transaction.
+  // The delete set stores information about deletes in this transaction. See the invariant
+  // documented on writeSet above.
   private final Map<Key, Delete> deleteSet;
 
   public Snapshot(
@@ -132,13 +140,25 @@ public class Snapshot {
     scanSet.put(scan, results);
   }
 
+  /**
+   * Adds the specified {@link Put} to the write set.
+   *
+   * <p>Invariant: a key must never leave {@code writeSet ∪ deleteSet}. Together with {@link
+   * #putIntoDeleteSet}, this method is the only mutator of those two sets, and both preserve the
+   * invariant even on their exception paths. Scanners rely on it: they decide whether a write
+   * happened before or after a record was read by testing membership of that union at the moment
+   * the record is produced, so a key that temporarily belongs to neither set would be misread as
+   * never written.
+   *
+   * @param key the key of the record to write
+   * @param put the put operation to add
+   * @throws CrudException if retrieving the table metadata fails
+   */
   public void putIntoWriteSet(Key key, Put put) throws CrudException {
     if (deleteSet.containsKey(key)) {
       // If a Put is performed on a previously deleted record within the same transaction, move it
       // from the delete set to the write set. Since Delete clears all column values, any columns
       // not explicitly specified in the Put must be set to null to ensure correct behavior.
-
-      deleteSet.remove(key);
 
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(put);
 
@@ -162,7 +182,12 @@ public class Snapshot {
       // preparation.
       putBuilder = putBuilder.enableImplicitPreRead();
 
-      writeSet.put(key, putBuilder.build());
+      // Build the merged Put before touching either set. Everything above can throw, and moving the
+      // key out of the delete set first would leave it in neither set, breaking the invariant
+      // documented on this method.
+      Put mergedPut = putBuilder.build();
+      deleteSet.remove(key);
+      writeSet.put(key, mergedPut);
     } else if (writeSet.containsKey(key)) {
       if (isInsertModeEnabled(put)) {
         throw new IllegalArgumentException(
@@ -190,6 +215,16 @@ public class Snapshot {
     }
   }
 
+  /**
+   * Adds the specified {@link Delete} to the delete set.
+   *
+   * <p>Preserves the {@code writeSet ∪ deleteSet} invariant documented on {@link #putIntoWriteSet}:
+   * the insert-mode rejection below throws before the key is removed from the write set, and
+   * nothing runs between that removal and the insertion into the delete set.
+   *
+   * @param key the key of the record to delete
+   * @param delete the delete operation to add
+   */
   public void putIntoDeleteSet(Key key, Delete delete) {
     Put put = writeSet.get(key);
     if (put != null) {
