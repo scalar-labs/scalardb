@@ -29,6 +29,7 @@ import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.api.UpsertBuilder;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
@@ -36,6 +37,8 @@ import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanColumn;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.Collation;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -60,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
@@ -363,13 +367,48 @@ public final class ScalarDbUtils {
     return columns;
   }
 
+  private static final CollationComparator BINARY_COLLATION_COMPARATOR =
+      binaryCollationComparator();
+
+  private static CollationComparator binaryCollationComparator() {
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(DatabaseConfig.COLLATION, Collation.BINARY.name());
+    return CollationComparator.from(new DatabaseConfig(properties));
+  }
+  // TODO Temporary code, will be changed in a later PR
+  /**
+   * Returns whether the given columns match any of the given conjunctions under {@link
+   * Collation#BINARY} semantics. This overload bridges callers without a {@link
+   * CollationComparator}, and it is deleted once every caller has migrated to the three-argument
+   * form.
+   *
+   * @param columns the columns of a record keyed by column name
+   * @param conjunctions the conjunctions to evaluate
+   * @return {@code true} if the columns match any of the conjunctions
+   */
   public static boolean columnsMatchAnyOfConjunctions(
       Map<String, Column<?>> columns, Set<Conjunction> conjunctions) {
+    return columnsMatchAnyOfConjunctions(columns, conjunctions, BINARY_COLLATION_COMPARATOR);
+  }
+
+  /**
+   * Returns whether the given columns match any of the given conjunctions.
+   *
+   * <p>Range and equality operators on TEXT columns compare through the given comparator. {@code
+   * LIKE} and {@code NOT_LIKE} always match on exact characters, whatever the collation.
+   */
+  public static boolean columnsMatchAnyOfConjunctions(
+      Map<String, Column<?>> columns,
+      Set<Conjunction> conjunctions,
+      CollationComparator collationComparator) {
     for (Conjunction conjunction : conjunctions) {
       boolean allMatched = true;
       for (ConditionalExpression condition : conjunction.getConditions()) {
         if (!columns.containsKey(condition.getColumn().getName())
-            || !columnMatchesCondition(columns.get(condition.getColumn().getName()), condition)) {
+            || !columnMatchesCondition(
+                columns.get(condition.getColumn().getName()), condition, collationComparator)) {
           allMatched = false;
           break;
         }
@@ -383,23 +422,25 @@ public final class ScalarDbUtils {
 
   @SuppressWarnings("unchecked")
   private static <T> boolean columnMatchesCondition(
-      Column<T> column, ConditionalExpression condition) {
+      Column<T> column, ConditionalExpression condition, CollationComparator collationComparator) {
     assert column.getClass() == condition.getColumn().getClass();
     switch (condition.getOperator()) {
       case EQ:
+        return matchesEquality(column, condition, collationComparator);
       case IS_NULL:
         return column.equals(condition.getColumn());
       case NE:
+        return !matchesEquality(column, condition, collationComparator);
       case IS_NOT_NULL:
         return !column.equals(condition.getColumn());
       case GT:
-        return column.compareTo((Column<T>) condition.getColumn()) > 0;
+        return compareForRange(column, condition, collationComparator) > 0;
       case GTE:
-        return column.compareTo((Column<T>) condition.getColumn()) >= 0;
+        return compareForRange(column, condition, collationComparator) >= 0;
       case LT:
-        return column.compareTo((Column<T>) condition.getColumn()) < 0;
+        return compareForRange(column, condition, collationComparator) < 0;
       case LTE:
-        return column.compareTo((Column<T>) condition.getColumn()) <= 0;
+        return compareForRange(column, condition, collationComparator) <= 0;
       case LIKE:
       case NOT_LIKE:
         // assert condition instanceof LikeExpression;
@@ -407,6 +448,46 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError("Unknown operator: " + condition.getOperator());
     }
+  }
+
+  private static <T> boolean matchesEquality(
+      Column<T> column, ConditionalExpression condition, CollationComparator cc) {
+    return columnEquals(column, condition.getColumn(), cc);
+  }
+
+  /**
+   * Returns whether the two columns are equal under the given collation. Only TEXT columns holding
+   * two non-null values use the collation's equality; non-TEXT columns and null text compare with
+   * {@link Column#equals}.
+   *
+   * <p>Text values are compared without their column names, matching {@link
+   * CollationComparator#columnComparator()}, so that equality and the range operators built on that
+   * comparator cannot disagree.
+   *
+   * @param column a column
+   * @param other the column to compare against
+   * @param collationComparator the collation comparator
+   * @return {@code true} when the columns are equal under the collation
+   */
+  public static boolean columnEquals(
+      Column<?> column, Column<?> other, CollationComparator collationComparator) {
+    if (column.getDataType() == DataType.TEXT && other.getDataType() == DataType.TEXT) {
+      String a = column.getTextValue();
+      String b = other.getTextValue();
+      if (a != null && b != null) {
+        return collationComparator.textEquals(a, b);
+      }
+    }
+    return column.equals(other);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> int compareForRange(
+      Column<T> column, ConditionalExpression condition, CollationComparator collationComparator) {
+    if (column.getDataType() == DataType.TEXT) {
+      return collationComparator.columnComparator().compare(column, condition.getColumn());
+    }
+    return column.compareTo((Column<T>) condition.getColumn());
   }
 
   @VisibleForTesting

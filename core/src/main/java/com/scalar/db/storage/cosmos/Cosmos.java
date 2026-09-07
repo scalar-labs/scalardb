@@ -23,6 +23,7 @@ import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Collation;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.List;
@@ -47,6 +48,7 @@ public class Cosmos extends AbstractDistributedStorage {
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
   private final OperationChecker operationChecker;
+  private final CollationComparator collationComparator;
 
   @Inject
   public Cosmos(DatabaseConfig databaseConfig) {
@@ -80,6 +82,7 @@ public class Cosmos extends AbstractDistributedStorage {
     putStatementHandler = new PutStatementHandler(client, metadataManager);
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);
+    collationComparator = CollationComparator.from(databaseConfig);
 
     logger.info("Cosmos DB object is created properly");
   }
@@ -100,6 +103,7 @@ public class Cosmos extends AbstractDistributedStorage {
     this.deleteStatementHandler = delete;
     this.batchHandler = batch;
     this.operationChecker = operationChecker;
+    this.collationComparator = CollationComparator.from(databaseConfig);
   }
 
   @Override
@@ -116,8 +120,8 @@ public class Cosmos extends AbstractDistributedStorage {
         scanner =
             new FilterableScanner(
                 get,
-                selectStatementHandler.handle(
-                    ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)));
+                selectStatementHandler.handle(ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)),
+                collationComparator);
       }
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
@@ -151,7 +155,8 @@ public class Cosmos extends AbstractDistributedStorage {
     } else {
       return new FilterableScanner(
           scan,
-          selectStatementHandler.handle(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)));
+          selectStatementHandler.handle(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)),
+          collationComparator);
     }
   }
 
