@@ -76,6 +76,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     rdbEngine = RdbEngineFactory.create(config);
+    rdbEngine.throwIfCollationNotSupported(databaseConfig.getCollation());
     dataSource = JdbcUtils.initDataSource(config, rdbEngine);
     requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
 

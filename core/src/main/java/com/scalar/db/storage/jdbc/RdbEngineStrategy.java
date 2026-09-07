@@ -4,6 +4,7 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -73,6 +74,13 @@ public interface RdbEngineStrategy {
   default void throwIfInvalidNamespaceName(String namespaceName) {}
 
   default void throwIfInvalidTableName(String tableName) {}
+
+  /**
+   * Throws if the given collation configuration cannot match this engine's text order. The default
+   * accepts any collation; engines whose text order is fixed to binary UTF-8 byte order (no
+   * UCA-based collation exists for {@link Collation#ICU} to approximate) reject {@code ICU}.
+   */
+  default void throwIfCollationNotSupported(Collation collation) {}
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);

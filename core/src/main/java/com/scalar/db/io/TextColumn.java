@@ -12,6 +12,9 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class TextColumn implements Column<String> {
 
+  private static final Comparator<String> NULLS_FIRST_CODE_POINT_ORDER =
+      Comparator.nullsFirst(TextColumn::compareByCodePoint);
+
   private final String name;
   @Nullable private final String value;
 
@@ -62,8 +65,30 @@ public class TextColumn implements Column<String> {
     return ComparisonChain.start()
         .compare(getName(), o.getName())
         .compareTrueFirst(hasNullValue(), o.hasNullValue())
-        .compare(getTextValue(), o.getTextValue(), Comparator.nullsFirst(Comparator.naturalOrder()))
+        .compare(getTextValue(), o.getTextValue(), NULLS_FIRST_CODE_POINT_ORDER)
         .result();
+  }
+
+  /**
+   * Orders two strings by Unicode code point, which for well-formed text is the unsigned UTF-8 byte
+   * order that byte-order backends use. {@link String#compareTo} orders by UTF-16 code unit and so
+   * places supplementary characters before U+E000..U+FFFF; comparing the UTF-8 encodings instead
+   * would conflate distinct strings whose unpaired surrogates all encode to the replacement byte.
+   * This order returns 0 only for {@link String#equals equal} strings, ill-formed ones included.
+   */
+  static int compareByCodePoint(String left, String right) {
+    int i = 0;
+    int j = 0;
+    while (i < left.length() && j < right.length()) {
+      int l = left.codePointAt(i);
+      int r = right.codePointAt(j);
+      if (l != r) {
+        return Integer.compare(l, r);
+      }
+      i += Character.charCount(l);
+      j += Character.charCount(r);
+    }
+    return Integer.compare(left.length() - i, right.length() - j);
   }
 
   @Override
