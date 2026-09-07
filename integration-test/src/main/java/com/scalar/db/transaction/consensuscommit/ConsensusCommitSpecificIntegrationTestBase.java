@@ -11309,6 +11309,277 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
   }
 
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenUpdatingEachRecordReturnedByScannerWithLimit_ShouldCommitProperly(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan =
+        Scan.newBuilder(prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1)).limit(2).build();
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Optional<Result> result;
+      while ((result = scanner.one()).isPresent()) {
+        transaction.update(
+            Update.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.get().getInt(ACCOUNT_TYPE)))
+                .intValue(BALANCE, NEW_BALANCE)
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    List<Result> results = another.scan(prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1));
+    another.commit();
+
+    assertThat(getBalance(results.get(0))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(1))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenUpdatingRecordsOfPartiallyConsumedScanner_ShouldCommitProperly(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    // Stop consuming after two records, so the scanner is never fully scanned
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      for (int i = 0; i < 2; i++) {
+        Result result = scanner.one().get();
+        transaction.update(
+            Update.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.getInt(ACCOUNT_TYPE)))
+                .intValue(BALANCE, NEW_BALANCE)
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    List<Result> results = another.scan(scan);
+    another.commit();
+
+    assertThat(getBalance(results.get(0))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(1))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenUpdatingRecordMakingItStopMatchingScanCondition_ShouldCommitProperly(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    // A conjunction-bearing scan. Updating a returned record so that it stops matching exercises
+    // the branch of the validation that relies on the write set rather than on the transaction id.
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .all()
+            .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .build();
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Result result = scanner.one().get();
+      transaction.update(
+          Update.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, result.getInt(ACCOUNT_ID)))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.getInt(ACCOUNT_TYPE)))
+              .intValue(BALANCE, NEW_BALANCE)
+              .build());
+    }
+
+    // Assert
+    transaction.commit();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenInsertingRecordIntoScanRangeWhileScannerOpen_ShouldThrowException(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    // The scan covers a clustering-key range with a gap the populated records do not fill
+    Scan scan = prepareScan(NUM_ACCOUNTS, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                scanner.all();
+                transaction.insert(
+                    prepareInsert(NUM_ACCOUNTS, 0, namespace1, TABLE_1, INITIAL_BALANCE));
+              }
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenScanningRecordWrittenBeforeTheScan_ShouldThrowException(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // The write happens before the scan produces the record, so it is not exempt
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .build());
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                scanner.all();
+              }
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_WhenAnotherScannerStillOpenCoversTheWrittenRecord_ShouldThrowExceptionAtItsClose(
+          Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan1 = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    Scan scan2 = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    TransactionCrudOperable.Scanner scanner1 = transaction.getScanner(scan1);
+    TransactionCrudOperable.Scanner scanner2 = transaction.getScanner(scan2);
+
+    Result result = scanner1.one().get();
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.getInt(ACCOUNT_TYPE)))
+            .intValue(BALANCE, NEW_BALANCE)
+            .build());
+
+    // The scanner that returned the record accepts the write
+    scanner1.close();
+
+    // The other scanner covers the record but never returned it, so it would hand its caller a
+    // stale row. The exemption is per-scanner while the rejection is transaction-wide.
+    assertThatThrownBy(scanner2::close).isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_WhenInsertingRecordAlreadyReturnedByScanner_ShouldThrowCommitConflictException(
+          Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Result result = scanner.one().get();
+      transaction.insert(
+          prepareInsert(
+              result.getInt(ACCOUNT_ID),
+              result.getInt(ACCOUNT_TYPE),
+              namespace1,
+              TABLE_1,
+              NEW_BALANCE));
+    }
+
+    // Assert
+    // The scanner already returned the record, so the write cannot change what the scan should
+    // have returned and is not an overlap. The insert is simply invalid because the record exists,
+    // which is detected at prepare time — the same as the equivalent get-then-insert.
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      getScanner_WhenInsertingRecordReturnedAsBeforeImageOfDeletedRecord_ShouldCommitProperly()
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // READ_COMMITTED only: it is the isolation that returns the committed before-image of a record
+    // whose delete has already committed. Under SNAPSHOT and SERIALIZABLE the scanner returns
+    // nothing for this record, so inserting it while the scanner is open is an insert into the
+    // scanned range and is rejected — a different case, covered separately.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.READ_COMMITTED);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.DELETED,
+        current,
+        TransactionState.COMMITTED,
+        CommitType.NORMAL_COMMIT);
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    int expectedBalance = 100;
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      // The record is returned even though its delete is committed
+      assertThat(scanner.one()).isPresent();
+
+      // Inserting it is correct: the record does not actually exist
+      transaction.insert(prepareInsert(0, 0, namespace1, TABLE_1, expectedBalance));
+    }
+    transaction.commit();
+
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
+  }
+
   private void populateRecords(ConsensusCommitManager manager, String namespace, String table)
       throws TransactionException {
     DistributedTransaction transaction = manager.begin();
