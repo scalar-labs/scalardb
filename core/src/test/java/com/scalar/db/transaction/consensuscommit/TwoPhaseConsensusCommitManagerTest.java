@@ -32,6 +32,7 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.ActiveTransactionManagedTwoPhaseCommitTransactionManager;
 import com.scalar.db.common.DecoratedTwoPhaseCommitTransaction;
+import com.scalar.db.config.Collation;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -76,6 +77,9 @@ public class TwoPhaseConsensusCommitManagerTest {
 
     // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
+    // The manager builds its CollationComparator from the database configuration; a mocked
+    // config must expose the BINARY default explicitly.
+    when(databaseConfig.getCollation()).thenReturn(Collation.BINARY);
 
     manager =
         new TwoPhaseConsensusCommitManager(

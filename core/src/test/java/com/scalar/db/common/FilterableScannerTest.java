@@ -51,16 +51,11 @@ public class FilterableScannerTest {
             ImmutableSet.of(Conjunction.of(ConditionBuilder.column("col").isGreaterThanInt(0))));
   }
 
-  private static CollationComparator binaryCollation() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    return CollationComparator.from(new DatabaseConfig(props));
-  }
-
   @Test
   public void one_ShouldReturnResult() throws ExecutionException {
     // Arrange
-    FilterableScanner filterableScanner = new FilterableScanner(scan, scanner, binaryCollation());
+    FilterableScanner filterableScanner =
+        new FilterableScanner(scan, scanner, CollationComparators.BINARY);
 
     // Act
     Optional<Result> actual1 = filterableScanner.one();
@@ -80,7 +75,8 @@ public class FilterableScannerTest {
   public void one_AfterExceedingLimit_ShouldReturnEmpty() throws ExecutionException {
     // Arrange
     when(scan.getLimit()).thenReturn(1);
-    FilterableScanner filterableScanner = new FilterableScanner(scan, scanner, binaryCollation());
+    FilterableScanner filterableScanner =
+        new FilterableScanner(scan, scanner, CollationComparators.BINARY);
 
     // Act
     Optional<Result> actual1 = filterableScanner.one();
@@ -96,7 +92,8 @@ public class FilterableScannerTest {
   @Test
   public void all_ShouldReturnResults() throws ExecutionException {
     // Arrange
-    FilterableScanner filterableScanner = new FilterableScanner(scan, scanner, binaryCollation());
+    FilterableScanner filterableScanner =
+        new FilterableScanner(scan, scanner, CollationComparators.BINARY);
 
     // Act
     List<Result> results1 = filterableScanner.all();
@@ -114,7 +111,8 @@ public class FilterableScannerTest {
   public void all_WithLimit_ShouldReturnLimitedResults() throws ExecutionException {
     // Arrange
     when(scan.getLimit()).thenReturn(1);
-    FilterableScanner filterableScanner = new FilterableScanner(scan, scanner, binaryCollation());
+    FilterableScanner filterableScanner =
+        new FilterableScanner(scan, scanner, CollationComparators.BINARY);
 
     // Act
     List<Result> results1 = filterableScanner.all();
@@ -182,7 +180,7 @@ public class FilterableScannerTest {
 
     // Act
     FilterableScanner withBinaryCollation =
-        new FilterableScanner(textScan, textScanner, binaryCollation());
+        new FilterableScanner(textScan, textScanner, CollationComparators.BINARY);
 
     // Assert
     assertThat(withBinaryCollation.all()).containsExactly(zebra);
@@ -191,7 +189,8 @@ public class FilterableScannerTest {
   @Test
   public void iterator_ShouldReturnResults() throws ExecutionException {
     // Arrange
-    FilterableScanner filterableScanner = new FilterableScanner(scan, scanner, binaryCollation());
+    FilterableScanner filterableScanner =
+        new FilterableScanner(scan, scanner, CollationComparators.BINARY);
 
     // Act
     Iterator<Result> iterator = filterableScanner.iterator();

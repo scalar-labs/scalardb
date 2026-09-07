@@ -30,7 +30,6 @@ import com.scalar.db.api.Upsert;
 import com.scalar.db.api.UpsertBuilder;
 import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.config.Collation;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
@@ -365,25 +364,6 @@ public final class ScalarDbUtils {
     return columns;
   }
 
-  private static final CollationComparator BINARY_COLLATION_COMPARATOR =
-      CollationComparator.binary();
-
-  // TODO Temporary code, will be changed in a later PR
-  /**
-   * Returns whether the given columns match any of the given conjunctions under {@link
-   * Collation#BINARY} semantics. This overload bridges callers without a {@link
-   * CollationComparator}, and it is deleted once every caller has migrated to the three-argument
-   * form.
-   *
-   * @param columns the columns of a record keyed by column name
-   * @param conjunctions the conjunctions to evaluate
-   * @return {@code true} if the columns match any of the conjunctions
-   */
-  public static boolean columnsMatchAnyOfConjunctions(
-      Map<String, Column<?>> columns, Set<Conjunction> conjunctions) {
-    return columnsMatchAnyOfConjunctions(columns, conjunctions, BINARY_COLLATION_COMPARATOR);
-  }
-
   /**
    * Returns whether the given columns match any of the given conjunctions.
    *
@@ -429,14 +409,19 @@ public final class ScalarDbUtils {
         return !matchesEquality(column, condition, collationComparator);
       case IS_NOT_NULL:
         return !column.equals(condition.getColumn());
+        // A NULL satisfies no range condition, as in the storages' own evaluation.
       case GT:
-        return compareForRange(column, condition, collationComparator) > 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) > 0;
       case GTE:
-        return compareForRange(column, condition, collationComparator) >= 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) >= 0;
       case LT:
-        return compareForRange(column, condition, collationComparator) < 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) < 0;
       case LTE:
-        return compareForRange(column, condition, collationComparator) <= 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) <= 0;
       case LIKE:
       case NOT_LIKE:
         // assert condition instanceof LikeExpression;

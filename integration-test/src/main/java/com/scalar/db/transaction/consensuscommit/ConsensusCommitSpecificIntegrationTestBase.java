@@ -42,6 +42,7 @@ import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
@@ -11574,7 +11575,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     commit = spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
     return new ConsensusCommitManager(
         storage,
