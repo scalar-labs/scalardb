@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -68,26 +69,21 @@ public class VirtualTableMetadataServiceTest {
   public void createVirtualTablesTableIfNotExists_TableExists_ShouldSuppressDuplicateTableError()
       throws Exception {
     // Arrange
+    // Use Oracle since it does not support the "CREATE TABLE IF NOT EXISTS" syntax, so the
+    // duplicate-table error has to be suppressed by the service
+    VirtualTableMetadataService oracleService =
+        new VirtualTableMetadataService(METADATA_SCHEMA, new RdbEngineOracle(), false);
     Statement createStatement = mock(Statement.class);
-    SQLException duplicateTableException = new SQLException("Table already exists", "42S01", 1050);
+    // ORA-00955: name is already used by an existing object
+    SQLException duplicateTableException = new SQLException("Table already exists", "42000", 955);
     when(createStatement.execute(anyString())).thenThrow(duplicateTableException);
     when(connection.createStatement()).thenReturn(createStatement);
 
     // Act
-    service.createVirtualTablesTableIfNotExists(connection);
-
     // Assert
-    ArgumentCaptor<String> createCaptor = ArgumentCaptor.forClass(String.class);
-    verify(createStatement).execute(createCaptor.capture());
-    assertThat(createCaptor.getValue())
-        .isEqualTo(
-            "CREATE TABLE IF NOT EXISTS `scalardb`.`virtual_tables`("
-                + "`full_table_name` VARCHAR(128), "
-                + "`left_source_table_full_table_name` VARCHAR(128), "
-                + "`right_source_table_full_table_name` VARCHAR(128), "
-                + "`join_type` VARCHAR(20), "
-                + "`attributes` LONGTEXT, "
-                + "PRIMARY KEY (`full_table_name`))");
+    assertThatCode(() -> oracleService.createVirtualTablesTableIfNotExists(connection))
+        .doesNotThrowAnyException();
+    verify(createStatement).execute(anyString());
   }
 
   @Test
