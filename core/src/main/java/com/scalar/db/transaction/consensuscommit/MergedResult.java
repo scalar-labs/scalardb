@@ -32,9 +32,13 @@ public class MergedResult extends AbstractResult {
 
     putColumns = new HashMap<>();
     putColumns.putAll(put.getColumns());
-    put.getPartitionKey().getColumns().forEach(c -> putColumns.put(c.getName(), c));
-    put.getClusteringKey()
-        .ifPresent(k -> k.getColumns().forEach(c -> putColumns.put(c.getName(), c)));
+    if (!result.isPresent()) {
+      // A Put cannot rewrite a stored key, so a stored record keeps its own key spelling even when
+      // the Put's key only collates equal to it.
+      put.getPartitionKey().getColumns().forEach(c -> putColumns.put(c.getName(), c));
+      put.getClusteringKey()
+          .ifPresent(k -> k.getColumns().forEach(c -> putColumns.put(c.getName(), c)));
+    }
 
     this.metadata = metadata;
   }

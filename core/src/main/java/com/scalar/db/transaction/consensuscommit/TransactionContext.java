@@ -92,7 +92,8 @@ public class TransactionContext {
     return snapshot.getGetSet().stream()
         .anyMatch(
             getSetEntry -> {
-              Snapshot.Key key = new Snapshot.Key(getSetEntry.getKey());
+              Snapshot.Key key =
+                  new Snapshot.Key(getSetEntry.getKey(), snapshot.getCollationComparator());
               return !snapshot.containsKeyInWriteSet(key) && !snapshot.containsKeyInDeleteSet(key);
             });
   }

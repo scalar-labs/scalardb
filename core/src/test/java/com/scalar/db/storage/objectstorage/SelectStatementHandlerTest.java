@@ -17,6 +17,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.CollationComparator;
+import com.scalar.db.io.CollationComparators;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -53,7 +54,7 @@ public class SelectStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
+    handler = new SelectStatementHandler(wrapper, metadataManager, CollationComparators.BINARY);
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
@@ -461,10 +462,6 @@ public class SelectStatementHandlerTest {
     return new DatabaseConfig(props);
   }
 
-  private CollationComparator binaryCollation() {
-    return CollationComparator.from(collationConfig(DatabaseConfig.COLLATION, "BINARY"));
-  }
-
   private void stubPartition(ObjectStoragePartition partition) throws Exception {
     String serialized = Serializer.serialize(partition);
     ObjectStorageWrapperResponse response =
@@ -527,7 +524,7 @@ public class SelectStatementHandlerTest {
     stubPartition(partition);
 
     SelectStatementHandler handler =
-        new SelectStatementHandler(wrapper, metadataManager, binaryCollation());
+        new SelectStatementHandler(wrapper, metadataManager, CollationComparators.BINARY);
 
     // Act
     Scanner scanner = handler.handle(prepareScan());
