@@ -11,6 +11,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
+import com.scalar.db.io.CollationComparators;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
@@ -62,7 +63,7 @@ class WriteSetEncoderTest {
   }
 
   private Snapshot newSnapshot() {
-    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor);
+    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor, CollationComparators.BINARY);
   }
 
   @Test
@@ -85,8 +86,8 @@ class WriteSetEncoderTest {
             .partitionKey(Key.ofText("pk", "p2"))
             .clusteringKey(Key.ofInt("ck", 20))
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, CollationComparators.BINARY), delete);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);
@@ -123,7 +124,7 @@ class WriteSetEncoderTest {
             .clusteringKey(Key.ofInt("ck", 1))
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, "child-1");
@@ -193,7 +194,7 @@ class WriteSetEncoderTest {
             .clusteringKey(Key.newBuilder().addBigInt("ck1", 100L).addText("ck2", "c").build())
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);
@@ -332,7 +333,7 @@ class WriteSetEncoderTest {
             .partitionKey(partitionKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
     return WriteSetEncoder.encodeEntryGroup(snapshot, null);
   }
 
@@ -358,7 +359,7 @@ class WriteSetEncoderTest {
             .partitionKey(Key.ofText("pk", "p1"))
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
 
     // Act
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);

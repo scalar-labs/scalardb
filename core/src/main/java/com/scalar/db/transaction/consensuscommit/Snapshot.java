@@ -5,6 +5,8 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperation
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
 import com.scalar.db.api.ConditionalExpression;
@@ -26,10 +28,14 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.io.CollationComparator;
 import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -57,6 +63,9 @@ public class Snapshot {
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
+  private final CollationComparator collationComparator;
+  private final Comparator<com.scalar.db.io.Key> keyComparator;
+
   // The read set stores information about the records that are read in this transaction. This is
   // used as a previous version for write operations.
   private final ConcurrentMap<Key, Optional<TransactionResult>> readSet;
@@ -82,10 +91,13 @@ public class Snapshot {
   public Snapshot(
       String id,
       TransactionTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      CollationComparator collationComparator) {
     this.id = id;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
+    this.collationComparator = collationComparator;
+    this.keyComparator = collationComparator.keyComparator();
     readSet = new ConcurrentHashMap<>();
     getSet = new ConcurrentHashMap<>();
     scanSet = new HashMap<>();
@@ -99,6 +111,7 @@ public class Snapshot {
       String id,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      CollationComparator collationComparator,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
       ConcurrentMap<Get, Optional<TransactionResult>> getSet,
       Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet,
@@ -108,6 +121,8 @@ public class Snapshot {
     this.id = id;
     this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
+    this.collationComparator = collationComparator;
+    this.keyComparator = collationComparator.keyComparator();
     this.readSet = readSet;
     this.getSet = getSet;
     this.scanSet = scanSet;
@@ -228,6 +243,10 @@ public class Snapshot {
     return new ArrayList<>(getSet.entrySet());
   }
 
+  CollationComparator getCollationComparator() {
+    return collationComparator;
+  }
+
   public boolean containsKeyInReadSet(Key key) {
     return readSet.containsKey(key);
   }
@@ -315,7 +334,8 @@ public class Snapshot {
             // We need to apply conditions if it is a merged result because the transaction’s write
             // makes the record no longer match the conditions.
             !r.isMergedResult()
-                || ScalarDbUtils.columnsMatchAnyOfConjunctions(r.getColumns(), conjunctions));
+                || ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                    r.getColumns(), conjunctions, collationComparator));
   }
 
   private TableMetadata getTableMetadata(Key key) throws CrudException {
@@ -428,7 +448,8 @@ public class Snapshot {
       Column<?> indexColumn = scanWithIndex.getPartitionKey().getColumns().get(0);
       String indexColumnName = indexColumn.getName();
       if (columns.containsKey(indexColumnName)
-          && columns.get(indexColumnName).equals(indexColumn)) {
+          && ScalarDbUtils.columnEquals(
+              columns.get(indexColumnName), indexColumn, collationComparator)) {
         return true;
       }
     }
@@ -480,7 +501,7 @@ public class Snapshot {
       Put put = entry.getValue();
       if (!put.forNamespace().equals(scan.forNamespace())
           || !put.forTable().equals(scan.forTable())
-          || !put.getPartitionKey().equals(scan.getPartitionKey())) {
+          || !partitionKeyEquals(put.getPartitionKey(), scan.getPartitionKey())) {
         continue;
       }
 
@@ -502,13 +523,14 @@ public class Snapshot {
         return true;
       }
 
+      // Range membership is a pure ordering test: an inclusive boundary matches a written key
+      // that collates equal to it, even when the two are not byte-identical.
       if (isStartGiven && isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
         // If startKey <= writtenKey <= endKey
-        if ((scan.getStartInclusive() && writtenKey.equals(startKey))
-            || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
-            || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
+        if (isAfterStart(writtenKey, startKey, scan.getStartInclusive())
+            && isBeforeEnd(writtenKey, endKey, scan.getEndInclusive())) {
           return true;
         }
       }
@@ -516,8 +538,7 @@ public class Snapshot {
       if (isStartGiven && !isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         // If startKey <= writtenKey
-        if ((scan.getStartInclusive() && startKey.equals(writtenKey))
-            || writtenKey.compareTo(startKey) > 0) {
+        if (isAfterStart(writtenKey, startKey, scan.getStartInclusive())) {
           return true;
         }
       }
@@ -525,13 +546,36 @@ public class Snapshot {
       if (!isStartGiven) {
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
         // If writtenKey <= endKey
-        if ((scan.getEndInclusive() && writtenKey.equals(endKey))
-            || writtenKey.compareTo(endKey) < 0) {
+        if (isBeforeEnd(writtenKey, endKey, scan.getEndInclusive())) {
           return true;
         }
       }
     }
     return false;
+  }
+
+  /**
+   * Under {@code ICU}, collate-equal partition keys name the same physical partition on an aligned
+   * backend, so equality follows the collation. Under {@code BINARY}, identity is the value itself
+   * and {@link com.scalar.db.io.Key#equals} is the cheaper byte-exact check.
+   */
+  private boolean partitionKeyEquals(com.scalar.db.io.Key key, com.scalar.db.io.Key another) {
+    if (collationComparator.hasCanonicalTextForm()) {
+      return keyComparator.compare(key, another) == 0;
+    }
+    return key.equals(another);
+  }
+
+  private boolean isAfterStart(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key startKey, boolean inclusive) {
+    int cmp = keyComparator.compare(writtenKey, startKey);
+    return inclusive ? cmp >= 0 : cmp > 0;
+  }
+
+  private boolean isBeforeEnd(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key endKey, boolean inclusive) {
+    int cmp = keyComparator.compare(writtenKey, endKey);
+    return inclusive ? cmp <= 0 : cmp < 0;
   }
 
   private boolean areConjunctionsOverlapped(Put put, Scan scan) {
@@ -540,7 +584,8 @@ public class Snapshot {
     }
 
     Map<String, Column<?>> columns = getAllColumns(put);
-    return ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, scan.getConjunctions());
+    return ScalarDbUtils.columnsMatchAnyOfConjunctions(
+        columns, scan.getConjunctions(), collationComparator);
   }
 
   private Map<String, Column<?>> getAllColumns(Put put) {
@@ -599,7 +644,7 @@ public class Snapshot {
       } else {
         // For other Get
 
-        Key key = new Key(get);
+        Key key = new Key(get, collationComparator);
         if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
           continue;
         }
@@ -656,7 +701,7 @@ public class Snapshot {
       // Compare the records of the iterators
       while (latestResult.isPresent() && originalResultEntry != null) {
         TransactionResult latestTxResult = new TransactionResult(latestResult.get());
-        Key key = new Key(scan, latestTxResult, metadata);
+        Key key = new Key(scan, latestTxResult, metadata, collationComparator);
 
         if (latestTxResult.getId() != null && latestTxResult.getId().equals(id)) {
           // The record is inserted/deleted/updated by this transaction
@@ -759,7 +804,7 @@ public class Snapshot {
           next.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), scan.getConjunctions()));
+                      r.getColumns(), scan.getConjunctions(), collationComparator));
     }
 
     return next.isPresent() ? next : getNextResult(scanner, scan);
@@ -779,7 +824,8 @@ public class Snapshot {
     Scan scanWithIndex = ConsensusCommitUtils.createScanWithIndexFromGet(get);
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
-    originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
+    originalResult.ifPresent(
+        r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata, collationComparator), r));
 
     // Validate the result to check if there is no anti-dependency
     validateScanResults(storage, scanWithIndex, results, false, metadata);
@@ -804,7 +850,7 @@ public class Snapshot {
           latestResult.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), get.getConjunctions()));
+                      r.getColumns(), get.getConjunctions(), collationComparator));
     }
 
     if (isChanged(latestResult, originalResult)) {
@@ -937,44 +983,128 @@ public class Snapshot {
         CoreError.CONSENSUS_COMMIT_ANTI_DEPENDENCY_FOUND.buildMessage(), id);
   }
 
+  /**
+   * The transaction layer's logical record key. Under {@code ICU}, TEXT key columns are identified
+   * by their canonical collation form, so the request-typed and storage-returned spellings of one
+   * physical row are one logical key. The visible fields and {@link #toString()} keep the original
+   * bytes.
+   *
+   * <p>All keys placed in one collection must be built with the same {@link CollationComparator}
+   * (one comparator per transaction manager).
+   */
   @Immutable
   public static final class Key implements Comparable<Key> {
     private final String namespace;
     private final String table;
     private final com.scalar.db.io.Key partitionKey;
     private final Optional<com.scalar.db.io.Key> clusteringKey;
+    private final CollationComparator collationComparator;
 
-    public Key(Get get) {
-      this((Operation) get);
+    /**
+     * Memoized: a key is built for every result row of a scan, but only the ones actually looked up
+     * or compared need their identity.
+     */
+    private final Supplier<List<Object>> identity;
+
+    private final Supplier<Integer> hash;
+
+    public Key(Get get, CollationComparator collationComparator) {
+      this((Operation) get, collationComparator);
     }
 
-    public Key(Get get, Result result, TableMetadata tableMetadata) {
-      this.namespace = get.forNamespace().get();
-      this.table = get.forTable().get();
-      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
-      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
+    public Key(
+        Get get,
+        Result result,
+        TableMetadata tableMetadata,
+        CollationComparator collationComparator) {
+      this(
+          get.forNamespace().get(),
+          get.forTable().get(),
+          ScalarDbUtils.getPartitionKey(result, tableMetadata),
+          ScalarDbUtils.getClusteringKey(result, tableMetadata),
+          collationComparator);
     }
 
-    public Key(Put put) {
-      this((Operation) put);
+    public Key(Put put, CollationComparator collationComparator) {
+      this((Operation) put, collationComparator);
     }
 
-    public Key(Delete delete) {
-      this((Operation) delete);
+    public Key(Delete delete, CollationComparator collationComparator) {
+      this((Operation) delete, collationComparator);
     }
 
-    public Key(Scan scan, Result result, TableMetadata tableMetadata) {
-      this.namespace = scan.forNamespace().get();
-      this.table = scan.forTable().get();
-      this.partitionKey = ScalarDbUtils.getPartitionKey(result, tableMetadata);
-      this.clusteringKey = ScalarDbUtils.getClusteringKey(result, tableMetadata);
+    public Key(
+        Scan scan,
+        Result result,
+        TableMetadata tableMetadata,
+        CollationComparator collationComparator) {
+      this(
+          scan.forNamespace().get(),
+          scan.forTable().get(),
+          ScalarDbUtils.getPartitionKey(result, tableMetadata),
+          ScalarDbUtils.getClusteringKey(result, tableMetadata),
+          collationComparator);
     }
 
-    private Key(Operation operation) {
-      namespace = operation.forNamespace().get();
-      table = operation.forTable().get();
-      partitionKey = operation.getPartitionKey();
-      clusteringKey = operation.getClusteringKey();
+    private Key(Operation operation, CollationComparator collationComparator) {
+      this(
+          operation.forNamespace().get(),
+          operation.forTable().get(),
+          operation.getPartitionKey(),
+          operation.getClusteringKey(),
+          collationComparator);
+    }
+
+    private Key(
+        String namespace,
+        String table,
+        com.scalar.db.io.Key partitionKey,
+        Optional<com.scalar.db.io.Key> clusteringKey,
+        CollationComparator collationComparator) {
+      this.namespace = namespace;
+      this.table = table;
+      this.partitionKey = partitionKey;
+      this.clusteringKey = clusteringKey;
+      this.collationComparator = collationComparator;
+      this.identity =
+          Suppliers.memoize(
+              () ->
+                  buildIdentity(
+                      namespace, table, partitionKey, clusteringKey, collationComparator));
+      this.hash = Suppliers.memoize(() -> identity.get().hashCode());
+    }
+
+    private static List<Object> buildIdentity(
+        String namespace,
+        String table,
+        com.scalar.db.io.Key partitionKey,
+        Optional<com.scalar.db.io.Key> clusteringKey,
+        CollationComparator comparator) {
+      List<Object> components = new ArrayList<>();
+      components.add(namespace);
+      components.add(table);
+      addColumns(components, partitionKey, comparator);
+      // Keeps an absent clustering key distinct from a present-but-empty one.
+      components.add(clusteringKey.isPresent());
+      clusteringKey.ifPresent(key -> addColumns(components, key, comparator));
+      return components;
+    }
+
+    private static void addColumns(
+        List<Object> components, com.scalar.db.io.Key key, CollationComparator comparator) {
+      for (Column<?> column : key.getColumns()) {
+        if (comparator.hasCanonicalTextForm()
+            && column.getDataType() == DataType.TEXT
+            && !column.hasNullValue()) {
+          // ByteBuffer gives the canonical bytes content-based equals/hashCode.
+          components.add(
+              new AbstractMap.SimpleImmutableEntry<>(
+                  column.getName(),
+                  ByteBuffer.wrap(comparator.canonicalTextFormOf(column.getTextValue()))));
+        } else {
+          components.add(column);
+        }
+      }
     }
 
     public String getNamespace() {
@@ -995,7 +1125,7 @@ public class Snapshot {
 
     @Override
     public int hashCode() {
-      return Objects.hash(namespace, table, partitionKey, clusteringKey);
+      return hash.get();
     }
 
     @Override
@@ -1007,22 +1137,29 @@ public class Snapshot {
         return false;
       }
       Key another = (Key) o;
-      return this.namespace.equals(another.namespace)
-          && this.table.equals(another.table)
-          && this.partitionKey.equals(another.partitionKey)
-          && this.clusteringKey.equals(another.clusteringKey);
+      // Byte-equal keys are collate-equal under every collation, so the common case of a re-read
+      // row skips collation-key generation.
+      if (namespace.equals(another.namespace)
+          && table.equals(another.table)
+          && partitionKey.equals(another.partitionKey)
+          && clusteringKey.equals(another.clusteringKey)) {
+        return true;
+      }
+      return identity.get().equals(another.identity.get());
     }
 
     @Override
     public int compareTo(Key o) {
+      // Consistent with equals: collate-equal keys compare as 0.
+      Comparator<com.scalar.db.io.Key> keyComparator = collationComparator.keyComparator();
       return ComparisonChain.start()
           .compare(this.namespace, o.namespace)
           .compare(this.table, o.table)
-          .compare(this.partitionKey, o.partitionKey)
+          .compare(this.partitionKey, o.partitionKey, keyComparator)
           .compare(
               this.clusteringKey.orElse(null),
               o.clusteringKey.orElse(null),
-              Comparator.nullsFirst(Comparator.naturalOrder()))
+              Comparator.nullsFirst(keyComparator))
           .result();
     }
 
