@@ -22,6 +22,7 @@ import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Collation;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.List;
@@ -52,6 +53,12 @@ public class Cassandra extends AbstractDistributedStorage {
     if (config.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
           CoreError.CASSANDRA_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
+    }
+
+    // Cassandra orders text only by binary UTF-8 bytes
+    if (config.getCollation() == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(config.getStorage()));
     }
 
     clusterManager = new ClusterManager(config);

@@ -9,6 +9,7 @@ import com.google.rpc.Code;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -126,6 +127,16 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   @Override
   public boolean isConflict(SQLException e) {
     return e.getErrorCode() == Code.ABORTED_VALUE;
+  }
+
+  @Override
+  public void throwIfCollationNotSupported(Collation collation) {
+    // Spanner's PostgreSQL dialect orders text by Unicode code point and does not support
+    // COLLATE, so there is no UCA-based collation the ICU mode could approximate.
+    if (collation == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage("jdbc (Spanner)"));
+    }
   }
 
   @Override

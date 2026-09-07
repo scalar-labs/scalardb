@@ -109,6 +109,9 @@ subprojects {
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
+//      ICU4J collation behavior may shift in any release, including maintenance ones, so its
+//      version is bumped manually, only at a ScalarDB major version
+        icu4jVersion = '77.1'
         protobufVersion = '4.36.0'
         junitVersion = '5.14.4'
         commonsLangVersion = '3.20.0'
