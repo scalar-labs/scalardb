@@ -99,16 +99,19 @@ dynamo:
 jdbc:
   - label: alloydb_%VERSION%
     display_name: AlloyDB %VERSION%
-    setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
+    setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 google/alloydbomni:%VERSION%
     versions:
       - 15
       - 16
     db_healthcheck: docker exec alloydb psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
+      # AlloyDB Omni forces the ICU locale provider at initdb time, so the test database takes the
+      # byte-order C locale of the libc provider, which matches scalar.db.collation=BINARY.
+      docker exec alloydb psql -U postgres -c "CREATE DATABASE test_db TEMPLATE template0 LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' ENCODING UTF8;"
       docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
-        GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+        GRANT CREATE ON DATABASE test_db TO test;"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: db2_%VERSION%
     display_name: Db2 %VERSION%
@@ -295,6 +298,9 @@ jdbc:
       $HOME/.tiup/bin/tiup playground v%VERSION% --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
     db_healthcheck: mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
+      # utf8mb4_0900_bin (NO PAD) is the byte-order match for scalar.db.collation=BINARY and exists
+      # from TiDB 7.4; the default utf8mb4_bin trims trailing spaces.
+      case "%VERSION%" in 6.5) ;; *) mysql -h 127.0.0.1 -P 4000 -u root -e "SET GLOBAL collation_server = 'utf8mb4_0900_bin';";; esac
       mysql -h 127.0.0.1 -P 4000 -u root -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
         GRANT CREATE ON *.* TO 'test'@'%%';
