@@ -452,7 +452,8 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
       Category.USER_ERROR,
       "0106",
-      "Scanning data already-written or already-deleted by the same transaction is not allowed",
+      "Scanning data already-written or already-deleted by the same transaction is not allowed."
+          + " Record: %s",
       "",
       ""),
   CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
