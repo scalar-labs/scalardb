@@ -557,6 +557,22 @@ public enum CoreError implements ScalarDbError {
           + "Primary-key columns must not contain any of the following characters in Cosmos DB: ':', '/', '\\', '#', '?'. Value: %s",
       "",
       ""),
+  COSMOS_CONCATENATED_PARTITION_KEY_TOO_LONG(
+      Category.USER_ERROR,
+      "0148",
+      "The concatenated partition key for table %s.%s exceeds the maximum length for this "
+          + "container's partition key version (%s). Length: %d bytes, maximum: %d bytes. "
+          + "ScalarDB joins partition key columns with ':' and encodes BLOB columns as Base64.",
+      "",
+      ""),
+  COSMOS_DOCUMENT_ID_TOO_LONG(
+      Category.USER_ERROR,
+      "0149",
+      "The document id for table %s.%s exceeds Cosmos DB's maximum of %d characters. "
+          + "ScalarDB builds the document id by joining partition key and clustering key columns "
+          + "with ':'. Length: %d characters.",
+      "",
+      ""),
   CONSENSUS_COMMIT_INSERTING_ALREADY_WRITTEN_DATA_NOT_ALLOWED(
       Category.USER_ERROR,
       "0146",

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
@@ -28,11 +29,16 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 public class CosmosOperationChecker extends OperationChecker {
 
   private static final long BIGINT_MAX_VALUE = 9007199254740992L;
   private static final long BIGINT_MIN_VALUE = -9007199254740992L;
+  private static final int V1_PARTITION_KEY_MAX_UTF8_BYTES = 101;
+  private static final int V2_PARTITION_KEY_MAX_UTF8_BYTES = 2048;
+  private static final int DOCUMENT_ID_MAX_LENGTH = 255;
 
   private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
     // Colons are not allowed in primary-key columns due to the `ConcatenationVisitor` limitation.
@@ -96,17 +102,22 @@ public class CosmosOperationChecker extends OperationChecker {
         public void visit(TimestampTZColumn column) {}
       };
 
+  private final CosmosAdmin cosmosAdmin;
+
   public CosmosOperationChecker(
       DatabaseConfig databaseConfig,
       TableMetadataManager metadataManager,
-      StorageInfoProvider storageInfoProvider) {
+      StorageInfoProvider storageInfoProvider,
+      CosmosAdmin cosmosAdmin) {
     super(databaseConfig, metadataManager, storageInfoProvider);
+    this.cosmosAdmin = cosmosAdmin;
   }
 
   @Override
   public void check(Get get) throws ExecutionException {
     super.check(get);
     checkPrimaryKey(get);
+    checkPartitionKeyAndDocumentIdLengths(get);
   }
 
   @Override
@@ -119,12 +130,14 @@ public class CosmosOperationChecker extends OperationChecker {
     scan.getEndClusteringKey()
         .ifPresent(
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
+    checkPartitionKeyAndDocumentIdLengths(scan);
   }
 
   @Override
   public void check(Put put) throws ExecutionException {
     super.check(put);
     checkPrimaryKey(put);
+    checkPartitionKeyAndDocumentIdLengths(put);
     checkBigIntColumnsInValues(put);
 
     TableMetadata metadata = getTableMetadata(put);
@@ -135,6 +148,7 @@ public class CosmosOperationChecker extends OperationChecker {
   public void check(Delete delete) throws ExecutionException {
     super.check(delete);
     checkPrimaryKey(delete);
+    checkPartitionKeyAndDocumentIdLengths(delete);
 
     TableMetadata metadata = getTableMetadata(delete);
     checkCondition(delete, metadata);
@@ -149,6 +163,62 @@ public class CosmosOperationChecker extends OperationChecker {
         .getClusteringKey()
         .ifPresent(
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
+  }
+
+  private void checkPartitionKeyAndDocumentIdLengths(Operation operation)
+      throws ExecutionException {
+    if (operation.getPartitionKey().getColumns().isEmpty()) {
+      return;
+    }
+
+    TableMetadata metadata = getTableMetadata(operation);
+    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadata);
+    String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
+    int partitionKeyByteLength =
+        concatenatedPartitionKey.getBytes(StandardCharsets.UTF_8).length;
+
+    Optional<PartitionKeyDefinitionVersion> version =
+        cosmosAdmin.getPartitionKeyDefinitionVersion(
+            operation.forNamespace().orElseThrow(IllegalArgumentException::new),
+            operation.forTable().orElseThrow(IllegalArgumentException::new));
+    int maxPartitionKeyBytes =
+        isV2PartitionKey(version)
+            ? V2_PARTITION_KEY_MAX_UTF8_BYTES
+            : V1_PARTITION_KEY_MAX_UTF8_BYTES;
+
+    if (partitionKeyByteLength > maxPartitionKeyBytes) {
+      throw new IllegalArgumentException(
+          CoreError.COSMOS_CONCATENATED_PARTITION_KEY_TOO_LONG.buildMessage(
+              operation.forNamespace().orElseThrow(IllegalArgumentException::new),
+              operation.forTable().orElseThrow(IllegalArgumentException::new),
+              formatPartitionKeyVersion(version),
+              partitionKeyByteLength,
+              maxPartitionKeyBytes));
+    }
+
+    if (cosmosOperation.isPrimaryKeySpecified()) {
+      String documentId = cosmosOperation.getId();
+      if (documentId.length() > DOCUMENT_ID_MAX_LENGTH) {
+        throw new IllegalArgumentException(
+            CoreError.COSMOS_DOCUMENT_ID_TOO_LONG.buildMessage(
+                operation.forNamespace().orElseThrow(IllegalArgumentException::new),
+                operation.forTable().orElseThrow(IllegalArgumentException::new),
+                DOCUMENT_ID_MAX_LENGTH,
+                documentId.length()));
+      }
+    }
+  }
+
+  private static boolean isV2PartitionKey(Optional<PartitionKeyDefinitionVersion> version) {
+    return version.isPresent() && version.get() == PartitionKeyDefinitionVersion.V2;
+  }
+
+  private static String formatPartitionKeyVersion(
+      Optional<PartitionKeyDefinitionVersion> version) {
+    if (isV2PartitionKey(version)) {
+      return "V2";
+    }
+    return "V1";
   }
 
   private void checkBigIntColumnsInValues(Put put) {
