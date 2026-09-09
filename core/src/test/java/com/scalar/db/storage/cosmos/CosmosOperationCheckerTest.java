@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.MutationCondition;
@@ -28,6 +29,8 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -75,14 +78,19 @@ public class CosmosOperationCheckerTest {
   @Mock private DatabaseConfig databaseConfig;
   @Mock private TableMetadataManager metadataManager;
   @Mock private StorageInfoProvider storageInfoProvider;
+  @Mock private CosmosAdmin cosmosAdmin;
   private CosmosOperationChecker operationChecker;
 
   @BeforeEach
   public void setUp() throws Exception {
     openMocks(this).close();
 
+    when(cosmosAdmin.getPartitionKeyDefinitionVersion(NAMESPACE_NAME, TABLE_NAME))
+        .thenReturn(Optional.empty());
+
     operationChecker =
-        new CosmosOperationChecker(databaseConfig, metadataManager, storageInfoProvider);
+        new CosmosOperationChecker(
+            databaseConfig, metadataManager, storageInfoProvider, cosmosAdmin);
   }
 
   @Test
@@ -895,6 +903,59 @@ public class CosmosOperationCheckerTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void check_PutGiven_WhenPartitionKeyExceedsV1Limit_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 102)))
+            .clusteringKey(Key.ofText(CKEY1, "a"))
+            .build();
+
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void check_PutGiven_WhenPartitionKeyExceedsV2Limit_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+    when(cosmosAdmin.getPartitionKeyDefinitionVersion(NAMESPACE_NAME, TABLE_NAME))
+        .thenReturn(Optional.of(PartitionKeyDefinitionVersion.V2));
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 2049)))
+            .clusteringKey(Key.ofText(CKEY1, "a"))
+            .build();
+
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void check_PutGiven_WhenDocumentIdExceedsLimit_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 200)))
+            .clusteringKey(Key.ofText(CKEY1, repeat("y", 56)))
+            .build();
+
+    assertThatThrownBy(() -> operationChecker.check(put))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   private Put buildPutWithCondition(MutationCondition condition) {
     return Put.newBuilder()
         .namespace(NAMESPACE_NAME)
@@ -914,5 +975,12 @@ public class CosmosOperationCheckerTest {
         .clusteringKey(Key.ofInt(CKEY1, 1))
         .condition(condition)
         .build();
+  }
+
+  private static String repeat(String character, int count) {
+    if (count <= 0) {
+      return "";
+    }
+    return String.join("", Collections.nCopies(count, character));
   }
 }

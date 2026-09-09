@@ -18,6 +18,9 @@ import com.azure.cosmos.models.ExcludedPath;
 import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
+import com.azure.cosmos.models.PartitionKeyDefinition;
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
+import com.azure.cosmos.models.PartitionKind;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.annotations.VisibleForTesting;
@@ -61,6 +64,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_REQUEST_UNIT = "400";
   public static final String NO_SCALING = "no-scaling";
   public static final String DEFAULT_NO_SCALING = "false";
+  public static final String LARGE_PARTITION_KEY = "large_partition_key";
+  public static final String DEFAULT_LARGE_PARTITION_KEY = "true";
 
   public static final String TABLE_METADATA_CONTAINER = "metadata";
   public static final String NAMESPACES_CONTAINER = "namespaces";
@@ -102,7 +107,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     try {
       createMetadataDatabaseAndNamespaceContainerIfNotExists();
-      createTableInternal(namespace, table, metadata);
+      createTableInternal(namespace, table, metadata, options);
     } catch (IllegalArgumentException e) {
       throw e;
     } catch (Exception e) {
@@ -111,10 +116,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createTableInternal(String namespace, String table, TableMetadata metadata)
+  private void createTableInternal(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     checkMetadata(metadata);
-    createContainer(namespace, table, metadata, false);
+    createContainer(namespace, table, metadata, false, options);
     upsertTableMetadata(namespace, table, metadata);
   }
 
@@ -129,10 +135,14 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   private void createContainer(
-      String database, String table, TableMetadata metadata, boolean ifNotExists)
+      String database,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
       throws ExecutionException {
     CosmosDatabase cosmosDatabase = client.getDatabase(database);
-    CosmosContainerProperties properties = computeContainerProperties(table, metadata);
+    CosmosContainerProperties properties = computeContainerProperties(table, metadata, options);
     if (ifNotExists) {
       cosmosDatabase.createContainerIfNotExists(properties);
     } else {
@@ -194,10 +204,46 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   private CosmosContainerProperties computeContainerProperties(
-      String table, TableMetadata metadata) {
+      String table, TableMetadata metadata, Map<String, String> options) {
     IndexingPolicy indexingPolicy = computeIndexingPolicy(metadata);
-    return new CosmosContainerProperties(table, PARTITION_KEY_PATH)
+    PartitionKeyDefinition partitionKeyDefinition =
+        new PartitionKeyDefinition()
+            .setKind(PartitionKind.HASH)
+            .setPaths(Collections.singletonList(PARTITION_KEY_PATH))
+            .setVersion(
+                isLargePartitionKeyEnabled(options)
+                    ? PartitionKeyDefinitionVersion.V2
+                    : PartitionKeyDefinitionVersion.V1);
+    return new CosmosContainerProperties(table, partitionKeyDefinition)
         .setIndexingPolicy(indexingPolicy);
+  }
+
+  static boolean isLargePartitionKeyEnabled(Map<String, String> options) {
+    if (options == null || options.isEmpty()) {
+      return Boolean.parseBoolean(DEFAULT_LARGE_PARTITION_KEY);
+    }
+    return Boolean.parseBoolean(
+        options.getOrDefault(LARGE_PARTITION_KEY, DEFAULT_LARGE_PARTITION_KEY));
+  }
+
+  public Optional<PartitionKeyDefinitionVersion> getPartitionKeyDefinitionVersion(
+      String namespace, String table) throws ExecutionException {
+    try {
+      PartitionKeyDefinition partitionKeyDefinition =
+          client
+              .getDatabase(namespace)
+              .getContainer(table)
+              .read()
+              .getProperties()
+              .getPartitionKeyDefinition();
+      return Optional.ofNullable(partitionKeyDefinition.getVersion());
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "Reading the partition key definition version failed. Table: %s",
+              getFullTableName(namespace, table)),
+          e);
+    }
   }
 
   private IndexingPolicy computeIndexingPolicy(TableMetadata metadata) {
@@ -661,7 +707,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       // stored ScalarDB metadata, while the indexing-policy update is guarded by comparing the
       // container's actual indexing policy (inside updateIndexingPolicy) -- repair must fix the
       // physical indexing policy even when the ScalarDB metadata already matches.
-      createContainer(namespace, table, metadata, true);
+      createContainer(namespace, table, metadata, true, options);
       if (tableMetadataAlreadyUpToDate(namespace, table, metadata)) {
         logger.debug(
             "The metadata for the {} container is already up to date; skipping the metadata update",

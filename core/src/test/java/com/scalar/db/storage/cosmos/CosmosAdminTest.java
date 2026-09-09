@@ -24,6 +24,7 @@ import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CompositePath;
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosContainerResponse;
@@ -309,6 +310,8 @@ public class CosmosAdminTest {
 
     verify(database).createContainer(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -414,6 +417,8 @@ public class CosmosAdminTest {
 
     verify(database).createContainer(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
