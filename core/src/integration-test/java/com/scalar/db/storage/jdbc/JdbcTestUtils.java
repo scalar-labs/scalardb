@@ -75,6 +75,10 @@ public final class JdbcTestUtils {
     return rdbEngine instanceof RdbEngineSqlServer;
   }
 
+  public static boolean isSybase(RdbEngineStrategy rdbEngine) {
+    return rdbEngine instanceof RdbEngineSybase;
+  }
+
   public static boolean isSqlite(RdbEngineStrategy rdbEngine) {
     return rdbEngine instanceof RdbEngineSqlite;
   }

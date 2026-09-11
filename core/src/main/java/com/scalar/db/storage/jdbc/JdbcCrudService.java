@@ -19,6 +19,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.query.Query;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.UpdateThenInsertQuery;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -243,6 +244,10 @@ public class JdbcCrudService {
   private boolean isBatchable(Query query) {
     if (query instanceof ConditionalMutationQuery) {
       return ((ConditionalMutationQuery) query).isBatchable();
+    }
+    if (query instanceof UpdateThenInsertQuery) {
+      // Two statements, which SAP ASE refuses in a batch. See UpdateThenInsertQuery.
+      return false;
     }
 
     return true;

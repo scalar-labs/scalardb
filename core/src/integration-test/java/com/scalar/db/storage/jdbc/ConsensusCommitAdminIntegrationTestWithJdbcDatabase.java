@@ -99,7 +99,8 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
         || JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
         || JdbcTestUtils.isSpanner(rdbEngine)
-        || isTidb();
+        || isTidb()
+        || JdbcTestUtils.isSybase(rdbEngine);
   }
 
   @SuppressWarnings("unused")
@@ -644,7 +645,8 @@ public class ConsensusCommitAdminIntegrationTestWithJdbcDatabase
 
   @Override
   protected boolean isIndexOnBlobColumnSupported() {
-    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
+    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine))
+        && !JdbcTestUtils.isSybase(rdbEngine);
   }
 
   @Override

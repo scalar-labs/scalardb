@@ -201,6 +201,12 @@ dependencies {
     }
     // Enables fast Aurora failover by discovering the cluster topology instead of waiting for DNS
     implementation "software.amazon.jdbc:aws-advanced-jdbc-wrapper:${awsAdvancedJdbcWrapperVersion}"
+
+    // SAP ASE proof of concept: jConnect ships with ASE under the SAP license and is not on Maven
+    // Central, so it is supplied by path, e.g. -PjconnectJar=/path/to/jConnect40.jar
+    if (project.hasProperty('jconnectJar')) {
+        integrationTestJdbcRuntimeOnly files(project.property('jconnectJar'))
+    }
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"

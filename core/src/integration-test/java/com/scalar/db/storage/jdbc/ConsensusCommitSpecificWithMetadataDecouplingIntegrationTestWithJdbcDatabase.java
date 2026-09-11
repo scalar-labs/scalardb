@@ -41,12 +41,17 @@ public class ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdb
 
   @Override
   protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
-    // SQL Server and Db2 use lock-based concurrency even at READ COMMITTED, so an open scan keeps a
+    // SQL Server, Db2 and SAP ASE use lock-based concurrency even at READ COMMITTED, so an open
+    // scan keeps a
     // shared lock that blocks the scan-path recovery simulation's concurrent write to a scanned row
     // (indefinitely, as their lock wait is unbounded). MySQL and MariaDB are MVCC at this class's
     // isolation and do not block; they only block under SERIALIZABLE (see the highest-isolation
-    // subclass).
-    return !(JdbcTestUtils.isSqlServer(rdbEngine) || JdbcTestUtils.isDb2(rdbEngine));
+    // subclass). SAP ASE deadlocks here but not in the non-decoupling class: this one writes the
+    // separate transaction metadata table while scanning the virtual table that joins it, so more
+    // locks are in play.
+    return !(JdbcTestUtils.isSqlServer(rdbEngine)
+        || JdbcTestUtils.isDb2(rdbEngine)
+        || JdbcTestUtils.isSybase(rdbEngine));
   }
 
   @AfterAll

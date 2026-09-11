@@ -84,7 +84,12 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
             + rdbEngine.encloseFullTableName(metadataSchema, TableMetadataService.TABLE_NAME)
             + " VALUES ('"
             + getFullTableName(namespace, table)
-            + "','corrupted','corrupted','corrupted','corrupted','0','0')";
+            // The last two columns are the boolean "indexed" and the integer "ordinal_position".
+            // Quoting them makes SAP ASE reject the insert, since it will not implicitly convert
+            // VARCHAR to TINYINT, so the engine's own boolean literal is used instead.
+            + "','corrupted','corrupted','corrupted','corrupted',"
+            + rdbEngine.computeBooleanValue(false)
+            + ",0)";
     execute(insertCorruptedMetadataStatement);
   }
 
@@ -239,6 +244,9 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
       sql = "SELECT 1 FROM sys.schemas WHERE name = ?";
     } else if (JdbcTestUtils.isDb2(rdbEngine)) {
       sql = "SELECT 1 FROM syscat.schemata WHERE schemaname = ?";
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      // A namespace is an object owner in SAP ASE, which is a database user
+      sql = "SELECT 1 FROM sysusers WHERE name = ?";
     } else {
       throw new AssertionError("Unsupported engine : " + rdbEngine.getClass().getSimpleName());
     }

@@ -306,6 +306,30 @@ public interface RdbEngineStrategy {
     return jdbcUrl;
   }
 
+  /**
+   * Returns a SQL statement to run on every new connection, or null when the underlying database
+   * needs none. Use it for session settings that the generated SQL depends on and that the JDBC URL
+   * cannot carry, such as enabling quoted identifiers in SAP ASE.
+   *
+   * @return a SQL statement to run once per connection, or null
+   */
+  default @Nullable String getConnectionInitSql() {
+    return null;
+  }
+
+  /**
+   * Returns the clause that makes a column nullable, for an underlying database whose columns are
+   * NOT NULL by default, or an empty string when omitting a nullability clause already leaves the
+   * column nullable. ScalarDB requires every non-primary-key column to accept null, so the callers
+   * that declare such a column append this. SAP ASE is the only engine that needs it; its default
+   * is NOT NULL unless the database is configured otherwise.
+   *
+   * @return a clause to append to a nullable column definition, or an empty string
+   */
+  default String getNullableColumnClause() {
+    return "";
+  }
+
   RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
 
   default String getProjectionsSqlForSelectQuery(TableMetadata metadata, List<String> projections) {

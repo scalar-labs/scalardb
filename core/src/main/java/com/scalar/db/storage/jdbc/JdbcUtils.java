@@ -139,6 +139,11 @@ public final class JdbcUtils {
       hikariConfig.addDataSourceProperty(entry.getKey(), entry.getValue());
     }
 
+    String connectionInitSql = rdbEngine.getConnectionInitSql();
+    if (connectionInitSql != null) {
+      hikariConfig.setConnectionInitSql(connectionInitSql);
+    }
+
     return createDataSource(hikariConfig);
   }
 

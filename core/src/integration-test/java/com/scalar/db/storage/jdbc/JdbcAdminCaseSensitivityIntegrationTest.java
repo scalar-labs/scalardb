@@ -92,7 +92,8 @@ public class JdbcAdminCaseSensitivityIntegrationTest
         || JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
         || JdbcTestUtils.isSpanner(rdbEngine)
-        || isTidb();
+        || isTidb()
+        || JdbcTestUtils.isSybase(rdbEngine);
   }
 
   @SuppressWarnings("unused")
@@ -807,8 +808,9 @@ public class JdbcAdminCaseSensitivityIntegrationTest
   @Override
   protected boolean isIndexOnBlobColumnSupported() {
     return !(JdbcTestUtils.isDb2(rdbEngine)
-        || JdbcTestUtils.isOracle(rdbEngine)
-        || JdbcTestUtils.isSpanner(rdbEngine));
+            || JdbcTestUtils.isOracle(rdbEngine)
+            || JdbcTestUtils.isSpanner(rdbEngine))
+        && !JdbcTestUtils.isSybase(rdbEngine);
   }
 
   @Override

@@ -36,6 +36,8 @@ public final class RdbEngineFactory {
       return new RdbEngineDb2(config);
     } else if (jdbcUrl.startsWith("jdbc:cloudspanner:") || jdbcUrl.startsWith("jdbc:spanner:")) {
       return new RdbEngineSpanner(config);
+    } else if (jdbcUrl.startsWith("jdbc:sybase:")) {
+      return new RdbEngineSybase(config);
     } else {
       throw new IllegalArgumentException(
           CoreError.JDBC_RDB_ENGINE_NOT_SUPPORTED.buildMessage(jdbcUrl));

@@ -109,7 +109,8 @@ public class JdbcAdminImportTableIntegrationTest
         || JdbcEnv.isOracle()
         || JdbcEnv.isSqlite()
         || isTidb()
-        || JdbcEnv.isSpanner();
+        || JdbcEnv.isSpanner()
+        || JdbcEnv.isSybase();
   }
 
   @SuppressWarnings("unused")

@@ -136,7 +136,7 @@ public class RdbEngineStrategyExceptionIntegrationTest {
   }
 
   @Test
-  @DisabledIf("isCreateSchemaIfNotExistsSyntaxSupported")
+  @DisabledIf("isDuplicateSchemaNotProducible")
   public void isDuplicateSchemaError_WhenDuplicateSchema_ShouldReturnTrue() throws SQLException {
     // Arrange: create the schema once
     executeSqls(rdbEngine.createSchemaSqls(DUP_SCHEMA));
@@ -157,11 +157,18 @@ public class RdbEngineStrategyExceptionIntegrationTest {
     }
   }
 
+  /**
+   * Whether creating the same schema twice raises no error, which makes a duplicate schema
+   * impossible to provoke. MySQL, PostgreSQL and SQLite get there with IF NOT EXISTS syntax. SAP
+   * ASE gets there because a namespace is an object owner that ScalarDB never creates, so its
+   * createSchemaSqls only checks that the owner is there.
+   */
   @SuppressWarnings("unused")
-  private boolean isCreateSchemaIfNotExistsSyntaxSupported() {
+  private boolean isDuplicateSchemaNotProducible() {
     return JdbcTestUtils.isMysql(rdbEngine)
         || JdbcTestUtils.isPostgresql(rdbEngine)
-        || JdbcTestUtils.isSqlite(rdbEngine);
+        || JdbcTestUtils.isSqlite(rdbEngine)
+        || JdbcTestUtils.isSybase(rdbEngine);
   }
 
   @Test

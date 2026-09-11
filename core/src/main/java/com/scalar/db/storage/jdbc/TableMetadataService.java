@@ -85,10 +85,12 @@ public class TableMetadataService {
             + enclose(COL_KEY_TYPE)
             + " "
             + getTextType(20, false)
+            + rdbEngine.getNullableColumnClause()
             + ","
             + enclose(COL_CLUSTERING_ORDER)
             + " "
             + getTextType(10, false)
+            + rdbEngine.getNullableColumnClause()
             + ","
             + enclose(COL_INDEXED)
             + " "

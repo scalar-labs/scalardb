@@ -1157,6 +1157,36 @@ public enum CoreError implements ScalarDbError {
       "The HikariCP exceptionOverrideClassName setting is not supported. ScalarDB determines whether a failed commit left the transaction in an unknown state by checking whether the connection survived, which relies on HikariCP discarding a connection that reports a connection exception. An override that keeps such a connection alive would make an unknown outcome be reported as a definite failure, which the caller is told is safe to retry. Configured class: %s",
       "",
       ""),
+  JDBC_SYBASE_INDEX_ON_BLOB_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0306",
+      "SAP ASE does not support a secondary index on a BLOB column",
+      "",
+      ""),
+  JDBC_SYBASE_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0305",
+      "SAP ASE does not support column type conversion from %s to %s",
+      "",
+      ""),
+  JDBC_SYBASE_DECIMAL_SCALE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0307",
+      "ScalarDB has no decimal type, so a SAP ASE numeric or decimal column with a scale can only be imported as a DOUBLE, which is not exact beyond 15 significant digits. Pass an explicit DOUBLE override for the column to accept that, or change the column to one ScalarDB has an exact type for. Column: %s, type: %s(%s,%s)",
+      "",
+      ""),
+  JDBC_SYBASE_DECIMAL_PRECISION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0308",
+      "A SAP ASE numeric or decimal column without a scale is imported as a BIGINT, which holds up to 18 digits. This column has more, so importing it would not be exact. Column: %s, type: %s(%s,%s)",
+      "",
+      ""),
+  JDBC_SYBASE_NAMESPACE_USER_NOT_FOUND(
+      Category.USER_ERROR,
+      "0304",
+      "The namespace does not exist as a user in the SAP ASE database. A namespace is an object owner there, and an owner is a database user that requires a server-level login, so ScalarDB does not create it. Ask a database administrator to create the user. Namespace: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

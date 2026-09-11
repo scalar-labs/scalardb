@@ -650,9 +650,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return Optional.ofNullable(keyDataType).orElse(dataType);
     } else if (metadata.getSecondaryIndexNames().contains(columnName)) {
       String indexDataType = rdbEngine.getDataTypeForSecondaryIndex(scalarDbColumnType);
-      return Optional.ofNullable(indexDataType).orElse(dataType);
+      return Optional.ofNullable(indexDataType).orElse(dataType)
+          + rdbEngine.getNullableColumnClause();
     } else {
-      return dataType;
+      return dataType + rdbEngine.getNullableColumnClause();
     }
   }
 
@@ -739,7 +740,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    String[] sqls =
+        rdbEngine.alterColumnTypeSql(
+            namespace, table, columnName, columnTypeForKey + rdbEngine.getNullableColumnClause());
     execute(connection, sqls, requiresExplicitCommit);
   }
 
@@ -753,7 +756,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String columnType = rdbEngine.getDataTypeForEngine(dataType);
+    String columnType =
+        rdbEngine.getDataTypeForEngine(dataType) + rdbEngine.getNullableColumnClause();
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
     execute(connection, sqls, requiresExplicitCommit);
   }

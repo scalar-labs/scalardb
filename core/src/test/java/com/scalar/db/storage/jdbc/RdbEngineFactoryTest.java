@@ -133,6 +133,18 @@ class RdbEngineFactoryTest {
   }
 
   @Test
+  void create_GivenSybaseUrl_ShouldReturnRdbEngineSybase() {
+    // Arrange
+    JdbcConfig config = configWithUrl("jdbc:sybase:Tds:localhost:5000/test");
+
+    // Act
+    RdbEngineStrategy engine = RdbEngineFactory.create(config);
+
+    // Assert
+    assertThat(engine).isInstanceOf(RdbEngineSybase.class);
+  }
+
+  @Test
   void create_GivenMysqlUrlAndMysqlServer_ShouldReturnRdbEngineMysql() throws SQLException {
     // Arrange
     JdbcConfig config = configWithUrl("jdbc:mysql://localhost:3306/test");

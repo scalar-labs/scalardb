@@ -167,7 +167,8 @@ public class JdbcTransactionAdminIntegrationTest
         || JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
         || JdbcTestUtils.isSpanner(rdbEngine)
-        || isTidb();
+        || isTidb()
+        || JdbcEnv.isSybase();
   }
 
   @SuppressWarnings("unused")
@@ -711,7 +712,8 @@ public class JdbcTransactionAdminIntegrationTest
 
   @Override
   protected boolean isIndexOnBlobColumnSupported() {
-    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
+    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine))
+        && !JdbcEnv.isSybase();
   }
 
   @Override

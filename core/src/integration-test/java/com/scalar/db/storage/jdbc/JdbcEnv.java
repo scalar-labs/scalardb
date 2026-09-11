@@ -72,6 +72,10 @@ public final class JdbcEnv {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sqlserver:");
   }
 
+  public static boolean isSybase() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sybase:");
+  }
+
   public static boolean isSqlite() {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:sqlite:");
   }

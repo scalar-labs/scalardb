@@ -61,10 +61,12 @@ public class VirtualTableMetadataService {
             + enclose(COL_JOIN_TYPE)
             + " "
             + getTextType(20, false)
+            + rdbEngine.getNullableColumnClause()
             + ", "
             + enclose(COL_ATTRIBUTES)
             + " "
             + rdbEngine.getDataTypeForEngine(DataType.TEXT)
+            + rdbEngine.getNullableColumnClause()
             + ", "
             + "PRIMARY KEY ("
             + enclose(COL_FULL_TABLE_NAME)

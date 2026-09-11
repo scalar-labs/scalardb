@@ -67,14 +67,15 @@ public class ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsol
 
   @Override
   protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
-    // MySQL, MariaDB, SQL Server and Db2 take shared/range locks for an open scan under
+    // MySQL, MariaDB, SQL Server, Db2 and SAP ASE take shared/range locks for an open scan under
     // SERIALIZABLE (the highest isolation level this class sets), so a concurrent write to a row
     // the scan still holds blocks until the scan finishes. The scan-path finalize/cleanup-race
     // recovery tests simulate exactly such a write from within lazy recovery while the scanner is
     // open, so they self-deadlock on these engines.
     return !((JdbcTestUtils.isMysql(rdbEngine) && !JdbcTestUtils.isTidb(rdbEngine))
         || JdbcTestUtils.isSqlServer(rdbEngine)
-        || JdbcTestUtils.isDb2(rdbEngine));
+        || JdbcTestUtils.isDb2(rdbEngine)
+        || JdbcTestUtils.isSybase(rdbEngine));
   }
 
   @Override

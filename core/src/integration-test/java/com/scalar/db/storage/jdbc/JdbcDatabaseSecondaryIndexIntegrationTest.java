@@ -100,7 +100,7 @@ public class JdbcDatabaseSecondaryIndexIntegrationTest
 
   @Override
   protected Set<DataType> getSecondaryIndexTypes() {
-    // BLOB type cannot be used as a secondary index in Db2, Oracle.
+    // BLOB type cannot be used as a secondary index in Db2, Oracle, SAP ASE.
     // FLOAT type cannot be used as a secondary index in Spanner.
     return Sets.newHashSet(
         JdbcTestUtils.filterDataTypes(
@@ -110,6 +110,8 @@ public class JdbcDatabaseSecondaryIndexIntegrationTest
                 RdbEngineDb2.class,
                 ImmutableList.of(DataType.BLOB),
                 RdbEngineOracle.class,
+                ImmutableList.of(DataType.BLOB),
+                RdbEngineSybase.class,
                 ImmutableList.of(DataType.BLOB),
                 RdbEngineSpanner.class,
                 ImmutableList.of(DataType.FLOAT))));

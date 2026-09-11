@@ -106,6 +106,21 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
               + "PRIMARY KEY("
               + rdbEngine.enclose("pk")
               + "))";
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      // ASE columns are NOT NULL unless told otherwise, and a primary key column must say so
+      sql =
+          "CREATE TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + "("
+              + rdbEngine.enclose("pk")
+              + " CHAR(8) NOT NULL,"
+              + rdbEngine.enclose("col1")
+              + " CHAR(8) NULL,"
+              + rdbEngine.enclose("col2")
+              + " BIGDATETIME NULL,"
+              + "PRIMARY KEY("
+              + rdbEngine.enclose("pk")
+              + ")) LOCK DATAROWS";
     } else {
       throw new AssertionError();
     }
@@ -126,6 +141,10 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
     } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isSqlServer(rdbEngine)) {
       return ImmutableMap.of("col1", DataType.TEXT);
     } else if (JdbcTestUtils.isDb2(rdbEngine)) {
+      return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMPTZ);
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      // A bigdatetime imports as TIMESTAMP by default; ASE has no time zone aware type, so a column
+      // known to hold UTC can be overridden to TIMESTAMPTZ
       return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMPTZ);
     } else {
       throw new AssertionError();
@@ -157,6 +176,11 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
       return metadata
           .addColumn("col2", hasTypeOverride ? DataType.TIMESTAMPTZ : DataType.TIMESTAMP)
           .build();
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      // The fixture's col2 is a bigdatetime, which imports as TIMESTAMP unless overridden
+      return metadata
+          .addColumn("col2", hasTypeOverride ? DataType.TIMESTAMPTZ : DataType.TIMESTAMP)
+          .build();
     } else {
       throw new AssertionError();
     }
@@ -178,6 +202,9 @@ public class JdbcSchemaLoaderImportIntegrationTest extends SchemaLoaderImportInt
       nonImportableDataType = "MONEY";
     } else if (JdbcTestUtils.isDb2(rdbEngine)) {
       nonImportableDataType = "XML";
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      // ASE money has no ScalarDB counterpart
+      nonImportableDataType = "MONEY";
     } else {
       throw new AssertionError();
     }

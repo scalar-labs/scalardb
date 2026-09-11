@@ -116,6 +116,16 @@ public class JdbcAdminImportTestUtils {
           "xml",
           "geometry",
           "geography");
+  static final List<String> UNSUPPORTED_DATA_TYPES_SYBASE =
+      Arrays.asList(
+          "decimal(8,2)",
+          "numeric(8,2)",
+          "money",
+          "smallmoney",
+          "unsigned bigint",
+          // The ASE type named timestamp is a row version, not a point in time
+          "timestamp");
+
   static final List<String> UNSUPPORTED_DATA_TYPES_DB2 =
       Arrays.asList("DECIMAL", "DECFLOAT", "XML");
   static final List<String> UNSUPPORTED_DATA_TYPES_SPANNER =
@@ -149,6 +159,8 @@ public class JdbcAdminImportTestUtils {
       return createExistingSqlServerDatabaseWithAllDataTypes(namespace);
     } else if (JdbcTestUtils.isDb2(rdbEngine)) {
       return createExistingDb2DatabaseWithAllDataTypes(namespace);
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      return createExistingSybaseDatabaseWithAllDataTypes(namespace);
     } else {
       throw new AssertionError("Unsupported database engine: " + rdbEngine);
     }
@@ -165,6 +177,8 @@ public class JdbcAdminImportTestUtils {
       return getIntCompatibleColumnNamesOnExistingSqlServerDatabase(table);
     } else if (JdbcTestUtils.isDb2(rdbEngine)) {
       return getIntCompatibleColumnNamesOnExistingDb2Database(table);
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      return getIntCompatibleColumnNamesOnExistingSybaseDatabase(table);
     } else {
       throw new AssertionError("Unsupported database engine: " + rdbEngine);
     }
@@ -181,6 +195,8 @@ public class JdbcAdminImportTestUtils {
       return getFloatCompatibleColumnNamesOnExistingSqlServerDatabase(table);
     } else if (JdbcTestUtils.isDb2(rdbEngine)) {
       return getFloatCompatibleColumnNamesOnExistingDb2Database(table);
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      return getFloatCompatibleColumnNamesOnExistingSybaseDatabase(table);
     } else {
       throw new AssertionError("Unsupported database engine: " + rdbEngine);
     }
@@ -956,6 +972,120 @@ public class JdbcAdminImportTestUtils {
     return ImmutableList.copyOf(data);
   }
 
+  /**
+   * The SAP ASE counterpart. Column types are spelled with an explicit NULL, because an ASE column
+   * is NOT NULL unless the database says otherwise, and the tests write nulls. The types here are
+   * the ones the driver was observed to report; see docs/sap-ase-poc.md.
+   */
+  private LinkedHashMap<String, String> prepareColumnsForSybase() {
+    LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+    columns.put("pk1", "int not null");
+    columns.put("pk2", "int not null");
+    columns.put("col01", "bit not null"); // an ASE bit column cannot hold null
+    columns.put("col02", "tinyint null");
+    columns.put("col03", "smallint null");
+    columns.put("col04", "int null");
+    columns.put("col05", "bigint null");
+    columns.put("col06", "real null");
+    columns.put("col07", "double precision null");
+    columns.put("col08", "char(3) null");
+    columns.put("col09", "varchar(512) null");
+    columns.put("col10", "unichar(3) null");
+    columns.put("col11", "univarchar(512) null");
+    columns.put("col12", "text null");
+    columns.put("col13", "binary(5) null");
+    columns.put("col14", "varbinary(5) null");
+    columns.put("col15", "image null");
+    columns.put("col16", "date null");
+    columns.put("col17", "bigtime null");
+    columns.put("col18", "datetime null");
+    columns.put("col19", "bigdatetime null");
+    columns.put("col20", "smalldatetime null");
+    return columns;
+  }
+
+  private TableMetadata prepareTableMetadataForSybase() {
+    return TableMetadata.newBuilder()
+        .addColumn("pk1", DataType.INT)
+        .addColumn("pk2", DataType.INT)
+        .addColumn("col01", DataType.BOOLEAN)
+        .addColumn("col02", DataType.INT)
+        .addColumn("col03", DataType.INT)
+        .addColumn("col04", DataType.INT)
+        .addColumn("col05", DataType.BIGINT)
+        .addColumn("col06", DataType.FLOAT)
+        .addColumn("col07", DataType.DOUBLE)
+        .addColumn("col08", DataType.TEXT)
+        .addColumn("col09", DataType.TEXT)
+        .addColumn("col10", DataType.TEXT)
+        .addColumn("col11", DataType.TEXT)
+        .addColumn("col12", DataType.TEXT)
+        .addColumn("col13", DataType.BLOB)
+        .addColumn("col14", DataType.BLOB)
+        .addColumn("col15", DataType.BLOB)
+        .addColumn("col16", DataType.DATE)
+        .addColumn("col17", DataType.TIME)
+        .addColumn("col18", DataType.TIMESTAMP)
+        .addColumn("col19", DataType.TIMESTAMP)
+        .addColumn("col20", DataType.TIMESTAMP)
+        .addPartitionKey("pk1")
+        .addPartitionKey("pk2")
+        .build();
+  }
+
+  private Map<String, Column<?>> prepareInsertColumnsForSybase(TableMetadata metadata) {
+    List<Column<?>> customColumns =
+        ImmutableList.of(
+            // datetime resolves to 1/300 of a second and smalldatetime to a minute, so the values
+            // written have to be ones those types can hold exactly
+            TimestampColumn.of("col18", LocalDateTime.of(1905, 10, 11, 8, 35, 14, 123_000_000)),
+            TimestampColumn.of("col20", LocalDateTime.of(1905, 10, 11, 8, 35)));
+    return prepareInsertColumnsWithGenericAndCustomValues(metadata, customColumns);
+  }
+
+  private List<TestData> createExistingSybaseDatabaseWithAllDataTypes(String namespace)
+      throws SQLException {
+    List<JdbcTestData> data = new ArrayList<>();
+
+    TableMetadata tableMetadata = prepareTableMetadataForSybase();
+    String sql =
+        prepareCreateTableSql(
+            namespace,
+            SUPPORTED_TABLE_NAME,
+            prepareColumnsForSybase(),
+            tableMetadata.getPartitionKeyNames());
+    data.add(
+        JdbcTestData.createImportableTable(
+            SUPPORTED_TABLE_NAME,
+            sql,
+            tableMetadata,
+            Collections.emptyMap(),
+            prepareInsertColumnsForSybase(tableMetadata)));
+
+    data.addAll(prepareCreateNonImportableTableSql(namespace, UNSUPPORTED_DATA_TYPES_SYBASE));
+
+    executeCreateTableSql(data);
+
+    return ImmutableList.copyOf(data);
+  }
+
+  private ImmutableList<String> getIntCompatibleColumnNamesOnExistingSybaseDatabase(String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col02", "col03", "col04");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
+  private ImmutableList<String> getFloatCompatibleColumnNamesOnExistingSybaseDatabase(
+      String table) {
+    if (table.equals(SUPPORTED_TABLE_NAME)) {
+      return ImmutableList.of("col06");
+    } else {
+      throw new IllegalArgumentException("Table does not exist: " + table);
+    }
+  }
+
   private ImmutableList<String> getIntCompatibleColumnNamesOnExistingDb2Database(String table) {
     if (table.equals(SUPPORTED_TABLE_NAME)) {
       return ImmutableList.of("col01", "col02");
@@ -1138,6 +1268,21 @@ public class JdbcAdminImportTestUtils {
           .put("VARGRAPHIC(32)", DataType.TEXT)
           .put("NCHAR(3)", DataType.TEXT)
           .put("NVARCHAR(32)", DataType.TEXT)
+          .build();
+    } else if (JdbcTestUtils.isSybase(rdbEngine)) {
+      return ImmutableMap.<String, DataType>builder()
+          // bit is deliberately absent: ASE cannot index a bit column ("Can't create index on a
+          // column of BIT data type"), so it cannot be a primary key
+          .put("tinyint", DataType.INT)
+          .put("smallint", DataType.INT)
+          .put("int", DataType.INT)
+          .put("bigint", DataType.BIGINT)
+          .put("real", DataType.FLOAT)
+          .put("double precision", DataType.DOUBLE)
+          .put("char(3)", DataType.TEXT)
+          .put("varchar(512)", DataType.TEXT)
+          .put("unichar(3)", DataType.TEXT)
+          .put("univarchar(32)", DataType.TEXT)
           .build();
     } else {
       throw new AssertionError("Unsupported database engine: " + rdbEngine);

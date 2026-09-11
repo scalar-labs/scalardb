@@ -70,6 +70,13 @@ public class JdbcConfig {
   public static final String ORACLE_VARIABLE_KEY_COLUMN_SIZE =
       PREFIX + "oracle.variable_key_column_size";
   public static final String DB2_VARIABLE_KEY_COLUMN_SIZE = PREFIX + "db2.variable_key_column_size";
+  /**
+   * How long a statement waits for a lock on SAP ASE, in seconds. ASE waits forever by default,
+   * which turns contention into a hang rather than an error the caller can retry. A negative value
+   * leaves the server's own behavior alone.
+   */
+  public static final String SYBASE_LOCK_WAIT_SECONDS = PREFIX + "sybase.lock_wait_seconds";
+
   public static final String ORACLE_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "oracle.time_column.default_date_component";
   public static final String DB2_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
@@ -105,6 +112,7 @@ public class JdbcConfig {
   // https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/logical-database-limits.html
   // https://www.ibm.com/docs/en/db2/12.1.0?topic=sql-xml-limits
   public static final int DEFAULT_VARIABLE_KEY_COLUMN_SIZE = 128;
+  public static final int DEFAULT_SYBASE_LOCK_WAIT_SECONDS = 30;
   // As the partition key `tx_id` of the coordinator state table, we need a UUID string plus a
   // 25-byte prefix for the group commit feature; thus, we set 64 bytes as the minimum.
   public static final int MINIMUM_VARIABLE_KEY_COLUMN_SIZE = 64;
@@ -157,6 +165,7 @@ public class JdbcConfig {
   @Nullable private final Long adminConnectionPoolKeepaliveTimeMillis;
 
   private final int mysqlVariableKeyColumnSize;
+  private final int sybaseLockWaitSeconds;
   private final int oracleVariableKeyColumnSize;
   private final int db2VariableKeyColumnSize;
 
@@ -291,6 +300,12 @@ public class JdbcConfig {
             databaseConfig.getProperties(),
             DB2_VARIABLE_KEY_COLUMN_SIZE,
             DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+
+    sybaseLockWaitSeconds =
+        getInt(
+            databaseConfig.getProperties(),
+            SYBASE_LOCK_WAIT_SECONDS,
+            DEFAULT_SYBASE_LOCK_WAIT_SECONDS);
 
     if (mysqlVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE
         || oracleVariableKeyColumnSize < MINIMUM_VARIABLE_KEY_COLUMN_SIZE
@@ -435,6 +450,16 @@ public class JdbcConfig {
 
   public Optional<Long> getAdminConnectionPoolKeepaliveTimeMillis() {
     return Optional.ofNullable(adminConnectionPoolKeepaliveTimeMillis);
+  }
+
+  /**
+   * Returns how long a statement waits for a lock on SAP ASE, in seconds, or a negative value to
+   * leave the server's own behavior alone.
+   *
+   * @return the lock wait in seconds
+   */
+  public int getSybaseLockWaitSeconds() {
+    return sybaseLockWaitSeconds;
   }
 
   public int getMysqlVariableKeyColumnSize() {
