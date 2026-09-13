@@ -214,6 +214,13 @@ public class JdbcDatabase extends AbstractDistributedStorage {
       } catch (SQLException ex) {
         e.addSuppressed(ex);
       }
+      if (rdbEngine.isConflict(e)) {
+        // A conflict, such as a row lock wait timeout or a serialization failure, can occur. Throw
+        // RetriableExecutionException in that case.
+        throw new RetriableExecutionException(
+            CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
+            e);
+      }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } finally {
@@ -258,6 +265,13 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         }
       } catch (SQLException ex) {
         e.addSuppressed(ex);
+      }
+      if (rdbEngine.isConflict(e)) {
+        // A conflict, such as a row lock wait timeout or a serialization failure, can occur. Throw
+        // RetriableExecutionException in that case.
+        throw new RetriableExecutionException(
+            CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
+            e);
       }
       throw new ExecutionException(
           CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
@@ -344,8 +358,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             CoreError.JDBC_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
       }
       if (rdbEngine.isConflict(e)) {
-        // Since a mutate operation executes multiple put/delete operations in a transaction,
-        // conflicts can occur. Throw RetriableExecutionException in that case.
+        // A conflict, such as a row lock wait timeout or a serialization failure, can occur. Throw
+        // RetriableExecutionException in that case.
         throw new RetriableExecutionException(
             CoreError.JDBC_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
             e);
