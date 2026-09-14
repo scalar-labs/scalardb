@@ -11,6 +11,41 @@ import org.junit.jupiter.api.Test;
 public class MultiStorageConfigTest {
 
   @Test
+  public void constructor_WithPerStorageCollationOverride_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_points", "localhost");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.collation", "BINARY");
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+
+    // Act Assert
+    assertThatThrownBy(() -> new MultiStorageConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("cannot be overridden per storage");
+  }
+
+  @Test
+  public void
+      constructor_WithPerStorageIcuCollationPropertyOverride_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_points", "localhost");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.collation.icu.locale", "en");
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+
+    // Act Assert
+    assertThatThrownBy(() -> new MultiStorageConfig(new DatabaseConfig(props)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("cannot be overridden per storage");
+  }
+
+  @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();

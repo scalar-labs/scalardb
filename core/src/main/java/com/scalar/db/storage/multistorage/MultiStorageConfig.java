@@ -69,9 +69,19 @@ public class MultiStorageConfig {
       // `scalar.db.storage`.
       for (String propertyName : properties.stringPropertyNames()) {
         if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
-          dbProps.put(
-              propertyName.replace("multi_storage.storages." + storage + ".", ""),
-              properties.getProperty(propertyName));
+          String storagePropertyName =
+              propertyName.replace("multi_storage.storages." + storage + ".", "");
+          // Collation is a single global JVM-side setting: the transaction layer compares with the
+          // top-level collation, so a per-storage override would only desynchronize a sub-storage's
+          // collation checks (e.g. the binary-only ICU rejection) from the comparisons actually
+          // performed above it
+          if (storagePropertyName.equals(DatabaseConfig.COLLATION)
+              || storagePropertyName.startsWith(DatabaseConfig.COLLATION + ".")) {
+            throw new IllegalArgumentException(
+                CoreError.COLLATION_MULTI_STORAGE_PER_STORAGE_OVERRIDE_NOT_SUPPORTED.buildMessage(
+                    propertyName));
+          }
+          dbProps.put(storagePropertyName, properties.getProperty(propertyName));
         }
       }
 

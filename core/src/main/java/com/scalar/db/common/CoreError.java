@@ -1157,6 +1157,68 @@ public enum CoreError implements ScalarDbError {
       "The HikariCP exceptionOverrideClassName setting is not supported. ScalarDB determines whether a failed commit left the transaction in an unknown state by checking whether the connection survived, which relies on HikariCP discarding a connection that reports a connection exception. An override that keeps such a connection alive would make an unknown outcome be reported as a definite failure, which the caller is told is safe to retry. Configured class: %s",
       "",
       ""),
+  COLLATION_INVALID_RULES(
+      Category.USER_ERROR,
+      "0304",
+      "Failed to build an ICU collator from the specified custom collation rules. Rules: %s",
+      "",
+      "Specify a valid ICU tailoring-rule string for the property scalar.db.collation.icu.rules"),
+  COLLATION_UNRECOGNIZED_LOCALE(
+      Category.USER_ERROR,
+      "0305",
+      "The specified collation locale is not recognized by ICU. Locale: %s",
+      "",
+      "Specify a locale that ICU has collation data for (for example en, en-US, or ja) for the "
+          + "property scalar.db.collation.icu.locale"),
+  COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE(
+      Category.USER_ERROR,
+      "0306",
+      "The ICU collation is not supported for this storage because the storage supports only "
+          + "binary UTF-8 byte order for text. Storage: %s",
+      "",
+      "Remove the property scalar.db.collation or set it to BINARY"),
+  COLLATION_MULTI_STORAGE_PER_STORAGE_OVERRIDE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0307",
+      "The collation configuration cannot be overridden per storage in multi-storage. "
+          + "Property: %s",
+      "",
+      "Remove the per-storage collation property; scalar.db.collation and "
+          + "scalar.db.collation.icu.* apply to all storages"),
+  COLLATION_ICU_LIKE_CONDITION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0308",
+      "The %s condition is not supported in a transaction when scalar.db.collation is set to ICU "
+          + "because the collation does not define pattern-matching semantics. Table: %s; "
+          + "Column: %s",
+      "",
+      "Remove the LIKE or NOT_LIKE condition, or set scalar.db.collation to BINARY"),
+  COLLATION_INVALID_LOCALE_TAG(
+      Category.USER_ERROR,
+      "0309",
+      "The specified collation locale is not a valid BCP 47 language tag. Locale: %s; Details: %s",
+      "",
+      "Specify a BCP 47 language tag (for example en, en-US, ja, or ja-u-co-unihan) for the "
+          + "property scalar.db.collation.icu.locale"),
+  COLLATION_UNSUPPORTED_LOCALE_COLLATION(
+      Category.USER_ERROR,
+      "0310",
+      "ICU has no collation of the specified type for the specified collation locale, so text "
+          + "would be ordered by the locale's standard collation. Locale: %s; Collation type: %s; "
+          + "Available collation types: %s",
+      "",
+      "Specify a collation type the locale supports, or remove the -u-co- keyword from the "
+          + "property scalar.db.collation.icu.locale"),
+  COLLATION_ICU_LOCALE_SETTING_WITH_RULES_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0311",
+      "The specified collation locale sets collation attributes, which a custom tailoring-rule "
+          + "string cannot carry, so combining them would silently discard the settings. "
+          + "Locale: %s; Setting keywords: %s",
+      "",
+      "Express the settings as options in the property scalar.db.collation.icu.rules instead (for "
+          + "example [numericOrdering on]) and remove them from the property "
+          + "scalar.db.collation.icu.locale, or remove the property scalar.db.collation.icu.rules"),
 
   //
   // Errors for the concurrency error category

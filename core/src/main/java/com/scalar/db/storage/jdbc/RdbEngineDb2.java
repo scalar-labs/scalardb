@@ -10,6 +10,7 @@ import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.config.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -55,6 +56,12 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   RdbEngineDb2() {
     timeTypeEngine = null;
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
+  }
+
+  @Override
+  public void throwIfCollationNotSupported(Collation collation) {
+    // Db2 offers UCA-based collations, fixed at database creation (CREATE DATABASE ... COLLATE
+    // USING CLDR181_LCS).
   }
 
   @Override
