@@ -227,9 +227,11 @@ public final class CollationComparator {
   }
 
   /**
-   * Returns the locale's collation-setting keywords. ICU maps every one to a {@code col}-prefixed
-   * legacy keyword except maxVariable ({@code kv}); {@code collation} is the {@code -u-co-}
-   * tailoring, which is rule data rather than a setting.
+   * Returns the locale's collation settings, such as the numeric ordering of {@code -u-kn-true}.
+   * ICU applies a setting to the collator object it builds, leaving that collator's rule string
+   * unchanged, so a collator rebuilt from those rules loses the setting. A {@code -u-co-} type is
+   * excluded because it selects a tailoring, which the rule string does carry. The names are ICU's
+   * legacy keyword spellings ({@code colnumeric}), not the BCP 47 ones ({@code kn}).
    */
   private static List<String> collationSettingKeywords(ULocale locale) {
     List<String> settingKeywords = new ArrayList<>();
