@@ -341,13 +341,9 @@ public final class CollationComparator {
   }
 
   /**
-   * Returns whether the two non-null text values are equal under the configured collation. For
-   * {@link Collation#BINARY} this is exact {@link String#equals} (byte-exact; equivalent to UTF-8
-   * byte equality for all well-formed strings, and stricter for ill-formed ones with unpaired
-   * surrogates, which {@code String#getBytes} would conflate via replacement bytes). For {@link
-   * Collation#ICU} it is the collation's equality, {@code textComparator().compare(a, b) == 0}.
-   * Callers use this only for {@code TEXT} and handle nulls themselves; like {@link
-   * #textComparator()}, both arguments must be non-null.
+   * Returns whether the two text values are equal under the configured collation. Agrees with
+   * {@code textComparator().compare(a, b) == 0} and is cheaper for {@link Collation#BINARY}, so
+   * prefer it whenever only equality is needed. Both arguments must be non-null.
    *
    * @param a the first text value (non-null)
    * @param b the second text value (non-null)
@@ -355,6 +351,7 @@ public final class CollationComparator {
    */
   public boolean textEquals(String a, String b) {
     if (byteExactEquality) {
+      // Code-point order returns 0 exactly when String#equals is true.
       return a.equals(b);
     }
     return textComparator.compare(a, b) == 0;
