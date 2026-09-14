@@ -11,7 +11,8 @@ public enum Collation {
 
   /**
    * Orders text according to the Unicode Collation Algorithm, configured by locale and optional
-   * tailoring rules; equality follows the collation.
+   * tailoring rules. Equality follows the collation and is many-to-one: distinct strings share one
+   * identity whenever the collation gives them the same sort weight.
    */
   ICU
 }

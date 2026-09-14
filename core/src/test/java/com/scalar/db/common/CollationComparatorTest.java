@@ -20,8 +20,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public class CollationComparatorTest {
@@ -75,6 +78,53 @@ public class CollationComparatorTest {
     // Act Assert
     assertThat(comparator.textEquals("Apple", "apple")).isTrue();
     assertThat(comparator.textEquals("apple", "banana")).isFalse();
+  }
+
+  @ParameterizedTest(name = "[{index}] {1}")
+  @MethodSource("spellingsTheRootCollationEquates")
+  public void textEquals_WhenIcuRootAndCollationEqualSpellings_ShouldReturnTrue(
+      String other, String description) {
+    // Arrange
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "ICU")));
+
+    // Act Assert
+    assertThat(comparator.textEquals("admin", other)).isTrue();
+    assertThat(comparator.textComparator().compare("admin", other)).isZero();
+  }
+
+  private static Stream<Arguments> spellingsTheRootCollationEquates() {
+    return Stream.of(
+        Arguments.of("ad\u200Bmin", "zero width space"),
+        Arguments.of("ad\u200Dmin", "zero width joiner"),
+        Arguments.of("ad\u200Cmin", "zero width non-joiner"),
+        Arguments.of("ad\u00ADmin", "soft hyphen"),
+        Arguments.of("\uFEFFadmin", "byte order mark"),
+        Arguments.of("ad\u202Emin", "right-to-left override"),
+        Arguments.of("ad\uFE00min", "variation selector 1"),
+        Arguments.of("ad\u200B\u200C\u00ADmin", "several ignorables combined"));
+  }
+
+  @Test
+  public void textEquals_WhenIcuRootAndCanonicallyEquivalentForms_ShouldReturnTrue() {
+    // Arrange
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "ICU")));
+
+    // Act Assert
+    assertThat(comparator.textEquals("caf\u00E9", "cafe\u0301")).isTrue();
+  }
+
+  @Test
+  public void textEquals_WhenIcuRootAndVisiblyDifferentSpellings_ShouldReturnFalse() {
+    // Arrange
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "ICU")));
+
+    // Act Assert
+    assertThat(comparator.textEquals("admin", "Admin")).isFalse();
+    assertThat(comparator.textEquals("admin", "ad-min")).isFalse();
+    assertThat(comparator.textEquals("admin", "admln")).isFalse();
   }
 
   @Test
