@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
@@ -424,6 +425,12 @@ class RdbEngineMysql extends AbstractRdbEngine {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "true" : "false";
+  }
+
+  @Override
+  public void throwIfCollationNotSupported(Collation collation) {
+    // MySQL offers UCA-based utf8mb4_0900_* collations, so a database can be collated to
+    // approximate the ICU order.
   }
 
   @Override

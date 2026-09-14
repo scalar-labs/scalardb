@@ -4,6 +4,7 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -76,11 +77,19 @@ public interface RdbEngineStrategy {
   default void throwIfInvalidTableName(String tableName) {}
 
   /**
-   * Throws if the given collation configuration cannot match this engine's text order. The default
-   * accepts any collation; engines whose text order is fixed to binary UTF-8 byte order (no
-   * UCA-based collation exists for {@link Collation#ICU} to approximate) reject {@code ICU}.
+   * Throws if this engine cannot be configured to match the given collation's text order. {@link
+   * Collation#BINARY} is always accepted. {@link Collation#ICU} is rejected unless the engine
+   * overrides this method, so an engine offering no UCA-based collation for ICU to approximate, and
+   * an engine nobody has classified yet, both fail at startup rather than order text differently
+   * from the storage with no error.
    */
-  default void throwIfCollationNotSupported(Collation collation) {}
+  default void throwIfCollationNotSupported(Collation collation) {
+    if (collation == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(
+              getClass().getSimpleName().replaceFirst("^RdbEngine", "")));
+    }
+  }
 
   String createTableInternalPrimaryKeyClause(
       boolean hasDescClusteringOrder, TableMetadata metadata);

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.io.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -392,6 +393,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "1" : "0";
+  }
+
+  @Override
+  public void throwIfCollationNotSupported(Collation collation) {
+    // SQL Server offers non-binary Windows collations at the database and column level.
   }
 
   @Override
