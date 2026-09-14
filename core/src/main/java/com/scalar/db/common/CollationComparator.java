@@ -48,23 +48,22 @@ public final class CollationComparator {
   private final boolean byteExactEquality;
 
   /**
-   * Per-thread canonical-form producer, present only for {@link Collation#ICU}. Collation-key
-   * generation on a shared frozen collator serializes on a JVM-wide lock, so each thread gets its
-   * own thawed clone; a thawed collator is safe for single-threaded use and produces the same
-   * collation keys as the frozen original it was cloned from.
+   * Per-thread collator, present only for {@link Collation#ICU}. A frozen collator guards its one
+   * collation buffer with a lock of its own, and both comparison and collation-key generation take
+   * that lock, so every call on a shared frozen instance serializes against every other.
    */
-  @Nullable private final ThreadLocal<Collator> canonicalizer;
+  @Nullable private final ThreadLocal<Collator> collator;
 
   private CollationComparator(
       Comparator<String> textComparator,
       boolean byteExactEquality,
-      @Nullable ThreadLocal<Collator> canonicalizer) {
+      @Nullable ThreadLocal<Collator> collator) {
     this.textComparator = textComparator;
     Comparator<String> nullsFirstText = Comparator.nullsFirst(textComparator);
     this.columnComparator = buildColumnComparator(nullsFirstText);
     this.keyComparator = buildKeyComparator(this.columnComparator);
     this.byteExactEquality = byteExactEquality;
-    this.canonicalizer = canonicalizer;
+    this.collator = collator;
   }
 
   /**
@@ -84,9 +83,9 @@ public final class CollationComparator {
       case ICU:
         {
           warnOnIcuVersionMismatch();
-          Collator frozen = buildFrozenIcuCollator(config);
-          return new CollationComparator(
-              frozen::compare, false, ThreadLocal.withInitial(frozen::cloneAsThawed));
+          Collator prototype = buildFrozenIcuCollator(config);
+          ThreadLocal<Collator> collator = ThreadLocal.withInitial(prototype::cloneAsThawed);
+          return new CollationComparator((a, b) -> collator.get().compare(a, b), false, collator);
         }
       default:
         throw new AssertionError("Unknown collation: " + collation);
@@ -148,12 +147,14 @@ public final class CollationComparator {
     return !VersionInfo.getInstance(version).equals(VersionInfo.ICU_VERSION);
   }
 
+  /**
+   * Builds the frozen collator the per-thread clones are taken from. An unfrozen ICU {@code
+   * Collator} is mutable and not thread-safe, and cloning one concurrently is unsafe, so the
+   * prototype is frozen even though no comparison runs on it.
+   */
   private static Collator buildFrozenIcuCollator(DatabaseConfig config) {
     Collator collator = buildIcuCollator(config);
     logResolvedIcuCollator(config, collator);
-
-    // An unfrozen ICU Collator is mutable and not thread-safe; a frozen one is safe for
-    // concurrent compare.
     return collator.freeze();
   }
 
@@ -370,7 +371,7 @@ public final class CollationComparator {
    * @return {@code true} when {@link #canonicalTextFormOf(String)} is usable
    */
   public boolean hasCanonicalTextForm() {
-    return canonicalizer != null;
+    return collator != null;
   }
 
   /**
@@ -386,10 +387,10 @@ public final class CollationComparator {
    *     Collation#BINARY}; check {@link #hasCanonicalTextForm()} first)
    */
   public byte[] canonicalTextFormOf(String text) {
-    if (canonicalizer == null) {
+    if (collator == null) {
       throw new IllegalStateException(
           "The BINARY collation has no canonical text form; identity is the value itself");
     }
-    return canonicalizer.get().getCollationKey(text).toByteArray();
+    return collator.get().getCollationKey(text).toByteArray();
   }
 }
