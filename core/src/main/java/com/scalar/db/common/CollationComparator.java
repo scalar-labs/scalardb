@@ -197,9 +197,11 @@ public final class CollationComparator {
   /**
    * Rejects a locale ICU has no collation data for. ICU silently falls back to the root collation
    * for such a locale, which would order text differently from the intended locale with no error,
-   * so a misconfiguration fails at startup instead of producing wrong ordering. An empty language
-   * means an explicitly root-rooted tag (und), which asks for the root collation itself, the same
-   * collation used when no locale is configured at all.
+   * so a misconfiguration fails at startup instead of producing wrong ordering. Only the language
+   * is checked; a narrower subtag ICU has no collation data for narrows away instead, as the
+   * resolved-collator log reports. An empty language is a root-rooted tag such as {@code und} or
+   * {@code und-Cyrl}, which asks for the root collation itself, the collation used when no locale
+   * is configured at all.
    */
   private static void rejectLocaleWithoutCollationData(String localeName, ULocale locale) {
     String language = locale.getLanguage();
@@ -287,9 +289,9 @@ public final class CollationComparator {
   /**
    * Reports the collation ICU resolved, so a locale that resolves to something other than what was
    * configured is diagnosable: {@code ja-u-kn-true} turns on numeric ordering while the resolved
-   * locale still reads {@code ja}, and a region or variant subtag ICU has no collation data for
-   * narrows to the language. Logged at {@code INFO} because an operator has no other way to observe
-   * either.
+   * locale still reads {@code ja}, and a script, region, or variant subtag ICU has no collation
+   * data for narrows to the language. Logged at {@code INFO} because an operator has no other way
+   * to observe either.
    */
   private static void logResolvedIcuCollator(DatabaseConfig config, Collator collator) {
     // A custom tailoring-rule string builds the collator from rules rather than from a locale, so

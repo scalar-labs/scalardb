@@ -635,14 +635,15 @@ public class CollationComparatorTest {
     assertThat(comparator).isNotNull();
   }
 
-  @Test
-  public void from_WhenIcuWithExplicitRootLocale_ShouldBuildComparator() {
+  @ParameterizedTest
+  @ValueSource(strings = {"und", "und-Cyrl", "und-Hant", "und-DE"})
+  public void from_WhenIcuWithRootRootedLocale_ShouldBuildComparator(String locale) {
     // Arrange Act: an explicit root request is the collation used when no locale is configured.
     CollationComparator comparator =
         CollationComparator.from(
             config(
                 props(
-                    DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_LOCALE, "und")));
+                    DatabaseConfig.COLLATION, "ICU", DatabaseConfig.COLLATION_ICU_LOCALE, locale)));
 
     // Assert
     assertThat(comparator).isNotNull();
