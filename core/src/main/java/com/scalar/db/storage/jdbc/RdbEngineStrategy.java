@@ -82,6 +82,10 @@ public interface RdbEngineStrategy {
    * overrides this method, so an engine offering no UCA-based collation for ICU to approximate, and
    * an engine nobody has classified yet, both fail at startup rather than order text differently
    * from the storage with no error.
+   *
+   * @param collation the configured collation
+   * @throws IllegalArgumentException if this engine cannot be configured to match the collation's
+   *     text order
    */
   default void throwIfCollationNotSupported(Collation collation) {
     if (collation == Collation.ICU) {
