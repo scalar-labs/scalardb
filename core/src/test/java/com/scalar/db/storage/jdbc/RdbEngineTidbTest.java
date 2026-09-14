@@ -6,8 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.config.Collation;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.io.Collation;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;

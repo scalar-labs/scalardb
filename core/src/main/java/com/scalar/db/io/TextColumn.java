@@ -75,8 +75,13 @@ public class TextColumn implements Column<String> {
    * places supplementary characters before U+E000..U+FFFF; comparing the UTF-8 encodings instead
    * would conflate distinct strings whose unpaired surrogates all encode to the replacement byte.
    * This order returns 0 only for {@link String#equals equal} strings, ill-formed ones included.
+   *
+   * @param left the first text value (non-null)
+   * @param right the second text value (non-null)
+   * @return a negative integer, zero, or a positive integer as {@code left} sorts before, equal to,
+   *     or after {@code right}
    */
-  static int compareByCodePoint(String left, String right) {
+  public static int compareByCodePoint(String left, String right) {
     int i = 0;
     int j = 0;
     while (i < left.length() && j < right.length()) {

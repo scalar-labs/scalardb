@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.io.Collation;
+import com.scalar.db.config.Collation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;

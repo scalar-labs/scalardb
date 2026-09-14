@@ -1,4 +1,4 @@
-package com.scalar.db.io;
+package com.scalar.db.config;
 
 /**
  * Selects ScalarDB's in-memory text comparison mode: it governs ordering, equality, and — under

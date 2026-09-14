@@ -1,4 +1,4 @@
-package com.scalar.db.io;
+package com.scalar.db.common;
 
 import com.google.common.collect.Ordering;
 import com.ibm.icu.text.Collator;
@@ -6,8 +6,12 @@ import com.ibm.icu.text.RuleBasedCollator;
 import com.ibm.icu.util.IllformedLocaleException;
 import com.ibm.icu.util.ULocale;
 import com.ibm.icu.util.VersionInfo;
-import com.scalar.db.common.CoreError;
+import com.scalar.db.config.Collation;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;

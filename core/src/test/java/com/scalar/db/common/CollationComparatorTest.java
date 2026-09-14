@@ -1,11 +1,14 @@
-package com.scalar.db.io;
+package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.primitives.UnsignedBytes;
-import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
