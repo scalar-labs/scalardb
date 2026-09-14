@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.primitives.UnsignedBytes;
+import com.scalar.db.config.Collation;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.IntColumn;
@@ -24,6 +25,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -633,6 +635,17 @@ public class CollationComparatorTest {
 
     // Assert
     assertThat(comparator).isNotNull();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Collation.class)
+  public void collation_ShouldReturnTheConfiguredCollation(Collation collation) {
+    // Arrange Act
+    CollationComparator comparator =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, collation.name())));
+
+    // Assert
+    assertThat(comparator.collation()).isEqualTo(collation);
   }
 
   @ParameterizedTest

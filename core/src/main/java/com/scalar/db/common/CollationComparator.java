@@ -42,10 +42,10 @@ public final class CollationComparator {
 
   private static final AtomicBoolean ICU_VERSION_CHECKED = new AtomicBoolean();
 
+  private final Collation collation;
   private final Comparator<String> textComparator;
   private final Comparator<Column<?>> columnComparator;
   private final Comparator<Key> keyComparator;
-  private final boolean byteExactEquality;
 
   /**
    * Per-thread collator, present only for {@link Collation#ICU}. A frozen collator guards its one
@@ -55,14 +55,14 @@ public final class CollationComparator {
   @Nullable private final ThreadLocal<Collator> collator;
 
   private CollationComparator(
+      Collation collation,
       Comparator<String> textComparator,
-      boolean byteExactEquality,
       @Nullable ThreadLocal<Collator> collator) {
+    this.collation = collation;
     this.textComparator = textComparator;
     Comparator<String> nullsFirstText = Comparator.nullsFirst(textComparator);
     this.columnComparator = buildColumnComparator(nullsFirstText);
     this.keyComparator = buildKeyComparator(this.columnComparator);
-    this.byteExactEquality = byteExactEquality;
     this.collator = collator;
   }
 
@@ -79,13 +79,14 @@ public final class CollationComparator {
     Collation collation = config.getCollation();
     switch (collation) {
       case BINARY:
-        return new CollationComparator(TextColumn::compareByCodePoint, true, null);
+        return new CollationComparator(collation, TextColumn::compareByCodePoint, null);
       case ICU:
         {
           warnOnIcuVersionMismatch();
           Collator prototype = buildFrozenIcuCollator(config);
           ThreadLocal<Collator> collator = ThreadLocal.withInitial(prototype::cloneAsThawed);
-          return new CollationComparator((a, b) -> collator.get().compare(a, b), false, collator);
+          return new CollationComparator(
+              collation, (a, b) -> collator.get().compare(a, b), collator);
         }
       default:
         throw new AssertionError("Unknown collation: " + collation);
@@ -320,6 +321,15 @@ public final class CollationComparator {
   }
 
   /**
+   * Returns the collation this comparator orders text by.
+   *
+   * @return the collation
+   */
+  public Collation collation() {
+    return collation;
+  }
+
+  /**
    * Returns the collation-aware comparator over non-null text values.
    *
    * @return the text comparator
@@ -359,7 +369,7 @@ public final class CollationComparator {
    * @return {@code true} when the values are equal under the collation
    */
   public boolean textEquals(String a, String b) {
-    if (byteExactEquality) {
+    if (collation == Collation.BINARY) {
       // Code-point order returns 0 exactly when String#equals is true.
       return a.equals(b);
     }
