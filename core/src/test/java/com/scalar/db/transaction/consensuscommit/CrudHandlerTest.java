@@ -918,7 +918,11 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot).verifyNoOverlap(eq(scan), eq(ImmutableMap.of(key, expected)), any());
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, expected)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -1069,7 +1073,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
-    verify(snapshot).verifyNoOverlap(eq(scan), eq(ImmutableMap.of(key, recoveredResult)), any());
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1123,7 +1131,11 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot, never()).putIntoScanSet(any(), any());
-    verify(snapshot).verifyNoOverlap(eq(scan), eq(ImmutableMap.of(key, recoveredResult)), any());
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1437,7 +1449,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
-    verify(snapshot).verifyNoOverlap(eq(scan), eq(ImmutableMap.of(key, transactionResult)), any());
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, transactionResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(
@@ -1500,7 +1516,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
-    verify(snapshot).verifyNoOverlap(eq(scan), eq(ImmutableMap.of(key, recoveredResult)), any());
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1562,7 +1582,7 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap());
-    verify(snapshot).verifyNoOverlap(eq(scan), eq(ImmutableMap.of()), any());
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(), ImmutableSet.of());
 
     assertThat(results).isEmpty();
   }
@@ -1750,7 +1770,10 @@ public class CrudHandlerTest {
         .verifyNoOverlap(
             eq(scanWithLimit),
             eq(ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2)),
-            any());
+            eq(
+                scanType == ScanType.SCAN
+                    ? ImmutableSet.<Snapshot.Key>of()
+                    : ImmutableSet.of(key2, key3)));
 
     assertThat(results)
         .containsExactly(
