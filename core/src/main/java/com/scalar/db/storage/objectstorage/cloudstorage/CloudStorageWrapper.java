@@ -9,6 +9,7 @@ import com.google.cloud.storage.StorageBatch;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
 import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.storage.objectstorage.ConflictOccurredException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
@@ -28,6 +29,10 @@ import javax.annotation.concurrent.ThreadSafe;
 public class CloudStorageWrapper implements ObjectStorageWrapper {
   // Batch API has a limit of 100 operations per request
   public static final int BATCH_DELETE_SIZE_LIMIT = 100;
+
+  // The maximum number of retries for the get operation, which is performed when the object is
+  // updated between the metadata retrieval and the payload download
+  @VisibleForTesting static final int GET_MAX_RETRY_COUNT = 3;
 
   private final Storage storage;
   private final String bucket;
@@ -55,18 +60,48 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   @Override
   public Optional<ObjectStorageWrapperResponse> get(String key)
       throws ObjectStorageWrapperException {
-    try {
-      Blob blob = storage.get(BlobId.of(bucket, key));
-      if (blob == null) {
-        return Optional.empty();
+    StorageException lastPreconditionFailure = null;
+    for (int retryCount = 0; retryCount <= GET_MAX_RETRY_COUNT; retryCount++) {
+      try {
+        Blob blob = storage.get(BlobId.of(bucket, key));
+        if (blob == null) {
+          return Optional.empty();
+        }
+        long generation = blob.getGeneration();
+        // Download the payload with the generation precondition instead of specifying the
+        // generation in the blob ID. With the precondition, a concurrent deletion results in
+        // NOT_FOUND while a concurrent update results in PRECONDITION_FAILED, which allows the two
+        // cases to be distinguished. If the generation were specified in the blob ID, both cases
+        // would result in NOT_FOUND since the specified generation no longer exists unless object
+        // versioning is enabled.
+        byte[] payload =
+            storage.readAllBytes(
+                BlobId.of(bucket, key), Storage.BlobSourceOption.generationMatch(generation));
+        return Optional.of(
+            new ObjectStorageWrapperResponse(
+                new String(payload, StandardCharsets.UTF_8), String.valueOf(generation)));
+      } catch (StorageException e) {
+        if (e.getCode() == CloudStorageErrorCode.NOT_FOUND.get()) {
+          // The object was deleted after the metadata was retrieved, so it is regarded as absent
+          return Optional.empty();
+        }
+        if (e.getCode() != CloudStorageErrorCode.PRECONDITION_FAILED.get()) {
+          throw new ObjectStorageWrapperException(
+              String.format("Failed to get the object with key '%s'", key), e);
+        }
+        // The object was updated after the metadata was retrieved. Retry from the metadata
+        // retrieval to get the payload and its generation consistently.
+        lastPreconditionFailure = e;
+      } catch (Exception e) {
+        throw new ObjectStorageWrapperException(
+            String.format("Failed to get the object with key '%s'", key), e);
       }
-      String payload = new String(blob.getContent(), StandardCharsets.UTF_8);
-      String generation = String.valueOf(blob.getGeneration());
-      return Optional.of(new ObjectStorageWrapperResponse(payload, generation));
-    } catch (Exception e) {
-      throw new ObjectStorageWrapperException(
-          String.format("Failed to get the object with key '%s'", key), e);
     }
+    throw new ConflictOccurredException(
+        String.format(
+            "Failed to get the object with key '%s' after retrying %d times due to conflicts",
+            key, GET_MAX_RETRY_COUNT),
+        lastPreconditionFailure);
   }
 
   @Override
