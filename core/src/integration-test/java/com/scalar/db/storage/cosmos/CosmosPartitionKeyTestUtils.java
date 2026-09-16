@@ -49,6 +49,6 @@ public final class CosmosPartitionKeyTestUtils {
 
   /** Returns true when the container uses V1 or leaves the version unset (ScalarDB default). */
   public static boolean isV1OrUnset(Optional<PartitionKeyDefinitionVersion> version) {
-    return version.isEmpty() || version.get() == PartitionKeyDefinitionVersion.V1;
+    return !version.isPresent() || version.get() == PartitionKeyDefinitionVersion.V1;
   }
 }

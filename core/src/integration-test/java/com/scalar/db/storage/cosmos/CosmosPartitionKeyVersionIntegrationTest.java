@@ -7,7 +7,6 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosDatabase;
-import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
@@ -504,14 +503,6 @@ public class CosmosPartitionKeyVersionIntegrationTest {
       throw new ExecutionException("Failed to close scanner", e);
     }
     return results;
-  }
-
-  private int countAllRecords(String table) {
-    return cosmosClient.getDatabase(NAMESPACE).getContainer(table)
-        .queryItems("SELECT VALUE COUNT(1) FROM c", new CosmosQueryRequestOptions(), Integer.class)
-        .stream()
-        .findFirst()
-        .orElse(0);
   }
 
   private void dropTableQuietly(String table) {
