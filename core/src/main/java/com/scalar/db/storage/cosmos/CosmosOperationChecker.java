@@ -29,6 +29,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
@@ -104,6 +105,7 @@ public class CosmosOperationChecker extends OperationChecker {
 
   private final CosmosAdmin cosmosAdmin;
 
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CosmosOperationChecker(
       DatabaseConfig databaseConfig,
       TableMetadataManager metadataManager,
