@@ -53,6 +53,7 @@ public class OperationCheckerTest {
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
   private static final String COL3 = "v3";
+  private static final String COL4 = "v4";
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
           "cassandra", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE, false);
@@ -77,6 +78,7 @@ public class OperationCheckerTest {
                 .addColumn(COL1, DataType.INT)
                 .addColumn(COL2, DataType.DOUBLE)
                 .addColumn(COL3, DataType.BOOLEAN)
+                .addColumn(COL4, DataType.TEXT)
                 .addPartitionKey(PKEY1)
                 .addPartitionKey(PKEY2)
                 .addClusteringKey(CKEY1, Scan.Ordering.Order.ASC)
@@ -135,7 +137,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val2");
-    List<String> projections = Arrays.asList(COL1, COL2, "v4");
+    List<String> projections = Arrays.asList(COL1, COL2, "v5");
     Get get =
         Get.newBuilder()
             .namespace(NAMESPACE)
@@ -458,7 +460,7 @@ public class OperationCheckerTest {
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key startClusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
     Key endClusteringKey = Key.of(CKEY1, 2, CKEY2, "val9");
-    List<String> projections = Arrays.asList(COL1, COL2, "v4");
+    List<String> projections = Arrays.asList(COL1, COL2, "v5");
     int limit = 10;
     Scan scan =
         Scan.newBuilder()
@@ -813,7 +815,7 @@ public class OperationCheckerTest {
             .clusteringKey(clusteringKey)
             .intValue(COL1, 1)
             .doubleValue(COL2, 0.1)
-            .booleanValue("v4", true)
+            .booleanValue("v5", true)
             .condition(condition)
             .build();
 
@@ -979,7 +981,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new PutIf(ConditionBuilder.column(PKEY2).isLikeText("val%"));
+    MutationCondition condition = new PutIf(ConditionBuilder.column(COL4).isLikeText("val%"));
     Put put =
         Put.newBuilder()
             .namespace(NAMESPACE)
@@ -1985,7 +1987,7 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanAllOperationWithInvalidProjections_shouldThrowIllegalArgumentException() {
     // Arrange
-    List<String> projections = Arrays.asList(COL1, COL2, "v4");
+    List<String> projections = Arrays.asList(COL1, COL2, "v5");
     int limit = 10;
     Scan scanAll =
         Scan.newBuilder()
