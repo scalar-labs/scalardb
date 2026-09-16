@@ -161,6 +161,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
@@ -171,6 +172,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     } else {
       return new CommitHandler(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,

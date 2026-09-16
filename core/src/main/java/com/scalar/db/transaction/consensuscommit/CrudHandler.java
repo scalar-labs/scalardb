@@ -2,14 +2,13 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createGet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -673,16 +672,6 @@ public class CrudHandler {
     if (!tasks.isEmpty()) {
       parallelExecutor.executeImplicitPreRead(tasks, context.transactionId);
     }
-  }
-
-  private Get createGet(Snapshot.Key key) {
-    GetBuilder.BuildableGet buildableGet =
-        Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
-            .partitionKey(key.getPartitionKey());
-    key.getClusteringKey().ifPresent(buildableGet::clusteringKey);
-    return buildableGet.consistency(Consistency.LINEARIZABLE).build();
   }
 
   /**

@@ -40,8 +40,12 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RecoveryExecutor implements AutoCloseable {
+
+  private static final Logger logger = LoggerFactory.getLogger(RecoveryExecutor.class);
 
   // The maximum number of re-resolution passes in resolveLatestResultAndRecover. Each pass is
   // driven by a real concurrent change (a different transaction re-prepared the record, or the
@@ -134,12 +138,28 @@ public class RecoveryExecutor implements AutoCloseable {
         Future<Void> future =
             executorService.submit(
                 () -> {
-                  Optional<CoordinatorStateAccessor.State> s = getCoordinatorState(result.getId());
+                  try {
+                    Optional<CoordinatorStateAccessor.State> s =
+                        getCoordinatorState(result.getId());
 
-                  throwUncommittedRecordExceptionIfTransactionNotExpired(
-                      s, selection, result, transactionId);
+                    throwUncommittedRecordExceptionIfTransactionNotExpired(
+                        s, selection, result, transactionId);
 
-                  recovery.tryRecover(selection, result, s);
+                    recovery.tryRecover(selection, result, s);
+                  } catch (UncommittedRecordException e) {
+                    // Not a failure: the writer may still be in flight, so no recovery is
+                    // attempted. Rethrown for the callers that wait for the future
+                    throw e;
+                  } catch (Exception e) {
+                    // Log before rethrowing, since callers that do not wait for the future would
+                    // otherwise lose this entirely
+                    logger.warn(
+                        "Recovering a record failed. Table: {}; Transaction ID that wrote the record: {}",
+                        selection.forFullTableName().orElse(null),
+                        result.getId(),
+                        e);
+                    throw e;
+                  }
                   return null;
                 });
 

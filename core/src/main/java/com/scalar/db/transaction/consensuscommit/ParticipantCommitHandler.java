@@ -1,10 +1,15 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createGet;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.Result;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -19,11 +24,13 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,13 +41,16 @@ import org.slf4j.LoggerFactory;
  * data tables.
  *
  * <p>Methods here only touch user data tables via {@link DistributedStorage} and the {@link
- * MutationsGrouper} / {@link ParallelExecutor} stack. They never write to the Coordinator table.
+ * MutationsGrouper} / {@link ParallelExecutor} stack, and never write to the Coordinator table
+ * themselves. The recovery triggered when a conditional write fails is delegated to {@link
+ * RecoveryExecutor}, which does read and may write Coordinator state on a background thread.
  */
 @ThreadSafe
 class ParticipantCommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(ParticipantCommitHandler.class);
 
   private final DistributedStorage storage;
+  private final RecoveryExecutor recoveryExecutor;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final MutationsGrouper mutationsGrouper;
@@ -49,11 +59,13 @@ class ParticipantCommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   ParticipantCommitHandler(
       DistributedStorage storage,
+      RecoveryExecutor recoveryExecutor,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean onePhaseCommitEnabled) {
     this.storage = checkNotNull(storage);
+    this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
     this.mutationsGrouper = checkNotNull(mutationsGrouper);
@@ -61,26 +73,37 @@ class ParticipantCommitHandler {
   }
 
   void prepareRecords(TransactionContext context, long preparedAt) throws PreparationException {
+    // Collects the mutations of the storage calls that fail because a conditional write is not
+    // applied. Written by the tasks below, which may run in parallel. The records blocking them are
+    // recovered whichever exception is caught below: with parallel preparation, all the tasks run
+    // to the end and the exception of the task that failed first is thrown, so a
+    // NoMutationException of another task may only be suppressed in it. The list is empty unless a
+    // task failed that way.
+    List<Mutation> notAppliedMutations = Collections.synchronizedList(new ArrayList<>());
+
     try {
       PrepareMutationComposer composer =
           new PrepareMutationComposer(context.transactionId, preparedAt, tableMetadataManager);
       context.snapshot.to(composer);
       List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
-      List<ParallelExecutorTask> tasks = toTasks(groupedMutations);
+      List<ParallelExecutorTask> tasks = toTasks(groupedMutations, notAppliedMutations);
       parallelExecutor.prepareRecords(tasks, context.transactionId);
     } catch (NoMutationException e) {
+      tryRecoverRecordsBlockingWrites(context, notAppliedMutations);
       throw new PreparationConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(e.getMessage()),
           e,
           context.transactionId);
     } catch (RetriableExecutionException e) {
+      tryRecoverRecordsBlockingWrites(context, notAppliedMutations);
       throw new PreparationConflictException(
           CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS.buildMessage(
               e.getMessage()),
           e,
           context.transactionId);
     } catch (ExecutionException e) {
+      tryRecoverRecordsBlockingWrites(context, notAppliedMutations);
       throw new PreparationException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORDS_FAILED.buildMessage(e.getMessage()),
           e,
@@ -136,9 +159,34 @@ class ParticipantCommitHandler {
   }
 
   private List<ParallelExecutorTask> toTasks(List<List<Mutation>> groupedMutations) {
+    return toTasks(groupedMutations, null);
+  }
+
+  /**
+   * Builds the tasks that write the given groups of mutations.
+   *
+   * <p>When {@code notAppliedMutations} is given, the mutations of a group whose storage call fails
+   * because a conditional write is not applied are added to it. They are collected here rather than
+   * taken from {@link NoMutationException#getMutations()} because that holds the mutations as the
+   * storage received them, which a storage may have converted before executing (it may, for
+   * instance, rewrite a mutation for a virtual table into mutations for the tables it is made of).
+   * The recovery path needs the mutations this transaction composed.
+   */
+  private List<ParallelExecutorTask> toTasks(
+      List<List<Mutation>> groupedMutations, @Nullable List<Mutation> notAppliedMutations) {
     List<ParallelExecutorTask> tasks = new ArrayList<>(groupedMutations.size());
     for (List<Mutation> mutations : groupedMutations) {
-      tasks.add(() -> storage.mutate(mutations));
+      tasks.add(
+          () -> {
+            try {
+              storage.mutate(mutations);
+            } catch (NoMutationException e) {
+              if (notAppliedMutations != null) {
+                notAppliedMutations.addAll(mutations);
+              }
+              throw e;
+            }
+          });
     }
     return tasks;
   }
@@ -202,15 +250,22 @@ class ParticipantCommitHandler {
    */
   void onePhaseCommitRecords(TransactionContext context)
       throws CommitConflictException, UnknownTransactionStatusException {
+    List<Mutation> mutations = null;
+
     try {
       OnePhaseCommitMutationComposer composer =
           new OnePhaseCommitMutationComposer(context.transactionId, tableMetadataManager);
       context.snapshot.to(composer);
+      mutations = composer.get();
 
       // One-phase commit does not require grouping mutations and using the parallel executor since
       // it is always executed in a single mutate API call.
-      storage.mutate(composer.get());
+      storage.mutate(mutations);
     } catch (NoMutationException e) {
+      // The mutations this transaction composed are used rather than the ones the exception holds;
+      // see toTasks(List, List)
+      assert mutations != null;
+      tryRecoverRecordsBlockingWrites(context, mutations);
       throw new CommitConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(e.getMessage()),
           e,
@@ -227,6 +282,76 @@ class ParticipantCommitHandler {
               e.getMessage()),
           e,
           context.transactionId);
+    }
+  }
+
+  /**
+   * Triggers recovery for the records that block the conditional writes that failed in this
+   * transaction.
+   *
+   * <p>A write that creates an initial record is prepared with a {@link PutIfNotExists} condition,
+   * which fails when any record is physically present on the key. That is the case for an insert,
+   * and also for a write to a key that the transaction never read. Such a write never triggers the
+   * lazy recovery that the read path performs, so an uncommitted record left behind by a
+   * transaction that did not finish blocks every subsequent attempt for that key until someone
+   * reads it, which never happens for a key that is only ever written this way.
+   *
+   * <p>Only the mutations of the storage calls that failed are examined, one read each. The other
+   * mutations of the transaction either succeeded or, when the preparation stops at the first
+   * failure, were never attempted.
+   *
+   * <p>This is best-effort and does not change what the caller reports: the conditional write may
+   * have failed for a record this method does not recover, or for a committed record that no
+   * recovery can resolve. A failure while reading a record is logged and ignored. The recovery
+   * itself runs on a background thread that nothing here waits for, so a failure inside it is not
+   * surfaced here either; the caller throws a conflict exception in either case and the next
+   * attempt retries the whole thing.
+   */
+  private void tryRecoverRecordsBlockingWrites(
+      TransactionContext context, List<Mutation> notAppliedMutations) {
+    for (Mutation mutation : notAppliedMutations) {
+      if (!(mutation instanceof Put)
+          || !(mutation.getCondition().orElse(null) instanceof PutIfNotExists)) {
+        continue;
+      }
+
+      Snapshot.Key key = new Snapshot.Key((Put) mutation);
+      try {
+        Get get = createGet(key);
+        Optional<Result> result = storage.get(get);
+        if (!result.isPresent()) {
+          continue;
+        }
+
+        TransactionResult txResult = new TransactionResult(result.get());
+        if (txResult.isCommitted()) {
+          // The record already exists, which is a duplicate key that recovery cannot resolve
+          continue;
+        }
+        if (context.transactionId.equals(txResult.getId())) {
+          // The record was prepared by this transaction, and the caller rolls it back
+          continue;
+        }
+
+        RecoveryExecutor.Result recoveryResult =
+            recoveryExecutor.execute(
+                key,
+                get,
+                txResult,
+                context.transactionId,
+                RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+        // Register the recovery task so that callers that wait for recovery completion (currently
+        // only tests) can observe it. The transaction itself does not wait for it: it is about to
+        // fail with a conflict, and the record is recovered for the next attempt.
+        context.recoveryResults.add(recoveryResult);
+      } catch (Exception e) {
+        logger.warn(
+            "Recovering a record blocking a write failed. Key: {}; Transaction ID: {}",
+            key,
+            context.transactionId,
+            e);
+      }
     }
   }
 }
