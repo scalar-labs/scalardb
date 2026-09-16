@@ -47,14 +47,16 @@ public class MergedResult extends AbstractResult {
   @Deprecated
   @Override
   public Optional<com.scalar.db.io.Key> getPartitionKey() {
-    return Optional.of(put.getPartitionKey());
+    return result
+        .map(TransactionResult::getPartitionKey)
+        .orElse(Optional.of(put.getPartitionKey()));
   }
 
   /** @deprecated As of release 3.8.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<com.scalar.db.io.Key> getClusteringKey() {
-    return put.getClusteringKey();
+    return result.map(TransactionResult::getClusteringKey).orElse(put.getClusteringKey());
   }
 
   @Override
