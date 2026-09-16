@@ -308,10 +308,12 @@ public class ConsensusCommitOperationChecker {
     StorageInfo.MutationAtomicityUnit unit = storageInfo.getMutationAtomicityUnit();
     if (unit == StorageInfo.MutationAtomicityUnit.RECORD
         || unit == StorageInfo.MutationAtomicityUnit.PARTITION) {
-      // No storage with a record or partition atomicity supports ICU collation
-      // If we support such storage in the future, we need to make the MutationsGrouper collation
-      // aware
-      throw new UnsupportedOperationException(
+      // Unreachable: every storage whose mutation atomicity unit is RECORD or PARTITION rejects
+      // the ICU collation when it is created (CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE),
+      // and multi-storage doesn't allow overriding the collation per storage. If such a storage
+      // supports the ICU collation in the future, revisit MutationsGrouper, which compares keys
+      // byte-exactly.
+      throw new AssertionError(
           "The ICU collation is not supported for a storage that applies mutations atomically only "
               + "within a record or a partition. Storage: "
               + storageInfo.getStorageName()

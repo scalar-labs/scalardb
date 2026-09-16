@@ -948,7 +948,7 @@ public class ConsensusCommitOperationCheckerTest {
       value = MutationAtomicityUnit.class,
       names = {"RECORD", "PARTITION"})
   public void
-      checkForMutation_WithKeyedMutationAtomicityUnitUnderIcuCollation_ShouldThrowUnsupportedOperationException(
+      checkForMutation_WithKeyedMutationAtomicityUnitUnderIcuCollation_ShouldThrowAssertionError(
           MutationAtomicityUnit unit) throws Exception {
     // Arrange
     Put put =
@@ -963,7 +963,7 @@ public class ConsensusCommitOperationCheckerTest {
 
     // Act Assert
     assertThatThrownBy(() -> icuChecker().check(put))
-        .isInstanceOf(UnsupportedOperationException.class)
+        .isInstanceOf(AssertionError.class)
         .hasMessageContaining("ICU collation")
         .hasMessageContaining(unit.toString());
   }
