@@ -1389,6 +1389,74 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void getScanner_WhenUpdatingEachReturnedRecord_ShouldUpdateAllOfThem()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1);
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Optional<Result> result;
+      while ((result = scanner.one()).isPresent()) {
+        transaction.update(
+            Update.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.get().getInt(ACCOUNT_TYPE)))
+                .intValue(BALANCE, getBalance(result.get()) + 100)
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.start();
+    List<Result> results = another.scan(scan);
+    another.commit();
+
+    assertThat(results).hasSize(NUM_TYPES);
+    results.forEach(result -> assertThat(getBalance(result)).isEqualTo(INITIAL_BALANCE + 100));
+  }
+
+  @Test
+  public void getScanner_WhenDeletingEachReturnedRecord_ShouldDeleteAllOfThem()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1);
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Optional<Result> result;
+      while ((result = scanner.one()).isPresent()) {
+        transaction.delete(
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.get().getInt(ACCOUNT_TYPE)))
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.start();
+    List<Result> results = another.scan(scan);
+    Optional<Result> untouched = another.get(prepareGet(1, 0));
+    another.commit();
+
+    assertThat(results).isEmpty();
+    assertThat(untouched).isPresent();
+  }
+
+  @Test
   public void getScanner_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
