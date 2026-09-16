@@ -129,8 +129,8 @@ public class MergedResultTest {
     Put put =
         Put.newBuilder()
             .table("test")
-            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toLowerCase()))
-            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toLowerCase()))
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toUpperCase()))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toUpperCase()))
             .intValue(ANY_NAME_3, ANY_INT_3)
             .build();
 
