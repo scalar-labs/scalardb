@@ -174,8 +174,7 @@ public class CosmosOperationChecker extends OperationChecker {
     TableMetadata metadata = getTableMetadata(operation);
     CosmosOperation cosmosOperation = new CosmosOperation(operation, metadata);
     String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
-    int partitionKeyByteLength =
-        concatenatedPartitionKey.getBytes(StandardCharsets.UTF_8).length;
+    int partitionKeyByteLength = concatenatedPartitionKey.getBytes(StandardCharsets.UTF_8).length;
 
     Optional<PartitionKeyDefinitionVersion> version =
         cosmosAdmin.getPartitionKeyDefinitionVersion(
@@ -213,8 +212,7 @@ public class CosmosOperationChecker extends OperationChecker {
     return version.isPresent() && version.get() == PartitionKeyDefinitionVersion.V2;
   }
 
-  private static String formatPartitionKeyVersion(
-      Optional<PartitionKeyDefinitionVersion> version) {
+  private static String formatPartitionKeyVersion(Optional<PartitionKeyDefinitionVersion> version) {
     if (isV2PartitionKey(version)) {
       return "V2";
     }

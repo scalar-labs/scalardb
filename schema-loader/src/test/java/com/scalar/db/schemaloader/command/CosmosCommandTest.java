@@ -215,9 +215,8 @@ public class CosmosCommandTest extends StorageSpecificCommandTestBase {
   }
 
   @Test
-  public void
-      call_WithLegacyPartitionKeyFlag_ShouldPassLargePartitionKeyFalseInOptions()
-          throws SchemaLoaderException {
+  public void call_WithLegacyPartitionKeyFlag_ShouldPassLargePartitionKeyFalseInOptions()
+      throws SchemaLoaderException {
     // Arrange
     Map<String, String> options =
         ImmutableMap.<String, String>builder()

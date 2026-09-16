@@ -93,8 +93,7 @@ public class CosmosPartitionKeyFullValueTest {
 
     // Act
     Record record = cosmosMutation.makeRecord();
-    Result result =
-        new ResultInterpreter(Collections.emptyList(), tableMetadata).interpret(record);
+    Result result = new ResultInterpreter(Collections.emptyList(), tableMetadata).interpret(record);
     String retrievedColumnValue = result.getText(PARTITION_KEY_COLUMN);
 
     // Assert
@@ -127,8 +126,7 @@ public class CosmosPartitionKeyFullValueTest {
             Collections.emptyMap(),
             Collections.emptyMap());
 
-    Result result =
-        new ResultInterpreter(Collections.emptyList(), tableMetadata).interpret(record);
+    Result result = new ResultInterpreter(Collections.emptyList(), tableMetadata).interpret(record);
     String retrievedColumnValue = result.getText(PARTITION_KEY_COLUMN);
 
     assertThat(retrievedColumnValue).isEqualTo(partitionKeyValue);
@@ -149,17 +147,13 @@ public class CosmosPartitionKeyFullValueTest {
             + PARTITION_KEY_COLUMN
             + ") UTF-8 bytes: "
             + columnValue.getBytes(StandardCharsets.UTF_8).length);
-    System.out.println(
-        "Full partition-key column value: " + preview(columnValue));
+    System.out.println("Full partition-key column value: " + preview(columnValue));
     printRoutingPrefixComparison(fullByteLength, concatenatedPartitionKey, "V1");
     printRoutingPrefixComparison(fullByteLength, concatenatedPartitionKey, "V2");
   }
 
   private static void printRetrievedPartitionKeyComparison(
-      String stage,
-      int fullByteLength,
-      String cosmosVersionLabel,
-      String retrievedColumnValue) {
+      String stage, int fullByteLength, String cosmosVersionLabel, String retrievedColumnValue) {
     System.out.println();
     System.out.println("=== " + stage + " [" + cosmosVersionLabel + " container context] ===");
     System.out.println(
@@ -191,8 +185,7 @@ public class CosmosPartitionKeyFullValueTest {
             + " UTF-8 bytes used by Cosmos for hashing): "
             + routingPrefixBytes
             + " bytes");
-    System.out.println(
-        cosmosVersionLabel + " routing prefix value: " + preview(routingPrefix));
+    System.out.println(cosmosVersionLabel + " routing prefix value: " + preview(routingPrefix));
     if (fullByteLength > routingLimit) {
       System.out.println(
           cosmosVersionLabel
@@ -201,8 +194,7 @@ public class CosmosPartitionKeyFullValueTest {
               + " is NOT used for routing but IS still stored/returned.");
     } else {
       System.out.println(
-          cosmosVersionLabel
-              + " routing prefix equals full key (key fits within routing limit).");
+          cosmosVersionLabel + " routing prefix equals full key (key fits within routing limit).");
     }
   }
 
@@ -221,7 +213,10 @@ public class CosmosPartitionKeyFullValueTest {
     int previewLength = Math.min(value.length(), 120);
     String excerpt = value.substring(0, previewLength);
     if (value.length() > previewLength) {
-      return excerpt + "... [truncated in log output only, full length=" + value.length() + " chars]";
+      return excerpt
+          + "... [truncated in log output only, full length="
+          + value.length()
+          + " chars]";
     }
     return excerpt;
   }

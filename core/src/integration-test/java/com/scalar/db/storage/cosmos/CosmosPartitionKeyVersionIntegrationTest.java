@@ -26,7 +26,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,8 +180,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
 
   // Experiments 2C — V1 collision keys (>101 bytes) are rejected before reaching Cosmos
   @Test
-  void put_withColliding102ByteKeys_onV1Container_shouldBeRejected()
-      throws ExecutionException {
+  void put_withColliding102ByteKeys_onV1Container_shouldBeRejected() throws ExecutionException {
     String table = "exp2c_v1_collision";
     String[] keys = CosmosPartitionKeyTestUtils.collisionPairAtByteBoundary(102);
 
@@ -398,9 +396,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
   private static TableMetadata textPartitionKeyMetadata(
       boolean withClusteringKey, DataType clusteringKeyType) {
     TableMetadata.Builder builder =
-        TableMetadata.newBuilder()
-            .addColumn(PK, DataType.TEXT)
-            .addColumn(VALUE, DataType.INT);
+        TableMetadata.newBuilder().addColumn(PK, DataType.TEXT).addColumn(VALUE, DataType.INT);
     if (withClusteringKey) {
       builder.addColumn(CK, clusteringKeyType).addClusteringKey(CK, Scan.Ordering.Order.ASC);
     }
@@ -511,11 +507,8 @@ public class CosmosPartitionKeyVersionIntegrationTest {
   }
 
   private int countAllRecords(String table) {
-    return cosmosClient
-        .getDatabase(NAMESPACE)
-        .getContainer(table)
-        .queryItems(
-            "SELECT VALUE COUNT(1) FROM c", new CosmosQueryRequestOptions(), Integer.class)
+    return cosmosClient.getDatabase(NAMESPACE).getContainer(table)
+        .queryItems("SELECT VALUE COUNT(1) FROM c", new CosmosQueryRequestOptions(), Integer.class)
         .stream()
         .findFirst()
         .orElse(0);

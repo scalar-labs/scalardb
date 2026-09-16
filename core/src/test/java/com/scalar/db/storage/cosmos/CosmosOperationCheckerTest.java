@@ -917,7 +917,43 @@ public class CosmosOperationCheckerTest {
             .build();
 
     assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("DB-CORE-10148");
+  }
+
+  @Test
+  public void check_PutGiven_WhenPartitionKeyIsExactly101BytesOnV1_ShouldSucceed()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 101)))
+            .clusteringKey(Key.ofText(CKEY1, "a"))
+            .build();
+
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_ScanGiven_WhenPartitionKeyIsExactly2048BytesOnV2_ShouldSucceed()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+    when(cosmosAdmin.getPartitionKeyDefinitionVersion(NAMESPACE_NAME, TABLE_NAME))
+        .thenReturn(Optional.of(PartitionKeyDefinitionVersion.V2));
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 2048)))
+            .start(Key.ofText(CKEY1, "a"))
+            .end(Key.ofText(CKEY1, "b"))
+            .build();
+
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -936,7 +972,8 @@ public class CosmosOperationCheckerTest {
             .build();
 
     assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("DB-CORE-10148");
   }
 
   @Test
@@ -948,12 +985,29 @@ public class CosmosOperationCheckerTest {
         Put.newBuilder()
             .namespace(NAMESPACE_NAME)
             .table(TABLE_NAME)
-            .partitionKey(Key.ofText(PKEY1, repeat("x", 200)))
-            .clusteringKey(Key.ofText(CKEY1, repeat("y", 56)))
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 101)))
+            .clusteringKey(Key.ofText(CKEY1, repeat("y", 154)))
             .build();
 
     assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("DB-CORE-10149");
+  }
+
+  @Test
+  public void check_PutGiven_WhenDocumentIdIsExactly255Characters_ShouldSucceed()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 101)))
+            .clusteringKey(Key.ofText(CKEY1, repeat("y", 153)))
+            .build();
+
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
   }
 
   private Put buildPutWithCondition(MutationCondition condition) {
