@@ -53,22 +53,6 @@ public class ConsensusCommitOperationChecker {
     this.collation = collation;
   }
 
-  private void throwIfLikeConditionUnderIcuCollation(Selection selection) {
-    if (collation != Collation.ICU) {
-      return;
-    }
-    for (Selection.Conjunction conjunction : selection.getConjunctions()) {
-      for (ConditionalExpression condition : conjunction.getConditions()) {
-        Operator operator = condition.getOperator();
-        if (operator == Operator.LIKE || operator == Operator.NOT_LIKE) {
-          throw new IllegalArgumentException(
-              CoreError.COLLATION_ICU_LIKE_CONDITION_NOT_SUPPORTED.buildMessage(
-                  operator, selection.forFullTableName().get(), condition.getColumn().getName()));
-        }
-      }
-    }
-  }
-
   /**
    * Checks the get validity
    *
@@ -296,6 +280,22 @@ public class ConsensusCommitOperationChecker {
   @VisibleForTesting
   ConditionChecker createConditionChecker(TableMetadata tableMetadata) {
     return new ConditionChecker(tableMetadata);
+  }
+
+  private void throwIfLikeConditionUnderIcuCollation(Selection selection) {
+    if (collation != Collation.ICU) {
+      return;
+    }
+    for (Selection.Conjunction conjunction : selection.getConjunctions()) {
+      for (ConditionalExpression condition : conjunction.getConditions()) {
+        Operator operator = condition.getOperator();
+        if (operator == Operator.LIKE || operator == Operator.NOT_LIKE) {
+          throw new IllegalArgumentException(
+              CoreError.COLLATION_ICU_LIKE_CONDITION_NOT_SUPPORTED.buildMessage(
+                  operator, selection.forFullTableName().get(), condition.getColumn().getName()));
+        }
+      }
+    }
   }
 
   private void throwIfKeyedMutationAtomicityUnitUnderIcuCollation(Mutation mutation)
