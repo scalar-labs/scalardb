@@ -24,7 +24,6 @@ import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CompositePath;
-import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosContainerResponse;
@@ -35,6 +34,7 @@ import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.collect.ImmutableMap;
@@ -369,6 +369,42 @@ public class CosmosAdminTest {
             .secondaryIndexNames(ImmutableSet.of("c4"))
             .build();
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
+  }
+
+  @Test
+  public void createTable_WithLargePartitionKeyFalse_ShouldCreateContainerWithPartitionKeyV1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "sample_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c3").addColumn("c3", DataType.BOOLEAN).build();
+
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
+    CosmosScripts cosmosScripts = Mockito.mock(CosmosScripts.class);
+    when(container.getScripts()).thenReturn(cosmosScripts);
+
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+    when(metadataDatabase.getContainer(CosmosAdmin.NAMESPACES_CONTAINER))
+        .thenReturn(mock(CosmosContainer.class));
+
+    Map<String, String> options =
+        ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, Boolean.FALSE.toString());
+
+    // Act
+    admin.createTable(namespace, table, metadata, options);
+
+    // Assert
+    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
+        ArgumentCaptor.forClass(CosmosContainerProperties.class);
+    verify(database).createContainer(containerPropertiesCaptor.capture());
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V1);
   }
 
   @Test
@@ -1084,6 +1120,8 @@ public class CosmosAdminTest {
 
     verify(database).createContainerIfNotExists(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -1101,6 +1139,54 @@ public class CosmosAdminTest {
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
     verify(storedProcedure).read();
     verify(scripts).createStoredProcedure(any());
+  }
+
+  @Test
+  public void repairTable_WithLargePartitionKeyFalse_ShouldCreateContainerWithPartitionKeyV1()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder().addColumn("c1", DataType.INT).addPartitionKey("c1").build();
+
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
+
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+
+    CosmosScripts scripts = mock(CosmosScripts.class);
+    when(container.getScripts()).thenReturn(scripts);
+    CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
+    CosmosException cosmosException = mock(CosmosException.class);
+    when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
+        .thenReturn(storedProcedure);
+    when(cosmosException.getStatusCode()).thenReturn(404);
+    when(storedProcedure.read()).thenThrow(cosmosException);
+
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+    when(properties.getIndexingPolicy()).thenReturn(new IndexingPolicy());
+
+    Map<String, String> options =
+        ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, Boolean.FALSE.toString());
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, options);
+
+    // Assert
+    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
+        ArgumentCaptor.forClass(CosmosContainerProperties.class);
+    verify(database).createContainerIfNotExists(containerPropertiesCaptor.capture());
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V1);
   }
 
   private CosmosContainer setUpRepairTableMocks(String namespace, String table) {
