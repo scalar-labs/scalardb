@@ -4,6 +4,7 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.get
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
@@ -25,6 +26,7 @@ import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.common.checker.ConditionChecker;
+import com.scalar.db.config.Collation;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
 import javax.annotation.concurrent.ThreadSafe;
@@ -36,16 +38,19 @@ public class ConsensusCommitOperationChecker {
   private final VirtualTableInfoManager virtualTableInfoManager;
   private final StorageInfoProvider storageInfoProvider;
   private final boolean isIncludeMetadataEnabled;
+  private final Collation collation;
 
   public ConsensusCommitOperationChecker(
       TransactionTableMetadataManager transactionTableMetadataManager,
       VirtualTableInfoManager virtualTableInfoManager,
       StorageInfoProvider storageInfoProvider,
-      boolean isIncludeMetadataEnabled) {
+      boolean isIncludeMetadataEnabled,
+      Collation collation) {
     this.transactionTableMetadataManager = transactionTableMetadataManager;
     this.virtualTableInfoManager = virtualTableInfoManager;
     this.storageInfoProvider = storageInfoProvider;
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
+    this.collation = collation;
   }
 
   /**
@@ -58,6 +63,7 @@ public class ConsensusCommitOperationChecker {
    */
   public void check(Get get, TransactionContext context) throws ExecutionException {
     throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(get);
+    throwIfLikeConditionUnderIcuCollation(get);
 
     TransactionTableMetadata metadata =
         getTransactionTableMetadata(transactionTableMetadataManager, get);
@@ -115,6 +121,7 @@ public class ConsensusCommitOperationChecker {
    */
   public void check(Scan scan, TransactionContext context) throws ExecutionException {
     throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(scan);
+    throwIfLikeConditionUnderIcuCollation(scan);
 
     TransactionTableMetadata metadata =
         getTransactionTableMetadata(transactionTableMetadataManager, scan);
@@ -201,6 +208,7 @@ public class ConsensusCommitOperationChecker {
    */
   public void check(Mutation mutation) throws ExecutionException {
     throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(mutation);
+    throwIfKeyedMutationAtomicityUnitUnderIcuCollation(mutation);
 
     if (mutation instanceof Put) {
       check((Put) mutation);
@@ -272,6 +280,70 @@ public class ConsensusCommitOperationChecker {
   @VisibleForTesting
   ConditionChecker createConditionChecker(TableMetadata tableMetadata) {
     return new ConditionChecker(tableMetadata);
+  }
+
+  /**
+   * Rejects LIKE and NOT LIKE conditions when the collation is ICU.
+   *
+   * <p>A LIKE condition on a transactional read is evaluated twice: the storage evaluates it on the
+   * pushed-down Get or Scan, and this layer evaluates it again in memory through {@link
+   * ScalarDbUtils#columnsMatchAnyOfConjunctions} when it merges the write set into a scan result,
+   * validates a scan against later writes, or checks a Get with conjunctions against the snapshot.
+   * Both evaluations must agree, or a transaction could see a buffered write that the committed
+   * read did not, or fail validation for a row the storage did match.
+   *
+   * <p>The in-memory evaluation compiles the pattern to a regular expression and matches exact
+   * characters, whatever the collation. It cannot follow ICU because an ICU {@code Collator} only
+   * defines ordering and equality of whole strings through {@code compare} and collation keys, and
+   * offers no pattern-matching primitive. Folding the pattern and the value before matching is not
+   * equivalent: under case-insensitive or accent-insensitive tailorings, contractions and
+   * expansions (for example {@code ß} against {@code ss}) make a single {@code _} correspond to a
+   * variable number of code points, and each backend answers that differently. So under ICU a
+   * pattern pushed to the storage and the same pattern evaluated here can return different rows,
+   * and there is no single definition this layer could implement to match every backend.
+   *
+   * <p>Rejecting the operator up front is preferred to letting the two evaluations silently
+   * diverge. Supporting LIKE under ICU needs a pattern-matching definition that both the storage
+   * adapters and the in-memory evaluation implement identically.
+   */
+  private void throwIfLikeConditionUnderIcuCollation(Selection selection) {
+    if (collation != Collation.ICU) {
+      return;
+    }
+    for (Selection.Conjunction conjunction : selection.getConjunctions()) {
+      for (ConditionalExpression condition : conjunction.getConditions()) {
+        Operator operator = condition.getOperator();
+        if (operator == Operator.LIKE || operator == Operator.NOT_LIKE) {
+          throw new IllegalArgumentException(
+              CoreError.COLLATION_ICU_LIKE_CONDITION_NOT_SUPPORTED.buildMessage(
+                  operator, selection.forFullTableName().get(), condition.getColumn().getName()));
+        }
+      }
+    }
+  }
+
+  private void throwIfKeyedMutationAtomicityUnitUnderIcuCollation(Mutation mutation)
+      throws ExecutionException {
+    if (collation != Collation.ICU) {
+      return;
+    }
+    assert mutation.forNamespace().isPresent();
+    StorageInfo storageInfo = storageInfoProvider.getStorageInfo(mutation.forNamespace().get());
+    StorageInfo.MutationAtomicityUnit unit = storageInfo.getMutationAtomicityUnit();
+    if (unit == StorageInfo.MutationAtomicityUnit.RECORD
+        || unit == StorageInfo.MutationAtomicityUnit.PARTITION) {
+      // Unreachable: every storage whose mutation atomicity unit is RECORD or PARTITION rejects
+      // the ICU collation when it is created (CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE),
+      // and multi-storage doesn't allow overriding the collation per storage. If such a storage
+      // supports the ICU collation in the future, revisit MutationsGrouper, which compares keys
+      // byte-exactly.
+      throw new AssertionError(
+          "The ICU collation is not supported for a storage that applies mutations atomically only "
+              + "within a record or a partition. Storage: "
+              + storageInfo.getStorageName()
+              + "; Mutation atomicity unit: "
+              + unit);
+    }
   }
 
   private void throwIfOperationForVirtualTableButNotConsistentVirtualTableReadStorage(
