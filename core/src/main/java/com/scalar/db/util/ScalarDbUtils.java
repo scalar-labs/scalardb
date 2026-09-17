@@ -458,7 +458,7 @@ public final class ScalarDbUtils {
   /**
    * Returns whether the two columns are equal under the given collation. Only TEXT columns holding
    * two non-null values use the collation's equality; non-TEXT columns and null text compare with
-   * {@link Column#equals}.
+   * {@code Column.equals}.
    *
    * <p>Text values are compared without their column names, matching {@link
    * CollationComparator#columnComparator()}, so that equality and the range operators built on that
