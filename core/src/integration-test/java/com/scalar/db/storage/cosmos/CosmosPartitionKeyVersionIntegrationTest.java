@@ -3,7 +3,6 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosDatabase;
@@ -254,7 +253,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 5A — document id at 255-char limit
+  // Experiment 5A — document id at 255-char limit (V2; a 127-byte PK is illegal on V1)
   @Test
   void put_with255CharDocumentId_shouldSucceed() throws ExecutionException {
     String table = "exp5a_id_255";
@@ -263,7 +262,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     assertThat(pkValue.length() + 1 + ckValue.length()).isEqualTo(255);
 
     try {
-      createV1Table(table, textPartitionKeyMetadata(true, DataType.TEXT));
+      createV2Table(table, textPartitionKeyMetadata(true, DataType.TEXT));
       putWithTextClusteringKey(table, pkValue, ckValue, 1);
 
       Optional<Result> result = getWithTextClusteringKey(table, pkValue, ckValue);
@@ -273,16 +272,16 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 5B — document id over 255-char limit
+  // Experiment 5B — document id over 255-char limit is rejected client-side
   @Test
-  void put_with256CharDocumentId_shouldFail() {
+  void put_with256CharDocumentId_shouldFail() throws ExecutionException {
     String table = "exp5b_id_256";
     String pkValue = CosmosPartitionKeyTestUtils.asciiOfLength(128);
     String ckValue = CosmosPartitionKeyTestUtils.asciiOfLength(127);
     assertThat(pkValue.length() + 1 + ckValue.length()).isEqualTo(256);
 
     try {
-      createV1Table(table, textPartitionKeyMetadata(true, DataType.TEXT));
+      createV2Table(table, textPartitionKeyMetadata(true, DataType.TEXT));
 
       Put put =
           Put.newBuilder()
@@ -293,15 +292,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
               .intValue(VALUE, 1)
               .build();
 
-      Throwable thrown = catchThrowable(() -> storage.put(put));
-      if (thrown == null) {
-        // Investigation finding: the Linux emulator may accept document ids longer than 255 chars.
-        assertThat(getWithTextClusteringKey(table, pkValue, ckValue)).isPresent();
-      } else {
-        assertThat(thrown).isInstanceOf(ExecutionException.class);
-      }
-    } catch (ExecutionException e) {
-      throw new RuntimeException(e);
+      assertThatThrownBy(() -> storage.put(put)).isInstanceOf(IllegalArgumentException.class);
     } finally {
       dropTableQuietly(table);
     }
