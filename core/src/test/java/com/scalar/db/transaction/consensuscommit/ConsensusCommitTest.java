@@ -847,7 +847,6 @@ public class ConsensusCommitTest {
     // Assert
     verify(context).closeScanners();
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }
 
   @Test
@@ -875,7 +874,6 @@ public class ConsensusCommitTest {
     verify(context).closeScanners();
     verify(groupCommitter).remove(ANY_ID);
     verify(commit, never()).rollbackRecords(context);
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }
 
   @Test
@@ -898,7 +896,6 @@ public class ConsensusCommitTest {
     verify(context).closeScanners();
     verify(groupCommitter, never()).remove(anyString());
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }
 
   @Test
@@ -934,6 +931,5 @@ public class ConsensusCommitTest {
     verify(context).closeScanners();
     verify(groupCommitter).remove(fullKey);
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }
 }

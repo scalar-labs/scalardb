@@ -456,13 +456,6 @@ public enum CoreError implements ScalarDbError {
           + " Record: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
-      Category.USER_ERROR,
-      "0107",
-      "The transaction is not validated. When using the SERIALIZABLE isolation level,"
-          + " you need to call validate() before calling commit()",
-      "",
-      ""),
   DYNAMO_BATCH_SIZE_EXCEEDED(
       Category.USER_ERROR, "0108", "DynamoDB cannot batch more than 100 mutations at once", "", ""),
   OPERATION_CHECK_ERROR_UNSUPPORTED_MUTATION_TYPE(
@@ -523,12 +516,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0140",
       "Resuming a transaction is not allowed in single CRUD operation transactions",
-      "",
-      ""),
-  CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0141",
-      "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
       "",
       ""),
   GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
@@ -632,12 +619,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0205",
       "Some scanners were not closed. All scanners must be closed before committing the transaction",
-      "",
-      ""),
-  TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
-      Category.USER_ERROR,
-      "0206",
-      "Some scanners were not closed. All scanners must be closed before preparing the transaction",
       "",
       ""),
   MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
@@ -1438,13 +1419,6 @@ public enum CoreError implements ScalarDbError {
       "Scanning records from the underlying storage failed. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
-      Category.INTERNAL_ERROR,
-      "0041",
-      "Rollback failed because the transaction has already been committed",
-      "",
-      ""),
-  CONSENSUS_COMMIT_ROLLBACK_FAILED(Category.INTERNAL_ERROR, "0042", "Rollback failed", "", ""),
   JDBC_TRANSACTION_INSERT_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0043", "The Insert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPSERT_OPERATION_FAILED(
