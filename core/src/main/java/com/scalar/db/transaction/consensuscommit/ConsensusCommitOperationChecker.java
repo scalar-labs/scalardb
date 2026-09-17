@@ -282,6 +282,30 @@ public class ConsensusCommitOperationChecker {
     return new ConditionChecker(tableMetadata);
   }
 
+  /**
+   * Rejects LIKE and NOT LIKE conditions when the collation is ICU.
+   *
+   * <p>A LIKE condition on a transactional read is evaluated twice: the storage evaluates it on the
+   * pushed-down Get or Scan, and this layer evaluates it again in memory through {@link
+   * ScalarDbUtils#columnsMatchAnyOfConjunctions} when it merges the write set into a scan result,
+   * validates a scan against later writes, or checks a Get with conjunctions against the snapshot.
+   * Both evaluations must agree, or a transaction could see a buffered write that the committed
+   * read did not, or fail validation for a row the storage did match.
+   *
+   * <p>The in-memory evaluation compiles the pattern to a regular expression and matches exact
+   * characters, whatever the collation. It cannot follow ICU because an ICU {@code Collator} only
+   * defines ordering and equality of whole strings through {@code compare} and collation keys, and
+   * offers no pattern-matching primitive. Folding the pattern and the value before matching is not
+   * equivalent: under case-insensitive or accent-insensitive tailorings, contractions and
+   * expansions (for example {@code ß} against {@code ss}) make a single {@code _} correspond to a
+   * variable number of code points, and each backend answers that differently. So under ICU a
+   * pattern pushed to the storage and the same pattern evaluated here can return different rows,
+   * and there is no single definition this layer could implement to match every backend.
+   *
+   * <p>Rejecting the operator up front is preferred to letting the two evaluations silently
+   * diverge. Supporting LIKE under ICU needs a pattern-matching definition that both the storage
+   * adapters and the in-memory evaluation implement identically.
+   */
   private void throwIfLikeConditionUnderIcuCollation(Selection selection) {
     if (collation != Collation.ICU) {
       return;
