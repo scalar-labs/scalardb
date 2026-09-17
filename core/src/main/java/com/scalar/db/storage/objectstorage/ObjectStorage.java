@@ -12,6 +12,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.StorageInfoProvider;
@@ -33,6 +34,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
   private final SelectStatementHandler selectStatementHandler;
   private final MutateStatementHandler mutateStatementHandler;
   private final OperationChecker operationChecker;
+  private final CollationComparator collationComparator;
 
   public ObjectStorage(DatabaseConfig databaseConfig) {
     super(databaseConfig);
@@ -58,8 +60,11 @@ public class ObjectStorage extends AbstractDistributedStorage {
     operationChecker =
         new ObjectStorageOperationChecker(
             databaseConfig, metadataManager, new StorageInfoProvider(admin));
-    selectStatementHandler = new SelectStatementHandler(wrapper, metadataManager);
-    mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager);
+    this.collationComparator = CollationComparator.from(databaseConfig);
+    selectStatementHandler =
+        new SelectStatementHandler(wrapper, metadataManager, collationComparator);
+    mutateStatementHandler =
+        new MutateStatementHandler(wrapper, metadataManager, collationComparator);
     logger.info("ObjectStorage object is created properly");
   }
 
@@ -75,6 +80,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
     this.selectStatementHandler = selectStatementHandler;
     this.mutateStatementHandler = mutateStatementHandler;
     this.operationChecker = operationChecker;
+    this.collationComparator = CollationComparator.from(databaseConfig);
   }
 
   @Override
@@ -88,7 +94,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
       } else {
         scanner =
             new FilterableScanner(
-                get, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)));
+                get,
+                selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)),
+                collationComparator);
       }
       Optional<Result> result = scanner.one();
       if (!result.isPresent()) {
@@ -124,7 +132,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
       return selectStatementHandler.handle(scan);
     } else {
       return new FilterableScanner(
-          scan, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)));
+          scan,
+          selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)),
+          collationComparator);
     }
   }
 
