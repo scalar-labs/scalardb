@@ -1,8 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase;
+import com.scalar.db.io.BigIntColumn;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +31,19 @@ public class CosmosCrossPartitionScanIntegrationTest
   @Override
   protected boolean isParallelDdlSupported() {
     return false;
+  }
+
+  @Override
+  protected Column<?> getRandomColumn(Random random, String columnName, DataType dataType) {
+    if (dataType == DataType.BIGINT) {
+      long value =
+          random
+              .longs(1, CosmosTestUtils.BIGINT_MIN_VALUE, CosmosTestUtils.BIGINT_MAX_VALUE + 1)
+              .findFirst()
+              .orElse(0);
+      return BigIntColumn.of(columnName, value);
+    }
+    return super.getRandomColumn(random, columnName, dataType);
   }
 
   @Test

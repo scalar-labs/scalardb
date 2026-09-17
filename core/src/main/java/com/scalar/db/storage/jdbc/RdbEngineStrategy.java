@@ -4,7 +4,6 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -12,6 +11,7 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import com.zaxxer.hikari.HikariConfig;
 import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
@@ -39,8 +39,6 @@ public interface RdbEngineStrategy {
   boolean isDuplicateTableError(SQLException e);
 
   boolean isDuplicateKeyError(SQLException e);
-
-  boolean isUndefinedTableError(SQLException e);
 
   boolean isConflict(SQLException e);
 
@@ -88,7 +86,7 @@ public interface RdbEngineStrategy {
 
   String tryAddIfNotExistsToCreateTableSql(String createTableSql);
 
-  boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e);
+  boolean isDuplicateSchemaError(SQLException e);
 
   String deleteMetadataSchemaSql(String metadataSchema);
 
@@ -97,9 +95,6 @@ public interface RdbEngineStrategy {
   default String truncateTableSql(String namespace, String table) {
     return "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
   }
-
-  void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException;
 
   default String[] dropColumnSql(String namespace, String table, String columnName) {
     return new String[] {
@@ -128,7 +123,36 @@ public interface RdbEngineStrategy {
 
   String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
 
-  String internalTableExistsCheckSql(String fullTableName);
+  /**
+   * Returns a parameterized SQL that checks whether the specified table exists by querying the
+   * database's system catalog. The returned SQL uses {@code ?} placeholders for the schema and
+   * table name; use {@link #bindInternalTableExistsCheckParams(PreparedStatement, String, String)}
+   * to bind them. Unlike a direct {@code SELECT} against the target table, the returned SQL
+   * succeeds (returning zero rows) when the table does not exist, so it avoids the noisy
+   * server-side error log that the underlying driver/database emits for an undefined-table error.
+   *
+   * @return a SQL string with {@code ?} placeholders whose result set is non-empty iff the table
+   *     exists
+   */
+  String internalTableExistsCheckSql();
+
+  /**
+   * Binds the schema and table parameters of the SQL returned by {@link
+   * #internalTableExistsCheckSql()}. The default binds {@code schema} to parameter 1 and {@code
+   * table} to parameter 2. Engines whose SQL has a different parameter shape (e.g., SQLite, which
+   * keys on a composite {@code schema$table} name) override this.
+   *
+   * @param preparedStatement the prepared statement built from {@link
+   *     #internalTableExistsCheckSql()}
+   * @param schema the schema (namespace) name
+   * @param table the table name
+   * @throws SQLException if a database access error occurs while binding parameters
+   */
+  default void bindInternalTableExistsCheckParams(
+      PreparedStatement preparedStatement, String schema, String table) throws SQLException {
+    preparedStatement.setString(1, schema);
+    preparedStatement.setString(2, table);
+  }
 
   default String createIndexSql(
       String schema, String table, String indexName, String indexedColumn) {
@@ -142,6 +166,18 @@ public interface RdbEngineStrategy {
   }
 
   String dropIndexSql(String schema, String table, String indexName);
+
+  /**
+   * Returns {@code true} if this RDB engine requires an explicit index drop before dropping a
+   * column that has a secondary index. Some engines (e.g. SQL Server, SQLite) do not automatically
+   * drop the index when the column is dropped.
+   *
+   * @return {@code true} if an explicit index drop is required before dropping a column that has a
+   *     secondary index, {@code false} otherwise
+   */
+  default boolean requiresExplicitDropIndexBeforeDropColumn() {
+    return false;
+  }
 
   String[] renameIndexSqls(
       String schema, String table, String column, String oldIndexName, String newIndexName);
@@ -187,6 +223,8 @@ public interface RdbEngineStrategy {
     return likeExpression.getEscape();
   }
 
+  boolean isUndefinedIndexError(SQLException e);
+
   boolean isDuplicateIndexError(SQLException e);
 
   String tryAddIfNotExistsToCreateIndexSql(String createIndexSql);
@@ -229,12 +267,13 @@ public interface RdbEngineStrategy {
   }
 
   default TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
-    return TimeColumn.of(columnName, resultSet.getObject(columnName, LocalTime.class));
+    return TimeColumn.ofStrict(columnName, resultSet.getObject(columnName, LocalTime.class));
   }
 
   default TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
       throws SQLException {
-    return TimestampColumn.of(columnName, resultSet.getObject(columnName, LocalDateTime.class));
+    return TimestampColumn.ofStrict(
+        columnName, resultSet.getObject(columnName, LocalDateTime.class));
   }
 
   default TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
@@ -243,7 +282,7 @@ public interface RdbEngineStrategy {
     if (offsetDateTime == null) {
       return TimestampTZColumn.ofNull(columnName);
     } else {
-      return TimestampTZColumn.of(columnName, offsetDateTime.toInstant());
+      return TimestampTZColumn.ofStrict(columnName, offsetDateTime.toInstant());
     }
   }
 
@@ -255,6 +294,16 @@ public interface RdbEngineStrategy {
    */
   default Map<String, String> getConnectionProperties(JdbcConfig config) {
     return Collections.emptyMap();
+  }
+
+  /**
+   * Adjust the JDBC URL for the underlying database if needed.
+   *
+   * @param jdbcUrl the original JDBC URL
+   * @return the adjusted JDBC URL
+   */
+  default String adjustJdbcUrl(String jdbcUrl) {
+    return jdbcUrl;
   }
 
   RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy();
@@ -358,5 +407,22 @@ public interface RdbEngineStrategy {
    */
   default int getHighestIsolationLevel() {
     return Connection.TRANSACTION_SERIALIZABLE;
+  }
+
+  /**
+   * Configure the credentials
+   *
+   * @param config the JdbcConfig object containing the connection credentials, such as username and
+   *     password
+   * @param connectionConfig the HikariConfig object where the connection credentials will be set
+   */
+  default void setConnectionCredentials(JdbcConfig config, HikariConfig connectionConfig) {
+    config.getUsername().ifPresent(connectionConfig::setUsername);
+    config.getPassword().ifPresent(connectionConfig::setPassword);
+  }
+
+  default String[] dropTableInternalSqlsBeforeDropTable(
+      String schema, String table, TableMetadata metadata) {
+    return new String[] {};
   }
 }

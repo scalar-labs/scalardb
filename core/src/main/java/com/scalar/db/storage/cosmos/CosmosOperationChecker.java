@@ -17,6 +17,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
 import com.scalar.db.io.BooleanColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.ColumnVisitor;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -29,6 +30,9 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 
 public class CosmosOperationChecker extends OperationChecker {
+
+  private static final long BIGINT_MAX_VALUE = 9007199254740992L;
+  private static final long BIGINT_MIN_VALUE = -9007199254740992L;
 
   private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
     // Colons are not allowed in primary-key columns due to the `ConcatenationVisitor` limitation.
@@ -52,7 +56,9 @@ public class CosmosOperationChecker extends OperationChecker {
         public void visit(IntColumn column) {}
 
         @Override
-        public void visit(BigIntColumn column) {}
+        public void visit(BigIntColumn column) {
+          checkBigIntValueRange(column);
+        }
 
         @Override
         public void visit(FloatColumn column) {}
@@ -119,6 +125,7 @@ public class CosmosOperationChecker extends OperationChecker {
   public void check(Put put) throws ExecutionException {
     super.check(put);
     checkPrimaryKey(put);
+    checkBigIntColumnsInValues(put);
 
     TableMetadata metadata = getTableMetadata(put);
     checkCondition(put, metadata);
@@ -142,6 +149,25 @@ public class CosmosOperationChecker extends OperationChecker {
         .getClusteringKey()
         .ifPresent(
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
+  }
+
+  private void checkBigIntColumnsInValues(Put put) {
+    for (Column<?> column : put.getColumns().values()) {
+      if (column instanceof BigIntColumn) {
+        checkBigIntValueRange((BigIntColumn) column);
+      }
+    }
+  }
+
+  private static void checkBigIntValueRange(BigIntColumn column) {
+    if (column.hasNullValue()) {
+      return;
+    }
+    long value = column.getBigIntValue();
+    if (value < BIGINT_MIN_VALUE || value > BIGINT_MAX_VALUE) {
+      throw new IllegalArgumentException(
+          CoreError.COSMOS_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT.buildMessage(value));
+    }
   }
 
   private void checkCondition(Mutation mutation, TableMetadata metadata) {

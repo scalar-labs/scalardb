@@ -5,6 +5,7 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteBuilder;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.GetWithIndex;
@@ -28,6 +29,7 @@ import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.api.UpsertBuilder;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobColumn;
@@ -50,6 +52,8 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.multistorage.MultiStorageAdmin;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -205,7 +209,7 @@ public final class ScalarDbUtils {
       return true;
     }
 
-    // We need to keep this for backward compatibility. We will remove it in release 5.0.0.
+    // We need to keep this for backward compatibility. We will remove it in release 4.0.0.
     List<Column<?>> columns = selection.getPartitionKey().getColumns();
     if (columns.size() == 1) {
       String name = columns.get(0).getName();
@@ -248,7 +252,7 @@ public final class ScalarDbUtils {
    *
    * @param column a column to convert
    * @return a value converted from the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public static Value<?> toValue(Column<?> column) {
@@ -283,7 +287,7 @@ public final class ScalarDbUtils {
    *
    * @param value a value to convert
    * @return a column converted from the value
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public static Column<?> toColumn(Value<?> value) {
@@ -512,5 +516,32 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError("Unsupported data type: " + dataType);
     }
+  }
+
+  /**
+   * Returns a map of underlying storage admins keyed by the storage name.
+   *
+   * <p>For {@link MultiStorageAdmin}, this returns the map of user-defined storage names (from the
+   * {@code scalar.db.multi_storage.storages} configuration) to their corresponding admins. For any
+   * other single-storage admin, this returns a single-entry map whose key is the storage name
+   * returned by {@link DistributedStorageAdmin#getStorageInfo(String)}.
+   *
+   * <p>This utility is useful when a caller needs to interact with each underlying storage
+   * individually (e.g., performing per-storage health checks) without having to know whether the
+   * given admin is a multi-storage admin or a single-storage one.
+   *
+   * @param admin a distributed storage admin
+   * @return a map of underlying storage admins keyed by storage name
+   * @throws ExecutionException if retrieving the storage information fails
+   */
+  public static Map<String, DistributedStorageAdmin> getStorageAdmins(DistributedStorageAdmin admin)
+      throws ExecutionException {
+    if (admin instanceof MultiStorageAdmin) {
+      return ((MultiStorageAdmin) admin).getNameAdminMap();
+    }
+    // For a single-storage admin, `getStorageInfo` ignores the namespace argument and returns a
+    // constant storage name, so passing an empty string is safe here.
+    String storageName = admin.getStorageInfo("").getStorageName();
+    return Collections.singletonMap(storageName, admin);
   }
 }

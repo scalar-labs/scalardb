@@ -8,17 +8,17 @@ import org.slf4j.LoggerFactory;
 
 // A worker manages Group instances to removes completed ones.
 @ThreadSafe
-class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
     extends BackgroundWorker<
-        Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>> {
+        Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>> {
   private static final Logger logger = LoggerFactory.getLogger(GroupCleanupWorker.class);
-  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+  private final GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
       groupManager;
 
   GroupCleanupWorker(
       String label,
       long queueCheckIntervalInMillis,
-      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
           groupManager) {
     super(
         label + "-group-commit-group-cleanup",
@@ -29,7 +29,7 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_
   }
 
   @Override
-  BlockingQueue<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+  BlockingQueue<Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>>
       createQueue() {
     // Use a normal queue because:
     // - The timeout of the queued groups is large since it's for "just in case"
@@ -41,7 +41,7 @@ class GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_
 
   @Override
   boolean processItem(
-      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> group) {
+      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> group) {
     if (group.oldGroupAbortTimeoutAtMillis() < System.currentTimeMillis()) {
       groupManager.removeGroupFromMap(group);
       group.abort();

@@ -38,8 +38,8 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
       LoggerFactory.getLogger(TwoPhaseCommitTransactionCrossPartitionScanIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_rscan_2pc_test_";
-  protected static final String TABLE_1 = "test_table1";
-  protected static final String TABLE_2 = "test_table2";
+  protected static final String TABLE_1 = "tbl1";
+  protected static final String TABLE_2 = "tbl2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String ACCOUNT_NAME = "account_name";
@@ -114,9 +114,21 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin1.truncateTable(namespace1, TABLE_1);
+    truncateTable1(namespace1, TABLE_1);
+    truncateCoordinatorTables();
+    truncateTable2(namespace2, TABLE_2);
+  }
+
+  protected void truncateTable1(String namespace, String table) throws ExecutionException {
+    admin1.truncateTable(namespace, table);
+  }
+
+  protected void truncateTable2(String namespace, String table) throws ExecutionException {
+    admin2.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     admin1.truncateCoordinatorTables();
-    admin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
@@ -269,21 +281,37 @@ public abstract class TwoPhaseCommitTransactionCrossPartitionScanIntegrationTest
     populateRecordsForLike(manager2, namespace2, TABLE_2);
     TwoPhaseCommitTransaction transaction = manager2.start();
     Scan scan1 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "%scalar[$]");
-    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "+_scalar[$]", "+");
-    Scan scan3 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, false, "\\_scalar[$]");
+    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, false, "\\_scalar[$]");
 
     // Act
     List<Result> actual1 = transaction.scan(scan1);
     List<Result> actual2 = transaction.scan(scan2);
-    List<Result> actual3 = transaction.scan(scan3);
     transaction.prepare();
     transaction.validate();
     transaction.commit();
 
     // Assert
     assertScanResult(actual1, ImmutableList.of(1, 2, 3));
-    assertScanResult(actual2, ImmutableList.of(3));
-    assertScanResult(actual3, ImmutableList.of(1, 2));
+    assertScanResult(actual2, ImmutableList.of(1, 2));
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanWithLikeWithCustomEscapeCharacterGivenForCommittedRecord_ShouldReturnRecords()
+          throws TransactionException {
+    // Arrange
+    populateRecordsForLike(manager2, namespace2, TABLE_2);
+    TwoPhaseCommitTransaction transaction = manager2.start();
+    Scan scan = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "+_scalar[$]", "+");
+
+    // Act
+    List<Result> actual = transaction.scan(scan);
+    transaction.prepare();
+    transaction.validate();
+    transaction.commit();
+
+    // Assert
+    assertScanResult(actual, ImmutableList.of(3));
   }
 
   @Test

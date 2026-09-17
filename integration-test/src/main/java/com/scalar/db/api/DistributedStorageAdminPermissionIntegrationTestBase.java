@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 public abstract class DistributedStorageAdminPermissionIntegrationTestBase {
   protected static final String TEST_NAME = "storage_admin";
   protected static final String NAMESPACE = "test_" + TEST_NAME + "_1";
-  protected static final String TABLE = "test_table_1";
+  protected static final String TABLE = "tbl_1";
 
   private static final Logger logger =
       LoggerFactory.getLogger(DistributedStorageAdminPermissionIntegrationTestBase.class);

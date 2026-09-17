@@ -74,7 +74,9 @@ public class SelectStatementHandler extends StatementHandler {
       }
 
       throw new ExecutionException(
-          CoreError.COSMOS_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
+          CoreError.COSMOS_ERROR_OCCURRED_IN_SELECTION.buildMessage(
+              CosmosUtils.buildErrorDetails(e)),
+          e);
     } catch (RuntimeException e) {
       throw new ExecutionException(
           CoreError.COSMOS_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);

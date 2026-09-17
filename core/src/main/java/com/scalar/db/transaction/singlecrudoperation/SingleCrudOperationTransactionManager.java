@@ -40,13 +40,16 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -67,28 +70,16 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
   }
 
   @Override
-  public DistributedTransaction begin() throws TransactionException {
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
             .buildMessage());
   }
 
   @Override
-  public DistributedTransaction begin(String txId) throws TransactionException {
-    throw new UnsupportedOperationException(
-        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-            .buildMessage());
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly() throws TransactionException {
-    throw new UnsupportedOperationException(
-        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-            .buildMessage());
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
             .buildMessage());
@@ -152,6 +143,8 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
             .buildMessage());
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     throw new UnsupportedOperationException(
@@ -223,7 +216,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     };
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException {
@@ -238,7 +231,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     }
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -343,7 +336,7 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     }
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
@@ -451,6 +444,20 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_ROLLING_BACK_TRANSACTION_NOT_SUPPORTED
             .buildMessage());
+  }
+
+  @Override
+  public boolean finishTransaction(String txId) {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED
+            .buildMessage());
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+    throw new UnsupportedOperationException(
+        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

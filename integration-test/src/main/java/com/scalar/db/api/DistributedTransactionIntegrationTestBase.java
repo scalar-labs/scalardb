@@ -43,6 +43,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -66,7 +67,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
       LoggerFactory.getLogger(DistributedTransactionIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
@@ -148,7 +149,15 @@ public abstract class DistributedTransactionIntegrationTestBase {
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin.truncateTable(namespace, TABLE);
+    truncateTable(namespace, TABLE);
+    truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    admin.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     admin.truncateCoordinatorTables();
   }
 
@@ -252,7 +261,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
             .and(ConditionBuilder.column(SOME_COLUMN).isEqualToInt(2))
             .and(ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true))
-            .and(ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE))
+            .and(ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L))
             .and(ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F))
             .and(ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10))
             .and(ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"))
@@ -1380,6 +1389,74 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void getScanner_WhenUpdatingEachReturnedRecord_ShouldUpdateAllOfThem()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1);
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Optional<Result> result;
+      while ((result = scanner.one()).isPresent()) {
+        transaction.update(
+            Update.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.get().getInt(ACCOUNT_TYPE)))
+                .intValue(BALANCE, getBalance(result.get()) + 100)
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.start();
+    List<Result> results = another.scan(scan);
+    another.commit();
+
+    assertThat(results).hasSize(NUM_TYPES);
+    results.forEach(result -> assertThat(getBalance(result)).isEqualTo(INITIAL_BALANCE + 100));
+  }
+
+  @Test
+  public void getScanner_WhenDeletingEachReturnedRecord_ShouldDeleteAllOfThem()
+      throws TransactionException {
+    // Arrange
+    populateRecords();
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1);
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Optional<Result> result;
+      while ((result = scanner.one()).isPresent()) {
+        transaction.delete(
+            Delete.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.get().getInt(ACCOUNT_TYPE)))
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.start();
+    List<Result> results = another.scan(scan);
+    Optional<Result> untouched = another.get(prepareGet(1, 0));
+    another.commit();
+
+    assertThat(results).isEmpty();
+    assertThat(untouched).isPresent();
+  }
+
+  @Test
   public void getScanner_DefaultNamespaceGiven_ShouldWorkProperly() throws TransactionException {
     Properties properties = getProperties(getTestName());
     properties.put(DatabaseConfig.DEFAULT_NAMESPACE_NAME, namespace);
@@ -1698,7 +1775,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
@@ -1783,7 +1860,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
@@ -2193,7 +2270,7 @@ public abstract class DistributedTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
@@ -3148,6 +3225,54 @@ public abstract class DistributedTransactionIntegrationTestBase {
       Optional<Result> deleteResult = get(prepareGet(0, 1));
       assertThat(deleteResult).isEmpty();
     }
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttribute_ShouldThrowIllegalArgumentException()
+          throws TransactionException {
+    // Arrange
+    Map<String, String> attributes = new HashMap<>();
+    DatabaseOperationAttributes.setCrossPartitionScanEnabled(attributes, false);
+    Scan scanAll = Scan.newBuilder().namespace(namespace).table(TABLE).all().build();
+
+    // Act Assert: the transaction-scoped attribute is propagated to the scan and overrides the
+    // config default, so cross-partition scan must be rejected.
+    DistributedTransaction transaction = manager.begin(attributes);
+    try {
+      assertThatThrownBy(() -> transaction.scan(scanAll))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Cross-partition scan is not enabled");
+    } finally {
+      transaction.rollback();
+    }
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttributeButEnabledByScanAttribute_ShouldScanProperly()
+          throws TransactionException {
+    // Arrange
+    populateRecords();
+    Map<String, String> attributes = new HashMap<>();
+    DatabaseOperationAttributes.setCrossPartitionScanEnabled(attributes, false);
+    // The scan-level attribute is authoritative over the transaction-scoped attribute: fast-path
+    // in the propagating decorator keeps the scan's value of "true".
+    Scan scanAll =
+        Scan.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .all()
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .build();
+
+    // Act
+    DistributedTransaction transaction = manager.begin(attributes);
+    List<Result> results = transaction.scan(scanAll);
+    transaction.commit();
+
+    // Assert
+    assertThat(results).hasSize(NUM_ACCOUNTS * NUM_TYPES);
   }
 
   protected Optional<Result> get(Get get) throws TransactionException {

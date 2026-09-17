@@ -36,7 +36,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * Constructs a {@code Key} with the specified {@link Value}s
    *
    * @param values one or more {@link Value}s which this key is composed of
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public Key(Value<?>... values) {
@@ -49,7 +49,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * Constructs a {@code Key} with the specified list of {@link Value}s
    *
    * @param values a list of {@link Value}s which this key is composed of
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public Key(List<Value<?>> values) {
@@ -73,7 +73,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param booleanValue a BOOLEAN value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link
    *     #ofBoolean(String, boolean)} instead
    */
   @Deprecated
@@ -86,7 +86,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param intValue an INT value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofInt(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #ofInt(String,
    *     int)} instead
    */
   @Deprecated
@@ -99,7 +99,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param bigIntValue a BIGINT value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofBigInt(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #ofBigInt(String,
    *     long)} instead
    */
   @Deprecated
@@ -112,7 +112,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param floatValue a FLOAT value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofFloat(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #ofFloat(String,
    *     float)} instead
    */
   @Deprecated
@@ -125,7 +125,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param doubleValue a DOUBLE value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofDouble(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #ofDouble(String,
    *     double)} instead
    */
   @Deprecated
@@ -138,7 +138,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param textValue a TEXT value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofText(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #ofText(String,
    *     String)} instead
    */
   @Deprecated
@@ -151,7 +151,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param blobValue a BLOB value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofBlob(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #ofBlob(String,
    *     byte[])} instead
    */
   @Deprecated
@@ -164,7 +164,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param blobValue a BLOB value of the column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofBlob(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #ofBlob(String,
    *     ByteBuffer)} instead
    */
   @Deprecated
@@ -179,7 +179,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v1 a value of the 1st column
    * @param n2 a column name of the 2nd column
    * @param v2 a value of the 2nd column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #of(String,
    *     Object, String, Object)} instead
    */
   @Deprecated
@@ -196,7 +196,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v2 a value of the 2nd column
    * @param n3 a column name of the 3rd column
    * @param v3 a value of the 3rd column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #of(String,
    *     Object, String, Object, String, Object)} instead
    */
   @Deprecated
@@ -215,7 +215,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v3 a value of the 3rd column
    * @param n4 a column of the 4th column
    * @param v4 a value of the 4th column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #of(String,
    *     Object, String, Object, String, Object, String, Object)} instead
    */
   @Deprecated
@@ -237,7 +237,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v4 a value of the 4th column
    * @param n5 a column of the 5th column
    * @param v5 a value of the 5th column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link #of(String,
    *     Object, String, Object, String, Object, String, Object, String, Object)} instead
    */
   @Deprecated
@@ -300,7 +300,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * this method. Users should not depend on it.
    *
    * @return list of {@code Value} which this key is composed of
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   @Nonnull
@@ -526,7 +526,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
   /**
    * @return an iterator of the values which this key is composed of
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   @Nonnull
@@ -653,7 +653,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Creates a {@code Key} object with a single column with a TIME type
+   * Creates a {@code Key} object with a single column with a TIME type. If the value has
+   * sub-microsecond precision, it will be truncated to microseconds.
    *
    * @param columnName a column name
    * @param value a TIME value of the column as LocalTime type
@@ -664,7 +665,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Creates a {@code Key} object with a single column with a TIMESTAMP type
+   * Creates a {@code Key} object with a single column with a TIMESTAMP type. If the value has
+   * sub-millisecond precision, it will be truncated to milliseconds.
    *
    * @param columnName a column name
    * @param value a TIMESTAMP value of the column as LocalDateTime type
@@ -675,10 +677,11 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Creates a {@code Key} object with a single column with a TIMESTAMPTZ type
+   * Creates a {@code Key} object with a single column with a TIMESTAMPTZ type. If the value has
+   * sub-millisecond precision, it will be truncated to milliseconds.
    *
    * @param columnName a column name
-   * @param value a TIMESTAMPTZ value of the column as LocalDateTime type
+   * @param value a TIMESTAMPTZ value of the column as Instant type
    * @return a {@code Key} object
    */
   public static Key ofTimestampTZ(String columnName, Instant value) {
@@ -893,7 +896,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     }
 
     /**
-     * Adds TIME value as an element of Key.
+     * Adds TIME value as an element of Key. If the value has sub-microsecond precision, it will be
+     * truncated to microseconds.
      *
      * @param columnName a column name to add
      * @param value a TIME value to add as LocalTime type
@@ -904,7 +908,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return this;
     }
     /**
-     * Adds TIMESTAMP value as an element of Key.
+     * Adds TIMESTAMP value as an element of Key. If the value has sub-millisecond precision, it
+     * will be truncated to milliseconds.
      *
      * @param columnName a column name to add
      * @param value a TIMESTAMP value to add as LocalDateTime type
@@ -916,7 +921,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     }
 
     /**
-     * Adds TIMESTAMPTZ value as an element of Key.
+     * Adds TIMESTAMPTZ value as an element of Key. If the value has sub-millisecond precision, it
+     * will be truncated to milliseconds.
      *
      * @param columnName a column name to add
      * @param value a TIMESTAMPTZ value to add as Instant type
@@ -930,7 +936,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     /**
      * @param value a value to add
      * @return a builder object
-     * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+     * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
      */
     @Deprecated
     public Builder add(Value<?> value) {
@@ -941,7 +947,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     /**
      * @param values a list of values to add
      * @return a builder object
-     * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+     * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
      */
     @Deprecated
     public Builder addAll(Collection<? extends Value<?>> values) {

@@ -9,6 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraConfig;
 import com.scalar.db.storage.cassandra.ClusterManager;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcTestUtils;
 import com.scalar.db.storage.jdbc.JdbcUtils;
@@ -226,18 +227,9 @@ public class MultiStorageAdminTestUtils extends AdminTestUtils {
   }
 
   private boolean tableExistsOnJdbc(String namespace, String table) throws Exception {
-    String fullTableName = rdbEngine.encloseFullTableName(namespace, table);
-    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
-    try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute(sql);
-      return true;
+    try (Connection connection = dataSource.getConnection()) {
+      return JdbcAdmin.internalTableExists(connection, rdbEngine, namespace, table, false);
     } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
       throw new Exception(
           String.format(
               "Checking if the %s table exists failed", getFullTableName(namespace, table)),

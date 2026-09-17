@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -487,6 +489,19 @@ public class KeyTest {
   }
 
   @Test
+  public void ofTime_WithSubMicrosecondPrecision_ShouldTruncateToMicroseconds() {
+    // Arrange
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+
+    // Act
+    Key key = Key.ofTime(ANY_NAME_1, timeWithSubMicros);
+
+    // Assert
+    assertThat(key.getColumns().get(0).getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+  }
+
+  @Test
   public void ofTimestamp_ShouldReturnWhatsSet() {
     // Arrange
     String name = ANY_NAME_1;
@@ -504,6 +519,19 @@ public class KeyTest {
   }
 
   @Test
+  public void ofTimestamp_WithSubMillisecondPrecision_ShouldTruncateToMilliseconds() {
+    // Arrange
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+
+    // Act
+    Key key = Key.ofTimestamp(ANY_NAME_1, timestampWithSubMillis);
+
+    // Assert
+    assertThat(key.getColumns().get(0).getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  @Test
   public void ofTimestampTZ_ShouldReturnWhatsSet() {
     // Arrange
     String name = ANY_NAME_1;
@@ -518,6 +546,20 @@ public class KeyTest {
     assertThat(key.size()).isEqualTo(1);
     assertThat(key.getColumnName(0)).isEqualTo(name);
     assertThat(key.getTimestampTZValue(0)).isEqualTo(ANY_TIMESTAMPTZ);
+  }
+
+  @Test
+  public void ofTimestampTZ_WithSubMillisecondPrecision_ShouldTruncateToMilliseconds() {
+    // Arrange
+    Instant timestampTZWithSubMillis =
+        LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789).toInstant(ZoneOffset.UTC);
+
+    // Act
+    Key key = Key.ofTimestampTZ(ANY_NAME_1, timestampTZWithSubMillis);
+
+    // Assert
+    assertThat(key.getColumns().get(0).getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
   }
 
   @Test
@@ -776,6 +818,46 @@ public class KeyTest {
   }
 
   @Test
+  public void builder_addTime_WithSubMicrosecondPrecision_ShouldTruncateToMicroseconds() {
+    // Arrange
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+
+    // Act
+    Key key = Key.newBuilder().addTime(ANY_NAME_1, timeWithSubMicros).build();
+
+    // Assert
+    assertThat(key.getColumns().get(0).getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+  }
+
+  @Test
+  public void builder_addTimestamp_WithSubMillisecondPrecision_ShouldTruncateToMilliseconds() {
+    // Arrange
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+
+    // Act
+    Key key = Key.newBuilder().addTimestamp(ANY_NAME_1, timestampWithSubMillis).build();
+
+    // Assert
+    assertThat(key.getColumns().get(0).getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  @Test
+  public void builder_addTimestampTZ_WithSubMillisecondPrecision_ShouldTruncateToMilliseconds() {
+    // Arrange
+    Instant timestampTZWithSubMillis =
+        LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789).toInstant(ZoneOffset.UTC);
+
+    // Act
+    Key key = Key.newBuilder().addTimestampTZ(ANY_NAME_1, timestampTZWithSubMillis).build();
+
+    // Assert
+    assertThat(key.getColumns().get(0).getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     Key oneKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
@@ -895,6 +977,66 @@ public class KeyTest {
 
     // Assert
     assertThat(actual < 0).isTrue();
+  }
+
+  @Test
+  public void
+      of_WithMultipleColumnsContainingTimeTypesWithOutOfRangeFractionalSeconds_ShouldTruncateProperly() {
+    // Arrange
+    LocalTime timeWithNanos = LocalTime.of(12, 30, 45, 123_456_789);
+    LocalTime expectedTime = timeWithNanos.truncatedTo(ChronoUnit.MICROS);
+
+    LocalDateTime timestampWithMicros = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    LocalDateTime expectedTimestamp = timestampWithMicros.truncatedTo(ChronoUnit.MILLIS);
+
+    Instant timestampTZWithMicros =
+        LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789).toInstant(ZoneOffset.UTC);
+    Instant expectedTimestampTZ = timestampTZWithMicros.truncatedTo(ChronoUnit.MILLIS);
+
+    // Act - two columns
+    Key key2 = Key.of("c1", timeWithNanos, "c2", timestampWithMicros);
+
+    // Assert
+    assertThat(key2.getTimeValue(0)).isEqualTo(expectedTime);
+    assertThat(key2.getTimestampValue(1)).isEqualTo(expectedTimestamp);
+
+    // Act - three columns
+    Key key3 = Key.of("c1", timeWithNanos, "c2", timestampWithMicros, "c3", timestampTZWithMicros);
+
+    // Assert
+    assertThat(key3.getTimeValue(0)).isEqualTo(expectedTime);
+    assertThat(key3.getTimestampValue(1)).isEqualTo(expectedTimestamp);
+    assertThat(key3.getTimestampTZValue(2)).isEqualTo(expectedTimestampTZ);
+
+    // Act - four columns
+    Key key4 =
+        Key.of(
+            "c1", timeWithNanos,
+            "c2", timestampWithMicros,
+            "c3", timestampTZWithMicros,
+            "c4", timeWithNanos);
+
+    // Assert
+    assertThat(key4.getTimeValue(0)).isEqualTo(expectedTime);
+    assertThat(key4.getTimestampValue(1)).isEqualTo(expectedTimestamp);
+    assertThat(key4.getTimestampTZValue(2)).isEqualTo(expectedTimestampTZ);
+    assertThat(key4.getTimeValue(3)).isEqualTo(expectedTime);
+
+    // Act - five columns
+    Key key5 =
+        Key.of(
+            "c1", timeWithNanos,
+            "c2", timestampWithMicros,
+            "c3", timestampTZWithMicros,
+            "c4", timeWithNanos,
+            "c5", timestampWithMicros);
+
+    // Assert
+    assertThat(key5.getTimeValue(0)).isEqualTo(expectedTime);
+    assertThat(key5.getTimestampValue(1)).isEqualTo(expectedTimestamp);
+    assertThat(key5.getTimestampTZValue(2)).isEqualTo(expectedTimestampTZ);
+    assertThat(key5.getTimeValue(3)).isEqualTo(expectedTime);
+    assertThat(key5.getTimestampValue(4)).isEqualTo(expectedTimestamp);
   }
 
   @Test

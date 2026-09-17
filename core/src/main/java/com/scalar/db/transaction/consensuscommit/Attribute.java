@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 public final class Attribute {
   public static final String ID = "tx_id";
   public static final String CHILD_IDS = "tx_child_ids";
+  public static final String WRITE_SET = "tx_write_set";
   public static final String STATE = "tx_state";
   public static final String VERSION = "tx_version";
   public static final String PREPARED_AT = "tx_prepared_at";

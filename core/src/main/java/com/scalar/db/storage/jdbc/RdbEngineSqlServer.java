@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -80,7 +79,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // 2714: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;
   }
@@ -93,12 +92,6 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -140,13 +133,18 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT TOP 1 1 FROM " + fullTableName;
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
   }
 
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(indexName) + " ON " + encloseFullTableName(schema, table);
+  }
+
+  @Override
+  public boolean requiresExplicitDropIndexBeforeDropColumn() {
+    return true;
   }
 
   @Override
@@ -165,7 +163,8 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    // 2714: There is already an object named '%.*ls' in the database.
+    // Error code: 2714
+    // Message: There is already an object named '%.*ls' in the database.
     return e.getErrorCode() == 2714;
   }
 
@@ -174,21 +173,31 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     if (e.getSQLState() == null) {
       return false;
     }
-    // 23000: Integrity constraint violation
+
+    // SQL state: 23000
+    // Message: Integrity constraint violation
     return e.getSQLState().equals("23000");
   }
 
   @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // 208: Invalid object name '%.*ls'.
-    return e.getErrorCode() == 208;
+  public boolean isConflict(SQLException e) {
+    // Error code: 1205
+    // Message: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process
+    // and has been chosen as the deadlock victim. Rerun the transaction.
+    return e.getErrorCode() == 1205;
   }
 
   @Override
-  public boolean isConflict(SQLException e) {
-    // 1205: Transaction (Process ID %d) was deadlocked on %.*ls resources with another process and
-    // has been chosen as the deadlock victim. Rerun the transaction.
-    return e.getErrorCode() == 1205;
+  public boolean isUndefinedIndexError(SQLException e) {
+    // Error code: 3701
+    // Message: Cannot drop the index '%.*ls', because it does not exist or you do not have
+    // permission.
+
+    // Error code: 15248
+    // Message: Either the parameter @objname is ambiguous or the claimed @objtype (INDEX) is wrong.
+    // (Returned by sp_rename when the index does not exist)
+
+    return e.getErrorCode() == 3701 || e.getErrorCode() == 15248;
   }
 
   @Override

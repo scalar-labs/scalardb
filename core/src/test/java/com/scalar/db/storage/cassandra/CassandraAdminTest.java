@@ -37,11 +37,11 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -787,15 +787,18 @@ public class CassandraAdminTest {
     verify(cassandraSession, times(3)).execute(captor.capture());
     Assertions.assertThat(captor.getAllValues().get(0))
         .isEqualTo(createTableStatement.getQueryString());
-    // Assert index creation
-    Iterator<String> indexIterator = tableMetadata.getSecondaryIndexNames().iterator();
-    for (int i = 1; indexIterator.hasNext(); i++) {
-      String index = indexIterator.next();
-      assertThat(captor.getAllValues().get(i).trim())
-          .isEqualTo(
-              String.format(
-                  "CREATE INDEX IF NOT EXISTS tbl_index_%1$s ON sample_ns.tbl(%1$s)", index));
+    // Assert index creation. Secondary index names are an unordered set, so verify the index DDL
+    // statements without depending on iteration order.
+    List<String> expectedIndexStatements = new ArrayList<>();
+    for (String index : tableMetadata.getSecondaryIndexNames()) {
+      expectedIndexStatements.add(
+          String.format("CREATE INDEX IF NOT EXISTS tbl_index_%1$s ON sample_ns.tbl(%1$s)", index));
     }
+    List<String> actualIndexStatements = new ArrayList<>();
+    for (int i = 1; i < captor.getAllValues().size(); i++) {
+      actualIndexStatements.add(captor.getAllValues().get(i).trim());
+    }
+    assertThat(actualIndexStatements).containsExactlyInAnyOrderElementsOf(expectedIndexStatements);
   }
 
   @Test

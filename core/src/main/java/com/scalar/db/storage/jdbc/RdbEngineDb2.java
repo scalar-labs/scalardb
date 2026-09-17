@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -10,7 +10,6 @@ import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
@@ -42,7 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RdbEngineDb2 extends AbstractRdbEngine {
-  private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
+  private static final Logger logger = LoggerFactory.getLogger(RdbEngineDb2.class);
+  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypeDb2 timeTypeEngine;
   private final String keyColumnSize;
 
@@ -208,7 +208,10 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(
+                  shortenIndexNameIfNeeded(
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX))
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -228,7 +231,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // SQL error code -601: Name already used
     return e.getErrorCode() == -601;
   }
@@ -241,12 +244,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace) + " RESTRICT";
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -283,8 +280,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM SYSCAT.TABLES" + " WHERE TABSCHEMA = ? AND TABNAME = ? AND TYPE = 'T'";
   }
 
   @Override
@@ -317,6 +314,12 @@ class RdbEngineDb2 extends AbstractRdbEngine {
           + " TO "
           + enclose(newIndexName)
     };
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // SQL error code -204: name IS AN UNDEFINED NAME
+    return e.getErrorCode() == -204;
   }
 
   @Override
@@ -370,12 +373,6 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     // SPACE indexspace-name CONSTRAINS COLUMNS OF THE TABLE SO NO TWO ROWS CAN CONTAIN DUPLICATE
     // VALUES IN THOSE COLUMNS. RID OF EXISTING ROW IS X record-id
     return e.getErrorCode() == -803;
-  }
-
-  @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // SQL error code -204: name IS AN UNDEFINED NAME
-    return e.getErrorCode() == -204;
   }
 
   @Override
@@ -433,6 +430,9 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
+    // Reading the column directly as a `LocalDate` returns a value offset by 10 days for dates
+    // around the Julian-to-Gregorian calendar transition (October 1582). Read it as a String and
+    // parse manually to preserve the original date.
     String dateStr = resultSet.getString(columnName);
     if (dateStr == null) {
       return DateColumn.ofNull(columnName);
@@ -450,7 +450,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     if (time == null) {
       return TimeColumn.ofNull(columnName);
     } else {
-      return TimeColumn.of(columnName, time.toLocalDateTime().toLocalTime());
+      return TimeColumn.ofStrict(columnName, time.toLocalDateTime().toLocalTime());
     }
   }
 
@@ -463,7 +463,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     } else {
       LocalDateTime timestamp =
           RdbEngineTimeTypeDb2.TIMESTAMP_FORMATTER.parse(timestampStr, LocalDateTime::from);
-      return TimestampColumn.of(columnName, timestamp);
+      return TimestampColumn.ofStrict(columnName, timestamp);
     }
   }
 
@@ -476,7 +476,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     } else {
       Instant timestampTZ =
           RdbEngineTimeTypeDb2.TIMESTAMP_FORMATTER.parse(timestampStr, Instant::from);
-      return TimestampTZColumn.of(columnName, timestampTZ);
+      return TimestampTZColumn.ofStrict(columnName, timestampTZ);
     }
   }
 

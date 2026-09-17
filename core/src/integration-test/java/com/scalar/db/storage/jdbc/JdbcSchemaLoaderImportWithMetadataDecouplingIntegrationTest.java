@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
@@ -9,7 +8,6 @@ import com.scalar.db.schemaloader.SchemaLoaderImportWithMetadataDecouplingIntegr
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.slf4j.Logger;
@@ -30,7 +28,9 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     Properties properties = JdbcEnv.getProperties(testName);
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     rdbEngine = RdbEngineFactory.create(config);
-    testUtils = new JdbcAdminImportTestUtils(properties);
+    if (testUtils == null) {
+      testUtils = new JdbcAdminImportTestUtils(properties);
+    }
 
     // Set the isolation level for consistency reads for virtual tables
     properties.setProperty(
@@ -47,7 +47,21 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
   protected void createImportableTable(String namespace, String table) throws Exception {
     String sql;
 
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      sql =
+          "CREATE TABLE "
+              + rdbEngine.encloseFullTableName(namespace, table)
+              + "("
+              + rdbEngine.enclose("pk")
+              + " VARCHAR(8),"
+              + rdbEngine.enclose("col1")
+              + " VARCHAR(8),"
+              + rdbEngine.enclose("col2")
+              + " TIMESTAMP WITH TIME ZONE,"
+              + "PRIMARY KEY("
+              + rdbEngine.enclose("pk")
+              + "))";
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       sql =
           "CREATE TABLE "
               + rdbEngine.encloseFullTableName(namespace, table)
@@ -112,7 +126,9 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
   protected Map<String, DataType> getImportableTableOverrideColumnsType() {
     // col1 type override confirms overriding with the default data type mapping does not fail
     // col2 really performs a type override
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIME);
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMPTZ);
     } else if (JdbcTestUtils.isOracle(rdbEngine)) {
       return ImmutableMap.of("col1", DataType.TEXT, "col2", DataType.TIMESTAMP);
@@ -132,7 +148,11 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     metadata.addColumn("pk", DataType.TEXT);
     metadata.addColumn("col1", DataType.TEXT);
 
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return metadata
+          .addColumn("col2", hasTypeOverride ? DataType.TIME : DataType.TIMESTAMPTZ)
+          .build();
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       return metadata
           .addColumn("col2", hasTypeOverride ? DataType.TIMESTAMPTZ : DataType.TIMESTAMP)
           .build();
@@ -155,7 +175,9 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
   @Override
   protected void createNonImportableTable(String namespace, String table) throws Exception {
     String nonImportableDataType;
-    if (JdbcTestUtils.isMysql(rdbEngine)) {
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      nonImportableDataType = "NUMERIC";
+    } else if (JdbcTestUtils.isMysql(rdbEngine)) {
       nonImportableDataType = "YEAR";
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
       nonImportableDataType = "INTERVAL";
@@ -168,12 +190,15 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     } else {
       throw new AssertionError();
     }
+    String pkType = JdbcTestUtils.isSpanner(rdbEngine) ? "VARCHAR(8) NOT NULL" : "CHAR(8) NOT NULL";
     testUtils.execute(
         "CREATE TABLE "
             + rdbEngine.encloseFullTableName(namespace, table)
             + "("
             + rdbEngine.enclose("pk")
-            + " CHAR(8) NOT NULL,"
+            + " "
+            + pkType
+            + ","
             + rdbEngine.enclose("col")
             + " "
             + nonImportableDataType
@@ -203,15 +228,5 @@ public class JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
     } catch (Exception e) {
       logger.warn("Failed to close test utils", e);
     }
-  }
-
-  @Override
-  protected void waitForDifferentSessionDdl() {
-    if (JdbcTestUtils.isYugabyte(rdbEngine)) {
-      // This is needed to avoid schema or catalog version mismatch database errors.
-      Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
-      return;
-    }
-    super.waitForDifferentSessionDdl();
   }
 }

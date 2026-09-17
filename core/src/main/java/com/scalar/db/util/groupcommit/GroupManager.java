@@ -15,24 +15,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> {
+class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> {
   private static final Logger logger = LoggerFactory.getLogger(GroupManager.class);
 
   // Groups
   @Nullable
-  private NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+  private NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
       currentGroup;
   // Note: Using ConcurrentHashMap results in less performance.
   @VisibleForTesting
   protected final Map<
           PARENT_KEY,
-          NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+          NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>>
       normalGroupMap = new HashMap<>();
 
   @VisibleForTesting
   protected final Map<
           FULL_KEY,
-          DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+          DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>>
       delayedGroupMap = new HashMap<>();
 
   // Only this class uses this type of lock since the class can be heavy hotspot and StampedLock has
@@ -41,18 +41,18 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
 
   // Background workers
   @LazyInit
-  private GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+  private GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
       groupSizeFixWorker;
 
   @LazyInit
-  private GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+  private GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
       groupCleanupWorker;
 
   // Custom operations injected by the client
   private final GroupCommitKeyManipulator<
           PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
       keyManipulator;
-  @LazyInit private Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter;
+  @LazyInit private Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> emitter;
 
   private final GroupCommitConfig config;
 
@@ -65,13 +65,13 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
   }
 
   void setGroupSizeFixWorker(
-      GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      GroupSizeFixWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
           groupSizeFixWorker) {
     this.groupSizeFixWorker = groupSizeFixWorker;
   }
 
   void setGroupCleanupWorker(
-      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      GroupCleanupWorker<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
           groupCleanupWorker) {
     this.groupCleanupWorker = groupCleanupWorker;
   }
@@ -96,7 +96,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
   }
 
   // Gets the corresponding group associated with the given key.
-  Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> getGroup(
+  Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> getGroup(
       Keys<PARENT_KEY, CHILD_KEY, FULL_KEY> keys) throws GroupCommitException {
     long stamp = lock.writeLock();
     try {
@@ -104,14 +104,14 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
       // with the parent key in `normalGroupMap` would return the NormalGroup even if the target
       // slot is already moved from the NormalGroup to the DelayedGroup. So, checking
       // `delayedGroupMap` first is necessary.
-      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
           delayedGroup = delayedGroupMap.get(keys.fullKey);
       if (delayedGroup != null) {
         return delayedGroup;
       }
 
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> normalGroup =
-          normalGroupMap.get(keys.parentKey);
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
+          normalGroup = normalGroupMap.get(keys.parentKey);
       if (normalGroup != null) {
         return normalGroup;
       }
@@ -125,20 +125,21 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
 
   // Remove the specified group from group map.
   boolean removeGroupFromMap(
-      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> group) {
+      Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> group) {
     long stamp = lock.writeLock();
     try {
       if (group instanceof NormalGroup) {
-        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+        NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
             normalGroup =
-                (NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>)
+                (NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>)
                     group;
         return normalGroupMap.remove(normalGroup.parentKey()) != null;
       } else {
         assert group instanceof DelayedGroup;
-        DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+        DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
             delayedGroup =
-                (DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>)
+                (DelayedGroup<
+                        PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>)
                     group;
         return delayedGroupMap.remove(delayedGroup.fullKey()) != null;
       }
@@ -153,14 +154,14 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
     try {
       boolean removed = false;
 
-      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+      DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
           delayedGroup = delayedGroupMap.get(keys.fullKey);
       if (delayedGroup != null) {
         removed = delayedGroup.removeSlot(keys.childKey);
       }
 
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> normalGroup =
-          normalGroupMap.get(keys.parentKey);
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
+          normalGroup = normalGroupMap.get(keys.parentKey);
       if (normalGroup != null) {
         removed = normalGroup.removeSlot(keys.childKey) || removed;
       }
@@ -177,26 +178,27 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
   //
   // Returns true if any delayed slot is moved, false otherwise.
   boolean moveDelayedSlotToDelayedGroup(
-      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> normalGroup) {
+      NormalGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
+          normalGroup) {
     long stamp = lock.writeLock();
     try {
       // TODO: NormalGroup.removeNotReadySlots() calls updateStatus() potentially resulting in
       //       delegateEmitTaskToWaiter(). Maybe it should be called outside the lock.
 
       // Remove delayed tasks from the NormalGroup so that it can be ready.
-      List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>> notReadySlots =
-          normalGroup.removeNotReadySlots();
+      List<Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>>
+          notReadySlots = normalGroup.removeNotReadySlots();
       if (notReadySlots == null) {
         normalGroup.updateDelayedSlotMoveTimeoutAt();
         logger.debug(
             "This group isn't needed to remove slots. Updated the timeout. Group: {}", normalGroup);
         return false;
       }
-      for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> notReadySlot :
-          notReadySlots) {
+      for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
+          notReadySlot : notReadySlots) {
         // Create a new DelayedGroup
         FULL_KEY fullKey = notReadySlot.fullKey();
-        DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+        DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
             delayedGroup = new DelayedGroup<>(config, fullKey, emitter, keyManipulator);
 
         // Set the slot stored in the NormalGroup into the new DelayedGroup.
@@ -204,7 +206,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
         checkNotNull(delayedGroup.reserveNewSlot(notReadySlot));
 
         // Register the new DelayedGroup to the map and cleanup queue.
-        DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> old =
+        DelayedGroup<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> old =
             delayedGroupMap.put(fullKey, delayedGroup);
         if (old != null) {
           throw new AssertionError(
@@ -224,7 +226,7 @@ class GroupManager<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_K
     return true;
   }
 
-  void setEmitter(Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter) {
+  void setEmitter(Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> emitter) {
     this.emitter = emitter;
   }
 

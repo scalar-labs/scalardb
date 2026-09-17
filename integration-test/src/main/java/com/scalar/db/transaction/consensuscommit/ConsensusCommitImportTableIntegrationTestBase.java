@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -57,7 +58,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   private static final String TEST_NAME = "cc_import";
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String BALANCE = "balance";
   private static final int INITIAL_BALANCE = 1000;
@@ -74,7 +75,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
-  private Coordinator coordinator;
+  private CoordinatorStateAccessor coordinator;
   private RecoveryHandler recovery;
   private RecoveryExecutor recoveryExecutor;
   @Nullable private CoordinatorGroupCommitter groupCommitter;
@@ -89,9 +90,6 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     namespace = getNamespaceBaseName() + testName;
 
     Properties properties = getProperties(testName);
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
@@ -126,11 +124,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   public void setUp() throws Exception {
     dropTables();
     storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CrudHandler crud =
         new CrudHandler(
@@ -138,6 +136,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             recoveryExecutor,
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
+            consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =
@@ -236,12 +235,18 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   }
 
   private void prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-      TransactionState recordState, long preparedAt, TransactionState coordinatorState)
+      TransactionState recordState, long preparedAtOffsetMillis, TransactionState coordinatorState)
       throws Exception {
     createStorageTable();
     adminTestUtils.truncateNamespacesTable();
     adminTestUtils.truncateMetadataTable();
     importTable();
+    consensusCommitAdmin.createCoordinatorTables(true, getCreationOptions());
+
+    // Compute preparedAt AFTER all DDL above. Otherwise, on storage with slow DDL
+    // (e.g., real Spanner), the time spent on DDL would exceed
+    // RecoveryHandler.TRANSACTION_LIFETIME_MILLIS, breaking some of the tests.
+    long preparedAt = System.currentTimeMillis() + preparedAtOffsetMillis;
 
     Put put =
         Put.newBuilder()
@@ -260,8 +265,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             .value(BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
             .build();
 
-    // When using Oracle with the SERIALIZABLE isolation level, a RetriableExecutionException may
-    // occur even without any conflicts. So, we retry the put operation in such a case.
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
     while (true) {
       try {
         originalStorage.put(put);
@@ -271,12 +276,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       }
     }
 
-    consensusCommitAdmin.createCoordinatorTables(true, getCreationOptions());
-
     if (coordinatorState == null) {
       return;
     }
-    Coordinator.State state = new Coordinator.State(ANY_ID_1, coordinatorState);
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, coordinatorState, System.currentTimeMillis());
     coordinator.putState(state);
   }
 
@@ -469,9 +473,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
+    long preparedAtOffsetMillis = 0;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, current, TransactionState.COMMITTED);
+        TransactionState.PREPARED, preparedAtOffsetMillis, TransactionState.COMMITTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -497,8 +501,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
@@ -518,9 +523,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
+    long preparedAtOffsetMillis = 0;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, current, TransactionState.ABORTED);
+        TransactionState.PREPARED, preparedAtOffsetMillis, TransactionState.ABORTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -546,7 +551,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -567,9 +572,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
+    long preparedAtOffsetMillis = 0;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, prepared_at, null);
+        TransactionState.PREPARED, preparedAtOffsetMillis, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -586,9 +591,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
@@ -613,9 +618,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAtOffsetMillis = -RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.PREPARED, prepared_at, null);
+        TransactionState.PREPARED, preparedAtOffsetMillis, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -641,9 +646,13 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    // With the default isolation, the read path aborts the expired transaction synchronously (its
+    // ABORTED coordinator state is written) before returning the result, then rolls the record back
+    // in the background. tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test
@@ -666,9 +675,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
+    long preparedAtOffsetMillis = 0;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, current, TransactionState.COMMITTED);
+        TransactionState.DELETED, preparedAtOffsetMillis, TransactionState.COMMITTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -685,8 +694,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @Test
@@ -706,9 +716,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
       Selection s) throws Exception {
     // Arrange
-    long current = System.currentTimeMillis();
+    long preparedAtOffsetMillis = 0;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, current, TransactionState.ABORTED);
+        TransactionState.DELETED, preparedAtOffsetMillis, TransactionState.ABORTED);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -734,7 +744,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -755,9 +765,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis();
+    long preparedAtOffsetMillis = 0;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, prepared_at, null);
+        TransactionState.DELETED, preparedAtOffsetMillis, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -774,9 +784,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     transaction.rollback();
 
     // Assert
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @Test
@@ -801,9 +811,9 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
           Selection s) throws Exception {
     // Arrange
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAtOffsetMillis = -RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
-        TransactionState.DELETED, prepared_at, null);
+        TransactionState.DELETED, preparedAtOffsetMillis, null);
     DistributedTransaction transaction = manager.begin();
 
     // Act
@@ -829,9 +839,13 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     ((ConsensusCommit) transaction).waitForRecoveryCompletion();
 
     // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+    // With the default isolation, the read path aborts the expired transaction synchronously (its
+    // ABORTED coordinator state is written) before returning the result, then rolls the record back
+    // in the background. tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ANY_ID_1);
+    verify(coordinator).forceAbort(ANY_ID_1);
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
   }
 
   @Test

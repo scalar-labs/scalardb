@@ -3,7 +3,6 @@ package com.scalar.db.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
@@ -16,6 +15,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,8 +86,8 @@ public class InsertBuilderTest {
             .table(TABLE_1)
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -113,10 +114,9 @@ public class InsertBuilderTest {
     Assertions.<Key>assertThat(actual.getPartitionKey()).isEqualTo(partitionKey1);
     assertThat(actual.getClusteringKey()).hasValue(clusteringKey1);
     assertThat(actual.getColumns().size()).isEqualTo(18);
-    assertThat(actual.getColumns().get("bigint1").getBigIntValue())
-        .isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(actual.getColumns().get("bigint1").getBigIntValue()).isEqualTo(Long.MAX_VALUE);
     assertThat(actual.getColumns().get("bigint2").getBigIntValue())
-        .isEqualTo(Long.valueOf(BigIntColumn.MAX_VALUE));
+        .isEqualTo(Long.valueOf(Long.MAX_VALUE));
     assertThat(actual.getColumns().get("blob1").getBlobValueAsBytes())
         .isEqualTo("blob".getBytes(StandardCharsets.UTF_8));
     assertThat(actual.getColumns().get("blob2").getBlobValueAsByteBuffer())
@@ -215,8 +215,8 @@ public class InsertBuilderTest {
             .table(TABLE_1)
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -251,8 +251,8 @@ public class InsertBuilderTest {
             .table(TABLE_1)
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -281,8 +281,8 @@ public class InsertBuilderTest {
             .partitionKey(partitionKey2)
             .clusteringKey(clusteringKey2)
             .clearValues()
-            .bigIntValue("bigint1", BigIntColumn.MIN_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MIN_VALUE))
+            .bigIntValue("bigint1", Long.MIN_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MIN_VALUE))
             .blobValue("blob1", "foo".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(2))
             .booleanValue("bool1", false)
@@ -311,10 +311,9 @@ public class InsertBuilderTest {
     Assertions.<Key>assertThat(newInsert.getPartitionKey()).isEqualTo(partitionKey2);
     assertThat(newInsert.getClusteringKey()).hasValue(clusteringKey2);
     assertThat(newInsert.getColumns().size()).isEqualTo(18);
-    assertThat(newInsert.getColumns().get("bigint1").getBigIntValue())
-        .isEqualTo(BigIntColumn.MIN_VALUE);
+    assertThat(newInsert.getColumns().get("bigint1").getBigIntValue()).isEqualTo(Long.MIN_VALUE);
     assertThat(newInsert.getColumns().get("bigint2").getBigIntValue())
-        .isEqualTo(Long.valueOf(BigIntColumn.MIN_VALUE));
+        .isEqualTo(Long.valueOf(Long.MIN_VALUE));
     assertThat(newInsert.getColumns().get("blob1").getBlobValueAsBytes())
         .isEqualTo("foo".getBytes(StandardCharsets.UTF_8));
     assertThat(newInsert.getColumns().get("blob2").getBlobValueAsByteBuffer())
@@ -410,5 +409,64 @@ public class InsertBuilderTest {
     Assertions.<Key>assertThat(newInsert.getPartitionKey()).isEqualTo(partitionKey1);
     assertThat(newInsert.getClusteringKey()).hasValue(clusteringKey1);
     assertThat(newInsert.getColumns()).isEmpty();
+  }
+
+  @Test
+  public void build_WithOutOfRangeFractionalSecondForTimeValues_ShouldTruncateTimeRelatedValues() {
+    // Arrange
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    Instant timestampTZWithSubMillis = timestampWithSubMillis.toInstant(ZoneOffset.UTC);
+
+    // Act
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .partitionKey(partitionKey1)
+            .timeValue("time", timeWithSubMicros)
+            .timestampValue("timestamp", timestampWithSubMillis)
+            .timestampTZValue("timestamptz", timestampTZWithSubMillis)
+            .build();
+
+    // Assert
+    assertThat(insert.getColumns().get("time").getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+    assertThat(insert.getColumns().get("timestamp").getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+    assertThat(insert.getColumns().get("timestamptz").getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  @Test
+  public void
+      build_FromExistingWithOutOfRangeFractionalSecondForTimeValues_ShouldTruncateTimeRelatedValues() {
+    // Arrange
+    Insert existingInsert =
+        Insert.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .partitionKey(partitionKey1)
+            .build();
+
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    Instant timestampTZWithSubMillis = timestampWithSubMillis.toInstant(ZoneOffset.UTC);
+
+    // Act
+    Insert insert =
+        Insert.newBuilder(existingInsert)
+            .timeValue("time", timeWithSubMicros)
+            .timestampValue("timestamp", timestampWithSubMillis)
+            .timestampTZValue("timestamptz", timestampTZWithSubMillis)
+            .build();
+
+    // Assert
+    assertThat(insert.getColumns().get("time").getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+    assertThat(insert.getColumns().get("timestamp").getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+    assertThat(insert.getColumns().get("timestamptz").getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
   }
 }

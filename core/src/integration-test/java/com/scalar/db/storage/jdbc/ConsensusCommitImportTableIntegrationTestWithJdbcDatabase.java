@@ -39,7 +39,7 @@ public class ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
 
   @Override
   protected Key createPartitionKey(int id) {
-    if (JdbcEnv.isOracle()) {
+    if (JdbcEnv.isOracle() || JdbcEnv.isSpanner()) {
       return Key.ofBigInt(ACCOUNT_ID, id);
     }
     return super.createPartitionKey(id);
@@ -47,7 +47,7 @@ public class ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
 
   @Override
   protected Column<?> createBalanceColumn(int balance) {
-    if (JdbcEnv.isOracle()) {
+    if (JdbcEnv.isOracle() || JdbcEnv.isSpanner()) {
       return BigIntColumn.of(BALANCE, balance);
     }
     return super.createBalanceColumn(balance);
@@ -55,7 +55,7 @@ public class ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
 
   @Override
   protected int getBalance(Result result) {
-    if (JdbcEnv.isOracle()) {
+    if (JdbcEnv.isOracle() || JdbcEnv.isSpanner()) {
       assertThat(result.getColumns()).containsKey(BALANCE);
       assertThat(result.getColumns().get(BALANCE).hasNullValue()).isFalse();
       return (int) result.getColumns().get(BALANCE).getBigIntValue();

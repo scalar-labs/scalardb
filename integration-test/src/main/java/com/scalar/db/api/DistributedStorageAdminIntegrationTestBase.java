@@ -32,6 +32,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,10 +45,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   private static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
   private static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
   private static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
-  private static final String TABLE1 = "test_table1";
-  private static final String TABLE2 = "test_table2";
-  private static final String TABLE3 = "test_table3";
-  private static final String TABLE4 = "test_table4";
+  private static final String TABLE1 = "tbl1";
+  private static final String TABLE2 = "tbl2";
+  private static final String TABLE3 = "tbl3";
+  private static final String TABLE4 = "tbl4";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
@@ -687,7 +688,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         admin.createIndex(namespace1, getTable4(), getColumnName3(), options);
       }
       admin.createIndex(namespace1, getTable4(), getColumnName4(), options);
-      admin.createIndex(namespace1, getTable4(), getColumnName5(), options);
+      if (isIndexOnFloatColumnSupported()) {
+        admin.createIndex(namespace1, getTable4(), getColumnName5(), options);
+      }
       admin.createIndex(namespace1, getTable4(), getColumnName6(), options);
       if (isIndexOnBooleanColumnSupported()) {
         admin.createIndex(namespace1, getTable4(), getColumnName7(), options);
@@ -708,7 +711,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         assertThat(admin.indexExists(namespace1, getTable4(), getColumnName3())).isTrue();
       }
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName4())).isTrue();
-      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isTrue();
+      if (isIndexOnFloatColumnSupported()) {
+        assertThat(admin.indexExists(namespace1, getTable4(), getColumnName5())).isTrue();
+      }
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName6())).isTrue();
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(admin.indexExists(namespace1, getTable4(), getColumnName7())).isTrue();
@@ -730,12 +735,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
           .contains(
               getColumnName2(),
               getColumnName4(),
-              getColumnName5(),
               getColumnName9(),
               getColumnName10(),
               getColumnName11(),
               getColumnName12());
-      int indexCount = 8;
+      int indexCount = 7;
       if (isIndexOnBooleanColumnSupported()) {
         assertThat(actualSecondaryIndexNames).contains(getColumnName7());
         indexCount++;
@@ -750,6 +754,10 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       }
       if (isIndexOnBlobColumnSupported()) {
         assertThat(actualSecondaryIndexNames).contains(getColumnName8());
+        indexCount++;
+      }
+      if (isIndexOnFloatColumnSupported()) {
+        assertThat(actualSecondaryIndexNames).contains(getColumnName5());
         indexCount++;
       }
       assertThat(actualSecondaryIndexNames).hasSize(indexCount);
@@ -863,7 +871,6 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .addSecondaryIndex(getColumnName2())
               .addSecondaryIndex(getColumnName3())
               .addSecondaryIndex(getColumnName4())
-              .addSecondaryIndex(getColumnName5())
               .addSecondaryIndex(getColumnName6())
               .addSecondaryIndex(getColumnName9())
               .addSecondaryIndex(getColumnName10())
@@ -878,6 +885,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       }
       if (isIndexOnBlobColumnSupported()) {
         metadataBuilder.addSecondaryIndex(getColumnName8());
+      }
+      if (isIndexOnFloatColumnSupported()) {
+        metadataBuilder.addSecondaryIndex(getColumnName5());
       }
       admin.createTable(namespace1, getTable4(), metadataBuilder.build(), options);
       storage = storageFactory.getStorage();
@@ -911,7 +921,9 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
       admin.dropIndex(namespace1, getTable4(), getColumnName2());
       admin.dropIndex(namespace1, getTable4(), getColumnName3());
       admin.dropIndex(namespace1, getTable4(), getColumnName4());
-      admin.dropIndex(namespace1, getTable4(), getColumnName5());
+      if (isIndexOnFloatColumnSupported()) {
+        admin.dropIndex(namespace1, getTable4(), getColumnName5());
+      }
       admin.dropIndex(namespace1, getTable4(), getColumnName6());
       if (isIndexOnBooleanColumnSupported()) {
         admin.dropIndex(namespace1, getTable4(), getColumnName7());
@@ -1109,6 +1121,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_ForExistingTable_ShouldRenameTableCorrectly() throws ExecutionException {
     String newTableName = "new" + getTable4();
@@ -1392,6 +1405,11 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
               .build();
       assertThat(admin.getTableMetadata(namespace1, getTable4())).isEqualTo(expectedTableMetadata);
       assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isFalse();
+
+      // Verify the column and index are fully removed by re-creating them with the same name
+      admin.addNewColumnToTable(namespace1, getTable4(), getColumnName2(), DataType.INT);
+      admin.createIndex(namespace1, getTable4(), getColumnName2());
+      assertThat(admin.indexExists(namespace1, getTable4(), getColumnName2())).isTrue();
     } finally {
       admin.dropTable(namespace1, getTable4(), true);
     }
@@ -1514,6 +1532,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_ForNonExistingTable_ShouldThrowIllegalArgumentException() {
     // Arrange
@@ -1523,6 +1542,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_IfNewTableNameAlreadyExists_ShouldThrowIllegalArgumentException()
       throws ExecutionException {
@@ -1548,6 +1568,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_ForExistingTableWithIndexes_ShouldRenameTableAndIndexesCorrectly()
       throws ExecutionException {
@@ -1587,6 +1608,7 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
     }
   }
 
+  @EnabledIf("isRenameTableSupported")
   @Test
   public void renameTable_IfOnlyOneTableExists_ShouldRenameTableCorrectly()
       throws ExecutionException {
@@ -1705,6 +1727,14 @@ public abstract class DistributedStorageAdminIntegrationTestBase {
   }
 
   protected boolean isCreateIndexOnTextColumnEnabled() {
+    return true;
+  }
+
+  protected boolean isIndexOnFloatColumnSupported() {
+    return true;
+  }
+
+  protected boolean isRenameTableSupported() {
     return true;
   }
 }

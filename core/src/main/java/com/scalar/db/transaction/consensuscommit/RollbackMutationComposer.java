@@ -37,10 +37,13 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
 
   private final DistributedStorage storage;
 
+  // Rollback restores before-images and does not write a fresh phase timestamp, so the inherited
+  // `timestamp` field is unused here. We pass 0L to the base constructor only to satisfy it; there
+  // is no commit-phase timestamp to thread in on the rollback path.
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public RollbackMutationComposer(
       String id, DistributedStorage storage, TransactionTableMetadataManager tableMetadataManager) {
-    super(id, tableMetadataManager);
+    super(id, 0L, tableMetadataManager);
     this.storage = storage;
   }
 

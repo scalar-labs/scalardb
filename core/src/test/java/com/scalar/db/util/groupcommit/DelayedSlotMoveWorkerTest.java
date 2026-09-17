@@ -25,15 +25,17 @@ class DelayedSlotMoveWorkerTest {
   private static final int LONG_WAIT_MILLIS = 500;
 
   @Mock
-  private GroupCleanupWorker<String, String, String, String, String, Integer> groupCleanupWorker;
+  private GroupCleanupWorker<String, String, String, String, String, Integer, Void>
+      groupCleanupWorker;
 
-  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup1;
-  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup2;
-  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup3;
-  @Mock private NormalGroup<String, String, String, String, String, Integer> normalGroup4;
-  @Mock private GroupManager<String, String, String, String, String, Integer> groupManager;
-  private DelayedSlotMoveWorker<String, String, String, String, String, Integer> worker;
-  private DelayedSlotMoveWorker<String, String, String, String, String, Integer> workerWithWait;
+  @Mock private NormalGroup<String, String, String, String, String, Integer, Void> normalGroup1;
+  @Mock private NormalGroup<String, String, String, String, String, Integer, Void> normalGroup2;
+  @Mock private NormalGroup<String, String, String, String, String, Integer, Void> normalGroup3;
+  @Mock private NormalGroup<String, String, String, String, String, Integer, Void> normalGroup4;
+  @Mock private GroupManager<String, String, String, String, String, Integer, Void> groupManager;
+  private DelayedSlotMoveWorker<String, String, String, String, String, Integer, Void> worker;
+  private DelayedSlotMoveWorker<String, String, String, String, String, Integer, Void>
+      workerWithWait;
 
   @BeforeEach
   void setUp() {
@@ -50,7 +52,7 @@ class DelayedSlotMoveWorkerTest {
   }
 
   private void doReturnOldGroupAbortTimeoutAtMillis(
-      NormalGroup<String, String, String, String, String, Integer> normalGroup) {
+      NormalGroup<String, String, String, String, String, Integer, Void> normalGroup) {
     long oldGroupAbortMillis = System.currentTimeMillis() + 60 * 1000;
     doReturn(oldGroupAbortMillis).when(normalGroup).oldGroupAbortTimeoutAtMillis();
   }

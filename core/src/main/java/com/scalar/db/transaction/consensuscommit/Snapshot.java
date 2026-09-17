@@ -2,13 +2,12 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isInsertModeEnabled;
-import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
-import com.scalar.db.api.ConditionSetBuilder;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -20,6 +19,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.ScanWithIndex;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -44,7 +44,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -75,9 +74,17 @@ public class Snapshot {
   private final List<ScannerInfo> scannerSet;
 
   // The write set stores information about writes in this transaction.
+  //
+  // Invariant: a key must never leave writeSet ∪ deleteSet, not even transiently on an exception
+  // path. Scanners test membership of this union at the moment they produce a record to decide
+  // whether a write happened before or after the read, so a key that briefly belongs to neither set
+  // would be misread as never written. putIntoWriteSet and putIntoDeleteSet are currently the only
+  // mutators of these two maps and both preserve it; any new mutator must preserve it too. See
+  // putIntoWriteSet for the details.
   private final Map<Key, Put> writeSet;
 
-  // The delete set stores information about deletes in this transaction.
+  // The delete set stores information about deletes in this transaction. See the invariant
+  // documented on writeSet above.
   private final Map<Key, Delete> deleteSet;
 
   public Snapshot(
@@ -133,13 +140,25 @@ public class Snapshot {
     scanSet.put(scan, results);
   }
 
+  /**
+   * Adds the specified {@link Put} to the write set.
+   *
+   * <p>Invariant: a key must never leave {@code writeSet ∪ deleteSet}. Together with {@link
+   * #putIntoDeleteSet}, this method is the only mutator of those two sets, and both preserve the
+   * invariant even on their exception paths. Scanners rely on it: they decide whether a write
+   * happened before or after a record was read by testing membership of that union at the moment
+   * the record is produced, so a key that temporarily belongs to neither set would be misread as
+   * never written.
+   *
+   * @param key the key of the record to write
+   * @param put the put operation to add
+   * @throws CrudException if retrieving the table metadata fails
+   */
   public void putIntoWriteSet(Key key, Put put) throws CrudException {
     if (deleteSet.containsKey(key)) {
       // If a Put is performed on a previously deleted record within the same transaction, move it
       // from the delete set to the write set. Since Delete clears all column values, any columns
       // not explicitly specified in the Put must be set to null to ensure correct behavior.
-
-      deleteSet.remove(key);
 
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(put);
 
@@ -163,7 +182,12 @@ public class Snapshot {
       // preparation.
       putBuilder = putBuilder.enableImplicitPreRead();
 
-      writeSet.put(key, putBuilder.build());
+      // Build the merged Put before touching either set. Everything above can throw, and moving the
+      // key out of the delete set first would leave it in neither set, breaking the invariant
+      // documented on this method.
+      Put mergedPut = putBuilder.build();
+      deleteSet.remove(key);
+      writeSet.put(key, mergedPut);
     } else if (writeSet.containsKey(key)) {
       if (isInsertModeEnabled(put)) {
         throw new IllegalArgumentException(
@@ -191,6 +215,16 @@ public class Snapshot {
     }
   }
 
+  /**
+   * Adds the specified {@link Delete} to the delete set.
+   *
+   * <p>Preserves the {@code writeSet ∪ deleteSet} invariant documented on {@link #putIntoWriteSet}:
+   * the insert-mode rejection below throws before the key is removed from the write set, and
+   * nothing runs between that removal and the insertion into the delete set.
+   *
+   * @param key the key of the record to delete
+   * @param delete the delete operation to add
+   */
   public void putIntoDeleteSet(Key key, Delete delete) {
     Put put = writeSet.get(key);
     if (put != null) {
@@ -348,8 +382,9 @@ public class Snapshot {
   }
 
   /**
-   * Verifies that the scan does not overlap with the previous write or delete operations of the
-   * same transaction to prevent incorrect results.
+   * Verifies that the scan does not overlap with the write or delete operations of the same
+   * transaction, ignoring the keys that the scan is known to have produced before they were
+   * written, to prevent incorrect results.
    *
    * <p>For instance, consider the following records in the database, where X is the partition key
    * and Y is the clustering key: R1(X=1, Y=1), R2(X=1, Y=2), R3(X=1, Y=3), and R4(X=1, Y=4).
@@ -373,46 +408,82 @@ public class Snapshot {
    * impossible to determine whether the scanned results include any records that match the keys
    * from previous writes or deletes.
    *
+   * <p>The exempt keys carry the ordering information that plain overlap detection lacks. Both
+   * examples above are writes that happened <i>before</i> the scan, which is why the scan result is
+   * wrong. A write issued <i>after</i> the scan already returned the record is harmless: the caller
+   * has seen the value it would have seen under "run the whole scan, then apply the write". A
+   * scanner therefore records a key as exempt only when the key was absent from both the write set
+   * and the delete set at the moment the record was produced, and those keys are skipped here. A
+   * key written before the scan produced it is never recorded as exempt and is still rejected.
+   *
+   * <p>The exemption is per-scan. A different scan or scanner covering the same key does not
+   * inherit it, because that other read would return a stale record. Pass an empty set for a scan
+   * that carries no ordering information, such as the batch scan path, which reproduces the
+   * behaviour of rejecting every overlap.
+   *
    * @param scan the scan to be verified
    * @param results the results of the scan
+   * @param exemptKeys the keys that this scan produced before the transaction wrote them
    */
-  public void verifyNoOverlap(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
-    if (isWriteSetOrDeleteSetOverlappedWith(scan, results)) {
+  public void verifyNoOverlap(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
+    Key overlappedKey = getKeyOverlappedWithWriteSetOrDeleteSet(scan, results, exemptKeys);
+    if (overlappedKey != null) {
       throw new IllegalArgumentException(
           CoreError.CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED
-              .buildMessage());
+              .buildMessage(overlappedKey));
     }
   }
 
-  private boolean isWriteSetOrDeleteSetOverlappedWith(
-      Scan scan, Map<Snapshot.Key, TransactionResult> results) {
-    if (isDeleteSetOverlappedWith(results)) {
-      return true;
+  /**
+   * Returns a key that this transaction has written or deleted and that the given scan covers, or
+   * null if there is none. When several keys overlap, the returned one is whichever is found first
+   * while iterating the write set or the delete set, so it is not defined which one it is. It is
+   * intended as a pointer for the user, not as an exhaustive report.
+   */
+  @Nullable
+  private Key getKeyOverlappedWithWriteSetOrDeleteSet(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
+    Key key = getKeyOverlappedWithDeleteSet(results, exemptKeys);
+    if (key != null) {
+      return key;
     }
 
     if (scan instanceof ScanWithIndex) {
-      return isWriteSetOverlappedWith((ScanWithIndex) scan, results);
+      return getKeyOverlappedWithWriteSet((ScanWithIndex) scan, results, exemptKeys);
     } else if (scan instanceof ScanAll) {
-      return isWriteSetOverlappedWith((ScanAll) scan, results);
+      return getKeyOverlappedWithWriteSet((ScanAll) scan, results, exemptKeys);
     } else {
-      return isWriteSetOverlappedWith(scan, results);
+      return getKeyOverlappedWithWriteSet(scan, results, exemptKeys);
     }
   }
 
-  private boolean isDeleteSetOverlappedWith(Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithDeleteSet(
+      Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Delete> entry : deleteSet.entrySet()) {
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
     }
-    return false;
+    return null;
   }
 
-  private boolean isWriteSetOverlappedWith(
-      ScanWithIndex scanWithIndex, Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithWriteSet(
+      ScanWithIndex scanWithIndex,
+      Map<Snapshot.Key, TransactionResult> results,
+      Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
+
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
 
       Put put = entry.getValue();
@@ -430,14 +501,15 @@ public class Snapshot {
       String indexColumnName = indexColumn.getName();
       if (columns.containsKey(indexColumnName)
           && columns.get(indexColumnName).equals(indexColumn)) {
-        return true;
+        return entry.getKey();
       }
     }
-    return false;
+    return null;
   }
 
-  private boolean isWriteSetOverlappedWith(
-      ScanAll scanAll, Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithWriteSet(
+      ScanAll scanAll, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       // We need to consider three cases here to prevent scan-after-write.
       //   1) A put operation overlaps the scan range regardless of the update (put) results.
@@ -452,9 +524,15 @@ public class Snapshot {
       // case, we cannot find the overlap using the scan results since the database is not updated
       // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
 
+      // An exempt key is excluded from all three cases. Case 3 in particular would otherwise fire
+      // on a record the scan already returned whose updated columns still match the conjunctions.
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
+
       // Check for cases 1 and 2
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
 
       // Check for case 3
@@ -465,17 +543,22 @@ public class Snapshot {
       }
 
       if (areConjunctionsOverlapped(put, scanAll)) {
-        return true;
+        return entry.getKey();
       }
     }
-    return false;
+    return null;
   }
 
-  private boolean isWriteSetOverlappedWith(
-      Scan scan, Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithWriteSet(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
+
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
 
       Put put = entry.getValue();
@@ -491,7 +574,7 @@ public class Snapshot {
 
       // If partition keys match and a primary key does not have a clustering key
       if (!put.getClusteringKey().isPresent()) {
-        return true;
+        return entry.getKey();
       }
 
       com.scalar.db.io.Key writtenKey = put.getClusteringKey().get();
@@ -500,7 +583,7 @@ public class Snapshot {
 
       // If no range is specified, which means it scans the whole partition space
       if (!isStartGiven && !isEndGiven) {
-        return true;
+        return entry.getKey();
       }
 
       if (isStartGiven && isEndGiven) {
@@ -510,7 +593,7 @@ public class Snapshot {
         if ((scan.getStartInclusive() && writtenKey.equals(startKey))
             || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
             || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
-          return true;
+          return entry.getKey();
         }
       }
 
@@ -519,7 +602,7 @@ public class Snapshot {
         // If startKey <= writtenKey
         if ((scan.getStartInclusive() && startKey.equals(writtenKey))
             || writtenKey.compareTo(startKey) > 0) {
-          return true;
+          return entry.getKey();
         }
       }
 
@@ -528,11 +611,11 @@ public class Snapshot {
         // If writtenKey <= endKey
         if ((scan.getEndInclusive() && writtenKey.equals(endKey))
             || writtenKey.compareTo(endKey) < 0) {
-          return true;
+          return entry.getKey();
         }
       }
     }
-    return false;
+    return null;
   }
 
   private boolean areConjunctionsOverlapped(Put put, Scan scan) {
@@ -560,22 +643,43 @@ public class Snapshot {
 
     // Scan set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>> entry : scanSet.entrySet()) {
-      tasks.add(() -> validateScanResults(storage, entry.getKey(), entry.getValue(), false));
+      tasks.add(
+          () -> {
+            TransactionTableMetadata txMetadata = getTransactionTableMetadata(entry.getKey());
+            validateScanResults(
+                storage, entry.getKey(), entry.getValue(), false, txMetadata.getTableMetadata());
+            validateBeforeIndex(storage, entry.getKey(), txMetadata);
+          });
     }
 
     // Scanner set is re-validated to check if there is no anti-dependency
     for (ScannerInfo scannerInfo : scannerSet) {
-      tasks.add(() -> validateScanResults(storage, scannerInfo.scan, scannerInfo.results, true));
+      tasks.add(
+          () -> {
+            TransactionTableMetadata txMetadata = getTransactionTableMetadata(scannerInfo.scan);
+            validateScanResults(
+                storage,
+                scannerInfo.scan,
+                scannerInfo.results,
+                true,
+                txMetadata.getTableMetadata());
+            validateBeforeIndex(storage, scannerInfo.scan, txMetadata);
+          });
     }
 
     // Get set is re-validated to check if there is no anti-dependency
     for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
       Get get = entry.getKey();
-      TableMetadata metadata = getTableMetadata(get);
+      TransactionTableMetadata txMetadata = getTransactionTableMetadata(get);
+      TableMetadata metadata = txMetadata.getTableMetadata();
 
       if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
         // For Get with index
-        tasks.add(() -> validateGetWithIndexResult(storage, get, entry.getValue(), metadata));
+        tasks.add(
+            () -> {
+              validateGetWithIndexResult(storage, get, entry.getValue(), metadata);
+              validateBeforeIndex(storage, get, txMetadata);
+            });
       } else {
         // For other Get
 
@@ -610,6 +714,7 @@ public class Snapshot {
    * @param results the results of the scan
    * @param notFullyScannedScanner if this is a validation for a scanner that has not been fully
    *     scanned
+   * @param metadata the table metadata for the scanned table
    * @throws ExecutionException if a storage operation fails
    * @throws ValidationConflictException if the scan results are changed by another transaction
    */
@@ -617,13 +722,11 @@ public class Snapshot {
       DistributedStorage storage,
       Scan scan,
       LinkedHashMap<Key, TransactionResult> results,
-      boolean notFullyScannedScanner)
+      boolean notFullyScannedScanner,
+      TableMetadata metadata)
       throws ExecutionException, ValidationConflictException {
-    Scanner scanner = null;
-    try {
-      TableMetadata metadata = getTableMetadata(scan);
-
-      scanner = storage.scan(ConsensusCommitUtils.prepareScanForStorage(scan, metadata));
+    try (Scanner scanner =
+        storage.scan(ConsensusCommitUtils.prepareScanForStorage(scan, metadata))) {
 
       // Initialize the iterator for the latest scan results
       Optional<Result> latestResult = getNextResult(scanner, scan);
@@ -722,14 +825,8 @@ public class Snapshot {
           throwExceptionDueToAntiDependency();
         }
       }
-    } finally {
-      if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException e) {
-          logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
-        }
-      }
+    } catch (IOException e) {
+      logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
     }
   }
 
@@ -763,24 +860,13 @@ public class Snapshot {
     // If this transaction or another transaction inserts records into the index range,
     // the Get with index operation may retrieve multiple records, which would result in
     // an IllegalArgumentException. Therefore, we use Scan with index instead.
-    Scan scanWithIndex =
-        Scan.newBuilder()
-            .namespace(get.forNamespace().get())
-            .table(get.forTable().get())
-            .indexKey(get.getPartitionKey())
-            .whereOr(
-                get.getConjunctions().stream()
-                    .map(c -> ConditionSetBuilder.andConditionSet(c.getConditions()).build())
-                    .collect(Collectors.toSet()))
-            .consistency(get.getConsistency())
-            .attributes(get.getAttributes())
-            .build();
+    Scan scanWithIndex = ConsensusCommitUtils.createScanWithIndexFromGet(get);
 
     LinkedHashMap<Key, TransactionResult> results = new LinkedHashMap<>(1);
     originalResult.ifPresent(r -> results.put(new Snapshot.Key(scanWithIndex, r, metadata), r));
 
     // Validate the result to check if there is no anti-dependency
-    validateScanResults(storage, scanWithIndex, results, false);
+    validateScanResults(storage, scanWithIndex, results, false, metadata);
   }
 
   private void validateGetResult(
@@ -810,10 +896,109 @@ public class Snapshot {
     }
   }
 
-  private TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
-    TransactionTableMetadata transactionTableMetadata =
-        getTransactionTableMetadata(tableMetadataManager, operation);
-    return transactionTableMetadata.getTableMetadata();
+  /**
+   * Validates that there are no uncommitted records on the before-image index that could cause
+   * phantom reads.
+   *
+   * <p>This is needed because when another transaction updates a record's indexed column (e.g.,
+   * from 10 to 20) and is in PREPARED/DELETED state, the regular index scan (e.g., index_col=10)
+   * won't find that record since its current value is 20. However, the record's committed
+   * (before-image) value is still 10. Without this check, a phantom could go undetected: a record
+   * committed with index_col=10 but updated to 20 by another PREPARED transaction would be
+   * invisible to both the original scan and the validation re-scan.
+   *
+   * <p>This method is only called in the SERIALIZABLE extra-read validation phase. In SERIALIZABLE,
+   * {@link ConsensusCommitOperationChecker} rejects index-based operations on tables without
+   * before-image indexes, so the existence of before-image indexes is guaranteed when this method
+   * is called. Therefore, this method only needs to check whether the selection is an index-based
+   * operation (Get with index, Scan with index, or ScanAll with indexed column conditions), without
+   * checking for the existence of before-image indexes.
+   *
+   * @param storage a distributed storage
+   * @param selection the original selection operation (Get with index, ScanWithIndex, or ScanAll)
+   * @throws ExecutionException if a storage operation fails
+   * @throws ValidationConflictException if uncommitted records are found on the before-image index
+   */
+  private void validateBeforeIndex(
+      DistributedStorage storage, Selection selection, TransactionTableMetadata txMetadata)
+      throws ExecutionException, ValidationConflictException {
+    if (!requiresBeforeIndexValidation(selection, txMetadata.getTableMetadata())) {
+      return;
+    }
+
+    Scan beforeIndexScan;
+    if (selection instanceof ScanAll) {
+      beforeIndexScan =
+          ConsensusCommitUtils.createBeforeIndexScanAll(
+              (ScanAll) selection, txMetadata.getTableMetadata());
+    } else {
+      beforeIndexScan = ConsensusCommitUtils.createBeforeIndexScan(selection);
+    }
+
+    try (Scanner scanner = storage.scan(beforeIndexScan)) {
+      for (Result result : scanner) {
+        TransactionResult txResult = new TransactionResult(result);
+        // Conservatively fail if any uncommitted record from another transaction is found on the
+        // before-image index. This may cause false positives (e.g., when the record will be
+        // rolled forward and its committed index value won't actually match the scan condition),
+        // but it guarantees correctness. On retry, the record should be committed, so the retry
+        // will succeed.
+        if (!txResult.isCommitted() && !id.equals(txResult.getId())) {
+          throwExceptionDueToAntiDependency();
+        }
+      }
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ExecutionException) {
+        throw (ExecutionException) e.getCause();
+      }
+      throw e;
+    } catch (IOException e) {
+      logger.warn("Failed to close the scanner. Transaction ID: {}", id, e);
+    }
+  }
+
+  /**
+   * Checks if the given selection requires before-image index validation. This is true when the
+   * selection is an index-based operation (Get with index, Scan with index, or ScanAll with
+   * conditions on indexed columns) and the index column is a non-primary-key column.
+   *
+   * <p>Primary key columns (partition keys and clustering keys) are excluded because they are
+   * immutable and do not have corresponding before-image columns, so before-image index validation
+   * is not needed for them.
+   *
+   * <p>For ScanAll, whether the underlying storage actually uses the index depends on the storage
+   * implementation. However, this method considers ScanAll with conditions on indexed columns as
+   * requiring before-image index validation regardless.
+   *
+   * @param selection the selection operation to check
+   * @param metadata the table metadata
+   * @return true if the selection requires before-image index validation
+   */
+  @VisibleForTesting
+  boolean requiresBeforeIndexValidation(Selection selection, TableMetadata metadata) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(selection, metadata)) {
+      String indexColumnName = selection.getPartitionKey().getColumns().get(0).getName();
+      return !metadata.getPartitionKeyNames().contains(indexColumnName)
+          && !metadata.getClusteringKeyNames().contains(indexColumnName);
+    }
+    if (selection instanceof ScanAll) {
+      for (Selection.Conjunction conjunction : selection.getConjunctions()) {
+        for (ConditionalExpression condition : conjunction.getConditions()) {
+          String columnName = condition.getColumn().getName();
+          if (metadata.getSecondaryIndexNames().contains(columnName)
+              && !metadata.getPartitionKeyNames().contains(columnName)
+              && !metadata.getClusteringKeyNames().contains(columnName)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private TransactionTableMetadata getTransactionTableMetadata(Operation operation)
+      throws ExecutionException {
+    return ConsensusCommitUtils.getTransactionTableMetadata(tableMetadataManager, operation);
   }
 
   private boolean isChanged(

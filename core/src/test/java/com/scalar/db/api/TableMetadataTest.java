@@ -180,6 +180,21 @@ public class TableMetadataTest {
   }
 
   @Test
+  public void
+      builder_SecondaryIndexGivenButNoColumnDefinitionOfItGiven_ShouldThrowIllegalStateException() {
+    // Arrange
+    TableMetadata.Builder builder =
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.TEXT)
+            .addPartitionKey(COL_NAME1)
+            .addSecondaryIndex(COL_NAME3);
+
+    // Act Assert
+    assertThatThrownBy(builder::build).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
   public void builder_basedOnAnotherTableMetadata_ShouldReturnProperTableMetadata() {
     // Arrange
     TableMetadata base =
@@ -331,7 +346,10 @@ public class TableMetadataTest {
 
     // Act
     TableMetadata tableMetadata =
-        builder.renameSecondaryIndex(COL_NAME5, "new_" + COL_NAME5).build();
+        builder
+            .renameColumn(COL_NAME5, "new_" + COL_NAME5)
+            .renameSecondaryIndex(COL_NAME5, "new_" + COL_NAME5)
+            .build();
 
     // Assert
     assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);

@@ -290,6 +290,16 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
+  public void getScanner_WhenUpdatingEachReturnedRecord_ShouldUpdateAllOfThem() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void getScanner_WhenDeletingEachReturnedRecord_ShouldDeleteAllOfThem() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
   public void put_DefaultNamespaceGiven_ShouldWorkProperly() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
@@ -501,4 +511,16 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @EnumSource(ScanType.class)
   public void scanOrGetScanner_ScanGivenForIndexColumnWithConjunctions_ShouldReturnRecords(
       ScanType scanType) {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttribute_ShouldThrowIllegalArgumentException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      scan_CrossPartitionScanDisabledByTransactionAttributeButEnabledByScanAttribute_ShouldScanProperly() {}
 }

@@ -7,6 +7,9 @@ import com.scalar.db.api.DistributedStorageProvider;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.DistributedTransactionProvider;
+import com.scalar.db.api.GlobalTransactionManager;
+import com.scalar.db.api.TwoPhaseCommitCoordinator;
+import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -116,12 +119,53 @@ final class ProviderManager {
    * @param config a database config
    * @return an instance of {@link TwoPhaseCommitTransactionManager}. If the transaction manager
    *     does not support the two-phase commit interface, returns {@code null}.
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   @Nullable
   public static TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
       DatabaseConfig config) {
     return getDistributedTransactionProvider(config.getTransactionManager())
         .createTwoPhaseCommitTransactionManager(config);
+  }
+
+  /**
+   * Returns an instance of {@link TwoPhaseCommitCoordinator}.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommitCoordinator}
+   * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
+   *     commit interface
+   */
+  public static TwoPhaseCommitCoordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
+    return getDistributedTransactionProvider(config.getTransactionManager())
+        .createTwoPhaseCommitCoordinator(config);
+  }
+
+  /**
+   * Returns an instance of {@link TwoPhaseCommitParticipant}.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommitParticipant}
+   * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
+   *     commit interface
+   */
+  public static TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config) {
+    return getDistributedTransactionProvider(config.getTransactionManager())
+        .createTwoPhaseCommitParticipant(config);
+  }
+
+  /**
+   * Returns an instance of {@link GlobalTransactionManager}.
+   *
+   * @param config a database config
+   * @return an instance of {@link GlobalTransactionManager}
+   * @throws UnsupportedOperationException if the transaction manager does not support global
+   *     transactions
+   */
+  public static GlobalTransactionManager createGlobalTransactionManager(DatabaseConfig config) {
+    return getDistributedTransactionProvider(config.getTransactionManager())
+        .createGlobalTransactionManager(config);
   }
 
   private static DistributedTransactionProvider getDistributedTransactionProvider(String name) {

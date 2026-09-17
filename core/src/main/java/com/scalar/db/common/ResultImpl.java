@@ -28,14 +28,14 @@ public class ResultImpl extends AbstractResult {
     this.metadata = Objects.requireNonNull(metadata);
   }
 
-  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.8.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<Key> getPartitionKey() {
     return Optional.of(ScalarDbUtils.getPartitionKey(this, metadata));
   }
 
-  /** @deprecated As of release 3.8.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.8.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<Key> getClusteringKey() {

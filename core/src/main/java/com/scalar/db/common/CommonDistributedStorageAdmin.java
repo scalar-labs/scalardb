@@ -320,10 +320,6 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
               ScalarDbUtils.getFullTableName(namespace, table), columnName));
     }
 
-    if (tableMetadata.getSecondaryIndexNames().contains(columnName)) {
-      dropIndex(namespace, table, columnName);
-    }
-
     try {
       admin.dropColumnFromTable(namespace, table, columnName);
     } catch (ExecutionException e) {

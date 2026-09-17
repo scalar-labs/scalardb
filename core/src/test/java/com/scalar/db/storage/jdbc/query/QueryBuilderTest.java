@@ -325,6 +325,7 @@ public class QueryBuilderTest {
       case MYSQL:
       case POSTGRESQL:
       case YUGABYTE:
+      case SPANNER:
       case MARIADB:
       case DB2:
         expectedQuery =
@@ -1298,6 +1299,11 @@ public class QueryBuilderTest {
             "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
         break;
+      case SPANNER:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?) "
+                + "ON CONFLICT (p1) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3";
+        break;
       case ORACLE:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
@@ -1345,6 +1351,12 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(6, "v2Value");
         verify(preparedStatement).setString(7, "v3Value");
         break;
+      case SPANNER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "v1Value");
+        verify(preparedStatement).setString(3, "v2Value");
+        verify(preparedStatement).setString(4, "v3Value");
+        break;
       case ORACLE:
       case SQL_SERVER:
       case DB2:
@@ -1374,6 +1386,11 @@ public class QueryBuilderTest {
         expectedQuery =
             "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
                 + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
+        break;
+      case SPANNER:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
+                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3";
         break;
       case ORACLE:
         expectedQuery =
@@ -1426,6 +1443,13 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(7, "v2Value");
         verify(preparedStatement).setString(8, "v3Value");
         break;
+      case SPANNER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "c1Value");
+        verify(preparedStatement).setString(3, "v1Value");
+        verify(preparedStatement).setString(4, "v2Value");
+        verify(preparedStatement).setString(5, "v3Value");
+        break;
       case ORACLE:
       case SQL_SERVER:
       case DB2:
@@ -1458,6 +1482,11 @@ public class QueryBuilderTest {
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
+        break;
+      case SPANNER:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3,v4=excluded.v4";
         break;
       case ORACLE:
         expectedQuery =
@@ -1519,6 +1548,16 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(11, "v3Value");
         verify(preparedStatement).setString(12, "v4Value");
         break;
+      case SPANNER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "p2Value");
+        verify(preparedStatement).setString(3, "c1Value");
+        verify(preparedStatement).setString(4, "c2Value");
+        verify(preparedStatement).setString(5, "v1Value");
+        verify(preparedStatement).setString(6, "v2Value");
+        verify(preparedStatement).setString(7, "v3Value");
+        verify(preparedStatement).setString(8, "v4Value");
+        break;
       case ORACLE:
       case SQL_SERVER:
       case DB2:
@@ -1557,6 +1596,11 @@ public class QueryBuilderTest {
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
+        break;
+      case SPANNER:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3,v4=excluded.v4,v5=excluded.v5";
         break;
       case ORACLE:
         expectedQuery =
@@ -1621,6 +1665,17 @@ public class QueryBuilderTest {
         verify(preparedStatement).setString(13, "v4Value");
         verify(preparedStatement).setNull(14, Types.VARCHAR);
         break;
+      case SPANNER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "p2Value");
+        verify(preparedStatement).setString(3, "c1Value");
+        verify(preparedStatement).setString(4, "c2Value");
+        verify(preparedStatement).setString(5, "v1Value");
+        verify(preparedStatement).setString(6, "v2Value");
+        verify(preparedStatement).setString(7, "v3Value");
+        verify(preparedStatement).setString(8, "v4Value");
+        verify(preparedStatement).setNull(9, Types.VARCHAR);
+        break;
       case ORACLE:
       case SQL_SERVER:
       case DB2:
@@ -1666,6 +1721,7 @@ public class QueryBuilderTest {
         break;
       case POSTGRESQL:
       case YUGABYTE:
+      case SPANNER:
         expectedQuery = "INSERT INTO n1.t1 (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
         break;
       case ORACLE:
@@ -1701,6 +1757,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case SPANNER:
       case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         break;
@@ -1722,6 +1779,7 @@ public class QueryBuilderTest {
         break;
       case POSTGRESQL:
       case YUGABYTE:
+      case SPANNER:
         expectedQuery = "INSERT INTO n1.t1 (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
         break;
       case ORACLE:
@@ -1763,6 +1821,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case SPANNER:
       case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "c1Value");
@@ -1787,6 +1846,7 @@ public class QueryBuilderTest {
         break;
       case POSTGRESQL:
       case YUGABYTE:
+      case SPANNER:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?) "
                 + "ON CONFLICT (p1,p2,c1,c2) DO NOTHING";
@@ -1832,6 +1892,7 @@ public class QueryBuilderTest {
       case POSTGRESQL:
       case SQLITE:
       case YUGABYTE:
+      case SPANNER:
       case MARIADB:
         verify(preparedStatement).setString(1, "p1Value");
         verify(preparedStatement).setString(2, "p2Value");

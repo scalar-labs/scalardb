@@ -52,7 +52,8 @@ public abstract class ConsensusCommitAdminTestBase {
     MockitoAnnotations.openMocks(this).close();
     when(config.getCoordinatorNamespace()).thenReturn(getCoordinatorNamespaceConfig());
     admin = new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
-    coordinatorNamespaceName = getCoordinatorNamespaceConfig().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespaceName =
+        getCoordinatorNamespaceConfig().orElse(CoordinatorStateAccessor.NAMESPACE);
   }
 
   protected abstract Optional<String> getCoordinatorNamespaceConfig();
@@ -71,8 +72,8 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin)
         .createTable(
             coordinatorNamespaceName,
-            Coordinator.TABLE,
-            Coordinator.TABLE_METADATA,
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.TABLE_METADATA,
             Collections.emptyMap());
   }
 
@@ -81,7 +82,8 @@ public abstract class ConsensusCommitAdminTestBase {
       createCoordinatorTables_CoordinatorTablesAlreadyExist_shouldThrowIllegalArgumentException()
           throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(true);
 
     // Act Assert
@@ -102,21 +104,26 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin).createNamespace(coordinatorNamespaceName, options);
     verify(distributedStorageAdmin)
         .createTable(
-            coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+            coordinatorNamespaceName,
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.TABLE_METADATA,
+            options);
   }
 
   @Test
   public void truncateCoordinatorTables_shouldTruncateCoordinatorTableProperly()
       throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(true);
 
     // Act
     admin.truncateCoordinatorTables();
 
     // Assert
-    verify(distributedStorageAdmin).truncateTable(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .truncateTable(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
   }
 
   @Test
@@ -124,7 +131,8 @@ public abstract class ConsensusCommitAdminTestBase {
       truncateCoordinatorTables_CoordinatorTablesNotExist_shouldThrowIllegalArgumentException()
           throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(false);
 
     // Act Assert
@@ -135,14 +143,16 @@ public abstract class ConsensusCommitAdminTestBase {
   @Test
   public void dropCoordinatorTables_shouldDropCoordinatorTableProperly() throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(true);
 
     // Act
     admin.dropCoordinatorTables();
 
     // Assert
-    verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .dropTable(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
     verify(distributedStorageAdmin).dropNamespace(coordinatorNamespaceName);
   }
 
@@ -150,7 +160,8 @@ public abstract class ConsensusCommitAdminTestBase {
   public void dropCoordinatorTables_CoordinatorTablesNotExist_shouldThrowIllegalArgumentException()
       throws ExecutionException {
     // Arrange
-    when(distributedStorageAdmin.tableExists(coordinatorNamespaceName, Coordinator.TABLE))
+    when(distributedStorageAdmin.tableExists(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
         .thenReturn(false);
 
     // Act Assert
@@ -168,7 +179,8 @@ public abstract class ConsensusCommitAdminTestBase {
     boolean actual = admin.coordinatorTablesExist();
 
     // Assert
-    verify(distributedStorageAdmin).tableExists(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .tableExists(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
     assertThat(actual).isFalse();
   }
 
@@ -182,7 +194,8 @@ public abstract class ConsensusCommitAdminTestBase {
     boolean actual = admin.coordinatorTablesExist();
 
     // Assert
-    verify(distributedStorageAdmin).tableExists(coordinatorNamespaceName, Coordinator.TABLE);
+    verify(distributedStorageAdmin)
+        .tableExists(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
     assertThat(actual).isTrue();
   }
 
@@ -201,6 +214,7 @@ public abstract class ConsensusCommitAdminTestBase {
             .addColumn(BALANCE, DataType.INT)
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
             .build();
 
     TableMetadata expected =
@@ -221,10 +235,63 @@ public abstract class ConsensusCommitAdminTestBase {
             .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .addSecondaryIndex(Attribute.BEFORE_PREFIX + BALANCE)
             .build();
 
     // Act
     admin.createTable(NAMESPACE, TABLE, tableMetadata);
+
+    // Assert
+    verify(distributedStorageAdmin).createTable(NAMESPACE, TABLE, expected, Collections.emptyMap());
+  }
+
+  @Test
+  public void
+      createTable_WithIndexEventuallyConsistentReadEnabled_shouldNotAddBeforeImageSecondaryIndex()
+          throws ExecutionException {
+    // Arrange
+    when(config.isIndexEventuallyConsistentReadEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithFlag =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    // Act
+    adminWithFlag.createTable(NAMESPACE, TABLE, tableMetadata);
 
     // Assert
     verify(distributedStorageAdmin).createTable(NAMESPACE, TABLE, expected, Collections.emptyMap());
@@ -273,7 +340,8 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void createNamespace_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void createNamespace_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
 
     // Act
@@ -284,7 +352,7 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void dropTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void dropTable_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
 
     // Act
@@ -295,7 +363,7 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void dropNamespace_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void dropNamespace_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
 
     // Act
@@ -306,7 +374,7 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void truncateTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void truncateTable_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
 
     // Act
@@ -317,29 +385,103 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void createIndex_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void createIndex_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + "col", DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey("pk")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata("ns", "tbl")).thenReturn(tableMetadata);
 
     // Act
     admin.createIndex("ns", "tbl", "col", Collections.emptyMap());
 
     // Assert
     verify(distributedStorageAdmin).createIndex("ns", "tbl", "col", Collections.emptyMap());
+    verify(distributedStorageAdmin)
+        .createIndex("ns", "tbl", Attribute.BEFORE_PREFIX + "col", Collections.emptyMap());
   }
 
   @Test
-  public void dropIndex_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void createIndex_WithIndexEventuallyConsistentReadEnabled_ShouldNotCreateBeforeIndex()
+      throws ExecutionException {
     // Arrange
+    when(config.isIndexEventuallyConsistentReadEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithFlag =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    // Act
+    adminWithFlag.createIndex("ns", "tbl", "col", Collections.emptyMap());
+
+    // Assert
+    verify(distributedStorageAdmin).createIndex("ns", "tbl", "col", Collections.emptyMap());
+    verify(distributedStorageAdmin, never())
+        .createIndex("ns", "tbl", Attribute.BEFORE_PREFIX + "col", Collections.emptyMap());
+  }
+
+  @Test
+  public void dropIndex_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + "col", DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey("pk")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata("ns", "tbl")).thenReturn(tableMetadata);
 
     // Act
     admin.dropIndex("ns", "tbl", "col");
 
     // Assert
     verify(distributedStorageAdmin).dropIndex("ns", "tbl", "col");
+    verify(distributedStorageAdmin).dropIndex("ns", "tbl", Attribute.BEFORE_PREFIX + "col", true);
   }
 
   @Test
-  public void getTableMetadata_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void dropIndex_WithIndexEventuallyConsistentReadEnabled_ShouldNotDropBeforeIndex()
+      throws ExecutionException {
+    // Arrange
+    when(config.isIndexEventuallyConsistentReadEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithFlag =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    // Act
+    adminWithFlag.dropIndex("ns", "tbl", "col");
+
+    // Assert
+    verify(distributedStorageAdmin).dropIndex("ns", "tbl", "col");
+    verify(distributedStorageAdmin, never())
+        .dropIndex("ns", "tbl", Attribute.BEFORE_PREFIX + "col", true);
+  }
+
+  @Test
+  public void getTableMetadata_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -385,8 +527,9 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void getTableMetadata_WithIncludeMetadataEnabled_ShouldCallJdbcAdminProperly()
-      throws ExecutionException {
+  public void
+      getTableMetadata_WithIncludeMetadataEnabled_ShouldCallDistributedStorageAdminProperly()
+          throws ExecutionException {
     // Arrange
     final String ACCOUNT_ID = "account_id";
     final String ACCOUNT_TYPE = "account_type";
@@ -506,7 +649,8 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void namespaceExists_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void namespaceExists_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
     when(distributedStorageAdmin.namespaceExists(any())).thenReturn(true);
 
@@ -533,6 +677,7 @@ public abstract class ConsensusCommitAdminTestBase {
             .addColumn(BALANCE, DataType.INT)
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
             .build();
 
     TableMetadata expected =
@@ -553,6 +698,8 @@ public abstract class ConsensusCommitAdminTestBase {
             .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .addSecondaryIndex(Attribute.BEFORE_PREFIX + BALANCE)
             .build();
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -564,7 +711,60 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void repairCoordinatorTables_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void
+      repairTable_WithIndexEventuallyConsistentReadEnabled_shouldNotAddBeforeImageSecondaryIndex()
+          throws ExecutionException {
+    // Arrange
+    when(config.isIndexEventuallyConsistentReadEnabled()).thenReturn(true);
+    ConsensusCommitAdmin adminWithFlag =
+        new ConsensusCommitAdmin(distributedStorageAdmin, config, false);
+
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+    Map<String, String> options = ImmutableMap.of("foo", "bar");
+
+    // Act
+    adminWithFlag.repairTable(NAMESPACE, TABLE, tableMetadata, options);
+
+    // Assert
+    verify(distributedStorageAdmin).repairTable(NAMESPACE, TABLE, expected, options);
+  }
+
+  @Test
+  public void repairCoordinatorTables_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
@@ -575,11 +775,15 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin).repairNamespace(coordinatorNamespaceName, options);
     verify(distributedStorageAdmin)
         .repairTable(
-            coordinatorNamespaceName, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+            coordinatorNamespaceName,
+            CoordinatorStateAccessor.TABLE,
+            CoordinatorStateAccessor.TABLE_METADATA,
+            options);
   }
 
   @Test
-  public void addNewColumnToTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void addNewColumnToTable_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
     String newColumn = "c2";
     TableMetadata tableMetadata =
@@ -607,7 +811,8 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void dropColumnFromTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void dropColumnFromTable_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
     String targetColumn = "col2";
     TableMetadata tableMetadata =
@@ -630,7 +835,7 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void renameColumn_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void renameColumn_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
     String existingColumnName = "col2";
     String newColumnName = "col3";
@@ -659,7 +864,8 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void alterColumnType_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void alterColumnType_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
     String columnName = "col2";
     DataType columnType = DataType.BIGINT;
@@ -683,7 +889,7 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void renameTable_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void renameTable_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
     String existingTableName = "tbl1";
     String newTableName = "tbl2";
@@ -735,7 +941,8 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void getNamespacesNames_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void getNamespacesNames_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
     Set<String> namespaces = ImmutableSet.of("n1", "n2", coordinatorNamespaceName);
     when(distributedStorageAdmin.getNamespaceNames()).thenReturn(namespaces);
@@ -749,7 +956,8 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void repairNamespace_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void repairNamespace_ShouldCallDistributedStorageAdminProperly()
+      throws ExecutionException {
     // Arrange
 
     // Act
@@ -760,15 +968,87 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
-  public void upgrade_ShouldCallJdbcAdminProperly() throws ExecutionException {
+  public void upgrade_ShouldCallDistributedStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
 
     // Act
     admin.upgrade(options);
 
-    // Arrange
+    // Assert
     verify(distributedStorageAdmin).upgrade(options);
+  }
+
+  @Test
+  public void upgrade_CoordinatorTableDoesNotExist_ShouldNotCallAddNewColumnToTable()
+      throws ExecutionException {
+    // Arrange
+    Map<String, String> options = Collections.emptyMap();
+    when(distributedStorageAdmin.getTableMetadata(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
+        .thenReturn(null);
+
+    // Act
+    admin.upgrade(options);
+
+    // Assert
+    verify(distributedStorageAdmin).upgrade(options);
+    verify(distributedStorageAdmin, never())
+        .addNewColumnToTable(anyString(), anyString(), anyString(), any());
+  }
+
+  @Test
+  public void upgrade_CoordinatorTableExistsWithAllColumns_ShouldNotCallAddNewColumnToTable()
+      throws ExecutionException {
+    // Arrange
+    Map<String, String> options = Collections.emptyMap();
+    when(distributedStorageAdmin.getTableMetadata(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
+        .thenReturn(CoordinatorStateAccessor.TABLE_METADATA);
+
+    // Act
+    admin.upgrade(options);
+
+    // Assert
+    verify(distributedStorageAdmin).upgrade(options);
+    verify(distributedStorageAdmin, never())
+        .addNewColumnToTable(anyString(), anyString(), anyString(), any());
+  }
+
+  @Test
+  public void
+      upgrade_CoordinatorTableExistsButMissingChildIdsAndWriteSetColumns_ShouldAddMissingColumns()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options = Collections.emptyMap();
+    TableMetadata oldCoordinatorMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
+            .addPartitionKey(Attribute.ID)
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(
+            coordinatorNamespaceName, CoordinatorStateAccessor.TABLE))
+        .thenReturn(oldCoordinatorMetadata);
+
+    // Act
+    admin.upgrade(options);
+
+    // Assert
+    verify(distributedStorageAdmin).upgrade(options);
+    verify(distributedStorageAdmin)
+        .addNewColumnToTable(
+            coordinatorNamespaceName,
+            CoordinatorStateAccessor.TABLE,
+            Attribute.CHILD_IDS,
+            DataType.TEXT);
+    verify(distributedStorageAdmin)
+        .addNewColumnToTable(
+            coordinatorNamespaceName,
+            CoordinatorStateAccessor.TABLE,
+            Attribute.WRITE_SET,
+            DataType.BLOB);
   }
 
   @Test

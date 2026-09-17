@@ -45,7 +45,7 @@ public class Get extends Selection {
    * Constructs a {@code Get} with the specified partition {@code Key}.
    *
    * @param partitionKey a partition key (it might be composed of multiple values)
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link Get#newBuilder()}
    *     instead
    */
   @Deprecated
@@ -60,7 +60,7 @@ public class Get extends Selection {
    *
    * @param partitionKey a partition {@code Key} (it might be composed of multiple values)
    * @param clusteringKey a clustering {@code Key} (it might be composed of multiple values)
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link Get#newBuilder()}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link Get#newBuilder()}
    *     instead
    */
   @Deprecated
@@ -103,7 +103,7 @@ public class Get extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -113,7 +113,7 @@ public class Get extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -123,7 +123,7 @@ public class Get extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -138,7 +138,7 @@ public class Get extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated
@@ -148,7 +148,7 @@ public class Get extends Selection {
   }
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use the setter method of the
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use the setter method of the
    *     Get builder instead; to create a Get builder, use {@link Get#newBuilder()}
    */
   @Deprecated

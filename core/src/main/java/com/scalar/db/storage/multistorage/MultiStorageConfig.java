@@ -96,7 +96,7 @@ public class MultiStorageConfig {
     logger.warn(
         "The table mapping property \""
             + TABLE_MAPPING
-            + "\" is deprecated and will be removed in 5.0.0. "
+            + "\" is deprecated and will be removed in 4.0.0. "
             + "Please use the namespace mapping property \""
             + NAMESPACE_MAPPING
             + "\" instead");
@@ -142,7 +142,7 @@ public class MultiStorageConfig {
 
   /**
    * @return a table storage mapping
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public Map<String, String> getTableStorageMap() {

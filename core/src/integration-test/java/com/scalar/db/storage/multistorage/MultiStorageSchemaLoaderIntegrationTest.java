@@ -5,7 +5,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitTestUtils;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import com.scalar.db.util.AdminTestUtils;
 import java.nio.file.Path;
 import java.util.List;
@@ -43,7 +43,12 @@ public class MultiStorageSchemaLoaderIntegrationTest extends SchemaLoaderIntegra
     // the coordinator namespace to cassandra
     properties.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
-        namespace1 + ":cassandra," + namespace2 + ":jdbc," + Coordinator.NAMESPACE + ":cassandra");
+        namespace1
+            + ":cassandra,"
+            + namespace2
+            + ":jdbc,"
+            + CoordinatorStateAccessor.NAMESPACE
+            + ":cassandra");
 
     // The default storage is cassandra
     properties.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");

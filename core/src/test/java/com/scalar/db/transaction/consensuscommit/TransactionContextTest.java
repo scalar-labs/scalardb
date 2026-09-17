@@ -179,4 +179,32 @@ public class TransactionContextTest {
     // Assert
     assertThat(actual).isFalse();
   }
+
+  @Test
+  public void isCommitRequired_WhenSnapshotHasWritesOrDeletes_ShouldReturnTrue() {
+    // Arrange
+    when(snapshot.hasWritesOrDeletes()).thenReturn(true);
+    TransactionContext context =
+        new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
+
+    // Act
+    boolean actual = context.isCommitRequired();
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isCommitRequired_WhenSnapshotHasNoWritesOrDeletes_ShouldReturnFalse() {
+    // Arrange
+    when(snapshot.hasWritesOrDeletes()).thenReturn(false);
+    TransactionContext context =
+        new TransactionContext(ANY_ID, snapshot, Isolation.SERIALIZABLE, false, false);
+
+    // Act
+    boolean actual = context.isCommitRequired();
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
 }

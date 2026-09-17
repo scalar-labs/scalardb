@@ -77,7 +77,8 @@ public interface CrudOperable<E extends TransactionException> {
    *
    * @param put a {@code Put} command
    * @throws E if the transaction CRUD operation fails
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use the insert, upsert, or
+   *     update operations instead.
    */
   @Deprecated
   void put(Put put) throws E;
@@ -90,8 +91,8 @@ public interface CrudOperable<E extends TransactionException> {
    *
    * @param puts a list of {@code Put} commands
    * @throws E if the transaction CRUD operation fails
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
-   *     instead.
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use {@link #mutate(List)}
+   *     instead, or the insert, upsert, or update operations for individual writes.
    */
   @Deprecated
   void put(List<Put> puts) throws E;
@@ -150,7 +151,7 @@ public interface CrudOperable<E extends TransactionException> {
    *
    * @param deletes a list of {@code Delete} commands
    * @throws E if the transaction CRUD operation fails
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use {@link #mutate(List)}
    *     instead.
    */
   @Deprecated

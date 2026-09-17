@@ -8,7 +8,7 @@ public abstract class SchemaLoaderImportWithMetadataDecouplingIntegrationTestBas
 
   @Override
   protected String getTestName() {
-    return "schema_loader_import_decoupling";
+    return "sl_import_dcpl";
   }
 
   @Override

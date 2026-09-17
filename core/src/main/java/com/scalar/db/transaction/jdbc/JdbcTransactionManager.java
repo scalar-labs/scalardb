@@ -33,6 +33,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcCrudService;
@@ -44,9 +45,10 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,24 +98,14 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   }
 
   @Override
-  public DistributedTransaction begin() throws TransactionException {
-    String txId = UUID.randomUUID().toString();
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
     return begin(txId, false);
   }
 
   @Override
-  public DistributedTransaction begin(String txId) throws TransactionException {
-    return begin(txId, false);
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly() throws TransactionException {
-    String txId = UUID.randomUUID().toString();
-    return begin(txId, true);
-  }
-
-  @Override
-  public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
     return begin(txId, true);
   }
 
@@ -292,7 +284,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
     };
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
@@ -304,7 +296,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -356,7 +348,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
@@ -439,6 +431,19 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
   public TransactionState rollback(String txId) {
     throw new UnsupportedOperationException(
         CoreError.JDBC_TRANSACTION_ROLLING_BACK_TRANSACTION_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public boolean finishTransaction(String txId) {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED.buildMessage());
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+    throw new UnsupportedOperationException(
+        CoreError.JDBC_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED.buildMessage());
   }
 
   @Override

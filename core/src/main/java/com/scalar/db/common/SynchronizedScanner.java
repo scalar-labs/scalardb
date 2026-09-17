@@ -55,8 +55,9 @@ public class SynchronizedScanner implements Scanner {
   @Nonnull
   @Override
   public Iterator<Result> iterator() {
-    synchronized (lock) {
-      return delegate.iterator();
-    }
+    // Drive iteration through this decorator's one() (which synchronizes on the lock) rather than
+    // returning delegate.iterator(): the delegate's iterator is bound to the raw scanner, so its
+    // hasNext()/next() would call the underlying one() without the lock, defeating this decorator.
+    return new ScannerIterator<>(this);
   }
 }

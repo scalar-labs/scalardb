@@ -91,7 +91,7 @@ public class ResultImplTest {
             .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
             .put(ANY_COLUMN_NAME_1, BooleanColumn.of(ANY_COLUMN_NAME_1, true))
             .put(ANY_COLUMN_NAME_2, IntColumn.of(ANY_COLUMN_NAME_2, Integer.MAX_VALUE))
-            .put(ANY_COLUMN_NAME_3, BigIntColumn.of(ANY_COLUMN_NAME_3, BigIntColumn.MAX_VALUE))
+            .put(ANY_COLUMN_NAME_3, BigIntColumn.of(ANY_COLUMN_NAME_3, Long.MAX_VALUE))
             .put(ANY_COLUMN_NAME_4, FloatColumn.of(ANY_COLUMN_NAME_4, Float.MAX_VALUE))
             .put(ANY_COLUMN_NAME_5, DoubleColumn.of(ANY_COLUMN_NAME_5, Double.MAX_VALUE))
             .put(ANY_COLUMN_NAME_6, TextColumn.of(ANY_COLUMN_NAME_6, "string"))
@@ -120,7 +120,7 @@ public class ResultImplTest {
     assertThat(result.getValue(ANY_COLUMN_NAME_2))
         .isEqualTo(Optional.of(new IntValue(ANY_COLUMN_NAME_2, Integer.MAX_VALUE)));
     assertThat(result.getValue(ANY_COLUMN_NAME_3))
-        .isEqualTo(Optional.of(new BigIntValue(ANY_COLUMN_NAME_3, BigIntValue.MAX_VALUE)));
+        .isEqualTo(Optional.of(new BigIntValue(ANY_COLUMN_NAME_3, Long.MAX_VALUE)));
     assertThat(result.getValue(ANY_COLUMN_NAME_4))
         .isEqualTo(Optional.of(new FloatValue(ANY_COLUMN_NAME_4, Float.MAX_VALUE)));
     assertThat(result.getValue(ANY_COLUMN_NAME_5))
@@ -172,8 +172,8 @@ public class ResultImplTest {
 
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
-    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
-    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(Long.MAX_VALUE);
+    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(Long.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
@@ -333,7 +333,7 @@ public class ResultImplTest {
                 .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_COLUMN_NAME_1, BooleanColumn.of(ANY_COLUMN_NAME_1, true))
                 .put(ANY_COLUMN_NAME_2, IntColumn.of(ANY_COLUMN_NAME_2, Integer.MAX_VALUE))
-                .put(ANY_COLUMN_NAME_3, BigIntColumn.of(ANY_COLUMN_NAME_3, BigIntColumn.MAX_VALUE))
+                .put(ANY_COLUMN_NAME_3, BigIntColumn.of(ANY_COLUMN_NAME_3, Long.MAX_VALUE))
                 .put(ANY_COLUMN_NAME_4, FloatColumn.of(ANY_COLUMN_NAME_4, Float.MAX_VALUE))
                 .put(ANY_COLUMN_NAME_5, DoubleColumn.of(ANY_COLUMN_NAME_5, Double.MAX_VALUE))
                 .put(ANY_COLUMN_NAME_6, TextColumn.of(ANY_COLUMN_NAME_6, null))
@@ -351,7 +351,7 @@ public class ResultImplTest {
     assertThat(result.getValue(ANY_COLUMN_NAME_2))
         .isEqualTo(Optional.of(new IntValue(ANY_COLUMN_NAME_2, Integer.MAX_VALUE)));
     assertThat(result.getValue(ANY_COLUMN_NAME_3))
-        .isEqualTo(Optional.of(new BigIntValue(ANY_COLUMN_NAME_3, BigIntValue.MAX_VALUE)));
+        .isEqualTo(Optional.of(new BigIntValue(ANY_COLUMN_NAME_3, Long.MAX_VALUE)));
     assertThat(result.getValue(ANY_COLUMN_NAME_4))
         .isEqualTo(Optional.of(new FloatValue(ANY_COLUMN_NAME_4, Float.MAX_VALUE)));
     assertThat(result.getValue(ANY_COLUMN_NAME_5))
@@ -397,8 +397,8 @@ public class ResultImplTest {
 
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
-    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
-    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(Long.MAX_VALUE);
+    assertThat(result.getAsObject(ANY_COLUMN_NAME_3)).isEqualTo(Long.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
@@ -482,7 +482,7 @@ public class ResultImplTest {
     assertThat(columns.get(ANY_COLUMN_NAME_2).hasNullValue()).isFalse();
     assertThat(columns.get(ANY_COLUMN_NAME_2).getIntValue()).isEqualTo(Integer.MAX_VALUE);
     assertThat(columns.get(ANY_COLUMN_NAME_3).hasNullValue()).isFalse();
-    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(Long.MAX_VALUE);
     assertThat(columns.get(ANY_COLUMN_NAME_4).hasNullValue()).isFalse();
     assertThat(columns.get(ANY_COLUMN_NAME_4).getFloatValue()).isEqualTo(Float.MAX_VALUE);
     assertThat(columns.get(ANY_COLUMN_NAME_5).hasNullValue()).isFalse();

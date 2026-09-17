@@ -12,7 +12,7 @@ import javax.annotation.concurrent.Immutable;
  * A {@code Value} (column) for a boolean data
  *
  * @author Hiroyuki Yamada
- * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+ * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
  */
 @Deprecated
 @Immutable

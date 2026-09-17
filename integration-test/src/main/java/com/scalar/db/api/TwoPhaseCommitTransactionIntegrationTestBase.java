@@ -66,8 +66,8 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
       LoggerFactory.getLogger(TwoPhaseCommitTransactionIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE_1 = "test_table1";
-  protected static final String TABLE_2 = "test_table2";
+  protected static final String TABLE_1 = "tbl1";
+  protected static final String TABLE_2 = "tbl2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
@@ -162,9 +162,21 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin1.truncateTable(namespace1, TABLE_1);
+    truncateTable1(namespace1, TABLE_1);
+    truncateCoordinatorTables();
+    truncateTable2(namespace2, TABLE_2);
+  }
+
+  protected void truncateTable1(String namespace, String table) throws ExecutionException {
+    admin1.truncateTable(namespace, table);
+  }
+
+  protected void truncateTable2(String namespace, String table) throws ExecutionException {
+    admin2.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     admin1.truncateCoordinatorTables();
-    admin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
@@ -271,7 +283,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             .where(ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE))
             .and(ConditionBuilder.column(SOME_COLUMN).isEqualToInt(2))
             .and(ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true))
-            .and(ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE))
+            .and(ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L))
             .and(ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F))
             .and(ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10))
             .and(ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"))
@@ -1944,7 +1956,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
@@ -2124,7 +2136,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),
@@ -2472,7 +2484,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
             ConditionBuilder.column(BALANCE).isEqualToInt(INITIAL_BALANCE),
             ConditionBuilder.column(SOME_COLUMN).isNotNullInt(),
             ConditionBuilder.column(BOOLEAN_COL).isNotEqualToBoolean(true),
-            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(BigIntColumn.MAX_VALUE),
+            ConditionBuilder.column(BIGINT_COL).isLessThanBigInt(100L),
             ConditionBuilder.column(FLOAT_COL).isEqualToFloat(0.12F),
             ConditionBuilder.column(DOUBLE_COL).isGreaterThanDouble(-10),
             ConditionBuilder.column(TEXT_COL).isNotEqualToText("foo"),

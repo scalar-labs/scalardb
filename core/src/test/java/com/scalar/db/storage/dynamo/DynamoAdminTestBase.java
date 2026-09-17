@@ -1221,6 +1221,174 @@ public abstract class DynamoAdminTestBase {
                 .build());
   }
 
+  private void stubExistingTableAndMetadataTableForRepair() {
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+  }
+
+  private GetItemResponse storedTableMetadataItem(Map<String, AttributeValue> columns) {
+    GetItemResponse response = mock(GetItemResponse.class);
+    when(response.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(getFullTableName()).build())
+                .put(DynamoAdmin.METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .build());
+    return response;
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataEqualsDesired_ShouldNotUpsertMetadata()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    stubExistingTableAndMetadataTableForRepair();
+    GetItemResponse stored =
+        storedTableMetadataItem(ImmutableMap.of("c1", AttributeValue.builder().s("text").build()));
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(stored);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert: physical repair still runs, but the metadata write is skipped
+    verify(client, never()).putItem(any(PutItemRequest.class));
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataDiffersFromDesired_ShouldUpsertMetadata()
+      throws ExecutionException {
+    // Arrange: desired has an extra column, so the stored metadata differs
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.INT)
+            .build();
+    stubExistingTableAndMetadataTableForRepair();
+    GetItemResponse stored =
+        storedTableMetadataItem(ImmutableMap.of("c1", AttributeValue.builder().s("text").build()));
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(stored);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    verify(client).putItem(any(PutItemRequest.class));
+  }
+
+  @Test
+  public void repairTable_WhenStoredMetadataAbsent_ShouldUpsertMetadata()
+      throws ExecutionException {
+    // Arrange: no stored metadata (getItem returns an empty item, so getTableMetadata returns
+    // null); the guard must fall through to the write rather than skip
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    stubExistingTableAndMetadataTableForRepair();
+    GetItemResponse absent = mock(GetItemResponse.class);
+    when(absent.item()).thenReturn(ImmutableMap.of());
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(absent);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    verify(client).putItem(any(PutItemRequest.class));
+  }
+
+  @Test
+  public void repairTable_WhenReadingStoredMetadataThrows_ShouldFailOpenAndUpsertMetadata()
+      throws ExecutionException {
+    // Arrange: reading the current metadata throws; the guard must fail open and write
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c1").addColumn("c1", DataType.TEXT).build();
+    stubExistingTableAndMetadataTableForRepair();
+    when(client.getItem(any(GetItemRequest.class))).thenThrow(new RuntimeException("corrupted"));
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    verify(client).putItem(any(PutItemRequest.class));
+  }
+
+  @Test
+  public void repairTable_WhenMetadataIsInvalid_ShouldThrowIllegalArgumentException() {
+    // Arrange: a BOOLEAN secondary index is rejected by checkMetadata with an
+    // IllegalArgumentException, which repairTable must let propagate (not wrap in
+    // ExecutionException), consistent with the other storage admins.
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BOOLEAN)
+            .addSecondaryIndex("c2")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      repairTable_WhenExistingTableHasSecondaryIndex_ShouldNotRegisterAutoScalingForThatIndex()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.TEXT)
+            .addSecondaryIndex("c2")
+            .build();
+
+    // The table exists and already has the c2 global secondary index (ACTIVE).
+    // The index name format is "<fullTableName>.global_index.<column>".
+    String globalIndexName = getFullTableName() + ".global_index.c2";
+    GlobalSecondaryIndexDescription gsiDescription =
+        GlobalSecondaryIndexDescription.builder()
+            .indexName(globalIndexName)
+            .indexStatus(IndexStatus.ACTIVE)
+            .build();
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(tableDescription.globalSecondaryIndexes()).thenReturn(ImmutableList.of(gsiDescription));
+    DescribeTableResponse tableResponse = mock(DescribeTableResponse.class);
+    when(tableResponse.table()).thenReturn(tableDescription);
+
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableResponse);
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert: auto scaling is registered only for the table, never for the existing index's GSI.
+    // (Before the fix, createTableInternal registered scaling for the index even though the table
+    // already existed, which would fail against a real DynamoDB for a not-yet-created index.)
+    ArgumentCaptor<RegisterScalableTargetRequest> captor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(2)).registerScalableTarget(captor.capture());
+    assertThat(captor.getAllValues())
+        .allSatisfy(
+            request -> assertThat(request.resourceId()).isEqualTo("table/" + getFullTableName()));
+  }
+
   @Test
   public void repairTable_WithNonExistingTableAndMetadataTables_shouldCreateBothTables()
       throws ExecutionException {

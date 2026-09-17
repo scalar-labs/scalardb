@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -759,7 +761,7 @@ public class TwoPhaseConsensusCommitTest {
     verify(context).areAllScannersClosed();
     verify(crud).readIfImplicitPreReadEnabled(context);
     verify(crud).waitForRecoveryCompletionIfNecessary(context);
-    verify(commit).prepareRecords(context);
+    verify(commit).prepareRecords(eq(context), anyLong());
   }
 
   @Test
@@ -843,8 +845,26 @@ public class TwoPhaseConsensusCommitTest {
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(context);
-    verify(commit).commitRecords(context);
+    verify(commit).commitStateWithoutWriteSet(context);
+    verify(commit).commitRecords(eq(context), anyLong());
+  }
+
+  @Test
+  public void commit_ShouldUseSameCommittedAtForCommitStateAndCommitRecords()
+      throws CommitException, UnknownTransactionStatusException, PreparationException {
+    // The 2PC commit() must use the committedAt returned by commitStateWithoutWriteSet (the
+    // COMMITTED coordinator row) when committing the data rows so the row and the records share one
+    // value.
+    // Arrange
+    transaction.prepare();
+    long committedAt = 1234567890123L;
+    when(commit.commitStateWithoutWriteSet(context)).thenReturn(committedAt);
+
+    // Act
+    transaction.commit();
+
+    // Assert: commitRecords must receive exactly the value commitStateWithoutWriteSet returned.
+    verify(commit).commitRecords(context, committedAt);
   }
 
   @Test
@@ -860,8 +880,8 @@ public class TwoPhaseConsensusCommitTest {
     transaction.commit();
 
     // Assert
-    verify(commit).commitState(context);
-    verify(commit).commitRecords(context);
+    verify(commit).commitStateWithoutWriteSet(context);
+    verify(commit).commitRecords(eq(context), anyLong());
   }
 
   @Test
@@ -885,7 +905,7 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(context).closeScanners();
-    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).abortStateWithoutWriteSet(ANY_TX_ID);
     verify(commit).rollbackRecords(context);
   }
 
@@ -893,7 +913,7 @@ public class TwoPhaseConsensusCommitTest {
   public void rollback_CalledAfterPrepareFails_ShouldAbortStateAndRollbackRecords()
       throws TransactionException {
     // Arrange
-    doThrow(PreparationException.class).when(commit).prepareRecords(context);
+    doThrow(PreparationException.class).when(commit).prepareRecords(eq(context), anyLong());
 
     // Act
     assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
@@ -901,25 +921,28 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     verify(context).closeScanners();
-    verify(commit).abortState(ANY_TX_ID);
+    verify(commit).abortStateWithoutWriteSet(ANY_TX_ID);
     verify(commit).rollbackRecords(context);
   }
 
   @Test
-  public void rollback_CalledAfterCommitFails_ShouldNeverAbortStateAndRollbackRecords()
-      throws TransactionException {
+  public void
+      rollback_CalledAfterCommitConflict_ShouldRollbackRecordsOnceDuringCommitAndNotAgainOnRollback()
+          throws TransactionException {
     // Arrange
     transaction.prepare();
-    doThrow(CommitConflictException.class).when(commit).commitState(context);
+    doThrow(CommitConflictException.class).when(commit).commitStateWithoutWriteSet(context);
 
     // Act
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
     transaction.rollback();
 
     // Assert
+    // commit() rolls the prepared records back eagerly on the conflict, so rollback() is a no-op:
+    // it must not abort the state or roll the records back a second time.
     verify(context).closeScanners();
-    verify(commit, never()).abortState(ANY_TX_ID);
-    verify(commit, never()).rollbackRecords(context);
+    verify(commit).rollbackRecords(context);
+    verify(commit, never()).abortStateWithoutWriteSet(ANY_TX_ID);
   }
 
   @Test
@@ -928,7 +951,8 @@ public class TwoPhaseConsensusCommitTest {
           throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(commit.abortState(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+    when(commit.abortStateWithoutWriteSet(ANY_TX_ID))
+        .thenThrow(UnknownTransactionStatusException.class);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
@@ -942,7 +966,7 @@ public class TwoPhaseConsensusCommitTest {
       throws TransactionException {
     // Arrange
     transaction.prepare();
-    when(commit.abortState(ANY_TX_ID)).thenReturn(TransactionState.COMMITTED);
+    when(commit.abortStateWithoutWriteSet(ANY_TX_ID)).thenReturn(TransactionState.COMMITTED);
 
     // Act Assert
     assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);

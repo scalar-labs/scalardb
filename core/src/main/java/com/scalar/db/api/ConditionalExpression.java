@@ -39,7 +39,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param value a value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public ConditionalExpression(String columnName, Value<?> value, Operator operator) {
@@ -63,7 +63,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param booleanValue a BOOLEAN value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -77,7 +77,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param intValue an INT value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -91,7 +91,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param bigIntValue a BIGINT value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -105,7 +105,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param floatValue a FLOAT value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -119,7 +119,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param doubleValue a DOUBLE value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -133,7 +133,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param textValue a TEXT value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -147,7 +147,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param blobValue a BLOB value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -161,7 +161,7 @@ public class ConditionalExpression {
    * @param columnName a name of target column
    * @param blobValue a BLOB value used to compare with the target column
    * @param operator an operator used to compare the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated
@@ -173,7 +173,7 @@ public class ConditionalExpression {
    * Returns the column name of target column.
    *
    * @return the column name of target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public String getName() {
@@ -184,7 +184,7 @@ public class ConditionalExpression {
    * Returns the value used to compare with the target column.
    *
    * @return the value used to compare with the target column
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   public Value<?> getValue() {

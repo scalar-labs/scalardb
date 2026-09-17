@@ -63,6 +63,7 @@ public class NamespaceMetadataService {
     Set<String> namespaces =
         executeQuery(
             connection,
+            rdbEngine,
             selectAllTables,
             requiresExplicitCommit,
             rs -> {
@@ -85,7 +86,11 @@ public class NamespaceMetadataService {
     String insertStatement =
         "INSERT INTO " + encloseFullTableName(metadataSchema, TABLE_NAME) + " VALUES (?)";
     executeUpdate(
-        connection, insertStatement, requiresExplicitCommit, ps -> ps.setString(1, namespaceName));
+        connection,
+        rdbEngine,
+        insertStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, namespaceName));
   }
 
   void upsertIntoNamespacesTable(Connection connection, String namespace) throws SQLException {
@@ -107,55 +112,51 @@ public class NamespaceMetadataService {
             + enclose(COL_NAMESPACE_NAME)
             + " = ?";
     executeUpdate(
-        connection, deleteStatement, requiresExplicitCommit, ps -> ps.setString(1, namespaceName));
+        connection,
+        rdbEngine,
+        deleteStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, namespaceName));
   }
 
   boolean namespaceExists(Connection connection, String namespace) throws SQLException {
+    if (!internalTableExists(connection, metadataSchema, TABLE_NAME)) {
+      return false;
+    }
+
     String selectQuery =
         "SELECT 1 FROM "
             + encloseFullTableName(metadataSchema, TABLE_NAME)
             + " WHERE "
             + enclose(COL_NAMESPACE_NAME)
             + " = ?";
-    try {
-      return executeQuery(
-          connection,
-          selectQuery,
-          requiresExplicitCommit,
-          ps -> ps.setString(1, namespace),
-          ResultSet::next);
-    } catch (SQLException e) {
-      // An exception will be thrown if the namespaces table does not exist when executing the
-      // select query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
-      throw e;
-    }
+    return executeQuery(
+        connection,
+        rdbEngine,
+        selectQuery,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, namespace),
+        ResultSet::next);
   }
 
   Set<String> getNamespaceNames(Connection connection) throws SQLException {
-    try {
-      String selectQuery = "SELECT * FROM " + encloseFullTableName(metadataSchema, TABLE_NAME);
-      return executeQuery(
-          connection,
-          selectQuery,
-          requiresExplicitCommit,
-          rs -> {
-            Set<String> namespaces = new HashSet<>();
-            while (rs.next()) {
-              namespaces.add(rs.getString(COL_NAMESPACE_NAME));
-            }
-            return namespaces;
-          });
-    } catch (SQLException e) {
-      // An exception will be thrown if the namespace table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return Collections.emptySet();
-      }
-      throw e;
+    if (!internalTableExists(connection, metadataSchema, TABLE_NAME)) {
+      return Collections.emptySet();
     }
+
+    String selectQuery = "SELECT * FROM " + encloseFullTableName(metadataSchema, TABLE_NAME);
+    return executeQuery(
+        connection,
+        rdbEngine,
+        selectQuery,
+        requiresExplicitCommit,
+        rs -> {
+          Set<String> namespaces = new HashSet<>();
+          while (rs.next()) {
+            namespaces.add(rs.getString(COL_NAMESPACE_NAME));
+          }
+          return namespaces;
+        });
   }
 
   private String getTextType(int charLength, boolean isKey) {
@@ -169,7 +170,7 @@ public class NamespaceMetadataService {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt, requiresExplicitCommit);
+      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -180,23 +181,13 @@ public class NamespaceMetadataService {
 
   private boolean internalTableExists(Connection connection, String namespace, String table)
       throws SQLException {
-    String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
-    try {
-      execute(connection, sql, requiresExplicitCommit);
-      return true;
-    } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
-      throw e;
-    }
+    return JdbcAdmin.internalTableExists(
+        connection, rdbEngine, namespace, table, requiresExplicitCommit);
   }
 
   private void deleteTable(Connection connection, String fullTableName) throws SQLException {
     String dropTableStatement = "DROP TABLE " + fullTableName;
-    execute(connection, dropTableStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, dropTableStatement, requiresExplicitCommit);
   }
 
   private String enclose(String name) {

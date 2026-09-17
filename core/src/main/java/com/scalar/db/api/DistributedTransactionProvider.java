@@ -43,7 +43,41 @@ public interface DistributedTransactionProvider {
    * @return an instance of {@link TwoPhaseCommitTransactionManager} for the transaction manager. If
    *     the transaction manager does not support the two-phase commit interface, returns {@code
    *     null}.
+   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
    */
+  @Deprecated
   @Nullable
   TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(DatabaseConfig config);
+
+  /**
+   * Creates an instance of {@link TwoPhaseCommitCoordinator} for the new multi-participant
+   * two-phase commit interface.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommitCoordinator}
+   * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
+   *     commit interface
+   */
+  TwoPhaseCommitCoordinator createTwoPhaseCommitCoordinator(DatabaseConfig config);
+
+  /**
+   * Creates an instance of {@link TwoPhaseCommitParticipant} for the new multi-participant
+   * two-phase commit interface.
+   *
+   * @param config a database config
+   * @return an instance of {@link TwoPhaseCommitParticipant}
+   * @throws UnsupportedOperationException if the transaction manager does not support the two-phase
+   *     commit interface
+   */
+  TwoPhaseCommitParticipant createTwoPhaseCommitParticipant(DatabaseConfig config);
+
+  /**
+   * Creates an instance of {@link GlobalTransactionManager}.
+   *
+   * @param config a database config
+   * @return an instance of {@link GlobalTransactionManager}
+   * @throws UnsupportedOperationException if the transaction manager does not support global
+   *     transactions
+   */
+  GlobalTransactionManager createGlobalTransactionManager(DatabaseConfig config);
 }

@@ -132,7 +132,7 @@ public abstract class DistributedStorageSinglePartitionKeyIntegrationTestBase {
     admin.dropNamespace(namespace);
   }
 
-  private void truncateTable(DataType partitionKeyType) throws ExecutionException {
+  protected void truncateTable(DataType partitionKeyType) throws ExecutionException {
     admin.truncateTable(namespace, getTableName(partitionKeyType));
   }
 

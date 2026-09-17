@@ -36,7 +36,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import com.scalar.db.util.ThrowableFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -47,6 +47,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+@Deprecated
 @ThreadSafe
 public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransactionManager {
 
@@ -57,7 +59,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final DistributedStorageAdmin admin;
   private final ConsensusCommitConfig config;
   private final TransactionTableMetadataManager tableMetadataManager;
-  private final Coordinator coordinator;
+  private final CoordinatorStateAccessor coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
@@ -75,16 +77,17 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     crud =
         new CrudHandler(
             storage,
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
@@ -104,6 +107,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             virtualTableInfoManager,
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
 
   public TwoPhaseConsensusCommitManager(DatabaseConfig databaseConfig) {
@@ -115,16 +120,17 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
-    coordinator = new Coordinator(storage, config);
+    coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     crud =
         new CrudHandler(
             storage,
             recoveryExecutor,
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
+            config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     commit =
@@ -144,6 +150,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             virtualTableInfoManager,
             storageInfoProvider,
             config.isIncludeMetadataEnabled());
+
+    ConsensusCommitUtils.warnIfBeforeIndexesAreMissing(admin, config);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
@@ -153,7 +161,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
       DatabaseConfig databaseConfig,
-      Coordinator coordinator,
+      CoordinatorStateAccessor coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
@@ -229,7 +237,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       String txId, Isolation isolation, boolean readOnly, boolean oneOperation) {
     Snapshot snapshot = new Snapshot(txId, tableMetadataManager, parallelExecutor);
     TransactionContext context =
-        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation);
+        new TransactionContext(txId, snapshot, isolation, readOnly, oneOperation, false);
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(context, crud, commit, operationChecker);
     getNamespace().ifPresent(transaction::withNamespace);
@@ -337,8 +345,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     };
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
-  @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     executeTransaction(
@@ -349,8 +355,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
-  @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
     executeTransaction(
@@ -401,8 +405,6 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
         false);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
-  @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
     executeTransaction(
@@ -478,7 +480,9 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     } catch (CoordinatorException ignored) {
       // ignored
     }
-    // Either no state exists or the exception is thrown
+
+    // The Coordinator state row is absent (the transaction never existed, or it was finished and
+    // cleaned up) or could not be read. These are indistinguishable here, so report UNKNOWN.
     return TransactionState.UNKNOWN;
   }
 
@@ -486,7 +490,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   public TransactionState rollback(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
-      return commit.abortState(txId);
+      return commit.abortStateWithoutWriteSet(txId);
     } catch (UnknownTransactionStatusException ignored) {
       return TransactionState.UNKNOWN;
     }

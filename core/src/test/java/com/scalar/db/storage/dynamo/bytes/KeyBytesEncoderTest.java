@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalDouble;
-import java.util.OptionalLong;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -239,7 +238,7 @@ public class KeyBytesEncoderTest {
   private Column<?> getMinValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BigIntColumn.MIN_VALUE);
+        return BigIntColumn.of(columnName, Long.MIN_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MIN_VALUE);
       case FLOAT:
@@ -260,7 +259,7 @@ public class KeyBytesEncoderTest {
   private Column<?> getMaxValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return BigIntColumn.of(columnName, BigIntColumn.MAX_VALUE);
+        return BigIntColumn.of(columnName, Long.MAX_VALUE);
       case INT:
         return IntColumn.of(columnName, Integer.MAX_VALUE);
       case FLOAT:
@@ -319,9 +318,7 @@ public class KeyBytesEncoderTest {
   }
 
   private static long nextBigInt() {
-    OptionalLong randomLong =
-        random.longs(BigIntColumn.MIN_VALUE, (BigIntColumn.MAX_VALUE + 1)).limit(1).findFirst();
-    return randomLong.orElse(0);
+    return random.nextLong();
   }
 
   private static float nextFloat() {

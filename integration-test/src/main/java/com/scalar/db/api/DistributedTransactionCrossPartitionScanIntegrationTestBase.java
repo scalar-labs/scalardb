@@ -38,8 +38,8 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
       LoggerFactory.getLogger(DistributedTransactionCrossPartitionScanIntegrationTestBase.class);
 
   protected static final String NAMESPACE_BASE_NAME = "int_cpscan_tx_test_";
-  protected static final String TABLE = "test_table";
-  protected static final String TABLE_WITH_TEXT = "test_table_with_text";
+  protected static final String TABLE = "tbl";
+  protected static final String TABLE_WITH_TEXT = "tbl_with_text";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String ACCOUNT_NAME = "account_name";
@@ -103,8 +103,16 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin.truncateTable(namespace, TABLE);
-    admin.truncateTable(namespace, TABLE_WITH_TEXT);
+    truncateTable(namespace, TABLE);
+    truncateTable(namespace, TABLE_WITH_TEXT);
+    truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    admin.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     admin.truncateCoordinatorTables();
   }
 
@@ -284,19 +292,33 @@ public abstract class DistributedTransactionCrossPartitionScanIntegrationTestBas
     populateRecordsForLike();
     DistributedTransaction transaction = manager.start();
     Scan scan1 = prepareCrossPartitionScanWithLike(true, "%scalar[$]");
-    Scan scan2 = prepareCrossPartitionScanWithLike(true, "+_scalar[$]", "+");
-    Scan scan3 = prepareCrossPartitionScanWithLike(false, "\\_scalar[$]");
+    Scan scan2 = prepareCrossPartitionScanWithLike(false, "\\_scalar[$]");
 
     // Act
     List<Result> actual1 = transaction.scan(scan1);
     List<Result> actual2 = transaction.scan(scan2);
-    List<Result> actual3 = transaction.scan(scan3);
     transaction.commit();
 
     // Assert
     assertScanResult(actual1, ImmutableList.of(1, 2, 3));
-    assertScanResult(actual2, ImmutableList.of(3));
-    assertScanResult(actual3, ImmutableList.of(1, 2));
+    assertScanResult(actual2, ImmutableList.of(1, 2));
+  }
+
+  @Test
+  public void
+      scan_CrossPartitionScanWithLikeWithCustomEscapeCharacterGivenForCommittedRecord_ShouldReturnRecord()
+          throws TransactionException {
+    // Arrange
+    populateRecordsForLike();
+    DistributedTransaction transaction = manager.start();
+    Scan scan = prepareCrossPartitionScanWithLike(true, "+_scalar[$]", "+");
+
+    // Act
+    List<Result> actual = transaction.scan(scan);
+    transaction.commit();
+
+    // Assert
+    assertScanResult(actual, ImmutableList.of(3));
   }
 
   @Test

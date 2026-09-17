@@ -12,6 +12,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
 import com.scalar.db.common.CoreError;
@@ -133,6 +134,11 @@ public class Cassandra extends AbstractDistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
+
+    if (scan instanceof ScanAll && !scan.getOrderings().isEmpty()) {
+      throw new IllegalArgumentException(
+          CoreError.CASSANDRA_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
+    }
 
     if (scan.getConjunctions().isEmpty()) {
       return scanInternal(scan);

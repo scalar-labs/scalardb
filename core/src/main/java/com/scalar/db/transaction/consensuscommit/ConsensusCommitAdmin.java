@@ -41,14 +41,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   private final DistributedStorageAdmin admin;
   private final String coordinatorNamespace;
   private final boolean isIncludeMetadataEnabled;
+  private final boolean isIndexEventuallyConsistentReadEnabled;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   @Inject
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, DatabaseConfig databaseConfig) {
     this.admin = admin;
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespace =
+        config.getCoordinatorNamespace().orElse(CoordinatorStateAccessor.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
 
   public ConsensusCommitAdmin(DatabaseConfig databaseConfig) {
@@ -56,8 +59,10 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     admin = storageFactory.getStorageAdmin();
 
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespace =
+        config.getCoordinatorNamespace().orElse(CoordinatorStateAccessor.NAMESPACE);
     isIncludeMetadataEnabled = config.isIncludeMetadataEnabled();
+    isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
 
   @VisibleForTesting
@@ -66,8 +71,10 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       ConsensusCommitConfig config,
       boolean isIncludeMetadataEnabled) {
     this.admin = admin;
-    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
+    coordinatorNamespace =
+        config.getCoordinatorNamespace().orElse(CoordinatorStateAccessor.NAMESPACE);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
+    isIndexEventuallyConsistentReadEnabled = config.isIndexEventuallyConsistentReadEnabled();
   }
 
   @Override
@@ -78,7 +85,11 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     }
 
     admin.createNamespace(coordinatorNamespace, options);
-    admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+    admin.createTable(
+        coordinatorNamespace,
+        CoordinatorStateAccessor.TABLE,
+        CoordinatorStateAccessor.TABLE_METADATA,
+        options);
   }
 
   @Override
@@ -88,7 +99,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
           CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND.buildMessage());
     }
 
-    admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
+    admin.dropTable(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
     admin.dropNamespace(coordinatorNamespace);
   }
 
@@ -99,12 +110,12 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
           CoreError.CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND.buildMessage());
     }
 
-    admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
+    admin.truncateTable(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
   }
 
   @Override
   public boolean coordinatorTablesExist() throws ExecutionException {
-    return admin.tableExists(coordinatorNamespace, Coordinator.TABLE);
+    return admin.tableExists(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
   }
 
   @Override
@@ -147,7 +158,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       admin.createTable(
           namespace,
           txMetadataTableName,
-          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(metadata),
+          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(
+              metadata, isIndexEventuallyConsistentReadEnabled),
           options);
 
       // Create a virtual table based on the data table and the transaction metadata table
@@ -163,7 +175,11 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       return;
     }
 
-    admin.createTable(namespace, table, buildTransactionTableMetadata(metadata), options);
+    admin.createTable(
+        namespace,
+        table,
+        buildTransactionTableMetadata(metadata, isIndexEventuallyConsistentReadEnabled),
+        options);
   }
 
   @Override
@@ -223,6 +239,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     checkNamespace(namespace);
 
     admin.createIndex(namespace, table, columnName, options);
+
+    if (!isIndexEventuallyConsistentReadEnabled) {
+      // Also create an index on the before image column if it exists
+      TableMetadata rawMetadata = admin.getTableMetadata(namespace, table);
+      if (rawMetadata != null) {
+        String beforeColumnName = Attribute.BEFORE_PREFIX + columnName;
+        if (rawMetadata.getColumnNames().contains(beforeColumnName)) {
+          admin.createIndex(namespace, table, beforeColumnName, options);
+        }
+      }
+    }
   }
 
   @Override
@@ -231,6 +258,17 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     checkNamespace(namespace);
 
     admin.dropIndex(namespace, table, columnName);
+
+    if (!isIndexEventuallyConsistentReadEnabled) {
+      // Also drop the index on the before image column if it exists
+      TableMetadata rawMetadata = admin.getTableMetadata(namespace, table);
+      if (rawMetadata != null) {
+        String beforeColumnName = Attribute.BEFORE_PREFIX + columnName;
+        if (rawMetadata.getColumnNames().contains(beforeColumnName)) {
+          admin.dropIndex(namespace, table, beforeColumnName, true);
+        }
+      }
+    }
   }
 
   @Override
@@ -293,13 +331,21 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
     checkNamespace(namespace);
     throwIfTransactionMetadataDecouplingApplied(namespace, table, "repairTable()");
 
-    admin.repairTable(namespace, table, buildTransactionTableMetadata(metadata), options);
+    admin.repairTable(
+        namespace,
+        table,
+        buildTransactionTableMetadata(metadata, isIndexEventuallyConsistentReadEnabled),
+        options);
   }
 
   @Override
   public void repairCoordinatorTables(Map<String, String> options) throws ExecutionException {
     admin.repairNamespace(coordinatorNamespace, options);
-    admin.repairTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, options);
+    admin.repairTable(
+        coordinatorNamespace,
+        CoordinatorStateAccessor.TABLE,
+        CoordinatorStateAccessor.TABLE_METADATA,
+        options);
   }
 
   @Override
@@ -438,7 +484,8 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       admin.createTable(
           namespace,
           txMetadataTableName,
-          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(dataTableMetadata),
+          ConsensusCommitUtils.buildTransactionMetadataTableMetadata(
+              dataTableMetadata, isIndexEventuallyConsistentReadEnabled),
           options);
 
       // create a virtual table based on the data table and the transaction metadata table
@@ -483,13 +530,15 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
   }
 
   private void upgradeCoordinatorTable() throws ExecutionException {
-    TableMetadata currentMetadata = admin.getTableMetadata(coordinatorNamespace, Coordinator.TABLE);
+    TableMetadata currentMetadata =
+        admin.getTableMetadata(coordinatorNamespace, CoordinatorStateAccessor.TABLE);
     if (currentMetadata == null) {
       return;
     }
     // These columns were recently added. Therefore, it's possible Coordinator tables created
     // earlier don't have these columns.
-    List<String> potentialMissingColumnNames = ImmutableList.of(Attribute.CHILD_IDS);
+    List<String> potentialMissingColumnNames =
+        ImmutableList.of(Attribute.CHILD_IDS, Attribute.WRITE_SET);
 
     // Verify the potentially missing columns.
     for (String columnName : potentialMissingColumnNames) {
@@ -497,9 +546,11 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
         continue;
       }
       // The `upgrade` command doesn't migrate key columns.
-      if (Coordinator.TABLE_METADATA.getPartitionKeyNames().contains(columnName)
-          || Coordinator.TABLE_METADATA.getClusteringKeyNames().contains(columnName)
-          || Coordinator.TABLE_METADATA.getSecondaryIndexNames().contains(columnName)) {
+      if (CoordinatorStateAccessor.TABLE_METADATA.getPartitionKeyNames().contains(columnName)
+          || CoordinatorStateAccessor.TABLE_METADATA.getClusteringKeyNames().contains(columnName)
+          || CoordinatorStateAccessor.TABLE_METADATA
+              .getSecondaryIndexNames()
+              .contains(columnName)) {
         // In practice, this currently doesn't happen. Special handling would be needed if we add
         // a key column in the Coordinator table metadata in the future.
         throw new IllegalStateException(
@@ -513,9 +564,10 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       if (currentMetadata.getColumnNames().contains(columnName)) {
         continue;
       }
-      DataType columnDataType = Coordinator.TABLE_METADATA.getColumnDataType(columnName);
+      DataType columnDataType =
+          CoordinatorStateAccessor.TABLE_METADATA.getColumnDataType(columnName);
       admin.addNewColumnToTable(
-          coordinatorNamespace, Coordinator.TABLE, columnName, columnDataType);
+          coordinatorNamespace, CoordinatorStateAccessor.TABLE, columnName, columnDataType);
     }
   }
 

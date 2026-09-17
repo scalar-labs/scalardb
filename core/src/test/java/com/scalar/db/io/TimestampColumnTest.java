@@ -138,7 +138,26 @@ class TimestampColumnTest {
   }
 
   @Test
-  public void constructor_valueWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException() {
+  public void of_valueWithSubMillisecondPrecision_ShouldTruncate() {
+    // Arrange
+    LocalDateTime timestampWithThreeDigitNano =
+        LocalDateTime.now(Clock.systemUTC()).withNano(123_456_789);
+    LocalDateTime timestampWithThreeDigitMicro =
+        LocalDateTime.now(Clock.systemUTC()).withNano(123_456_000);
+
+    // Act
+    TimestampColumn col1 = TimestampColumn.of("col", timestampWithThreeDigitNano);
+    TimestampColumn col2 = TimestampColumn.of("col", timestampWithThreeDigitMicro);
+
+    // Assert
+    assertThat(col1.getTimestampValue())
+        .isEqualTo(timestampWithThreeDigitNano.withNano(123_000_000));
+    assertThat(col2.getTimestampValue())
+        .isEqualTo(timestampWithThreeDigitMicro.withNano(123_000_000));
+  }
+
+  @Test
+  public void ofStrict_valueWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException() {
     // Arrange
     LocalDateTime timestampWithThreeDigitNano =
         LocalDateTime.now(Clock.systemUTC()).withNano(123_456_789);
@@ -154,17 +173,17 @@ class TimestampColumnTest {
         LocalDateTime.now(Clock.systemUTC()).withNano(123_400_700);
 
     // Act Assert
-    assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithThreeDigitNano))
+    assertThatThrownBy(() -> TimestampColumn.ofStrict("col", timestampWithThreeDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithTwoDigitNano))
+    assertThatThrownBy(() -> TimestampColumn.ofStrict("col", timestampWithTwoDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithOneDigitNano))
+    assertThatThrownBy(() -> TimestampColumn.ofStrict("col", timestampWithOneDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithThreeDigitMicro))
+    assertThatThrownBy(() -> TimestampColumn.ofStrict("col", timestampWithThreeDigitMicro))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithTwoDigitMicro))
+    assertThatThrownBy(() -> TimestampColumn.ofStrict("col", timestampWithTwoDigitMicro))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimestampColumn.of("col", timestampWithOneDigitMicro))
+    assertThatThrownBy(() -> TimestampColumn.ofStrict("col", timestampWithOneDigitMicro))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

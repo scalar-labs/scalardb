@@ -12,6 +12,8 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.singlecrudoperation.SingleCrudOperationTransactionUtils;
 import com.scalar.db.util.ThrowableConsumer;
 import com.scalar.db.util.ThrowableFunction;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,14 @@ public final class TransactionExecutor {
       DistributedTransactionManager transactionManager,
       ThrowableFunction<CrudOperable<?>, T, TransactionException> throwableFunction)
       throws TransactionException {
+    return execute(transactionManager, Collections.emptyMap(), throwableFunction);
+  }
+
+  public static <T> T execute(
+      DistributedTransactionManager transactionManager,
+      Map<String, String> attributes,
+      ThrowableFunction<CrudOperable<?>, T, TransactionException> throwableFunction)
+      throws TransactionException {
     if (SingleCrudOperationTransactionUtils.isSingleCrudOperationTransactionManager(
         transactionManager)) {
       return throwableFunction.apply(transactionManager);
@@ -38,7 +48,7 @@ public final class TransactionExecutor {
 
     DistributedTransaction transaction = null;
     try {
-      transaction = transactionManager.begin();
+      transaction = transactionManager.begin(attributes);
       T result = throwableFunction.apply(transaction);
       transaction.commit();
       return result;
@@ -58,8 +68,17 @@ public final class TransactionExecutor {
       DistributedTransactionManager transactionManager,
       ThrowableConsumer<CrudOperable<?>, TransactionException> throwableConsumer)
       throws TransactionException {
+    execute(transactionManager, Collections.emptyMap(), throwableConsumer);
+  }
+
+  public static void execute(
+      DistributedTransactionManager transactionManager,
+      Map<String, String> attributes,
+      ThrowableConsumer<CrudOperable<?>, TransactionException> throwableConsumer)
+      throws TransactionException {
     execute(
         transactionManager,
+        attributes,
         t -> {
           throwableConsumer.accept(t);
           return null;
@@ -80,6 +99,22 @@ public final class TransactionExecutor {
       throws TransactionException {
     return executeWithRetries(
         transactionManager,
+        Collections.emptyMap(),
+        throwableFunction,
+        DEFAULT_RETRY_INITIAL_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MAX_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MULTIPLIER,
+        DEFAULT_RETRY_MAX_RETRIES);
+  }
+
+  public static <T> T executeWithRetries(
+      DistributedTransactionManager transactionManager,
+      Map<String, String> attributes,
+      ThrowableFunction<CrudOperable<?>, T, TransactionException> throwableFunction)
+      throws TransactionException {
+    return executeWithRetries(
+        transactionManager,
+        attributes,
         throwableFunction,
         DEFAULT_RETRY_INITIAL_INTERVAL_MILLIS,
         DEFAULT_RETRY_MAX_INTERVAL_MILLIS,
@@ -95,12 +130,31 @@ public final class TransactionExecutor {
       int retryMultiplier,
       int retryMaxRetries)
       throws TransactionException {
+    return executeWithRetries(
+        transactionManager,
+        Collections.emptyMap(),
+        throwableFunction,
+        retryInitialIntervalMillis,
+        retryMaxIntervalMillis,
+        retryMultiplier,
+        retryMaxRetries);
+  }
+
+  public static <T> T executeWithRetries(
+      DistributedTransactionManager transactionManager,
+      Map<String, String> attributes,
+      ThrowableFunction<CrudOperable<?>, T, TransactionException> throwableFunction,
+      int retryInitialIntervalMillis,
+      int retryMaxIntervalMillis,
+      int retryMultiplier,
+      int retryMaxRetries)
+      throws TransactionException {
     TransactionException lastException;
     int interval = retryInitialIntervalMillis;
     int attempt = 0;
     while (true) {
       try {
-        return execute(transactionManager, throwableFunction);
+        return execute(transactionManager, attributes, throwableFunction);
       } catch (CrudConflictException | CommitConflictException e) {
         // Retry the transaction for the conflict exceptions
         lastException = e;
@@ -134,6 +188,22 @@ public final class TransactionExecutor {
       throws TransactionException {
     executeWithRetries(
         transactionManager,
+        Collections.emptyMap(),
+        throwableConsumer,
+        DEFAULT_RETRY_INITIAL_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MAX_INTERVAL_MILLIS,
+        DEFAULT_RETRY_MULTIPLIER,
+        DEFAULT_RETRY_MAX_RETRIES);
+  }
+
+  public static void executeWithRetries(
+      DistributedTransactionManager transactionManager,
+      Map<String, String> attributes,
+      ThrowableConsumer<CrudOperable<?>, TransactionException> throwableConsumer)
+      throws TransactionException {
+    executeWithRetries(
+        transactionManager,
+        attributes,
         throwableConsumer,
         DEFAULT_RETRY_INITIAL_INTERVAL_MILLIS,
         DEFAULT_RETRY_MAX_INTERVAL_MILLIS,
@@ -151,6 +221,26 @@ public final class TransactionExecutor {
       throws TransactionException {
     executeWithRetries(
         transactionManager,
+        Collections.emptyMap(),
+        throwableConsumer,
+        retryInitialIntervalMillis,
+        retryMaxIntervalMillis,
+        retryMultiplier,
+        retryMaxRetries);
+  }
+
+  public static void executeWithRetries(
+      DistributedTransactionManager transactionManager,
+      Map<String, String> attributes,
+      ThrowableConsumer<CrudOperable<?>, TransactionException> throwableConsumer,
+      int retryInitialIntervalMillis,
+      int retryMaxIntervalMillis,
+      int retryMultiplier,
+      int retryMaxRetries)
+      throws TransactionException {
+    executeWithRetries(
+        transactionManager,
+        attributes,
         t -> {
           throwableConsumer.accept(t);
           return null;

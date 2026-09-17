@@ -111,7 +111,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     return crud.getScanner(scan, context);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException {
@@ -120,7 +120,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     crud.put(put, context);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException {
@@ -137,7 +137,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     crud.delete(delete, context);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
@@ -226,8 +226,18 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
     }
 
-    if (groupCommitter != null && !context.readOnly) {
-      groupCommitter.remove(getId());
+    // Release the reserved group commit slot if this transaction holds one.
+    if (groupCommitter != null && context.groupCommitSlotReserved) {
+      // This is best-effort cleanup; never let a failure here mask the rollback or propagate out of
+      // this cleanup path.
+      try {
+        groupCommitter.remove(getId());
+      } catch (Exception e) {
+        logger.warn(
+            "Failed to remove the transaction ID from the group committer. Transaction ID: {}",
+            getId(),
+            e);
+      }
     }
   }
 

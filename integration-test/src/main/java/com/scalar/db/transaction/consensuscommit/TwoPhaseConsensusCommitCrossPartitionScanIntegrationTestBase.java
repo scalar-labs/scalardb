@@ -26,10 +26,6 @@ public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBa
   protected final Properties getProperties1(String testName) {
     Properties properties = new Properties();
     properties.putAll(getProps1(testName));
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
     return properties;
   }
 
@@ -37,10 +33,6 @@ public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBa
   protected final Properties getProperties2(String testName) {
     Properties properties = new Properties();
     properties.putAll(getProps2(testName));
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
-
     return properties;
   }
 
@@ -130,8 +122,8 @@ public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBa
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecordsForLike(manager2, namespace2, TABLE_2);
     Scan scan1 = Scan.newBuilder(prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, 2)).build();
-    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "\\_scalar[$]", "");
-    Put put = preparePut(namespace2, TABLE_2, 999, "\\scalar[$]");
+    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "&_scalar[$]");
+    Put put = preparePut(namespace2, TABLE_2, 999, "&scalar[$]");
 
     TwoPhaseCommitTransaction transaction1 = manager1.start();
     TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());
@@ -165,8 +157,8 @@ public abstract class TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestBa
     populateRecords(manager1, namespace1, TABLE_1);
     populateRecordsForLike(manager2, namespace2, TABLE_2);
     Scan scan1 = Scan.newBuilder(prepareCrossPartitionScan(namespace1, TABLE_1, 1, 0, 2)).build();
-    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "\\scalar[$]", "");
-    Put put = preparePut(namespace2, TABLE_2, 999, "\\scalar[$]");
+    Scan scan2 = prepareCrossPartitionScanWithLike(namespace2, TABLE_2, true, "&%scalar[$]");
+    Put put = preparePut(namespace2, TABLE_2, 999, "&scalar[$]");
 
     TwoPhaseCommitTransaction transaction1 = manager1.start();
     TwoPhaseCommitTransaction transaction2 = manager2.join(transaction1.getId());

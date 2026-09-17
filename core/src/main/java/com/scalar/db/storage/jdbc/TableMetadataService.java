@@ -53,7 +53,10 @@ public class TableMetadataService {
     if (overwriteMetadata) {
       // Delete the metadata for the table before we add them
       execute(
-          connection, getDeleteTableMetadataStatement(namespace, table), requiresExplicitCommit);
+          connection,
+          rdbEngine,
+          getDeleteTableMetadataStatement(namespace, table),
+          requiresExplicitCommit);
     }
     LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
     orderedColumns.addAll(metadata.getClusteringKeyNames());
@@ -131,7 +134,7 @@ public class TableMetadataService {
             metadata.getClusteringOrder(column),
             metadata.getSecondaryIndexNames().contains(column),
             ordinalPosition);
-    execute(connection, insertStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, insertStatement, requiresExplicitCommit);
   }
 
   private String getInsertStatement(
@@ -161,7 +164,10 @@ public class TableMetadataService {
       throws SQLException {
     try {
       execute(
-          connection, getDeleteTableMetadataStatement(namespace, table), requiresExplicitCommit);
+          connection,
+          rdbEngine,
+          getDeleteTableMetadataStatement(namespace, table),
+          requiresExplicitCommit);
       if (deleteMetadataTableIfEmpty) {
         deleteMetadataTableIfEmpty(connection);
       }
@@ -195,66 +201,63 @@ public class TableMetadataService {
             + enclose(COL_FULL_TABLE_NAME)
             + " FROM "
             + encloseFullTableName(metadataSchema, TABLE_NAME);
-    return executeQuery(connection, selectAllTables, requiresExplicitCommit, rs -> !rs.next());
+    return executeQuery(
+        connection, rdbEngine, selectAllTables, requiresExplicitCommit, rs -> !rs.next());
   }
 
   TableMetadata getTableMetadata(Connection connection, String namespace, String table)
       throws SQLException {
-    try {
-      return executeQuery(
-          connection,
-          getSelectColumnsStatement(),
-          requiresExplicitCommit,
-          ps -> ps.setString(1, getFullTableName(namespace, table)),
-          resultSet -> {
-            TableMetadata.Builder builder = TableMetadata.newBuilder();
-            boolean tableExists = false;
-
-            while (resultSet.next()) {
-              tableExists = true;
-
-              String columnName = resultSet.getString(COL_COLUMN_NAME);
-              DataType dataType = DataType.valueOf(resultSet.getString(COL_DATA_TYPE));
-              builder.addColumn(columnName, dataType);
-
-              boolean indexed = resultSet.getBoolean(COL_INDEXED);
-              if (indexed) {
-                builder.addSecondaryIndex(columnName);
-              }
-
-              String keyType = resultSet.getString(COL_KEY_TYPE);
-              if (keyType == null) {
-                continue;
-              }
-
-              switch (KeyType.valueOf(keyType)) {
-                case PARTITION:
-                  builder.addPartitionKey(columnName);
-                  break;
-                case CLUSTERING:
-                  Scan.Ordering.Order clusteringOrder =
-                      Scan.Ordering.Order.valueOf(resultSet.getString(COL_CLUSTERING_ORDER));
-                  builder.addClusteringKey(columnName, clusteringOrder);
-                  break;
-                default:
-                  throw new AssertionError("Invalid key type: " + keyType);
-              }
-            }
-
-            if (!tableExists) {
-              return null;
-            }
-
-            return builder.build();
-          });
-    } catch (SQLException e) {
-      // An exception will be thrown if the namespace table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return null;
-      }
-      throw e;
+    if (!internalTableExists(connection, metadataSchema, TABLE_NAME)) {
+      return null;
     }
+
+    return executeQuery(
+        connection,
+        rdbEngine,
+        getSelectColumnsStatement(),
+        requiresExplicitCommit,
+        ps -> ps.setString(1, getFullTableName(namespace, table)),
+        resultSet -> {
+          TableMetadata.Builder builder = TableMetadata.newBuilder();
+          boolean tableExists = false;
+
+          while (resultSet.next()) {
+            tableExists = true;
+
+            String columnName = resultSet.getString(COL_COLUMN_NAME);
+            DataType dataType = DataType.valueOf(resultSet.getString(COL_DATA_TYPE));
+            builder.addColumn(columnName, dataType);
+
+            boolean indexed = resultSet.getBoolean(COL_INDEXED);
+            if (indexed) {
+              builder.addSecondaryIndex(columnName);
+            }
+
+            String keyType = resultSet.getString(COL_KEY_TYPE);
+            if (keyType == null) {
+              continue;
+            }
+
+            switch (KeyType.valueOf(keyType)) {
+              case PARTITION:
+                builder.addPartitionKey(columnName);
+                break;
+              case CLUSTERING:
+                Scan.Ordering.Order clusteringOrder =
+                    Scan.Ordering.Order.valueOf(resultSet.getString(COL_CLUSTERING_ORDER));
+                builder.addClusteringKey(columnName, clusteringOrder);
+                break;
+              default:
+                throw new AssertionError("Invalid key type: " + keyType);
+            }
+          }
+
+          if (!tableExists) {
+            return null;
+          }
+
+          return builder.build();
+        });
   }
 
   private String getSelectColumnsStatement() {
@@ -296,10 +299,14 @@ public class TableMetadataService {
             + "='"
             + columnName
             + "'";
-    execute(connection, updateStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, updateStatement, requiresExplicitCommit);
   }
 
   Set<String> getNamespaceTableNames(Connection connection, String namespace) throws SQLException {
+    if (!internalTableExists(connection, metadataSchema, TABLE_NAME)) {
+      return Collections.emptySet();
+    }
+
     String selectTablesOfNamespaceStatement =
         "SELECT DISTINCT "
             + enclose(COL_FULL_TABLE_NAME)
@@ -309,28 +316,20 @@ public class TableMetadataService {
             + enclose(COL_FULL_TABLE_NAME)
             + " LIKE ?";
     String prefix = namespace + ".";
-    try {
-      return executeQuery(
-          connection,
-          selectTablesOfNamespaceStatement,
-          requiresExplicitCommit,
-          ps -> ps.setString(1, prefix + "%"),
-          results -> {
-            Set<String> tableNames = new HashSet<>();
-            while (results.next()) {
-              String tableName = results.getString(COL_FULL_TABLE_NAME).substring(prefix.length());
-              tableNames.add(tableName);
-            }
-            return tableNames;
-          });
-    } catch (SQLException e) {
-      // An exception will be thrown if the metadata table does not exist when executing the select
-      // query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return Collections.emptySet();
-      }
-      throw e;
-    }
+    return executeQuery(
+        connection,
+        rdbEngine,
+        selectTablesOfNamespaceStatement,
+        requiresExplicitCommit,
+        ps -> ps.setString(1, prefix + "%"),
+        results -> {
+          Set<String> tableNames = new HashSet<>();
+          while (results.next()) {
+            String tableName = results.getString(COL_FULL_TABLE_NAME).substring(prefix.length());
+            tableNames.add(tableName);
+          }
+          return tableNames;
+        });
   }
 
   Set<String> getNamespaceNamesOfExistingTables(Connection connection) throws SQLException {
@@ -345,6 +344,7 @@ public class TableMetadataService {
             + encloseFullTableName(metadataSchema, TABLE_NAME);
     return executeQuery(
         connection,
+        rdbEngine,
         selectAllTableNames,
         requiresExplicitCommit,
         rs -> {
@@ -377,7 +377,7 @@ public class TableMetadataService {
       stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
     }
     try {
-      execute(connection, stmt, requiresExplicitCommit);
+      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
       // Suppress the exception thrown when the table already exists
       if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
@@ -388,23 +388,13 @@ public class TableMetadataService {
 
   private boolean internalTableExists(Connection connection, String namespace, String table)
       throws SQLException {
-    String fullTableName = encloseFullTableName(namespace, table);
-    String sql = rdbEngine.internalTableExistsCheckSql(fullTableName);
-    try {
-      execute(connection, sql, requiresExplicitCommit);
-      return true;
-    } catch (SQLException e) {
-      // An exception will be thrown if the table does not exist when executing the select query
-      if (rdbEngine.isUndefinedTableError(e)) {
-        return false;
-      }
-      throw e;
-    }
+    return JdbcAdmin.internalTableExists(
+        connection, rdbEngine, namespace, table, requiresExplicitCommit);
   }
 
   private void deleteTable(Connection connection, String fullTableName) throws SQLException {
     String dropTableStatement = "DROP TABLE " + fullTableName;
-    execute(connection, dropTableStatement, requiresExplicitCommit);
+    execute(connection, rdbEngine, dropTableStatement, requiresExplicitCommit);
   }
 
   private String enclose(String name) {

@@ -18,7 +18,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public abstract class Mutation extends Operation {
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated @Nullable private MutationCondition condition;
 
   Mutation(
@@ -36,7 +36,7 @@ public abstract class Mutation extends Operation {
   /**
    * @param partitionKey a partition key
    * @param clusteringKey a clustering key
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   public Mutation(Key partitionKey, Key clusteringKey) {
@@ -46,7 +46,7 @@ public abstract class Mutation extends Operation {
 
   /**
    * @param mutation a mutation
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   public Mutation(Mutation mutation) {
@@ -58,7 +58,7 @@ public abstract class Mutation extends Operation {
    * Returns the {@link MutationCondition}
    *
    * @return {@code MutationCondition}
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   @Nonnull
@@ -71,7 +71,7 @@ public abstract class Mutation extends Operation {
    *
    * @param condition a {@code MutationCondition}
    * @return this object
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   public Mutation withCondition(MutationCondition condition) {

@@ -24,7 +24,7 @@ public interface Result {
    * Returns the partition {@link Key}
    *
    * @return an {@code Optional} with the partition {@code Key}
-   * @deprecated As of release 3.8.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.8.0. Will be removed in release 4.0.0
    */
   @Deprecated
   Optional<Key> getPartitionKey();
@@ -33,7 +33,7 @@ public interface Result {
    * Returns the clustering {@link Key}
    *
    * @return an {@code Optional} with the clustering {@code Key}
-   * @deprecated As of release 3.8.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.8.0. Will be removed in release 4.0.0
    */
   @Deprecated
   Optional<Key> getClusteringKey();
@@ -45,7 +45,7 @@ public interface Result {
    *
    * @param columnName a column name of the {@code Value}
    * @return an {@code Optional} with the {@code Value}
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   Optional<Value<?>> getValue(String columnName);
@@ -57,7 +57,7 @@ public interface Result {
    * default value.
    *
    * @return a map of {@code Value}s
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0
    */
   @Deprecated
   Map<String, Value<?>> getValues();

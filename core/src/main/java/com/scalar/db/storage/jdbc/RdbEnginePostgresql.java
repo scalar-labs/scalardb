@@ -1,10 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -14,10 +13,6 @@ import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
+  protected static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
 
   public RdbEnginePostgresql() {
@@ -70,7 +66,10 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
       sqls.add(
           "CREATE UNIQUE INDEX "
               + (ifNotExists ? "IF NOT EXISTS " : "")
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(
+                  shortenIndexNameIfNeeded(
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX))
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -91,7 +90,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     return false;
   }
 
@@ -103,12 +102,6 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -133,8 +126,8 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM information_schema.tables" + " WHERE table_schema = ? AND table_name = ?";
   }
 
   @Override
@@ -174,22 +167,29 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    if (e.getSQLState() == null) {
-      return false;
-    }
-    // 42P01: undefined_table
-    return e.getSQLState().equals("42P01");
-  }
-
-  @Override
   public boolean isConflict(SQLException e) {
     if (e.getSQLState() == null) {
       return false;
     }
     // 40001: serialization_failure
     // 40P01: deadlock_detected
+
+    // Do not add the AWS Advanced JDBC Wrapper failover SQLStates (08001, 08S02, 08007) here.
+    // A conflict is converted into a RetriableExecutionException by JdbcDatabase, which tells the
+    // caller the operation definitely did not apply and is safe to retry. A failover gives no such
+    // guarantee: the outcome may be unknown, or the write may already have been applied on the old
+    // writer. See RdbEnginePostgresqlTest#isConflict_GivenFailoverSqlStates_ShouldReturnFalse.
     return e.getSQLState().equals("40001") || e.getSQLState().equals("40P01");
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    if (e.getSQLState() == null) {
+      return false;
+    }
+    // 42704: undefined_object (DROP INDEX returns this)
+    // 42P01: undefined_table (ALTER INDEX RENAME returns this, as indexes are relations)
+    return e.getSQLState().equals("42704") || e.getSQLState().equals("42P01");
   }
 
   @Override
@@ -391,8 +391,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, OffsetDateTime>
-      getTimeTypeStrategy() {
+  public RdbEngineTimeTypeStrategy<?, ?, ?, ?> getTimeTypeStrategy() {
     return timeTypeEngine;
   }
 

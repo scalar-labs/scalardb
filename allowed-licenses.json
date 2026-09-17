@@ -1,0 +1,49 @@
+{
+    "allowedLicenses": [
+        {
+            "moduleLicense": "Apache License, Version 2.0"
+        },
+        {
+            "moduleLicense": "MIT License"
+        },
+        {
+            "moduleLicense": "MIT-0"
+        },
+        {
+            "moduleLicense": "Eclipse Public License - v 2.0"
+        },
+        {
+            "moduleLicense": "PUBLIC DOMAIN"
+        },
+        {
+            "moduleLicense": "Common Public License - v 1.0"
+        },
+        {
+            "moduleLicense": "The 2-Clause BSD License"
+        },
+        {
+            "moduleLicense": "The 3-Clause BSD License"
+        },
+        {
+            "moduleLicense": "Go License"
+        },
+        {
+            "moduleLicense": "International Program License Agreement (IPLA)"
+        },
+        {
+            "moduleLicense": "Oracle Free Use Terms and Conditions (FUTC)"
+        },
+        {
+            "moduleLicense": "COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.1"
+        },
+        {
+            "moduleLicense": "LGPL-2.1-or-later"
+        },
+        {
+            "moduleLicense": "CDDL + GPLv2 with classpath exception"
+        },
+        {
+            "moduleLicense": "CDDL/GPLv2+CE"
+        }
+    ]
+}

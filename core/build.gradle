@@ -1,6 +1,7 @@
 plugins {
     id 'com.github.spotbugs-base' version "${spotbugsPluginVersion}"
     id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'com.google.protobuf' version "${protobufPluginVersion}"
     id 'maven-publish'
     id 'base'
 }
@@ -179,7 +180,6 @@ dependencies {
     testImplementation 'software.amazon.awssdk:iam'
     testImplementation 'software.amazon.awssdk:iam-policy-builder'
     implementation "com.zaxxer:HikariCP:${hikariCpVersion}"
-    implementation "com.mysql:mysql-connector-j:${mysqlDriverVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
     implementation "com.oracle.database.jdbc:ojdbc8:${oracleDriverVersion}"
     implementation "com.microsoft.sqlserver:mssql-jdbc:${sqlserverDriverVersion}"
@@ -196,8 +196,14 @@ dependencies {
     implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerDriverVersion}") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    // Enables fast Aurora failover by discovering the cluster topology instead of waiting for DNS
+    implementation "software.amazon.jdbc:aws-advanced-jdbc-wrapper:${awsAdvancedJdbcWrapperVersion}"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -217,6 +223,14 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+// Suppress Error Prone findings in protobuf-generated sources. The proto compiler emits patterns
+// (reference-equality checks against DEFAULT_INSTANCE, unused parameters in builders, deprecated
+// API references) that we can't fix locally and that aren't useful to surface.
+tasks.withType(JavaCompile).configureEach {
+    options.errorprone.disableWarningsInGeneratedCode = true
+    options.errorprone.excludedPaths = ".*/build/generated/sources/proto/.*"
 }
 
 javadoc {
@@ -285,6 +299,7 @@ task integrationTestObjectStorage(type: Test) {
     options {
         systemProperties(System.getProperties().findAll { it.key.toString().startsWith("scalardb") })
     }
+    maxHeapSize = "2g"
 }
 
 task integrationTestMultiStorage(type: Test) {
@@ -380,6 +395,12 @@ task spotbugsIntegrationTest(type: SpotBugsTask) {
 check.dependsOn += spotbugsMain
 check.dependsOn += spotbugsTest
 check.dependsOn += spotbugsIntegrationTest
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+}
 
 base {
     archivesName = "scalardb"

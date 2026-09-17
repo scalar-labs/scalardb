@@ -8,10 +8,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -42,29 +46,38 @@ import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
-import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
+import com.scalar.db.transaction.consensuscommit.proto.v1.Entry;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroup;
+import com.scalar.db.transaction.consensuscommit.proto.v1.EntryGroups;
+import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
 import com.scalar.db.util.groupcommit.GroupCommitKeyManipulator.Keys;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -86,14 +99,21 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   private static final String TEST_NAME = "cc";
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  private static final String TABLE_1 = "test_table1";
-  private static final String TABLE_2 = "test_table2";
+  private static final String TABLE_1 = "tbl1";
+  private static final String TABLE_2 = "tbl2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
   protected static final String SOME_COLUMN = "some_column";
   private static final int INITIAL_BALANCE = 1000;
   private static final int NEW_BALANCE = 2000;
+
+  // A value committed by an intervening transaction, distinct from INITIAL_BALANCE and NEW_BALANCE,
+  // used to detect a stale before-image read in the post-abort ABA cleanup-race test.
+  private static final int INTERVENING_BALANCE = 3000;
+  private static final String INTERVENING_TX_ID = "intervening-tx-id";
+  private static final String REPREPARING_TX_ID = "repreparing-tx-id";
+
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
   private static final String ANY_ID_1 = "id1";
@@ -109,7 +129,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private ParallelExecutor parallelExecutor;
 
   private DistributedStorage storage;
-  private Coordinator coordinator;
+  private CoordinatorStateAccessor coordinator;
   private RecoveryHandler recovery;
   private RecoveryExecutor recoveryExecutor;
   private CommitHandler commit;
@@ -124,9 +144,6 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     namespace2 = getNamespaceBaseName() + testName + "2";
 
     Properties properties = getProperties(testName);
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, testName);
 
     StorageFactory factory = StorageFactory.create(properties);
     admin = factory.getStorageAdmin();
@@ -182,15 +199,25 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @AfterEach
   public void tearDown() {
-    recoveryExecutor.close();
+    if (recoveryExecutor != null) {
+      recoveryExecutor.close();
+    }
     if (groupCommitter != null) {
       groupCommitter.close();
     }
   }
 
   private void truncateTables() throws ExecutionException {
-    consensusCommitAdmin.truncateTable(namespace1, TABLE_1);
-    consensusCommitAdmin.truncateTable(namespace2, TABLE_2);
+    truncateTable(namespace1, TABLE_1);
+    truncateTable(namespace2, TABLE_2);
+    truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     consensusCommitAdmin.truncateCoordinatorTables();
   }
 
@@ -257,7 +284,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.COMMITTED);
 
     // commit-state should not occur for read-only transactions
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -303,7 +330,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.COMMITTED);
 
     // commit-state should not occur for read-only transactions
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -358,7 +385,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // commit-state should not occur for read-only transactions
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -1281,13 +1308,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       if (readOnly) {
         // In read-only mode, recovery should not occur
         verify(recovery, never())
-            .recover(any(Selection.class), any(TransactionResult.class), any());
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery, never())
-            .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       } else {
         // In read-write mode, recovery should occur
-        verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-        verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery)
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       }
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation
@@ -1299,8 +1327,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       assertThat(result.getCommittedAt()).isGreaterThan(0);
 
       // Recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery)
+          .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
     }
   }
 
@@ -1336,7 +1365,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+  void scan_ScanAllGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
       Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
@@ -1403,11 +1432,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In other cases, recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     }
   }
@@ -1444,7 +1474,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+  void scan_ScanAllGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
       Isolation isolation, boolean readOnly, CommitType commitType)
       throws TransactionException, ExecutionException, CoordinatorException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
@@ -1472,9 +1502,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null, commitType);
     DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act Assert
@@ -1538,8 +1568,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all cases, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -1576,10 +1606,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void
-      scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
-          Isolation isolation, boolean readOnly, CommitType commitType)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  void scan_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
         scanAll, false, isolation, readOnly, commitType);
@@ -1606,10 +1635,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
-            storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null, commitType);
     DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
@@ -1645,15 +1674,25 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator, never()).putState(any(Coordinator.State.class));
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    } else {
-      // In other cases, recovery should occur
-
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+    } else if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
+      // via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).forceAbort(ongoingTxId);
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. tryRecover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).forceAbort(ongoingTxId);
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -1700,7 +1739,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void scanAll_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+  void scan_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
       Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
@@ -1772,13 +1811,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       if (readOnly) {
         // In read-only mode, recovery should not occur
         verify(recovery, never())
-            .recover(any(Selection.class), any(TransactionResult.class), any());
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
         verify(recovery, never())
-            .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       } else {
         // In read-write mode, recovery should occur
-        verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-        verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+        verify(recovery)
+            .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
       }
     } else {
       // In SNAPSHOT or SERIALIZABLE isolation
@@ -1787,8 +1827,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       assertThat(result).isNull();
 
       // Recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-      verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery)
+          .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
     }
   }
 
@@ -1824,7 +1865,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
+  void scan_ScanAllGivenForDeletedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
       Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
@@ -1891,11 +1932,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     } else {
       // In other cases, recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     }
   }
@@ -1932,7 +1974,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
+  void scan_ScanAllGivenForDeletedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
       Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
@@ -1960,9 +2002,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
+        storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null, commitType);
     DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act Assert
@@ -2026,8 +2068,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all cases, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2064,10 +2106,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void
-      scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
-          Isolation isolation, boolean readOnly, CommitType commitType)
-          throws ExecutionException, CoordinatorException, TransactionException {
+  void scan_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
+      Isolation isolation, boolean readOnly, CommitType commitType)
+      throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldBehaveCorrectly(
         scanAll, false, isolation, readOnly, commitType);
@@ -2094,10 +2135,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
-            storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
+            storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null, commitType);
     DistributedTransaction transaction = begin(manager, readOnly);
 
     // Act
@@ -2134,13 +2175,24 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     if (isolation == Isolation.READ_COMMITTED && readOnly) {
       // In READ_COMMITTED isolation and read-only mode, recovery should not occur
-      verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
       verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    } else {
-      // In other cases, recovery should occur
-      verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-      verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
+    } else if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation and read-write mode, the record is recovered in the background
+      // via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).forceAbort(ongoingTxId);
       verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. tryRecover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).forceAbort(ongoingTxId);
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
     }
   }
 
@@ -2176,7 +2228,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @MethodSource("isolationAndReadOnlyModeAndCommitType")
-  void scanAll_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+  void scan_ScanAllGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
       Isolation isolation, boolean readOnly, CommitType commitType)
       throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
@@ -2192,6 +2244,2256 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           throws ExecutionException, CoordinatorException, TransactionException {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldBehaveCorrectly(
+        scanAll, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        current,
+        TransactionState.COMMITTED,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    // The before-index check finds the PREPARED record via before_BALANCE=INITIAL_BALANCE
+    // and rolls it forward. After roll-forward, the record has BALANCE=NEW_BALANCE,
+    // so Get with BALANCE=INITIAL_BALANCE returns empty
+    assertThat(result).isNotPresent();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-forward)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void get_GetWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
+      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        current,
+        TransactionState.ABORTED,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    // The before-index check finds the PREPARED record via before_BALANCE=INITIAL_BALANCE
+    // and rolls it back. After roll-back, the record is restored to BALANCE=INITIAL_BALANCE,
+    // so Get returns it
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            preparedAt,
+            null,
+            CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    // After abort (expired) and roll-back, the record is restored to BALANCE=INITIAL_BALANCE
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
+    // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
+    // before the result is returned, then the record is rolled back in the background.
+    // tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+    verify(coordinator).forceAbort(ongoingTxId);
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        preparedAt,
+        null,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    assertThatThrownBy(() -> transaction.get(get)).isInstanceOf(UncommittedRecordException.class);
+
+    transaction.rollback();
+
+    // Recovery should not occur
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnEmpty(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.DELETED,
+        current,
+        TransactionState.COMMITTED,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    // After roll-forward, the DELETED record is physically deleted, so Get returns empty
+    assertThat(result).isNotPresent();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-forward = delete committed)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void get_GetWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnResult(
+      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.DELETED,
+        current,
+        TransactionState.ABORTED,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    // After roll-back, the delete is undone and BALANCE=INITIAL_BALANCE is restored
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // The PREPARED record has BALANCE=NEW_BALANCE (after-image) and
+    // before_BALANCE=INITIAL_BALANCE. Query by BALANCE=NEW_BALANCE matches the normal index.
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        current,
+        TransactionState.ABORTED,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    // After roll-back, BALANCE reverts to INITIAL_BALANCE, which does not match the queried
+    // index key BALANCE=NEW_BALANCE, so the result should be filtered out
+    assertThat(result).isNotPresent();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void get_GetWithIndexForTransientDeletedAndPreparedRecords_ShouldResolveToSingleRecord(
+      Isolation isolation) throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // A delete + insert on two records that have different primary keys but the same index value
+    // (BALANCE=NEW_BALANCE) leave two physical rows belonging to the same writer transaction: a
+    // DELETED record (the deleted one) and a PREPARED record (the inserted one). A single-row index
+    // Get would throw GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION here. Reading via a Scan
+    // with index lets lazy recovery (coordinator COMMITTED -> roll forward) resolve the transient
+    // duplicate so that exactly one record (the inserted one) survives. (This example happens to
+    // share a partition key, but the bug is about distinct primary keys sharing an index value, not
+    // about clustering keys.)
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    // Old record being deleted (account_type 0); its committed before-image is INITIAL_BALANCE.
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        0,
+        TransactionState.DELETED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    // New record being inserted (account_type 1).
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        1,
+        TransactionState.PREPARED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(
+            ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis()));
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    // The key assertion is that this does NOT throw
+    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION even though two physical rows transiently
+    // match the index value.
+    Optional<Result> result = transaction.get(get);
+
+    // Assert
+    if (isolation == Isolation.READ_COMMITTED) {
+      // READ_COMMITTED returns committed (before-image) values (BALANCE=INITIAL_BALANCE), which do
+      // not match the queried index value NEW_BALANCE, so no record matches.
+      assertThat(result).isNotPresent();
+    } else {
+      // SNAPSHOT/SERIALIZABLE roll forward to the latest image: the old record is deleted and the
+      // inserted record (account_type 1, BALANCE=NEW_BALANCE) survives.
+      assertThat(result).isPresent();
+      assertThat(result.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+      assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur for both transient rows (DELETED old + PREPARED new) and roll them
+    // FORWARD (writer committed); nothing is rolled back.
+    verify(recovery, times(2))
+        .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForTransientDeletedAndPreparedRecordsWhenWriterAborted_ShouldResolveToNoRecord(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // The same transient DELETED(old) + PREPARED(new) duplicate as the rollforward case, but the
+    // writer transaction ABORTED. Both rows roll back to their committed before-image
+    // (BALANCE=INITIAL_BALANCE), which no longer matches the queried index value NEW_BALANCE, so
+    // the index Get resolves to no record in every isolation - and still never throws
+    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION. (Correctness invariant case 2.)
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    // Old record being deleted (account_type 0); its committed before-image is INITIAL_BALANCE.
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        0,
+        TransactionState.DELETED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    // New record being inserted (account_type 1).
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        1,
+        TransactionState.PREPARED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(
+            ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert: both rows revert to INITIAL_BALANCE on rollback, so neither matches NEW_BALANCE.
+    assertThat(result).isNotPresent();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur for both transient rows (DELETED old + PREPARED new) and roll them BACK
+    // (writer aborted); nothing is rolled forward.
+    verify(recovery, times(2))
+        .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never())
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      get_GetWithIndexForExistingCommittedRecordAndTransientPreparedRecord_ShouldReturnCommittedRecordInAllIsolations(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // An already-committed record (account_type 0, BALANCE=NEW_BALANCE) exists. A concurrent
+    // transaction's in-flight insert (account_type 1, PREPARED, same BALANCE) transiently shares
+    // the index value, then aborts. A single-row index Get would throw
+    // GET_OPERATION_USED_FOR_NON_EXACT_MATCH_SELECTION on the two physical rows; resolving via a
+    // Scan with index returns the existing committed record in every isolation -- including
+    // READ_COMMITTED, since the surviving record is genuinely committed (no before-image needed).
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    // Existing committed record (account_type 0).
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, NEW_BALANCE);
+    // In-flight insert (account_type 1) that will be aborted.
+    populatePreparedIndexRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        1,
+        TransactionState.PREPARED,
+        NEW_BALANCE,
+        INITIAL_BALANCE,
+        ANY_ID_2,
+        current);
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(
+            ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis()));
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    Optional<Result> result = transaction.get(get);
+
+    // Assert: the existing committed record is returned in every isolation (including
+    // READ_COMMITTED). The aborted in-flight insert is rolled back and filtered out.
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur once for the aborted in-flight record and roll it BACK; nothing is
+    // rolled forward (the surviving record is genuinely committed and needs no recovery).
+    verify(recovery, times(1))
+        .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, times(1)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never())
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+  }
+
+  // Writes a PREPARED/DELETED record at the given account_type with the given after-image BALANCE
+  // and writer transaction id, so that two records with different primary keys but the same BALANCE
+  // index value reproduce a transient index duplicate.
+  private void populatePreparedIndexRecord(
+      DistributedStorage storage,
+      String namespace,
+      String table,
+      int accountType,
+      TransactionState recordState,
+      int balance,
+      int beforeBalance,
+      String txId,
+      long preparedAt)
+      throws ExecutionException {
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, accountType))
+            .intValue(BALANCE, balance)
+            .textValue(Attribute.ID, txId)
+            .intValue(Attribute.STATE, recordState.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, preparedAt)
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, beforeBalance)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
+    while (true) {
+      try {
+        storage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry
+      }
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void get_GetWithIndexMatchingMultipleCommittedRecords_ShouldThrowIllegalArgumentException(
+      Isolation isolation) throws ExecutionException, TransactionException {
+    // Arrange
+    // Two genuinely committed records share the same index value (BALANCE=NEW_BALANCE). The
+    // exact-match Get-with-index contract cannot be satisfied, so the user is still told to use a
+    // Scan - this behavior is preserved (now enforced by ConsensusCommit after lazy recovery).
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, NEW_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, NEW_BALANCE);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    assertThatThrownBy(() -> transaction.get(get))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Please use scan() for non-exact match selection");
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage(
+        isolation, false);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage_ShouldRollBackAndFilterOutResult(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage(
+        isolation, true);
+  }
+
+  private void scan_ScanWithIndexForPreparedWhenCoordinatorStateAbortedAndIndexKeyMatchesAfterImage(
+      Isolation isolation, boolean useScanner)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populateRecordsForAfterImageIndexTest(
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, NEW_BALANCE);
+    List<Result> results;
+    if (!useScanner) {
+      results = transaction.scan(scan);
+    } else {
+      try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+        results = scanner.all();
+      }
+    }
+
+    transaction.commit();
+
+    // Assert
+    // After roll-back, the PREPARED record (0,1) has BALANCE reverted to INITIAL_BALANCE, which
+    // does not match the queried index key BALANCE=NEW_BALANCE. Only the 2 COMMITTED records
+    // (0,0) and (0,2) with BALANCE=NEW_BALANCE should remain.
+    assertThat(results).hasSize(2);
+    Set<Integer> accountTypes = new HashSet<>();
+    for (Result result : results) {
+      assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
+      assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+      accountTypes.add(result.getInt(ACCOUNT_TYPE));
+    }
+    assertThat(accountTypes).containsExactlyInAnyOrder(0, 2);
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  /**
+   * Populates records for testing index key filtering after rollback when the query matches the
+   * after-image index. Creates:
+   *
+   * <ul>
+   *   <li>(0,0): COMMITTED with BALANCE=NEW_BALANCE
+   *   <li>(0,2): COMMITTED with BALANCE=NEW_BALANCE
+   *   <li>(0,1): {@code recordState} with BALANCE changed from INITIAL_BALANCE to NEW_BALANCE
+   * </ul>
+   *
+   * When querying BALANCE=NEW_BALANCE, all 3 records match the normal index. If (0,1) is rolled
+   * back, its BALANCE reverts to INITIAL_BALANCE, so it should be filtered out, leaving only the 2
+   * COMMITTED records.
+   *
+   * @param storage the storage instance to use for populating records
+   * @param namespace the namespace of the table
+   * @param table the table name
+   * @param recordState the transaction state of the (0,1) record (e.g., PREPARED or DELETED)
+   * @param preparedAt the prepared-at timestamp for the (0,1) record
+   * @param coordinatorState the coordinator state for the transaction that wrote the (0,1) record
+   */
+  private void populateRecordsForAfterImageIndexTest(
+      DistributedStorage storage,
+      String namespace,
+      String table,
+      TransactionState recordState,
+      long preparedAt,
+      TransactionState coordinatorState)
+      throws ExecutionException, CoordinatorException {
+    // (0,0): COMMITTED with BALANCE=NEW_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace, table, 0, 0, NEW_BALANCE);
+
+    // (0,2): COMMITTED with BALANCE=NEW_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace, table, 0, 2, NEW_BALANCE);
+
+    // (0,1): PREPARED/DELETED with BALANCE changed from INITIAL_BALANCE to NEW_BALANCE
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 1);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, recordState.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, preparedAt)
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
+  }
+
+  private void
+      scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Scan scan, boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populateRecordsForBeforeIndexTest(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        current,
+        TransactionState.COMMITTED);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    if (!useScanner) {
+      List<Result> results = transaction.scan(scan);
+
+      // Assert
+      // After roll-forward, the PREPARED record has BALANCE=NEW_BALANCE, so scanning for
+      // INITIAL_BALANCE returns only the 2 COMMITTED records
+      assertThat(results.size()).isEqualTo(2);
+      for (Result r : results) {
+        assertThat(r.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+    } else {
+      List<Result> results;
+      try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+        results = scanner.all();
+      }
+
+      // After roll-forward, rolledBack=false, so no exception from close().
+      // The scanner returns 2 COMMITTED records.
+      assertThat(results.size()).isEqualTo(2);
+      for (Result r : results) {
+        assertThat(r.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-forward)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, true, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, true, isolation);
+  }
+
+  private void
+      scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Scan scan, boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populateRecordsForBeforeIndexTest(
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    if (!useScanner) {
+      List<Result> results = transaction.scan(scan);
+
+      // After roll-back, the PREPARED record is restored to BALANCE=INITIAL_BALANCE,
+      // so all 3 records match
+      assertThat(results.size()).isEqualTo(3);
+      for (Result r : results) {
+        assertThat(r.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+    } else {
+      // For scanner, the before-index check at close() detects the rolled-back record
+      // and throws CrudConflictException
+      assertThatThrownBy(
+              () -> {
+                try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                  scanner.all();
+                }
+              })
+          .isInstanceOf(CrudConflictException.class);
+    }
+
+    if (!useScanner) {
+      transaction.commit();
+    } else {
+      transaction.rollback();
+    }
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, true, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, true, isolation);
+  }
+
+  private void
+      scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Scan scan, boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populateRecordsForBeforeIndexTest(
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    if (!useScanner) {
+      List<Result> results = transaction.scan(scan);
+
+      // After abort (expired) and roll-back, all 3 records have BALANCE=INITIAL_BALANCE
+      assertThat(results.size()).isEqualTo(3);
+      for (Result r : results) {
+        assertThat(r.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+    } else {
+      // For scanner, the before-index check at close() detects the rolled-back record
+      assertThatThrownBy(
+              () -> {
+                try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                  scanner.all();
+                }
+              })
+          .isInstanceOf(CrudConflictException.class);
+    }
+
+    if (!useScanner) {
+      transaction.commit();
+    } else {
+      transaction.rollback();
+    }
+
+    waitForRecoveryCompletion(transaction);
+
+    // The index read path always uses RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation, so
+    // the expired transaction is aborted synchronously (its ABORTED coordinator state is written)
+    // before the records are returned, then the record is rolled back in the background.
+    // tryRecover() is not used on this path.
+    verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+    verify(coordinator).forceAbort(ongoingTxId);
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+        scan, true, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortAndReturnAllRecords(
+        scan, true, isolation);
+  }
+
+  private void
+      scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Scan scan, boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis();
+    populateRecordsForBeforeIndexTest(
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    // The before-index check always uses RETURN_LATEST_RESULT_AND_RECOVER, which throws
+    // UncommittedRecordException for not-expired records regardless of isolation level
+    assertThatThrownBy(
+            () -> {
+              if (!useScanner) {
+                transaction.scan(scan);
+              } else {
+                try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                  scanner.all();
+                }
+              }
+            })
+        .isInstanceOf(UncommittedRecordException.class);
+
+    transaction.rollback();
+
+    // Recovery should not occur
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+        scan, true, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanAllWithIndexConditionForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldThrowException(
+        scan, true, isolation);
+  }
+
+  private void
+      scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Scan scan, boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populateRecordsForBeforeIndexTest(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.DELETED,
+        current,
+        TransactionState.COMMITTED);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    if (!useScanner) {
+      List<Result> results = transaction.scan(scan);
+
+      // Assert
+      // After roll-forward, the DELETED record is physically deleted, so only 2 COMMITTED
+      // records remain
+      assertThat(results.size()).isEqualTo(2);
+      for (Result r : results) {
+        assertThat(r.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+    } else {
+      List<Result> results;
+      try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+        results = scanner.all();
+      }
+
+      // After roll-forward (delete committed), rolledBack=false, so no exception from close().
+      assertThat(results.size()).isEqualTo(2);
+      for (Result r : results) {
+        assertThat(r.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-forward = delete committed)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, true, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnCommittedRecords(
+        scan, true, isolation);
+  }
+
+  private void
+      scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Scan scan, boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long current = System.currentTimeMillis();
+    populateRecordsForBeforeIndexTest(
+        storage, namespace1, TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    if (!useScanner) {
+      List<Result> results = transaction.scan(scan);
+
+      // After roll-back, the delete is undone and BALANCE=INITIAL_BALANCE is restored,
+      // so all 3 records match
+      assertThat(results.size()).isEqualTo(3);
+      for (Result r : results) {
+        assertThat(r.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      }
+    } else {
+      // For scanner, the before-index check at close() detects the rolled-back record
+      assertThatThrownBy(
+              () -> {
+                try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                  scanner.all();
+                }
+              })
+          .isInstanceOf(CrudConflictException.class);
+    }
+
+    if (!useScanner) {
+      transaction.commit();
+    } else {
+      transaction.rollback();
+    }
+
+    waitForRecoveryCompletion(transaction);
+
+    // Recovery should occur (roll-back)
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanWithIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, true, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      scan_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_ScanAllWithIndexConditionForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    scan_ScanWithBeforeIndexForDeletedWhenCoordinatorStateAborted_ShouldRollBackAndReturnAllRecords(
+        scan, true, isolation);
+  }
+
+  private String populateRecordsForBeforeIndexTest(
+      DistributedStorage storage,
+      String namespace,
+      String table,
+      TransactionState recordState,
+      long preparedAt,
+      TransactionState coordinatorState)
+      throws ExecutionException, CoordinatorException {
+    // (0,0): COMMITTED with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace, table, 0, 0, INITIAL_BALANCE);
+
+    // (0,2): COMMITTED with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace, table, 0, 2, INITIAL_BALANCE);
+
+    // (0,1): PREPARED/DELETED with BALANCE changed from INITIAL_BALANCE to NEW_BALANCE
+    Key partitionKey = Key.ofInt(ACCOUNT_ID, 0);
+    Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, 1);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, recordState.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, preparedAt)
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    if (coordinatorState == null) {
+      return ANY_ID_2;
+    }
+
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(ANY_ID_2, coordinatorState, System.currentTimeMillis()));
+    return ANY_ID_2;
+  }
+
+  private void populateCommittedRecordWithBalance(
+      DistributedStorage storage,
+      String namespace,
+      String table,
+      int accountId,
+      int accountType,
+      int balance)
+      throws ExecutionException {
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, accountId))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, accountType))
+            .intValue(BALANCE, balance)
+            .textValue(Attribute.ID, ANY_ID_1)
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, 1)
+            .bigIntValue(Attribute.COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+  }
+
+  // Sets up the lazy-recovery-rollback race for the transaction that wrote a record: the read path
+  // first looks up the coordinator state and finds none, so it tries to abort the expired
+  // transaction. Intercept only that first lookup to return empty while writing the COMMITTED
+  // coordinator state (the winner) as a side effect. The real lazy-recovery rollback that follows
+  // then genuinely conflicts against this committed state, and the real re-read resolves the read
+  // from the winner's outcome (the after-image).
+  private void simulateLazyRecoveryRollbackConflict(String ongoingTxId)
+      throws CoordinatorException {
+    doAnswer(
+            invocation -> {
+              coordinator.putState(
+                  new CoordinatorStateAccessor.State(
+                      ongoingTxId, TransactionState.COMMITTED, System.currentTimeMillis()));
+              return Optional.empty();
+            })
+        .doCallRealMethod()
+        .when(coordinator)
+        .getState(ongoingTxId);
+  }
+
+  private void assertPreparedRecordAfterLazyRecoveryRollbackConflict(
+      TransactionResult result, Isolation isolation, String ongoingTxId)
+      throws ExecutionException, CoordinatorException {
+    if (isolation == Isolation.READ_COMMITTED) {
+      // READ_COMMITTED uses RETURN_COMMITTED_RESULT_AND_RECOVER: it always returns the committed
+      // (before-image) result and recovers the record in the background. It does not perform the
+      // lazy-recovery-rollback conflict resolution, so the winner's after-image is not surfaced on
+      // this path.
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(1);
+      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      verify(recovery, never()).tryAbortExpiredTransaction(anyString());
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    } else {
+      // SNAPSHOT/SERIALIZABLE use RETURN_LATEST_RESULT_AND_RECOVER. The lazy-recovery rollback
+      // loses the race, so the read resolves from the winner's COMMITTED outcome. The after-image
+      // is returned (not the before-image), and the record is rolled forward instead of back.
+      assertThat(result.getId()).isEqualTo(ongoingTxId);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(2);
+      assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery)
+          .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    }
+  }
+
+  private void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldReturnAllRecords(
+          boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    // Three records in partition 0: (0,0) and (0,2) are COMMITTED, while (0,1) is an expired
+    // PREPARED record with no coordinator state (the conflict target).
+    String ongoingTxId =
+        populateRecordsForBeforeIndexTest(
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null);
+    simulateLazyRecoveryRollbackConflict(ongoingTxId);
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Scan scan = prepareScan(0, namespace1, TABLE_1);
+    List<Result> results;
+    if (!useScanner) {
+      results = transaction.scan(scan);
+    } else {
+      try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+        results = scanner.all();
+      }
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+    // All three records are returned, ordered by clustering key.
+    assertThat(results.size()).isEqualTo(3);
+
+    // The committed records (0,0) and (0,2) are returned unchanged.
+    assertThat(results.get(0).getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(results.get(0).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(2).getInt(ACCOUNT_TYPE)).isEqualTo(2);
+    assertThat(results.get(2).getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+    // The expired PREPARED record (0,1) is resolved according to the isolation level.
+    assertThat(results.get(1).getInt(ACCOUNT_TYPE)).isEqualTo(1);
+    TransactionResult result =
+        (TransactionResult) ((FilteredResult) results.get(1)).getOriginalResult();
+    assertPreparedRecordAfterLazyRecoveryRollbackConflict(result, isolation, ongoingTxId);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldBehaveCorrectly(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            preparedAt,
+            null,
+            CommitType.NORMAL_COMMIT);
+    simulateLazyRecoveryRollbackConflict(ongoingTxId);
+
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    Optional<Result> r = transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(r).isPresent();
+    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+    assertPreparedRecordAfterLazyRecoveryRollbackConflict(result, isolation, ongoingTxId);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldBehaveCorrectly(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldReturnAllRecords(
+        false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void
+      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldBehaveCorrectly(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButLazyRecoveryRollbackConflicts_ShouldReturnAllRecords(
+        true, isolation);
+  }
+
+  /**
+   * Whether the storage engine allows a concurrent write to a row that an open scan cursor is still
+   * reading. The scan-path variants of the finalize/cleanup-race recovery tests synchronously write
+   * the scanned row from within lazy recovery while the storage scanner is still open. On engines
+   * that hold a lock for an open scan, that write blocks until the scan finishes and the simulation
+   * self-deadlocks.
+   *
+   * <p>Returns {@code true} by default; subclasses override it to {@code false} for the engines
+   * that cannot support such a write. The Get variants are unaffected because a point Get releases
+   * its connection immediately.
+   */
+  protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
+    return true;
+  }
+
+  /**
+   * Skips a scan-path recovery-simulation test on engines that cannot support a concurrent write to
+   * a row an open scan is still reading. These tests synchronously write the scanned row from
+   * within lazy recovery while the storage scanner is still open, which self-deadlocks on engines
+   * that hold a lock for an open scan. The Get path is unaffected because a point Get releases its
+   * connection immediately. See {@link #isConcurrentWriteToRowUnderOpenScanSupported()}.
+   */
+  private void assumeConcurrentWriteToRowUnderOpenScanSupported(Selection s) {
+    if (s instanceof Scan) {
+      assumeTrue(isConcurrentWriteToRowUnderOpenScanSupported());
+    }
+  }
+
+  // Sets up the cleanup race for the transaction that wrote a record: the read path looks up the
+  // coordinator state and finds none. Intercept only that first lookup to roll the record forward
+  // to its committed after-image (a real write) as a side effect, modeling the writer committing,
+  // being finalized, and its coordinator state row removed by the cleanup process. The coordinator
+  // row stays absent, so the subsequent physical re-read observes the committed record, and the
+  // read resolves to it without writing a spurious ABORTED state.
+  private void simulateRecordFinalizedAndCleanedUp(String ongoingTxId) throws CoordinatorException {
+    doAnswer(
+            invocation -> {
+              rollRecordForwardToCommitted();
+              return Optional.empty();
+            })
+        .doCallRealMethod()
+        .when(coordinator)
+        .getState(ongoingTxId);
+  }
+
+  // Flips the prepared record (0, 0) to its committed after-image with a real write
+  // (STATE=COMMITTED, committed_at set), leaving the after-image columns (balance, id, version)
+  // that the writer prepared. This is what a real rollforward + finalize leaves behind.
+  private void rollRecordForwardToCommitted() throws ExecutionException {
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .bigIntValue(Attribute.COMMITTED_AT, 1)
+            .build();
+    while (true) {
+      try {
+        storage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry (Oracle may throw without a real conflict)
+      }
+    }
+  }
+
+  private void assertRecordAfterCleanupFinalizedAndCommitted(
+      TransactionResult result, Isolation isolation, boolean readOnly, String ongoingTxId)
+      throws CoordinatorException, ExecutionException {
+    if (isolation == Isolation.READ_COMMITTED) {
+      // READ_COMMITTED returns the committed before-image immediately. In read-write mode it also
+      // recovers in the background, but the abort-before re-read sees the record already committed,
+      // so no spurious ABORTED coordinator state is written. In read-only mode no recovery runs.
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(1);
+      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+
+      if (readOnly) {
+        verify(recovery, never())
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      } else {
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      }
+      verify(recovery, never()).tryAbortExpiredTransaction(anyString());
+      verify(coordinator, never()).forceAbort(anyString());
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // SNAPSHOT/SERIALIZABLE resolve from the physical re-read, which sees the committed
+      // after-image, so the after-image is returned -- not a stale before-image. No abort is
+      // attempted and no spurious ABORTED coordinator state is written.
+      assertThat(result.getId()).isEqualTo(ongoingTxId);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(2);
+      assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+      verify(recovery, never()).tryAbortExpiredTransaction(anyString());
+      verify(coordinator, never()).forceAbort(anyString());
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    }
+  }
+
+  private void
+      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null, commitType);
+    simulateRecordFinalizedAndCleanedUp(ongoingTxId);
+
+    DistributedTransaction transaction = begin(manager, readOnly);
+
+    // Act
+    TransactionResult result;
+    if (s instanceof Get) {
+      Optional<Result> r = transaction.get((Get) s);
+      assertThat(r).isPresent();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    } else {
+      List<Result> results;
+      if (!useScanner) {
+        results = transaction.scan((Scan) s);
+      } else {
+        try (TransactionCrudOperable.Scanner scanner = transaction.getScanner((Scan) s)) {
+          results = scanner.all();
+        }
+      }
+      assertThat(results.size()).isEqualTo(1);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+    assertRecordAfterCleanupFinalizedAndCommitted(result, isolation, readOnly, ongoingTxId);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+        get, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+        scan, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+        scan, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      scan_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUp_ShouldReturnCommittedValue(
+        scanAll, true, isolation, readOnly, commitType);
+  }
+
+  // Models the cleanup race that strikes *after* the read path has decided to abort the writer
+  // (SNAPSHOT/SERIALIZABLE synchronous resolution): the pre-abort re-read still sees the record
+  // PREPARED by the writer, so the read path calls tryAbortExpiredTransaction; but the writer then
+  // commits, is finalized, and its coordinator state is cleaned up -- modeled here as a side effect
+  // of the abort attempt, after which the real abort still writes a (now spurious) ABORTED
+  // coordinator state. The post-abort re-read then observes the committed record, so the read must
+  // resolve to the committed value rather than a stale before-image. The spurious ABORTED is the
+  // accepted, non-corrupting residual (reclaimed later by Coordinator state cleanup).
+  private void simulateRecordFinalizedAndCleanedUpDuringAbort(String ongoingTxId)
+      throws CoordinatorException {
+    doAnswer(
+            invocation -> {
+              rollRecordForwardToCommitted();
+              return invocation.callRealMethod();
+            })
+        .when(recovery)
+        .tryAbortExpiredTransaction(ongoingTxId);
+  }
+
+  private void
+      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+          Selection s, boolean useScanner, Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
+    // Arrange — a prepared record with no coordinator state, expired. The cleanup race is injected
+    // into the abort attempt itself (see simulateRecordFinalizedAndCleanedUpDuringAbort).
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null, commitType);
+    simulateRecordFinalizedAndCleanedUpDuringAbort(ongoingTxId);
+
+    DistributedTransaction transaction = begin(manager, false);
+
+    // Act
+    TransactionResult result;
+    if (s instanceof Get) {
+      Optional<Result> r = transaction.get((Get) s);
+      assertThat(r).isPresent();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    } else {
+      List<Result> results;
+      if (!useScanner) {
+        results = transaction.scan((Scan) s);
+      } else {
+        try (TransactionCrudOperable.Scanner scanner = transaction.getScanner((Scan) s)) {
+          results = scanner.all();
+        }
+      }
+      assertThat(results.size()).isEqualTo(1);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert — the committed after-image is returned (not a stale before-image). The abort was
+    // attempted and the (accepted, non-corrupting) spurious ABORTED coordinator state was written,
+    // but the record is not rolled back and stays committed.
+    assertThat(result.getId()).isEqualTo(ongoingTxId);
+    assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(result.getVersion()).isEqualTo(2);
+    assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+    verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+    verify(coordinator).forceAbort(ongoingTxId);
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+        get, false, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+        scan, false, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+        scan, true, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      scan_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+        scanAll, false, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordFinalizedAndCleanedUpDuringAbort_ShouldReturnCommittedValue(
+        scanAll, true, isolation, commitType);
+  }
+
+  // Models the group-commit-specific cleanup race that strikes *during* the lazy-recovery-rollback
+  // attempt: the record is still physically PREPARED, the writer already committed via group commit
+  // (a COMMITTED parent row with this child's ID existed), and the coordinator cleanup process
+  // removed the parent row in the small window between our parent-id insert conflicting and the
+  // subsequent re-read inside forceAbortForGroupCommit. The fall-through then writes a spurious
+  // full-ID ABORTED coordinator state -- the same outcome as the unit test
+  // forceAbort_FullIdGivenWhenParentRowAlreadyCleanedUpAndNoFullIdRecord. Crucially, the record is
+  // already rolled forward at conflict time (rollRecordForwardToCommitted models the writer's
+  // commit), so the background rollback is a conditional no-op and the data record stays committed
+  // despite the spurious ABORTED.
+  private void simulateGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback(String ongoingTxId)
+      throws CoordinatorException {
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    Keys<String, String, String> keys = keyManipulator.keysFromFullKey(ongoingTxId);
+    String parentKey = keys.parentKey;
+
+    // The parent-id insert conflicts because a finished group-commit row existed (the writer
+    // committed). Roll the record forward as a side effect to model the writer's commit, then
+    // throw to simulate the conflict with the already-committed parent row.
+    doAnswer(
+            invocation -> {
+              rollRecordForwardToCommitted();
+              throw new CoordinatorConflictException(
+                  "simulated conflict: group-commit parent row was committed");
+            })
+        .when(coordinator)
+        .putState(any(CoordinatorStateAccessor.State.class));
+
+    // The coordinator cleanup process removed the parent row in the window between the conflict
+    // and the re-read -- return empty to model the cleaned-up state. The fall-through then writes
+    // the spurious full-ID ABORTED record instead of re-throwing the conflict exception.
+    doReturn(Optional.empty()).when(coordinator).getState(parentKey);
+  }
+
+  private void
+      selection_SelectionGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+          Selection s, boolean useScanner, Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
+    // Arrange — a prepared record under a group-commit full ID with no coordinator state, expired.
+    // The group-commit parent-row cleanup race is injected via
+    // simulateGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback.
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            preparedAt,
+            null,
+            CommitType.GROUP_COMMIT);
+    simulateGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback(ongoingTxId);
+
+    DistributedTransaction transaction = begin(manager, false);
+
+    // Act
+    TransactionResult result;
+    if (s instanceof Get) {
+      Optional<Result> r = transaction.get((Get) s);
+      assertThat(r).isPresent();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    } else {
+      List<Result> results;
+      if (!useScanner) {
+        results = transaction.scan((Scan) s);
+      } else {
+        try (TransactionCrudOperable.Scanner scanner = transaction.getScanner((Scan) s)) {
+          results = scanner.all();
+        }
+      }
+      assertThat(results.size()).isEqualTo(1);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert — the committed after-image is returned (not a stale before-image). The
+    // group-commit abort path wrote a spurious full-ID ABORTED coordinator state (accepted,
+    // non-corrupting residual: reclaimed later by coordinator cleanup), but the record stays
+    // committed and is not rolled back.
+    assertThat(result.getId()).isEqualTo(ongoingTxId);
+    assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(result.getVersion()).isEqualTo(2);
+    assertThat(result.getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+    verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+    verify(coordinator).forceAbort(ongoingTxId);
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Isolation.class,
+      names = {"SNAPSHOT", "SERIALIZABLE"})
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      get_GetGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+        get, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Isolation.class,
+      names = {"SNAPSHOT", "SERIALIZABLE"})
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      scan_ScanGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+        scan, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Isolation.class,
+      names = {"SNAPSHOT", "SERIALIZABLE"})
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      getScanner_ScanGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+        scan, true, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Isolation.class,
+      names = {"SNAPSHOT", "SERIALIZABLE"})
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      scan_ScanAllGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+        scanAll, false, isolation);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Isolation.class,
+      names = {"SNAPSHOT", "SERIALIZABLE"})
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      getScanner_ScanAllGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenGroupCommitParentRowCleanedUpDuringLazyRecoveryRollback_ShouldReturnCommittedValue(
+        scanAll, true, isolation);
+  }
+
+  // Models the ABA cleanup race that strikes *during* the abort: the pre-abort re-read still sees
+  // the record PREPARED by the writer, so the read path calls tryAbortExpiredTransaction. As a side
+  // effect of that abort we model the full chain that can happen in the window before the
+  // post-abort re-read: the writer is rolled back, an intervening transaction commits a new value
+  // (INTERVENING_BALANCE), and yet another transaction re-prepares the record on top of that
+  // committed value. The post-abort re-read therefore sees a DIFFERENT writer, so the read must
+  // re-resolve against it and ultimately return the intervening committed value -- never the
+  // original writer's now-stale before-image (INITIAL_BALANCE).
+  private void simulateRecordRePreparedByDifferentTxDuringAbort(String ongoingTxId)
+      throws CoordinatorException {
+    // The re-preparing transaction is aborted, so resolving it rolls the record back to its
+    // before-image, restoring the intervening committed value as the record's committed image.
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(
+            REPREPARING_TX_ID, TransactionState.ABORTED, System.currentTimeMillis()));
+    doAnswer(
+            invocation -> {
+              rePrepareRecordByDifferentTransaction();
+              return invocation.callRealMethod();
+            })
+        .when(recovery)
+        .tryAbortExpiredTransaction(ongoingTxId);
+  }
+
+  // Writes the record (0, 0) as PREPARED by a different transaction whose before-image is the
+  // intervening committed value. Models: original writer rolled back -> intervening commit
+  // (INTERVENING_BALANCE, version 2) -> different transaction re-prepares on top (version 3).
+  private void rePrepareRecordByDifferentTransaction() throws ExecutionException {
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE) // re-preparing tx's after-image; discarded on its abort
+            .textValue(Attribute.ID, REPREPARING_TX_ID)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 3)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INTERVENING_BALANCE)
+            .textValue(Attribute.BEFORE_ID, INTERVENING_TX_ID)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 2)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    while (true) {
+      try {
+        storage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry (Oracle may throw without a real conflict)
+      }
+    }
+  }
+
+  private void
+      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+          Selection s, boolean useScanner, Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
+    // Arrange — a prepared record with no coordinator state, expired. The ABA cleanup race is
+    // injected into the abort attempt itself (see
+    // simulateRecordRePreparedByDifferentTxDuringAbort).
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null, commitType);
+    simulateRecordRePreparedByDifferentTxDuringAbort(ongoingTxId);
+
+    DistributedTransaction transaction = begin(manager, false);
+
+    // Act
+    TransactionResult result;
+    if (s instanceof Get) {
+      Optional<Result> r = transaction.get((Get) s);
+      assertThat(r).isPresent();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    } else {
+      List<Result> results;
+      if (!useScanner) {
+        results = transaction.scan((Scan) s);
+      } else {
+        try (TransactionCrudOperable.Scanner scanner = transaction.getScanner((Scan) s)) {
+          results = scanner.all();
+        }
+      }
+      assertThat(results.size()).isEqualTo(1);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert — the read re-resolved against the re-preparing transaction and returned the
+    // intervening committed value (INTERVENING_BALANCE), NOT the original writer's stale before-
+    // image (INITIAL_BALANCE) nor its after-image (NEW_BALANCE). The original writer was aborted,
+    // but the record is recovered for the re-preparing transaction (rolled back to the intervening
+    // committed value).
+    assertThat(result.getInt(BALANCE)).isEqualTo(INTERVENING_BALANCE);
+    assertThat(result.getId()).isEqualTo(INTERVENING_TX_ID);
+    assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(result.getVersion()).isEqualTo(2);
+
+    verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+    verify(coordinator).forceAbort(ongoingTxId);
+    verify(recovery, never()).tryAbortExpiredTransaction(REPREPARING_TX_ID);
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+        get, false, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+        scan, false, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+        scan, true, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      scan_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+        scanAll, false, isolation, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotOrSerializableIsolationAndCommitType")
+  void
+      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButRecordRePreparedByDifferentTxDuringAbort_ShouldReturnInterveningCommittedValue(
+        scanAll, true, isolation, commitType);
+  }
+
+  // Like simulateRecordFinalizedAndCleanedUp, but models a committed delete: the writer's delete
+  // committed and was finalized (the record physically removed) and its coordinator state row was
+  // cleaned up. Intercept the first coordinator-state lookup to delete the record with a real
+  // write, then report the coordinator row absent so the re-read finds the record gone.
+  private void simulateRecordDeleteFinalizedAndCleanedUp(String ongoingTxId)
+      throws CoordinatorException {
+    doAnswer(
+            invocation -> {
+              deleteRecordPhysically();
+              return Optional.empty();
+            })
+        .doCallRealMethod()
+        .when(coordinator)
+        .getState(ongoingTxId);
+  }
+
+  private void deleteRecordPhysically() throws ExecutionException {
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .build();
+    while (true) {
+      try {
+        storage.delete(delete);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry (Oracle may throw without a real conflict)
+      }
+    }
+  }
+
+  private void
+      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+          Selection s,
+          boolean useScanner,
+          Isolation isolation,
+          boolean readOnly,
+          CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    assumeConcurrentWriteToRowUnderOpenScanSupported(s);
+
+    // Arrange — a prepared DELETE with no coordinator state, expired.
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null, commitType);
+    simulateRecordDeleteFinalizedAndCleanedUp(ongoingTxId);
+
+    DistributedTransaction transaction = begin(manager, readOnly);
+    boolean readCommitted = isolation == Isolation.READ_COMMITTED;
+
+    // Act
+    TransactionResult result = null;
+    if (s instanceof Get) {
+      Optional<Result> r = transaction.get((Get) s);
+      if (readCommitted) {
+        // READ_COMMITTED returns the committed before-image without the physical re-read.
+        assertThat(r).isPresent();
+        result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      } else {
+        // SNAPSHOT/SERIALIZABLE re-read the record physically and find it gone, so empty is
+        // returned instead of a stale before-image.
+        assertThat(r).isEmpty();
+      }
+    } else {
+      List<Result> results;
+      if (!useScanner) {
+        results = transaction.scan((Scan) s);
+      } else {
+        try (TransactionCrudOperable.Scanner scanner = transaction.getScanner((Scan) s)) {
+          results = scanner.all();
+        }
+      }
+      if (readCommitted) {
+        assertThat(results.size()).isEqualTo(1);
+        result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      } else {
+        assertThat(results).isEmpty();
+      }
+    }
+
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert — no spurious ABORTED coordinator state is written in any isolation.
+    if (readCommitted) {
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+      assertThat(result.getVersion()).isEqualTo(1);
+      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      if (readOnly) {
+        verify(recovery, never())
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      } else {
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      }
+    } else {
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    }
+    verify(recovery, never()).tryAbortExpiredTransaction(anyString());
+    verify(coordinator, never()).forceAbort(anyString());
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+        get, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+        scan, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+        scan, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      scan_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+        scanAll, false, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyModeAndCommitType")
+  void
+      getScanner_ScanAllGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
+          Isolation isolation, boolean readOnly, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    Scan scanAll = prepareScanAll(namespace1, TABLE_1);
+    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpiredButDeleteFinalizedAndCleanedUp_ShouldBehaveCorrectly(
         scanAll, true, isolation, readOnly, commitType);
   }
 
@@ -2272,8 +4574,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -2328,7 +4631,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2339,9 +4642,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
+        storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null, commitType);
 
     DistributedTransaction transaction = manager.begin();
 
@@ -2374,9 +4677,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all isolations, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -2386,10 +4689,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
-            storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null, commitType);
+            storage, namespace1, TABLE_1, TransactionState.PREPARED, preparedAt, null, commitType);
 
     Get get =
         Get.newBuilder()
@@ -2425,10 +4728,21 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.isPresent()).isTrue();
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
-    // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the record is recovered in the background via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).forceAbort(ongoingTxId);
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. tryRecover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).forceAbort(ongoingTxId);
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    }
   }
 
   @ParameterizedTest
@@ -2490,8 +4804,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery)
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
   }
 
   @ParameterizedTest
@@ -2546,7 +4861,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
     // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
@@ -2557,9 +4872,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis();
+    long preparedAt = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
+        storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null, commitType);
 
     DistributedTransaction transaction = manager.begin();
 
@@ -2592,9 +4907,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
 
     // In all isolations, recovery should not occur
-    verify(recovery, never()).recover(any(Selection.class), any(TransactionResult.class), any());
+    verify(recovery, never()).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
+    verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
   }
 
   @ParameterizedTest
@@ -2604,10 +4919,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       throws ExecutionException, CoordinatorException, TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
-    long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
     String ongoingTxId =
         populatePreparedRecordAndCoordinatorStateRecord(
-            storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null, commitType);
+            storage, namespace1, TABLE_1, TransactionState.DELETED, preparedAt, null, commitType);
 
     Get get =
         Get.newBuilder()
@@ -2643,10 +4958,21 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     assertThat(actual.isPresent()).isTrue();
     assertThat(actual.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE + 100);
 
-    // In all isolations, recovery should occur
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class), any());
-    verify(coordinator).putState(new Coordinator.State(ongoingTxId, TransactionState.ABORTED));
-    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    if (isolation == Isolation.READ_COMMITTED) {
+      // In READ_COMMITTED isolation, the record is recovered in the background via tryRecover()
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      verify(coordinator).forceAbort(ongoingTxId);
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    } else {
+      // In SNAPSHOT or SERIALIZABLE isolation, the expired transaction is aborted synchronously
+      // (its ABORTED coordinator state is written) before the before-image is returned, then the
+      // record is rolled back in the background. tryRecover() is not used on this path.
+      verify(recovery).tryAbortExpiredTransaction(ongoingTxId);
+      verify(coordinator).forceAbort(ongoingTxId);
+      verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+      verify(recovery, never())
+          .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    }
   }
 
   @ParameterizedTest
@@ -4240,17 +6566,12 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build();
 
     // Act
-    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    List<Result> results = transaction.scan(scan);
+    transaction.commit();
 
     // Assert
-    if (isolation == Isolation.SERIALIZABLE) {
-      // Index scans are not allowed in SERIALIZABLE isolation
-      assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
-      transaction.rollback();
-    } else {
-      assertThat(thrown).doesNotThrowAnyException();
-      transaction.commit();
-    }
+    // The put record has SOME_COLUMN="aaa", which does not satisfy SOME_COLUMN > "aaa"
+    assertThat(results).isEmpty();
   }
 
   @ParameterizedTest
@@ -5457,8 +7778,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
+  public void scan_ScanWithIndexGiven_WithSerializable_ShouldScan() throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.mutate(
@@ -5499,23 +7819,30 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 .intValue(BALANCE, INITIAL_BALANCE)
                 .build()));
 
-    // Act Assert
+    // Act
     DistributedTransaction transaction = manager.begin();
-    // Index scans are not allowed in SERIALIZABLE isolation
-    assertThatThrownBy(
-            () ->
-                transaction.scan(
-                    Scan.newBuilder()
-                        .namespace(namespace1)
-                        .table(TABLE_1)
-                        .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                        .build()))
-        .isInstanceOf(IllegalArgumentException.class);
+    List<Result> results =
+        transaction.scan(
+            Scan.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+    transaction.commit();
+
+    // Assert
+    assertThat(results).hasSize(5);
+    Set<Integer> accountIds = new HashSet<>();
+    for (Result result : results) {
+      assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+      assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+      accountIds.add(result.getInt(ACCOUNT_ID));
+    }
+    assertThat(accountIds).containsExactlyInAnyOrder(0, 1, 2, 3, 4);
   }
 
   @Test
-  public void get_GetWithIndexGiven_WithSerializable_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
+  public void get_GetWithIndexGiven_WithSerializable_ShouldGet() throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
     manager.insert(
@@ -5527,19 +7854,22 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .intValue(BALANCE, INITIAL_BALANCE)
             .build());
 
-    // Act Assert
+    // Act
     DistributedTransaction transaction = manager.begin();
+    Optional<Result> result =
+        transaction.get(
+            Get.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
+                .build());
+    transaction.commit();
 
-    // Index gets are not allowed in SERIALIZABLE isolation
-    assertThatThrownBy(
-            () ->
-                transaction.get(
-                    Get.newBuilder()
-                        .namespace(namespace1)
-                        .table(TABLE_1)
-                        .indexKey(Key.ofInt(BALANCE, INITIAL_BALANCE))
-                        .build()))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
   }
 
   @Test
@@ -5929,9 +8259,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       get_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
@@ -5992,9 +8320,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       get_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
@@ -6062,9 +8388,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       scan_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -6135,9 +8459,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       scan_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -6215,9 +8537,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       scan_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -6313,9 +8633,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       getScanner_WithConjunction_ForPreparedRecordWhoseBeforeImageMatchesConjunction_ShouldReturnRecordAfterLazyRecovery(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -6389,9 +8707,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       getScanner_WithConjunction_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -6472,9 +8788,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @MethodSource("isolationAndReadOnlyMode")
   void
       getScanner_WithConjunctionAndLimit_ForCommittedRecordWhoseBeforeImageMatchesConjunction_ShouldNotReturnRecord(
-          Isolation isolation, boolean readOnly)
-          throws UnknownTransactionStatusException, CrudException, ExecutionException,
-              CommitException {
+          Isolation isolation, boolean readOnly) throws TransactionException, ExecutionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.mutate(
@@ -6573,9 +8887,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   @EnumSource(Isolation.class)
   void
       commit_ConflictingExternalUpdate_DifferentGetButSameRecordReturned_ShouldThrowShouldBehaveCorrectly(
-          Isolation isolation)
-          throws UnknownTransactionStatusException, CrudException, RollbackException,
-              CommitException {
+          Isolation isolation) throws TransactionException {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(isolation);
     manager.insert(
@@ -7056,12 +9368,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator)
-              .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           return;
         }
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         break;
       case PARTITION:
       case TABLE:
@@ -7072,18 +9382,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator)
-                .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -7162,11 +9470,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator)
-              .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         } else {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         }
         break;
       case TABLE:
@@ -7177,18 +9483,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator)
-                .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -7268,10 +9572,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // commit-state should occur
       if (isGroupCommitEnabled()) {
-        verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       } else {
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       }
     } else {
       // same storage
@@ -7285,11 +9588,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator)
-                .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
           break;
         case STORAGE:
@@ -7298,18 +9599,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             verify(storage).mutate(anyList());
 
             // no commit-state should occur
-            verify(coordinator, never()).putState(any(Coordinator.State.class));
+            verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
           } else {
             // one for prepare, one for commit
             verify(storage, times(2)).mutate(anyList());
 
             // commit-state should occur
             if (isGroupCommitEnabled()) {
-              verify(coordinator)
-                  .putStateForGroupCommit(
-                      anyString(), anyList(), any(TransactionState.class), anyLong());
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             } else {
-              verify(coordinator).putState(any(Coordinator.State.class));
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             }
           }
           break;
@@ -7410,12 +9709,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator)
-              .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           return;
         }
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         break;
       case PARTITION:
       case TABLE:
@@ -7426,18 +9723,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator)
-                .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -7538,11 +9833,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
         // commit-state should occur
         if (isGroupCommitEnabled()) {
-          verify(coordinator)
-              .putStateForGroupCommit(
-                  anyString(), anyList(), any(TransactionState.class), anyLong());
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         } else {
-          verify(coordinator).putState(any(Coordinator.State.class));
+          verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         }
         break;
       case TABLE:
@@ -7553,18 +9846,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           verify(storage).mutate(anyList());
 
           // no commit-state should occur
-          verify(coordinator, never()).putState(any(Coordinator.State.class));
+          verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
         } else {
           // one for prepare, one for commit
           verify(storage, times(2)).mutate(anyList());
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator)
-                .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
         }
         break;
@@ -7666,10 +9957,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // commit-state should occur
       if (isGroupCommitEnabled()) {
-        verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       } else {
-        verify(coordinator).putState(any(Coordinator.State.class));
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
       }
     } else {
       // same storage
@@ -7683,11 +9973,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
           // commit-state should occur
           if (isGroupCommitEnabled()) {
-            verify(coordinator)
-                .putStateForGroupCommit(
-                    anyString(), anyList(), any(TransactionState.class), anyLong());
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           } else {
-            verify(coordinator).putState(any(Coordinator.State.class));
+            verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
           }
           break;
         case STORAGE:
@@ -7696,18 +9984,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             verify(storage).mutate(anyList());
 
             // no commit-state should occur
-            verify(coordinator, never()).putState(any(Coordinator.State.class));
+            verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
           } else {
             // one for prepare, one for commit
             verify(storage, times(2)).mutate(anyList());
 
             // commit-state should occur
             if (isGroupCommitEnabled()) {
-              verify(coordinator)
-                  .putStateForGroupCommit(
-                      anyString(), anyList(), any(TransactionState.class), anyLong());
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             } else {
-              verify(coordinator).putState(any(Coordinator.State.class));
+              verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
             }
           }
           break;
@@ -7803,11 +10089,10 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // commit-state should occur
       if (isGroupCommitEnabled()) {
-        verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
+        verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
         return;
       }
-      verify(coordinator).putState(any(Coordinator.State.class));
+      verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
     } else if (onePhaseCommitEnabled) {
       // only one transaction read, no validation read
       verify(storage).get(any(Get.class));
@@ -7816,7 +10101,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       verify(storage).mutate(anyList());
 
       // no commit-state should occur
-      verify(coordinator, never()).putState(any(Coordinator.State.class));
+      verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     } else {
       // only one transaction read, no validation read
       verify(storage).get(any(Get.class));
@@ -7825,12 +10110,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       verify(storage, times(2)).mutate(anyList());
 
       // commit-state should occur
-      if (isGroupCommitEnabled()) {
-        verify(coordinator)
-            .putStateForGroupCommit(anyString(), anyList(), any(TransactionState.class), anyLong());
-      } else {
-        verify(coordinator).putState(any(Coordinator.State.class));
-      }
+      verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
     }
 
     Optional<Result> result1 =
@@ -7893,7 +10173,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   void put_WhenTheOtherTransactionsFails_ShouldBeCommittedWithoutBlocked() throws Exception {
     // Arrange
     ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
-    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any(), anyLong());
 
     // Act
     DistributedTransaction failingTxn = manager.begin();
@@ -7975,7 +10255,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     DistributedTransaction failingTxn1 = manager.begin();
     DistributedTransaction failingTxn2 = manager.begin();
 
-    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any());
+    doThrow(PreparationConflictException.class).when(commit).prepareRecords(any(), anyLong());
 
     failingTxn1.put(preparePut(0, 0, namespace1, TABLE_1));
     failingTxn2.put(preparePut(1, 0, namespace1, TABLE_1));
@@ -7997,6 +10277,959 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .isEqualTo(TransactionState.ABORTED);
     assertThat(coordinator.getState(failingTxn2.getId()).get().getState())
         .isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  public void
+      commit_GetWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Start a SERIALIZABLE transaction and get with index
+    DistributedTransaction transaction = manager.begin();
+    Get get = prepareGetWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    Optional<Result> result = transaction.get(get);
+    assertThat(result).isEmpty();
+
+    // After the read, insert a PREPARED record (0,0) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_ScanWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan with index
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results = transaction.scan(scan);
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    // This simulates another transaction that changed BALANCE from INITIAL_BALANCE to NEW_BALANCE
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    // toSerializable should detect the PREPARED record via before-image index and throw
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_ScanAllWithIndexConditionInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan all with balance condition
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results = transaction.scan(scan);
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_GetScannerWithIndexInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan with index via getScanner
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanWithIndex(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results;
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      results = scanner.all();
+    }
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      commit_GetScannerWithScanAllIndexConditionInSerializable_WhenBeforeIndexHasPreparedRecordFromOtherTransaction_ShouldThrowCommitConflictException()
+          throws ExecutionException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SERIALIZABLE);
+
+    // Create committed records (0,0) and (0,2) with BALANCE=INITIAL_BALANCE
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 0, INITIAL_BALANCE);
+    populateCommittedRecordWithBalance(storage, namespace1, TABLE_1, 0, 2, INITIAL_BALANCE);
+
+    // Start a SERIALIZABLE transaction and scan all with balance condition via getScanner
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = prepareScanAllWithBalanceCondition(namespace1, TABLE_1, INITIAL_BALANCE);
+    List<Result> results;
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      results = scanner.all();
+    }
+    assertThat(results.size()).isEqualTo(2);
+
+    // After the read, insert a PREPARED record (0,1) via DistributedStorage
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 1))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, ANY_ID_2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 2)
+            .bigIntValue(Attribute.PREPARED_AT, System.currentTimeMillis())
+            .intValue(Attribute.BEFORE_PREFIX + BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.BEFORE_ID, ANY_ID_1)
+            .intValue(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.BEFORE_VERSION, 1)
+            .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
+            .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
+            .build();
+    storage.put(put);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  void commit_WithMultipleWrites_ShouldPersistWriteSetReadableFromCoordinator()
+      throws TransactionException, CoordinatorException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Act — write two records and commit. This exercises the full encode + storage put + read
+    // back path against the real backend, so any BLOB encoding/round-trip regression in the
+    // storage adapter (e.g., truncation, byte-array semantics) will surface here.
+    DistributedTransaction transaction = manager.begin();
+    String txId = transaction.getId();
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 1, namespace1, TABLE_1));
+    transaction.commit();
+
+    // Assert — the persisted tx_write_set BLOB can be read back and parsed as a valid WriteSet
+    // carrying both writes (the exact EntryGroup partitioning depends on group commit; we only
+    // assert the total entry count).
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(txId);
+    assertThat(state).isPresent();
+    assertThat(state.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    assertThat(state.get().getWriteSet()).isPresent();
+
+    WriteSet writeSet = state.get().getWriteSet().get();
+    assertThat(writeSet.getSchemaVersion()).isEqualTo(1);
+    int totalEntries =
+        writeSet.getEntryGroups().getEntryGroupsList().stream()
+            .mapToInt(g -> g.getEntriesCount())
+            .sum();
+    assertThat(totalEntries).isEqualTo(2);
+  }
+
+  @Test
+  void commit_WithMultiPartitionWrites_ShouldStampSingleCommittedAtOnCoordinatorRowAndAllRecords()
+      throws Exception {
+    // Unified commit-phase timestamp invariant, verified end-to-end against real storage: the
+    // COMMITTED Coordinator state row's committedAt (createdAt) equals every committed data row's
+    // COMMITTED_AT, and all data rows of the transaction share a single PREPARED_AT. This runs in
+    // both group-commit-enabled and -disabled environments. One-phase commit is disabled here and
+    // the writes span two partitions, so a Coordinator state row is always written and the
+    // two-phase path is taken.
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Act
+    DistributedTransaction txn = manager.begin();
+    txn.put(preparePut(0, 0, namespace1, TABLE_1));
+    txn.put(preparePut(1, 0, namespace1, TABLE_1)); // a different partition
+    txn.commit();
+
+    // Assert
+    long coordinatorCommittedAt = coordinator.getState(txn.getId()).get().getCreatedAt();
+
+    DistributedTransaction readTxn = manager.beginReadOnly();
+    Optional<Result> r0 = readTxn.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> r1 = readTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    readTxn.commit();
+    TransactionResult record0 = (TransactionResult) ((FilteredResult) r0.get()).getOriginalResult();
+    TransactionResult record1 = (TransactionResult) ((FilteredResult) r1.get()).getOriginalResult();
+
+    // Every committed data row shares the Coordinator row's committedAt ...
+    assertThat(record0.getCommittedAt()).isEqualTo(coordinatorCommittedAt);
+    assertThat(record1.getCommittedAt()).isEqualTo(coordinatorCommittedAt);
+    // ... and both rows share a single preparedAt.
+    assertThat(record0.getPreparedAt()).isEqualTo(record1.getPreparedAt());
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void commit_WithGroupCommit_ShouldStampOneBatchCommittedAtAcrossAllBatchedTransactionsAndRecords()
+      throws Exception {
+    // The group-commit-specific invariant: when multiple transactions are batched into one normal
+    // group, they share a single COMMITTED Coordinator (parent) row carrying one emit-time
+    // committedAt, and every committed data row of every transaction in the batch is stamped with
+    // that same value. The two transactions reserve slots in the same group at begin() time (same
+    // parent key) and are committed concurrently so the group emits them together as one batch
+    // (mirroring CoordinatorGroupCommitterTest, which reserves slots then readies them
+    // concurrently). Verified end-to-end against real storage.
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    DistributedTransaction txn1 = manager.begin();
+    DistributedTransaction txn2 = manager.begin();
+    txn1.put(preparePut(0, 0, namespace1, TABLE_1));
+    txn1.put(preparePut(1, 0, namespace1, TABLE_1)); // a different partition
+    txn2.put(preparePut(2, 0, namespace1, TABLE_1));
+
+    // The shared-timestamp invariant only applies to transactions in the same batch. Both reserve
+    // slots in the same group at begin() time, reflected by a shared parent key.
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    assertThat(keyManipulator.keysFromFullKey(txn1.getId()).parentKey)
+        .isEqualTo(keyManipulator.keysFromFullKey(txn2.getId()).parentKey);
+
+    // Act — commit concurrently so the group emits both transactions together as one batch.
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<?> future1 =
+          executor.submit(
+              () -> {
+                txn1.commit();
+                return null;
+              });
+      Future<?> future2 =
+          executor.submit(
+              () -> {
+                txn2.commit();
+                return null;
+              });
+      future1.get(10, TimeUnit.SECONDS);
+      future2.get(10, TimeUnit.SECONDS);
+    } finally {
+      executor.shutdown();
+    }
+
+    // Assert — both transactions resolve to the single batched Coordinator row, so they share one
+    // committedAt ...
+    long committedAt = coordinator.getState(txn1.getId()).get().getCreatedAt();
+    assertThat(coordinator.getState(txn2.getId()).get().getCreatedAt()).isEqualTo(committedAt);
+
+    // ... and every committed data row of both transactions carries that same committedAt.
+    DistributedTransaction readTxn = manager.beginReadOnly();
+    Optional<Result> r0 = readTxn.get(prepareGet(0, 0, namespace1, TABLE_1));
+    Optional<Result> r1 = readTxn.get(prepareGet(1, 0, namespace1, TABLE_1));
+    Optional<Result> r2 = readTxn.get(prepareGet(2, 0, namespace1, TABLE_1));
+    readTxn.commit();
+    TransactionResult record0 = (TransactionResult) ((FilteredResult) r0.get()).getOriginalResult();
+    TransactionResult record1 = (TransactionResult) ((FilteredResult) r1.get()).getOriginalResult();
+    TransactionResult record2 = (TransactionResult) ((FilteredResult) r2.get()).getOriginalResult();
+    assertThat(record0.getCommittedAt()).isEqualTo(committedAt);
+    assertThat(record1.getCommittedAt()).isEqualTo(committedAt);
+    assertThat(record2.getCommittedAt()).isEqualTo(committedAt);
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      rollback_forOngoingGroupCommitTransactionWhenNormalGroupCommitInFlight_ShouldRollbackCorrectly()
+          throws Exception {
+    // Rolling back an in-flight, group-committed transaction by ID must win against the in-flight
+    // normal group commit, which writes the COMMITTED state under the parent ID. The race is made
+    // deterministic by rolling the transaction back by ID just before the group commit writes its
+    // COMMITTED state under the parent ID, so the two writes genuinely conflict.
+
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0, namespace1, TABLE_1));
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1));
+    String ongoingTxId = transaction.getId();
+    String parentId =
+        new CoordinatorGroupCommitKeyManipulator().keysFromFullKey(ongoingTxId).parentKey;
+
+    doAnswer(
+            invocation -> {
+              // The rollback writes the parent-ID ABORTED marker (not a COMMITTED state), so it
+              // does not match this stub and runs against the real coordinator.
+              manager.rollback(ongoingTxId);
+              return invocation.callRealMethod();
+            })
+        .when(coordinator)
+        .putState(
+            argThat(
+                s ->
+                    s != null
+                        && s.getId().equals(parentId)
+                        && s.getState() == TransactionState.COMMITTED));
+
+    // Act Assert
+    assertThatCode(transaction::commit).isInstanceOf(CommitConflictException.class);
+    assertThat(manager.getState(ongoingTxId)).isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  void finishTransaction_CommittedWithSomeRecordsStillPrepared_ShouldRollForwardAndDeleteState()
+      throws Exception {
+    // Scenario 1: a transaction wrote two records, the Coordinator state row says COMMITTED, but
+    // only one record was rolled forward to COMMITTED at storage — the other is still PREPARED.
+    // This simulates the typical crash window between commitState and commitRecords.
+    // finishTransaction must roll the remaining PREPARED record forward and delete the
+    // Coordinator state row. The already-COMMITTED record is filtered out by shouldRecover and
+    // left untouched.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Drive a real commit so the Coordinator persists a COMMITTED state row with a write set
+    // and both records exist at storage in COMMITTED form with BALANCE=NEW_BALANCE.
+    DistributedTransaction transaction = manager.begin();
+    transaction.insert(prepareInsert(0, 0, namespace1, TABLE_1, NEW_BALANCE));
+    transaction.insert(prepareInsert(0, 1, namespace1, TABLE_1, NEW_BALANCE));
+    transaction.commit();
+    // In group-commit mode, the actual transaction id and the Coordinator state row key carry a
+    // parent-id prefix. Use the transaction's own id throughout so the test works in both
+    // normal-commit and group-commit configurations.
+    String txId = transaction.getId();
+
+    // Simulate the partial-rollforward state by pushing record (0, 1) back to PREPARED.
+    pushRecordBackToPrepared(0, 1, txId);
+
+    // Sanity check
+    Optional<CoordinatorStateAccessor.State> stateBefore = coordinator.getState(txId);
+    assertThat(stateBefore).isPresent();
+    assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    Optional<Result> raw00Before = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00Before).isPresent();
+    assertThat(raw00Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw01Before = originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1));
+    assertThat(raw01Before).isPresent();
+    assertThat(raw01Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.PREPARED.get());
+    assertThat(raw01Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+
+    // Assert — both records are COMMITTED with BALANCE=NEW_BALANCE preserved, Coordinator state
+    // row is gone.
+    assertThat(finished).isTrue();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw00After = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00After).isPresent();
+    assertThat(raw00After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw01After = originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1));
+    assertThat(raw01After).isPresent();
+    assertThat(raw01After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw01After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+  }
+
+  @Test
+  void finishTransaction_AbortedWithSomeRecordsPartiallyPrepared_ShouldRollBackAndDeleteState()
+      throws Exception {
+    // Scenario 2: a transaction tried to prepare two records, succeeded for one and failed for
+    // the other. The CommitHandler caught the PreparationException and wrote ABORTED to the
+    // Coordinator with the original write set, but the crash happened before rollbackRecords
+    // could finish. finishTransaction must roll the prepared record back to its before-image
+    // and delete the Coordinator state row.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    // Set up record (0, 0) as PREPARED at storage with a complete before-image (tx_id=ANY_ID_2,
+    // before tx_id=ANY_ID_1, before balance=INITIAL_BALANCE) so the rollback path has the data it
+    // needs to restore the previously committed state. Record (0, 1) is never written here — its
+    // prepare failed before the storage put happened. We pass null for coordinatorState because
+    // we want to write the Coordinator state row ourselves below with a custom write set.
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            null,
+            CommitType.NORMAL_COMMIT);
+
+    // Write a Coordinator ABORTED state row carrying a write set that lists both records.
+    WriteSet writeSet =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .setEntryGroups(
+                EntryGroups.newBuilder()
+                    .addEntryGroups(
+                        EntryGroup.newBuilder()
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 0))
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 1))))
+            .build();
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(
+            txId, writeSet, TransactionState.ABORTED, System.currentTimeMillis()));
+
+    // Sanity check
+    Optional<Result> rawBefore = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(rawBefore).isPresent();
+    assertThat(rawBefore.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.PREPARED.get());
+    assertThat(originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1))).isEmpty();
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+
+    // Assert — record (0, 0) is restored to the before-image (tx_id=ANY_ID_1, tx_state=COMMITTED,
+    // balance=INITIAL_BALANCE), record (0, 1) remains absent at storage, and the
+    // Coordinator state row is gone.
+    assertThat(finished).isTrue();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(originalStorage.get(prepareGet(0, 1, namespace1, TABLE_1))).isEmpty();
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      finishTransaction_GroupCommittedWithSomeRecordsStillPrepared_ShouldRollForwardAndDeleteParentState()
+          throws Exception {
+    // Scenario 3: the group-commit version of scenario 1. Two sibling transactions commit
+    // together; the parent Coordinator state row says COMMITTED with a multi-EntryGroup write
+    // set. One sibling's record was rolled forward at storage but the other's is still PREPARED.
+    // finishTransaction on any child id must roll the remaining PREPARED record forward and
+    // delete the parent state row.
+    //
+    // Two concurrently-driven transactions cannot reliably be bundled into the same group on CI,
+    // so the post-commit storage layout is constructed by hand: a single parent Coordinator state
+    // row referencing two children with a two-EntryGroup write set, plus one record in each of
+    // the COMMITTED and PREPARED storage states.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String parentId = keyManipulator.generateParentKey();
+    String fullTxId1 = keyManipulator.fullKey(parentId, ANY_ID_1);
+    String fullTxId2 = keyManipulator.fullKey(parentId, ANY_ID_2);
+    long now = System.currentTimeMillis();
+
+    // Record (0, 0): txn1 already rolled forward to COMMITTED at storage.
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, fullTxId1)
+            .intValue(Attribute.STATE, TransactionState.COMMITTED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, now)
+            .bigIntValue(Attribute.COMMITTED_AT, now)
+            .consistency(Consistency.LINEARIZABLE)
+            .build());
+    // Record (1, 0): txn2's write is still PREPARED — the partial-rollforward state.
+    originalStorage.put(
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 1))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .textValue(Attribute.ID, fullTxId2)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, now)
+            .consistency(Consistency.LINEARIZABLE)
+            .build());
+
+    // Parent COMMITTED state row with a multi-EntryGroup write set, one entry group per child.
+    WriteSet writeSet =
+        WriteSet.newBuilder()
+            .setSchemaVersion(1)
+            .setEntryGroups(
+                EntryGroups.newBuilder()
+                    .addEntryGroups(
+                        EntryGroup.newBuilder()
+                            .setChildId(ANY_ID_1)
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 0, 0)))
+                    .addEntryGroups(
+                        EntryGroup.newBuilder()
+                            .setChildId(ANY_ID_2)
+                            .addEntries(intKeyEntry(namespace1, TABLE_1, 1, 0))))
+            .build();
+    CoordinatorGroupCommitKeyManipulator km = new CoordinatorGroupCommitKeyManipulator();
+    List<String> childIds =
+        Arrays.asList(
+            km.keysFromFullKey(fullTxId1).childKey, km.keysFromFullKey(fullTxId2).childKey);
+    coordinator.putState(
+        new CoordinatorStateAccessor.State(
+            parentId, childIds, writeSet, TransactionState.COMMITTED, now));
+
+    // Sanity check
+    Optional<CoordinatorStateAccessor.State> stateBefore = coordinator.getState(fullTxId1);
+    assertThat(stateBefore).isPresent();
+    assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.COMMITTED);
+    Optional<Result> raw00Before = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00Before).isPresent();
+    assertThat(raw00Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw10Before = originalStorage.get(prepareGet(1, 0, namespace1, TABLE_1));
+    assertThat(raw10Before).isPresent();
+    assertThat(raw10Before.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.PREPARED.get());
+    assertThat(raw10Before.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+
+    // Act — finishing the transaction via either child id is equivalent.
+    boolean finished = manager.finishTransaction(fullTxId1);
+
+    // Assert — both records COMMITTED with BALANCE=NEW_BALANCE preserved, the parent state row
+    // is gone, and the sibling's state is also "absent" (idempotency).
+    assertThat(finished).isTrue();
+    assertThat(coordinator.getState(fullTxId1)).isEmpty();
+    assertThat(coordinator.getState(fullTxId2)).isEmpty();
+    Optional<Result> raw00After = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw00After).isPresent();
+    assertThat(raw00After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw00After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    Optional<Result> raw10After = originalStorage.get(prepareGet(1, 0, namespace1, TABLE_1));
+    assertThat(raw10After).isPresent();
+    assertThat(raw10After.get().getInt(Attribute.STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw10After.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+  }
+
+  @Test
+  void finishTransaction_TransactionTerminatedWithoutWriteSet_ShouldReturnFalseAndLeaveState()
+      throws Exception {
+    // Scenario 4: a transaction that did not go through DistributedTransaction#commit() — here it
+    // was terminated via DistributedTransactionManager#rollback() — leaves a
+    // Coordinator ABORTED state row that carries no write set. finishTransaction is not
+    // applicable to such a transaction: it must report that by returning false without doing any
+    // work and leave the state row in place for lazy recovery to handle.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+
+    String txId = UUID.randomUUID().toString();
+    // rollback writes an ABORTED Coordinator state row without a write set.
+    manager.rollback(txId);
+
+    // Sanity check — the state row is present, ABORTED, and carries no write set.
+    Optional<CoordinatorStateAccessor.State> stateBefore = coordinator.getState(txId);
+    assertThat(stateBefore).isPresent();
+    assertThat(stateBefore.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(stateBefore.get().getWriteSet()).isNotPresent();
+
+    // Act
+    boolean finished = manager.finishTransaction(txId);
+
+    // Assert — not applicable (no write set), so it returns false and leaves the state row intact.
+    assertThat(finished).isFalse();
+    Optional<CoordinatorStateAccessor.State> stateAfter = coordinator.getState(txId);
+    assertThat(stateAfter).isPresent();
+    assertThat(stateAfter.get().getState()).isEqualTo(TransactionState.ABORTED);
+    assertThat(stateAfter.get().getWriteSet()).isNotPresent();
+  }
+
+  private void pushRecordBackToPrepared(int accountId, int accountType, String txId)
+      throws ExecutionException {
+    // Overwrite the existing COMMITTED record's tx_state and tx_id columns. ScalarDB storage
+    // Put performs a column-wise upsert, so the other columns (balance, version, before-image
+    // columns from any prior prepare, etc.) are kept intact. That's enough for the rollforward
+    // path, which only checks `tx_id = id && tx_state = PREPARED`.
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, accountId))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, accountType))
+            .textValue(Attribute.ID, txId)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    originalStorage.put(put);
+  }
+
+  private static Entry intKeyEntry(
+      String namespace, String table, int partitionKeyValue, int clusteringKeyValue) {
+    return Entry.newBuilder()
+        .setNamespaceName(namespace)
+        .setTableName(table)
+        .setPartitionKey(
+            com.scalar.db.transaction.consensuscommit.proto.v1.Key.newBuilder()
+                .addColumns(
+                    Column.newBuilder()
+                        .setName(ACCOUNT_ID)
+                        .setIntValue(Column.IntValue.newBuilder().setValue(partitionKeyValue))))
+        .setClusteringKey(
+            com.scalar.db.transaction.consensuscommit.proto.v1.Key.newBuilder()
+                .addColumns(
+                    Column.newBuilder()
+                        .setName(ACCOUNT_TYPE)
+                        .setIntValue(Column.IntValue.newBuilder().setValue(clusteringKeyValue))))
+        .build();
+  }
+
+  @Test
+  void recoverRecord_PreparedRecordWhenCoordinatorStateCommitted_ShouldRollForwardAndReturnTrue()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED at storage but its writer committed.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            TransactionState.COMMITTED,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — rolled forward to the after-image; the Coordinator state row is NOT deleted (unlike
+    // finishTransaction).
+    assertThat(recovered).isTrue();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+    assertThat(coordinator.getState(txId)).isPresent();
+  }
+
+  @Test
+  void recoverRecord_PreparedRecordWhenCoordinatorStateAborted_ShouldRollBackAndReturnTrue()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED at storage but its writer aborted.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            TransactionState.ABORTED,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — rolled back to the before-image; the Coordinator state row is NOT deleted.
+    assertThat(recovered).isTrue();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(coordinator.getState(txId)).isPresent();
+  }
+
+  @Test
+  void recoverRecord_DeletedRecordWhenCoordinatorStateCommitted_ShouldRollForwardRemovingRecord()
+      throws Exception {
+    // Arrange — record (0,0) is DELETED at storage and its writer committed; rolling forward must
+    // physically remove the record.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    populatePreparedRecordAndCoordinatorStateRecord(
+        originalStorage,
+        namespace1,
+        TABLE_1,
+        TransactionState.DELETED,
+        System.currentTimeMillis(),
+        TransactionState.COMMITTED,
+        CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the call reports the record recovered and the record is physically gone.
+    assertThat(recovered).isTrue();
+    assertThat(originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+  }
+
+  @Test
+  void recoverRecord_PreparedRecordWithNoCoordinatorStateAndExpired_ShouldAbortAndReturnTrue()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED with no Coordinator state and the writer has expired.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            1, // a long-past prepared-at, so the writer is considered expired
+            null,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the writer is aborted and the record rolled back to the before-image.
+    assertThat(recovered).isTrue();
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(txId);
+    assertThat(state).isPresent();
+    assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  void recoverRecord_PreparedRecordWithNoCoordinatorStateAndNotExpired_ShouldReturnFalse()
+      throws Exception {
+    // Arrange — record (0,0) is PREPARED with no Coordinator state and the writer is NOT expired,
+    // so it may still be in flight and must not be aborted.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            null,
+            CommitType.NORMAL_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — no recovery performed; the record is untouched and no Coordinator state was written.
+    assertThat(recovered).isFalse();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(txId);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.PREPARED.get());
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      recoverRecord_PreparedGroupCommitRecordWithNoCoordinatorStateAndNotExpired_ShouldNotAbortLiveGroupAndReturnFalse()
+          throws Exception {
+    // Arrange — record (0,0) is PREPARED by a group-commit transaction (its tx_id is a full
+    // group-commit key) with no Coordinator state and a recent prepared-at. This represents a
+    // healthy, in-flight group whose parent Coordinator row has not been written yet. recoverRecord
+    // must not abort it (which would write a conflicting ABORTED row and take down the whole live
+    // group); it reuses the exact abortIfExpired path that lazy recovery uses, so the expiration
+    // guard protects the live group identically.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            null,
+            CommitType.GROUP_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the live group is left untouched: no recovery performed, no Coordinator state (not
+    // even the lazy-recovery-abort-with-parent-id row) was written, and the record is unchanged.
+    assertThat(recovered).isFalse();
+    assertThat(coordinator.getState(txId)).isEmpty();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(txId);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.PREPARED.get());
+  }
+
+  @Test
+  @EnabledIf("isGroupCommitEnabled")
+  void
+      recoverRecord_PreparedGroupCommitRecordWithNoCoordinatorStateAndExpired_ShouldAbortViaGroupCommitPathAndReturnTrue()
+          throws Exception {
+    // Arrange — record (0,0) is PREPARED by a group-commit transaction (its tx_id is a full
+    // group-commit key) with no Coordinator state and an expired prepared-at. This is an abandoned
+    // group-commit writer (the group never reached commit). recoverRecord must abort it through the
+    // group-commit-aware path (CoordinatorStateAccessor.forceAbortForGroupCommit), which writes
+    // both the lazy-recovery-abort-with-parent-id row and the full-id ABORTED row — the same rows
+    // that conflict-protect against a racing real group commit. This is the expired counterpart of
+    // the not-expired test above and confirms recoverRecord drives the no-state group-commit branch
+    // identically to lazy recovery.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    String txId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            originalStorage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            1, // a long-past prepared-at, so the writer is considered expired
+            null,
+            CommitType.GROUP_COMMIT);
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — the writer is aborted via the group-commit path and the record rolled back to the
+    // before-image. getState on the full key resolves to ABORTED (it falls through to the full-id
+    // ABORTED row written by the group-commit abort path).
+    assertThat(recovered).isTrue();
+    Optional<CoordinatorStateAccessor.State> state = coordinator.getState(txId);
+    assertThat(state).isPresent();
+    assertThat(state.get().getState()).isEqualTo(TransactionState.ABORTED);
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getText(Attribute.ID)).isEqualTo(ANY_ID_1);
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @Test
+  void recoverRecord_AlreadyCommittedRecord_ShouldBeNoOpAndReturnTrue() throws Exception {
+    // Arrange — a normally committed record.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    DistributedTransaction transaction = manager.begin();
+    transaction.insert(prepareInsert(0, 0, namespace1, TABLE_1, NEW_BALANCE));
+    transaction.commit();
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert — no-op; the record stays COMMITTED.
+    assertThat(recovered).isTrue();
+    Optional<Result> raw = originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(raw).isPresent();
+    assertThat(raw.get().getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(raw.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
+  }
+
+  @Test
+  void recoverRecord_AbsentRecord_ShouldBeNoOpAndReturnTrue() throws Exception {
+    // Arrange — no record at (0,0).
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    assertThat(originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
+
+    // Act
+    boolean recovered =
+        manager.recoverRecord(
+            namespace1, TABLE_1, Key.ofInt(ACCOUNT_ID, 0), Key.ofInt(ACCOUNT_TYPE, 0));
+
+    // Assert
+    assertThat(recovered).isTrue();
+    assertThat(originalStorage.get(prepareGet(0, 0, namespace1, TABLE_1))).isEmpty();
   }
 
   private DistributedTransaction prepareTransfer(
@@ -8076,6 +11309,277 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .build());
   }
 
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenUpdatingEachRecordReturnedByScannerWithLimit_ShouldCommitProperly(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan =
+        Scan.newBuilder(prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1)).limit(2).build();
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Optional<Result> result;
+      while ((result = scanner.one()).isPresent()) {
+        transaction.update(
+            Update.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.get().getInt(ACCOUNT_TYPE)))
+                .intValue(BALANCE, NEW_BALANCE)
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    List<Result> results = another.scan(prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1));
+    another.commit();
+
+    assertThat(getBalance(results.get(0))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(1))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenUpdatingRecordsOfPartiallyConsumedScanner_ShouldCommitProperly(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    // Stop consuming after two records, so the scanner is never fully scanned
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      for (int i = 0; i < 2; i++) {
+        Result result = scanner.one().get();
+        transaction.update(
+            Update.newBuilder()
+                .namespace(namespace1)
+                .table(TABLE_1)
+                .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+                .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.getInt(ACCOUNT_TYPE)))
+                .intValue(BALANCE, NEW_BALANCE)
+                .build());
+      }
+    }
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    List<Result> results = another.scan(scan);
+    another.commit();
+
+    assertThat(getBalance(results.get(0))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(1))).isEqualTo(NEW_BALANCE);
+    assertThat(getBalance(results.get(2))).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenUpdatingRecordMakingItStopMatchingScanCondition_ShouldCommitProperly(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    // A conjunction-bearing scan. Updating a returned record so that it stops matching exercises
+    // the branch of the validation that relies on the write set rather than on the transaction id.
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .all()
+            .where(column(BALANCE).isEqualToInt(INITIAL_BALANCE))
+            .build();
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Result result = scanner.one().get();
+      transaction.update(
+          Update.newBuilder()
+              .namespace(namespace1)
+              .table(TABLE_1)
+              .partitionKey(Key.ofInt(ACCOUNT_ID, result.getInt(ACCOUNT_ID)))
+              .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.getInt(ACCOUNT_TYPE)))
+              .intValue(BALANCE, NEW_BALANCE)
+              .build());
+    }
+
+    // Assert
+    transaction.commit();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenInsertingRecordIntoScanRangeWhileScannerOpen_ShouldThrowException(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    // The scan covers a clustering-key range with a gap the populated records do not fill
+    Scan scan = prepareScan(NUM_ACCOUNTS, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                scanner.all();
+                transaction.insert(
+                    prepareInsert(NUM_ACCOUNTS, 0, namespace1, TABLE_1, INITIAL_BALANCE));
+              }
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenScanningRecordWrittenBeforeTheScan_ShouldThrowException(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // The write happens before the scan produces the record, so it is not exempt
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .build());
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+                scanner.all();
+              }
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_WhenAnotherScannerStillOpenCoversTheWrittenRecord_ShouldThrowExceptionAtItsClose(
+          Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan1 = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    Scan scan2 = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    TransactionCrudOperable.Scanner scanner1 = transaction.getScanner(scan1);
+    TransactionCrudOperable.Scanner scanner2 = transaction.getScanner(scan2);
+
+    Result result = scanner1.one().get();
+    transaction.update(
+        Update.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, result.getInt(ACCOUNT_TYPE)))
+            .intValue(BALANCE, NEW_BALANCE)
+            .build());
+
+    // The scanner that returned the record accepts the write
+    scanner1.close();
+
+    // The other scanner covers the record but never returned it, so it would hand its caller a
+    // stale row. The exemption is per-scanner while the rejection is transaction-wide.
+    assertThatThrownBy(scanner2::close).isInstanceOf(IllegalArgumentException.class);
+
+    transaction.rollback();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      getScanner_WhenInsertingRecordAlreadyReturnedByScanner_ShouldThrowCommitConflictException(
+          Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    Scan scan = prepareScan(0, 0, NUM_TYPES - 1, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      Result result = scanner.one().get();
+      transaction.insert(
+          prepareInsert(
+              result.getInt(ACCOUNT_ID),
+              result.getInt(ACCOUNT_TYPE),
+              namespace1,
+              TABLE_1,
+              NEW_BALANCE));
+    }
+
+    // Assert
+    // The scanner already returned the record, so the write cannot change what the scan should
+    // have returned and is not an overlap. The insert is simply invalid because the record exists,
+    // which is detected at prepare time — the same as the equivalent get-then-insert.
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  public void
+      getScanner_WhenInsertingRecordReturnedAsBeforeImageOfDeletedRecord_ShouldCommitProperly()
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    // READ_COMMITTED only: it is the isolation that returns the committed before-image of a record
+    // whose delete has already committed. Under SNAPSHOT and SERIALIZABLE the scanner returns
+    // nothing for this record, so inserting it while the scanner is open is an insert into the
+    // scanned range and is rejected — a different case, covered separately.
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.READ_COMMITTED);
+    long current = System.currentTimeMillis();
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.DELETED,
+        current,
+        TransactionState.COMMITTED,
+        CommitType.NORMAL_COMMIT);
+    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    int expectedBalance = 100;
+
+    // Act
+    try (TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan)) {
+      // The record is returned even though its delete is committed
+      assertThat(scanner.one()).isPresent();
+
+      // Inserting it is correct: the record does not actually exist
+      transaction.insert(prepareInsert(0, 0, namespace1, TABLE_1, expectedBalance));
+    }
+    transaction.commit();
+
+    // Assert
+    Optional<Result> actual = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(expectedBalance);
+  }
+
   private void populateRecords(ConsensusCommitManager manager, String namespace, String table)
       throws TransactionException {
     DistributedTransaction transaction = manager.begin();
@@ -8136,7 +11640,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             .bigIntValue(Attribute.BEFORE_PREPARED_AT, 1)
             .bigIntValue(Attribute.BEFORE_COMMITTED_AT, 1)
             .build();
-    storage.put(put);
+
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
+    while (true) {
+      try {
+        storage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry
+      }
+    }
 
     if (coordinatorState == null) {
       return ongoingTxId;
@@ -8144,19 +11658,25 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     switch (commitType) {
       case NORMAL_COMMIT:
-        Coordinator.State state = new Coordinator.State(ANY_ID_2, coordinatorState);
+        CoordinatorStateAccessor.State state =
+            new CoordinatorStateAccessor.State(
+                ANY_ID_2, coordinatorState, System.currentTimeMillis());
         coordinator.putState(state);
         break;
       case GROUP_COMMIT:
         Keys<String, String, String> keys = keyManipulator.keysFromFullKey(ongoingTxId);
-        coordinator.putStateForGroupCommit(
-            keys.parentKey,
-            Collections.singletonList(keys.fullKey),
-            coordinatorState,
-            System.currentTimeMillis());
+        coordinator.putState(
+            new CoordinatorStateAccessor.State(
+                keys.parentKey,
+                Collections.singletonList(keys.childKey),
+                null,
+                coordinatorState,
+                System.currentTimeMillis()));
         break;
       case DELAYED_GROUP_COMMIT:
-        coordinator.putState(new Coordinator.State(ongoingTxId, coordinatorState));
+        coordinator.putState(
+            new CoordinatorStateAccessor.State(
+                ongoingTxId, coordinatorState, System.currentTimeMillis()));
         break;
     }
 
@@ -8183,6 +11703,15 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(j -> gets.add(prepareGet(i, j, namespace, table))));
     return gets;
+  }
+
+  private Get prepareGetWithIndex(String namespace, String table, int balance) {
+    return Get.newBuilder()
+        .namespace(namespace)
+        .table(table)
+        .indexKey(Key.ofInt(BALANCE, balance))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
   }
 
   private Scan prepareScan(int id, int fromType, int toType, String namespace, String table) {
@@ -8226,6 +11755,16 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         .build();
   }
 
+  private Scan prepareScanAllWithBalanceCondition(String namespace, String table, int balance) {
+    return Scan.newBuilder()
+        .namespace(namespace)
+        .table(table)
+        .all()
+        .where(column(BALANCE).isEqualToInt(balance))
+        .consistency(Consistency.LINEARIZABLE)
+        .build();
+  }
+
   private Put preparePut(int id, int type, String namespace, String table) {
     Key partitionKey = Key.ofInt(ACCOUNT_ID, id);
     Key clusteringKey = Key.ofInt(ACCOUNT_TYPE, type);
@@ -8246,6 +11785,17 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(j -> puts.add(preparePut(i, j, namespace, table))));
     return puts;
+  }
+
+  private Insert prepareInsert(
+      int accountId, int accountType, String namespace, String table, int balance) {
+    return Insert.newBuilder()
+        .namespace(namespace)
+        .table(table)
+        .partitionKey(Key.ofInt(ACCOUNT_ID, accountId))
+        .clusteringKey(Key.ofInt(ACCOUNT_TYPE, accountType))
+        .intValue(BALANCE, balance)
+        .build();
   }
 
   private Delete prepareDelete(int id, int type, String namespace, String table) {
@@ -8282,11 +11832,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   private ConsensusCommitManager createConsensusCommitManager(
       Isolation isolation, boolean onePhaseCommitEnabled) {
     storage = spy(originalStorage);
-    coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
         new TransactionTableMetadataManager(admin, -1);
     recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
-    recoveryExecutor = new RecoveryExecutor(coordinator, recovery, tableMetadataManager);
+    recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     groupCommitter = CoordinatorGroupCommitter.from(consensusCommitConfig).orElse(null);
     CrudHandler crud =
         new CrudHandler(
@@ -8294,6 +11844,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             recoveryExecutor,
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
+            consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     commit = spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
     return new ConsensusCommitManager(
@@ -8337,7 +11888,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     }
   }
 
-  private DistributedTransaction begin(ConsensusCommitManager manager, boolean readOnly) {
+  private DistributedTransaction begin(ConsensusCommitManager manager, boolean readOnly)
+      throws TransactionException {
     if (readOnly) {
       return manager.beginReadOnly();
     } else {
@@ -8366,6 +11918,18 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   static Stream<Arguments> isolationAndCommitType() {
     return Arrays.stream(Isolation.values())
+        .flatMap(
+            isolation ->
+                Arrays.stream(CommitType.values())
+                    .map(commitType -> Arguments.of(isolation, commitType)));
+  }
+
+  // SNAPSHOT/SERIALIZABLE only: the synchronous read-path resolution
+  // (resolveLatestResultAndRecover, which calls tryAbortExpiredTransaction) runs in these
+  // isolations; READ_COMMITTED defers recovery to a background path that does not take this route.
+  static Stream<Arguments> snapshotOrSerializableIsolationAndCommitType() {
+    return Arrays.stream(Isolation.values())
+        .filter(isolation -> isolation != Isolation.READ_COMMITTED)
         .flatMap(
             isolation ->
                 Arrays.stream(CommitType.values())

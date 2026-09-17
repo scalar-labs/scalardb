@@ -14,6 +14,7 @@ import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.common.StorageSharedKeyCredential;
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
@@ -31,12 +32,18 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   private final ParallelTransferOptions parallelTransferOptions;
 
   public BlobStorageWrapper(BlobStorageConfig config) {
-    this.client =
+    this(
+        config,
         new BlobServiceClientBuilder()
             .endpoint(config.getEndpoint())
             .credential(new StorageSharedKeyCredential(config.getUsername(), config.getPassword()))
             .buildClient()
-            .getBlobContainerClient(config.getBucket());
+            .getBlobContainerClient(config.getBucket()));
+  }
+
+  @VisibleForTesting
+  BlobStorageWrapper(BlobStorageConfig config, BlobContainerClient client) {
+    this.client = client;
     this.requestTimeoutSecs = config.getRequestTimeoutSecs().map(Duration::ofSeconds).orElse(null);
     this.parallelTransferOptions = new ParallelTransferOptions();
     if (config.getParallelUploadBlockSizeBytes().isPresent()) {

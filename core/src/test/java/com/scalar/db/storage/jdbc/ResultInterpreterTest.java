@@ -1,12 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
@@ -17,15 +17,21 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -86,7 +92,7 @@ public class ResultInterpreterTest {
     when(resultSet.getString(ANY_NAME_2)).thenReturn(ANY_TEXT_2);
     when(resultSet.getBoolean(ANY_COLUMN_NAME_1)).thenReturn(true);
     when(resultSet.getInt(ANY_COLUMN_NAME_2)).thenReturn(Integer.MAX_VALUE);
-    when(resultSet.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntColumn.MAX_VALUE);
+    when(resultSet.getLong(ANY_COLUMN_NAME_3)).thenReturn(Long.MAX_VALUE);
     when(resultSet.getDouble(ANY_COLUMN_NAME_4)).thenReturn((double) Float.MAX_VALUE);
     when(resultSet.getDouble(ANY_COLUMN_NAME_5)).thenReturn(Double.MAX_VALUE);
     when(resultSet.getString(ANY_COLUMN_NAME_6)).thenReturn("string");
@@ -124,7 +130,7 @@ public class ResultInterpreterTest {
     assertThat(result.getInt(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
-    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(Long.MAX_VALUE);
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
     assertThat(result.getFloat(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
@@ -168,7 +174,7 @@ public class ResultInterpreterTest {
     assertThat(columns.get(ANY_COLUMN_NAME_2).getIntValue()).isEqualTo(Integer.MAX_VALUE);
     assertThat(columns.containsKey(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_3).hasNullValue()).isFalse();
-    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(BigIntColumn.MAX_VALUE);
+    assertThat(columns.get(ANY_COLUMN_NAME_3).getBigIntValue()).isEqualTo(Long.MAX_VALUE);
     assertThat(columns.containsKey(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_4).hasNullValue()).isFalse();
     assertThat(columns.get(ANY_COLUMN_NAME_4).getFloatValue()).isEqualTo(Float.MAX_VALUE);
@@ -309,5 +315,190 @@ public class ResultInterpreterTest {
     assertThat(columns.containsKey(ANY_COLUMN_NAME_11)).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_11).hasNullValue()).isTrue();
     assertThat(columns.get(ANY_COLUMN_NAME_11).getTimestampTZValue()).isNull();
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void interpret_TimeColumnWithSubMicrosecondPrecision_ShouldThrowIllegalArgumentException(
+      RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.TIME)
+            .addPartitionKey(ANY_NAME_1)
+            .build();
+
+    when(resultSet.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+    when(resultSet.wasNull()).thenReturn(false);
+
+    LocalTime subMicrosecondTime = LocalTime.of(12, 30, 45, 123_456_789);
+
+    // Mock all engine-specific read methods for TIME
+    // Default engines use getObject(col, LocalTime.class)
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, LocalTime.class)).thenReturn(subMicrosecondTime);
+    // SQLite uses getLong(col) with nanoOfDay encoding
+    when(resultSet.getLong(ANY_COLUMN_NAME_1)).thenReturn(subMicrosecondTime.toNanoOfDay());
+    // DB2 uses getTimestamp(col)
+    Timestamp timestamp =
+        Timestamp.valueOf(LocalDateTime.of(LocalDate.of(2024, 1, 1), subMicrosecondTime));
+    when(resultSet.getTimestamp(ANY_COLUMN_NAME_1)).thenReturn(timestamp);
+    // SPANNER uses getObject(col, OffsetDateTime.class) since TIME is stored as TIMESTAMPTZ
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, OffsetDateTime.class))
+        .thenReturn(
+            OffsetDateTime.of(LocalDate.of(1970, 1, 1), subMicrosecondTime, ZoneOffset.UTC));
+
+    ResultInterpreter interpreter =
+        new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
+
+    // Act Assert
+    assertThatThrownBy(() -> interpreter.interpret(resultSet))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // SQLite is excluded because it uses long encoding (decodeTimestamp/decodeTimestampTZ) that
+  // can never produce sub-millisecond values.
+  // DB2 is excluded because it uses a string formatter that rejects excess fractional digits
+  // with DateTimeParseException (tested separately below).
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"SQLITE", "DB2"},
+      mode = EnumSource.Mode.EXCLUDE)
+  public void
+      interpret_TimestampColumnWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.TIMESTAMP)
+            .addPartitionKey(ANY_NAME_1)
+            .build();
+
+    when(resultSet.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+    when(resultSet.wasNull()).thenReturn(false);
+
+    LocalDateTime subMillisecondTimestamp = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    // Default engines use getObject(col, LocalDateTime.class)
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, LocalDateTime.class))
+        .thenReturn(subMillisecondTimestamp);
+    // SPANNER uses getObject(col, OffsetDateTime.class) since TIMESTAMP is stored as TIMESTAMPTZ
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, OffsetDateTime.class))
+        .thenReturn(OffsetDateTime.of(subMillisecondTimestamp, ZoneOffset.UTC));
+
+    ResultInterpreter interpreter =
+        new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
+
+    // Act Assert
+    assertThatThrownBy(() -> interpreter.interpret(resultSet))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // SQLite is excluded because it uses long encoding (decodeTimestampTZ) that can never produce
+  // sub-millisecond values.
+  // DB2 is excluded because it uses a string formatter that rejects excess fractional digits
+  // with DateTimeParseException (tested separately below).
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"SQLITE", "DB2"},
+      mode = EnumSource.Mode.EXCLUDE)
+  public void
+      interpret_TimestampTZColumnWithSubMillisecondPrecision_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.TIMESTAMPTZ)
+            .addPartitionKey(ANY_NAME_1)
+            .build();
+
+    when(resultSet.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+    when(resultSet.wasNull()).thenReturn(false);
+
+    LocalDateTime subMillisecondLocalDateTime =
+        LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    OffsetDateTime subMillisecondOffsetDateTime =
+        subMillisecondLocalDateTime.atOffset(ZoneOffset.UTC);
+
+    // MySQL/MariaDB read LocalDateTime for TIMESTAMPTZ
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, LocalDateTime.class))
+        .thenReturn(subMillisecondLocalDateTime);
+    // PostgreSQL, Oracle, SQL Server, Yugabyte read OffsetDateTime
+    when(resultSet.getObject(ANY_COLUMN_NAME_1, OffsetDateTime.class))
+        .thenReturn(subMillisecondOffsetDateTime);
+
+    ResultInterpreter interpreter =
+        new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
+
+    // Act Assert
+    assertThatThrownBy(() -> interpreter.interpret(resultSet))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      interpret_Db2TimestampColumnWithExcessFractionalDigits_ShouldThrowDateTimeParseException()
+          throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(RdbEngine.DB2);
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.TIMESTAMP)
+            .addPartitionKey(ANY_NAME_1)
+            .build();
+
+    when(resultSet.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+    when(resultSet.wasNull()).thenReturn(false);
+
+    // DB2 TIMESTAMP_FORMATTER parses at most 3 fractional digits (milliseconds).
+    // A string with microsecond precision (6 digits) causes a DateTimeParseException.
+    when(resultSet.getString(ANY_COLUMN_NAME_1)).thenReturn("2024-01-15 12:30:45.123456");
+
+    ResultInterpreter interpreter =
+        new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
+
+    // Act Assert
+    assertThatThrownBy(() -> interpreter.interpret(resultSet))
+        .isInstanceOf(DateTimeParseException.class);
+  }
+
+  @Test
+  public void
+      interpret_Db2TimestampTZColumnWithExcessFractionalDigits_ShouldThrowDateTimeParseException()
+          throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = RdbEngine.createRdbEngineStrategy(RdbEngine.DB2);
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.TIMESTAMPTZ)
+            .addPartitionKey(ANY_NAME_1)
+            .build();
+
+    when(resultSet.getString(ANY_NAME_1)).thenReturn(ANY_TEXT_1);
+    when(resultSet.wasNull()).thenReturn(false);
+
+    // DB2 TIMESTAMP_FORMATTER parses at most 3 fractional digits (milliseconds).
+    // A string with microsecond precision (6 digits) causes a DateTimeParseException.
+    when(resultSet.getString(ANY_COLUMN_NAME_1)).thenReturn("2024-01-15 12:30:45.123456");
+
+    ResultInterpreter interpreter =
+        new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngineStrategy);
+
+    // Act Assert
+    assertThatThrownBy(() -> interpreter.interpret(resultSet))
+        .isInstanceOf(DateTimeParseException.class);
   }
 }

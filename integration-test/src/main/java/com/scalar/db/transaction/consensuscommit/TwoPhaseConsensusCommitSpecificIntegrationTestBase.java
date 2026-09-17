@@ -25,7 +25,7 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor.State;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +44,8 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private static final String TEST_NAME = "2pcc";
   private static final String NAMESPACE_1 = "int_test_" + TEST_NAME + "1";
   private static final String NAMESPACE_2 = "int_test_" + TEST_NAME + "2";
-  private static final String TABLE_1 = "tx_test_table1";
-  private static final String TABLE_2 = "tx_test_table2";
+  private static final String TABLE_1 = "tx_tbl1";
+  private static final String TABLE_2 = "tx_tbl2";
   private static final String ACCOUNT_ID = "account_id";
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";
@@ -61,7 +61,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   private DistributedStorage storage2;
   private ConsensusCommitAdmin consensusCommitAdmin1;
   private ConsensusCommitAdmin consensusCommitAdmin2;
-  private Coordinator coordinatorForStorage1;
+  private CoordinatorStateAccessor coordinatorForStorage1;
   private String namespace1;
   private String namespace2;
 
@@ -69,12 +69,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   public void beforeAll() throws Exception {
     initialize();
     Properties properties1 = getProperties1(TEST_NAME);
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties1, TEST_NAME);
-
     Properties properties2 = getProperties2(TEST_NAME);
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties2, TEST_NAME);
 
     namespace1 = getNamespace1();
     namespace2 = getNamespace2();
@@ -93,7 +88,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     storage2 = factory2.getStorage();
     manager1 = new TwoPhaseConsensusCommitManager(storage1, admin1, databaseConfig1);
     manager2 = new TwoPhaseConsensusCommitManager(storage2, admin2, databaseConfig2);
-    coordinatorForStorage1 = new Coordinator(storage1, consensusCommitConfig1);
+    coordinatorForStorage1 = new CoordinatorStateAccessor(storage1, consensusCommitConfig1);
   }
 
   protected void initialize() throws Exception {}
@@ -139,9 +134,21 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void truncateTables() throws ExecutionException {
-    consensusCommitAdmin1.truncateTable(namespace1, TABLE_1);
+    truncateTable1(namespace1, TABLE_1);
+    truncateCoordinatorTables();
+    truncateTable2(namespace2, TABLE_2);
+  }
+
+  protected void truncateTable1(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin1.truncateTable(namespace, table);
+  }
+
+  protected void truncateTable2(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin2.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     consensusCommitAdmin1.truncateCoordinatorTables();
-    consensusCommitAdmin2.truncateTable(namespace2, TABLE_2);
   }
 
   @AfterAll
@@ -2480,7 +2487,7 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     if (coordinatorState == null) {
       return;
     }
-    State state = new State(ANY_ID_2, coordinatorState);
+    State state = new State(ANY_ID_2, coordinatorState, System.currentTimeMillis());
     coordinatorForStorage1.putState(state);
   }
 

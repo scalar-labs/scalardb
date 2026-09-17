@@ -29,8 +29,8 @@ public abstract class DistributedStorageMutationAtomicityUnitIntegrationTestBase
   protected static final String NAMESPACE1 = "int_test_" + TEST_NAME + "1";
   protected static final String NAMESPACE2 = "int_test_" + TEST_NAME + "2";
   protected static final String NAMESPACE3 = "int_test_" + TEST_NAME + "3";
-  protected static final String TABLE1 = "test_table1";
-  protected static final String TABLE2 = "test_table2";
+  protected static final String TABLE1 = "tbl1";
+  protected static final String TABLE2 = "tbl2";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
   protected static final String COL_NAME3 = "c3";

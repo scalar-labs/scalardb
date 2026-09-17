@@ -16,6 +16,7 @@ import com.scalar.db.util.TimeRelatedColumnEncodingUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -67,18 +68,6 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // Error code: SQLITE_ERROR (1)
-    // Message: SQL error or missing database (no such table: XXX)
-
-    // Error code: SQLITE_SCHEMA (17)
-    // Message: The database schema changed (no such table: XXX)
-
-    return (e.getErrorCode() == 1 || e.getErrorCode() == 17)
-        && e.getMessage().contains("no such table:");
-  }
-
-  @Override
   public boolean isConflict(SQLException e) {
     // Error code: SQLITE_BUSY (5)
     // Message: The database file is locked (database is locked)
@@ -87,6 +76,15 @@ class RdbEngineSqlite extends AbstractRdbEngine {
     // Message: A table in the database is locked (database table is locked)
 
     return e.getErrorCode() == 5 || e.getErrorCode() == 6;
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // Error code: SQLITE_ERROR (1)
+    // Message: no such index: XXX
+    return e.getErrorCode() == 1
+        && e.getMessage() != null
+        && e.getMessage().contains("no such index");
   }
 
   @Override
@@ -235,7 +233,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // Namespace is never created
     return false;
   }
@@ -260,11 +258,6 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace) {
-    throw new AssertionError("DropNamespace never happen in SQLite implementation");
-  }
-
-  @Override
   public String renameTableSql(String namespace, String oldTableName, String newTableName) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, oldTableName)
@@ -280,13 +273,24 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?";
+  }
+
+  @Override
+  public void bindInternalTableExistsCheckParams(
+      PreparedStatement preparedStatement, String schema, String table) throws SQLException {
+    preparedStatement.setString(1, schema + NAMESPACE_SEPARATOR + table);
   }
 
   @Override
   public String dropIndexSql(String schema, String table, String indexName) {
     return "DROP INDEX " + enclose(indexName);
+  }
+
+  @Override
+  public boolean requiresExplicitDropIndexBeforeDropColumn() {
+    return true;
   }
 
   @Override
@@ -348,21 +352,21 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
   @Override
   public TimeColumn parseTimeColumn(ResultSet resultSet, String columnName) throws SQLException {
-    return TimeColumn.of(
+    return TimeColumn.ofStrict(
         columnName, TimeRelatedColumnEncodingUtils.decodeTime(resultSet.getLong(columnName)));
   }
 
   @Override
   public TimestampColumn parseTimestampColumn(ResultSet resultSet, String columnName)
       throws SQLException {
-    return TimestampColumn.of(
+    return TimestampColumn.ofStrict(
         columnName, TimeRelatedColumnEncodingUtils.decodeTimestamp(resultSet.getLong(columnName)));
   }
 
   @Override
   public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
       throws SQLException {
-    return TimestampTZColumn.of(
+    return TimestampTZColumn.ofStrict(
         columnName,
         TimeRelatedColumnEncodingUtils.decodeTimestampTZ(resultSet.getLong(columnName)));
   }

@@ -30,12 +30,14 @@ public class VirtualTableMetadataServiceTest {
 
   private RdbEngineStrategy rdbEngine;
   private VirtualTableMetadataService service;
+  private String checkTableExistsSql;
 
   @BeforeEach
   public void setUp() {
     MockitoAnnotations.openMocks(this);
     rdbEngine = new RdbEngineMysql();
     service = new VirtualTableMetadataService(METADATA_SCHEMA, rdbEngine, false);
+    checkTableExistsSql = rdbEngine.internalTableExistsCheckSql();
   }
 
   @Test
@@ -196,11 +198,14 @@ public class VirtualTableMetadataServiceTest {
   public void getVirtualTableInfo_VirtualTableExists_ShouldReturnVirtualTableInfo()
       throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
 
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
-    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(checkPreparedStatement, preparedStatement);
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(true);
     when(resultSet.getString("full_table_name")).thenReturn("ns.vtable");
@@ -225,26 +230,25 @@ public class VirtualTableMetadataServiceTest {
     assertThat(virtualTableInfo.getRightSourceTableName()).isEqualTo("right_table");
     assertThat(virtualTableInfo.getJoinType()).isEqualTo(VirtualTableJoinType.INNER);
 
-    ArgumentCaptor<String> checkCaptor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(checkCaptor.capture());
-    assertThat(checkCaptor.getValue())
-        .isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
-
-    ArgumentCaptor<String> selectCaptor = ArgumentCaptor.forClass(String.class);
-    verify(connection).prepareStatement(selectCaptor.capture());
-    assertThat(selectCaptor.getValue())
-        .isEqualTo("SELECT * FROM `scalardb`.`virtual_tables` WHERE `full_table_name` = ?");
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
+    verify(connection)
+        .prepareStatement("SELECT * FROM `scalardb`.`virtual_tables` WHERE `full_table_name` = ?");
     verify(preparedStatement).setString(1, "ns.vtable");
   }
 
   @Test
   public void getVirtualTableInfo_VirtualTableDoesNotExist_ShouldReturnNull() throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
 
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
-    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(checkPreparedStatement, preparedStatement);
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(false);
     when(preparedStatement.executeQuery()).thenReturn(resultSet);
@@ -258,25 +262,22 @@ public class VirtualTableMetadataServiceTest {
     // Assert
     assertThat(virtualTableInfo).isNull();
 
-    ArgumentCaptor<String> checkCaptor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(checkCaptor.capture());
-    assertThat(checkCaptor.getValue())
-        .isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
-
-    ArgumentCaptor<String> selectCaptor = ArgumentCaptor.forClass(String.class);
-    verify(connection).prepareStatement(selectCaptor.capture());
-    assertThat(selectCaptor.getValue())
-        .isEqualTo("SELECT * FROM `scalardb`.`virtual_tables` WHERE `full_table_name` = ?");
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
+    verify(connection)
+        .prepareStatement("SELECT * FROM `scalardb`.`virtual_tables` WHERE `full_table_name` = ?");
     verify(preparedStatement).setString(1, "ns.vtable");
   }
 
   @Test
   public void getVirtualTableInfo_MetadataTableDoesNotExist_ShouldReturnNull() throws Exception {
     // Arrange
-    Statement statement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(statement);
-    SQLException sqlException = new SQLException("Table doesn't exist", "42S02", 1146);
-    when(statement.execute(anyString())).thenThrow(sqlException);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false);
 
     String namespace = "ns";
     String table = "vtable";
@@ -287,19 +288,22 @@ public class VirtualTableMetadataServiceTest {
     // Assert
     assertThat(virtualTableInfo).isNull();
 
-    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(statement).execute(captor.capture());
-    assertThat(captor.getValue()).isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
   }
 
   @Test
   public void getVirtualTableInfosBySourceTable_ShouldReturnVirtualTableInfos() throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
 
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
-    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(checkPreparedStatement, preparedStatement);
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(true, true, false);
     when(resultSet.getString("full_table_name")).thenReturn("ns.vtable1", "ns.vtable2");
@@ -327,15 +331,11 @@ public class VirtualTableMetadataServiceTest {
     assertThat(virtualTableInfos.get(1).getRightSourceTableName()).isEqualTo("source_table");
     assertThat(virtualTableInfos.get(1).getJoinType()).isEqualTo(VirtualTableJoinType.LEFT_OUTER);
 
-    ArgumentCaptor<String> checkCaptor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(checkCaptor.capture());
-    assertThat(checkCaptor.getValue())
-        .isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
-
-    ArgumentCaptor<String> selectCaptor = ArgumentCaptor.forClass(String.class);
-    verify(connection).prepareStatement(selectCaptor.capture());
-    assertThat(selectCaptor.getValue())
-        .isEqualTo(
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
+    verify(connection)
+        .prepareStatement(
             "SELECT * FROM `scalardb`.`virtual_tables` WHERE `left_source_table_full_table_name` = ? OR `right_source_table_full_table_name` = ?");
     verify(preparedStatement).setString(1, "ns.source_table");
     verify(preparedStatement).setString(2, "ns.source_table");
@@ -345,10 +345,11 @@ public class VirtualTableMetadataServiceTest {
   public void getVirtualTableInfosBySourceTable_MetadataTableDoesNotExist_ShouldReturnEmptyList()
       throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    SQLException sqlException = new SQLException("Table doesn't exist", "42S02", 1146);
-    when(checkStatement.execute(anyString())).thenThrow(sqlException);
-    when(connection.createStatement()).thenReturn(checkStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false);
 
     String sourceNamespace = "ns";
     String sourceTable = "source_table";
@@ -360,19 +361,22 @@ public class VirtualTableMetadataServiceTest {
     // Assert
     assertThat(virtualTableInfos).isEmpty();
 
-    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(captor.capture());
-    assertThat(captor.getValue()).isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
   }
 
   @Test
   public void getNamespaceTableNames_ShouldReturnTableNames() throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
 
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
-    when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(anyString()))
+        .thenReturn(checkPreparedStatement, preparedStatement);
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(true, true, false);
     when(resultSet.getString("full_table_name")).thenReturn("ns.table1", "ns.table2");
@@ -386,15 +390,11 @@ public class VirtualTableMetadataServiceTest {
     // Assert
     assertThat(tableNames).containsExactlyInAnyOrder("table1", "table2");
 
-    ArgumentCaptor<String> checkCaptor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(checkCaptor.capture());
-    assertThat(checkCaptor.getValue())
-        .isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
-
-    ArgumentCaptor<String> selectCaptor = ArgumentCaptor.forClass(String.class);
-    verify(connection).prepareStatement(selectCaptor.capture());
-    assertThat(selectCaptor.getValue())
-        .isEqualTo(
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
+    verify(connection)
+        .prepareStatement(
             "SELECT `full_table_name` FROM `scalardb`.`virtual_tables` WHERE `full_table_name` LIKE ?");
     verify(preparedStatement).setString(1, "ns.%");
   }
@@ -403,10 +403,11 @@ public class VirtualTableMetadataServiceTest {
   public void getNamespaceTableNames_MetadataTableDoesNotExist_ShouldReturnEmptySet()
       throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    SQLException sqlException = new SQLException("Table doesn't exist", "42S02", 1146);
-    when(checkStatement.execute(anyString())).thenThrow(sqlException);
-    when(connection.createStatement()).thenReturn(checkStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false);
 
     String namespace = "ns";
 
@@ -416,18 +417,22 @@ public class VirtualTableMetadataServiceTest {
     // Assert
     assertThat(tableNames).isEmpty();
 
-    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(captor.capture());
-    assertThat(captor.getValue()).isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
   }
 
   @Test
   public void getNamespaceNamesOfExistingTables_ShouldReturnNamespaceNames() throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    Statement selectStatement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(checkStatement, selectStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
 
+    Statement selectStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(selectStatement);
     ResultSet resultSet = mock(ResultSet.class);
     when(resultSet.next()).thenReturn(true, true, true, false);
     when(resultSet.getString("full_table_name"))
@@ -440,10 +445,9 @@ public class VirtualTableMetadataServiceTest {
     // Assert
     assertThat(namespaceNames).containsExactlyInAnyOrder("ns1", "ns2");
 
-    ArgumentCaptor<String> checkCaptor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(checkCaptor.capture());
-    assertThat(checkCaptor.getValue())
-        .isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
 
     ArgumentCaptor<String> selectCaptor = ArgumentCaptor.forClass(String.class);
     verify(selectStatement).executeQuery(selectCaptor.capture());
@@ -455,10 +459,11 @@ public class VirtualTableMetadataServiceTest {
   public void getNamespaceNamesOfExistingTables_MetadataTableDoesNotExist_ShouldReturnEmptySet()
       throws Exception {
     // Arrange
-    Statement checkStatement = mock(Statement.class);
-    SQLException sqlException = new SQLException("Table doesn't exist", "42S02", 1146);
-    when(checkStatement.execute(anyString())).thenThrow(sqlException);
-    when(connection.createStatement()).thenReturn(checkStatement);
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(anyString())).thenReturn(checkPreparedStatement);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(false);
 
     // Act
     Set<String> namespaceNames = service.getNamespaceNamesOfExistingTables(connection);
@@ -466,8 +471,8 @@ public class VirtualTableMetadataServiceTest {
     // Assert
     assertThat(namespaceNames).isEmpty();
 
-    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(checkStatement).execute(captor.capture());
-    assertThat(captor.getValue()).isEqualTo("SELECT 1 FROM `scalardb`.`virtual_tables` LIMIT 1");
+    verify(connection).prepareStatement(checkTableExistsSql);
+    verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
+    verify(checkPreparedStatement).setString(2, "virtual_tables");
   }
 }

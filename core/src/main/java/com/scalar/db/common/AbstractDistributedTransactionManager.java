@@ -27,7 +27,7 @@ public abstract class AbstractDistributedTransactionManager
     tableName = Optional.empty();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
@@ -35,39 +35,43 @@ public abstract class AbstractDistributedTransactionManager
     this.tableName = Optional.ofNullable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
     this.namespace = Optional.ofNullable(namespace);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return namespace;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
     this.tableName = Optional.ofNullable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
     return tableName;
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction join(String txId) throws TransactionNotFoundException {
     throw new UnsupportedOperationException("join is not supported in this implementation");
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     throw new UnsupportedOperationException("resume is not supported in this implementation");

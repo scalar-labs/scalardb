@@ -29,6 +29,28 @@ public interface AuthAdmin {
   }
 
   /**
+   * Creates a user with the given username, password, authentication methods and user options. If
+   * the password is null, the user is created without a password. If the authentication methods are
+   * null, the default authentication methods are used.
+   *
+   * @param username the username
+   * @param password the password. If null, the user is created without a password
+   * @param authenticationMethods the authentication methods. If null, the default authentication
+   *     methods are used
+   * @param userOptions the user options
+   * @throws IllegalArgumentException if the user already exists
+   * @throws ExecutionException if the operation fails
+   */
+  default void createUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
    * Alters a user with the given username, password and user options. If the password is null, the
    * password is not changed. If empty, the password is deleted.
    *
@@ -40,6 +62,29 @@ public interface AuthAdmin {
    * @throws ExecutionException if the operation fails
    */
   default void alterUser(String username, @Nullable String password, UserOption... userOptions)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Alters a user with the given username, password, authentication methods and user options. If
+   * the password is null, the password is not changed. If empty, the password is deleted. If the
+   * authentication methods are null, the authentication methods are not changed.
+   *
+   * @param username the username
+   * @param password the password. If null, the password is not changed. If empty, the password is
+   *     deleted
+   * @param authenticationMethods the authentication methods. If null, the authentication methods
+   *     are not changed
+   * @param userOptions the user options
+   * @throws IllegalArgumentException if the user does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default void alterUser(
+      String username,
+      @Nullable String password,
+      @Nullable Set<AuthenticationMethod> authenticationMethods,
+      UserOption... userOptions)
       throws ExecutionException {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
@@ -408,6 +453,42 @@ public interface AuthAdmin {
     throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
   }
 
+  /**
+   * Returns whether the given user has the given privilege on the given table. The check considers
+   * both table-level and namespace-level privileges, including privileges granted transitively via
+   * roles. It also returns {@code true} if the user is a superuser.
+   *
+   * @param username the username
+   * @param namespaceName the namespace name of the table
+   * @param tableName the table name
+   * @param privilege the privilege to check
+   * @return {@code true} if the user has the privilege, {@code false} otherwise
+   * @throws IllegalArgumentException if the user does not exist or the table does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default boolean hasPrivilege(
+      String username, String namespaceName, String tableName, Privilege privilege)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
+  /**
+   * Returns whether the given user has the given privilege on the given namespace. The check
+   * considers privileges granted transitively via roles. It also returns {@code true} if the user
+   * is a superuser.
+   *
+   * @param username the username
+   * @param namespaceName the namespace name
+   * @param privilege the privilege to check
+   * @return {@code true} if the user has the privilege, {@code false} otherwise
+   * @throws IllegalArgumentException if the user does not exist or the namespace does not exist
+   * @throws ExecutionException if the operation fails
+   */
+  default boolean hasPrivilege(String username, String namespaceName, Privilege privilege)
+      throws ExecutionException {
+    throw new UnsupportedOperationException(CoreError.AUTH_NOT_ENABLED.buildMessage());
+  }
+
   /** Represents a user. */
   interface User {
     /**
@@ -423,6 +504,13 @@ public interface AuthAdmin {
      * @return whether the user is a superuser
      */
     boolean isSuperuser();
+
+    /**
+     * Returns the authentication methods associated with the user.
+     *
+     * @return the authentication methods
+     */
+    Set<AuthenticationMethod> getAuthenticationMethods();
   }
 
   /** Represents a role, including its granted roles. */
@@ -488,6 +576,15 @@ public interface AuthAdmin {
      * @return whether admin option is granted for this role grant
      */
     boolean hasAdminOption();
+  }
+
+  /** The authentication methods. */
+  enum AuthenticationMethod {
+    /** Username and password-based authentication. */
+    USERPASS,
+
+    /** OpenID Connect (OIDC) authentication. */
+    OIDC,
   }
 
   /** The user options. */

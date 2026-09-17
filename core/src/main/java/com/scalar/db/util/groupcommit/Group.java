@@ -10,17 +10,17 @@ import org.slf4j.LoggerFactory;
 
 // An abstract class that has logics and implementations to manage slots and trigger to emit it.
 @ThreadSafe
-abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> {
+abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> {
   private static final Logger logger = LoggerFactory.getLogger(Group.class);
 
-  protected final Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter;
+  protected final Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> emitter;
   protected final GroupCommitKeyManipulator<
           PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
       keyManipulator;
   private final int capacity;
   private final AtomicReference<Integer> size = new AtomicReference<>();
   protected final Map<
-          CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>>
+          CHILD_KEY, Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>>
       slots;
   // Whether to reject a new value slot.
   protected final AtomicReference<Status> status = new AtomicReference<>(Status.OPEN);
@@ -61,7 +61,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
   }
 
   Group(
-      Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V> emitter,
+      Emittable<EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> emitter,
       GroupCommitKeyManipulator<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY>
           keyManipulator,
       int capacity,
@@ -82,7 +82,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
   // If it returns null, the Group is already size-fixed and a retry is needed.
   @Nullable
   protected synchronized FULL_KEY reserveNewSlot(
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot) {
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot) {
     if (isSizeFixed()) {
       return null;
     }
@@ -94,8 +94,8 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
   }
 
   private void reserveSlot(
-      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot) {
-    Slot<?, ?, ?, ?, ?, ?> oldSlot = slots.put(slot.key(), slot);
+      Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot) {
+    Slot<?, ?, ?, ?, ?, ?, ?> oldSlot = slots.put(slot.key(), slot);
     if (oldSlot != null) {
       throw new AssertionError(
           String.format("An old slot exist unexpectedly. Slot: %s, Old slot: %s", slot, oldSlot));
@@ -106,7 +106,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
   // This sync is for moving timed-out value slot from a normal buf to a new delayed buf.
   // Returns null if the state of the group is changed (e.g., the slot is moved to another group).
   @Nullable
-  private synchronized Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V>
+  private synchronized Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R>
       putValueToSlot(CHILD_KEY childKey, V value) {
     if (isReady()) {
       logger.debug(
@@ -116,7 +116,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
       return null;
     }
 
-    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot =
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot =
         slots.get(childKey);
     if (slot == null) {
       return null;
@@ -125,20 +125,34 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
     return slot;
   }
 
-  boolean putValueToSlotAndWait(CHILD_KEY childKey, V value) throws GroupCommitException {
-    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot;
+  // Puts the value to the slot and waits until the group is emitted. Returns the emit result
+  // wrapped in an EmitResult on success, or null when a retry is needed (the slot was moved to
+  // another group). The result is wrapped so that a successful emit carrying a null result can be
+  // distinguished from the retry signal.
+  @Nullable
+  EmitResult<R> putValueToSlotAndWait(CHILD_KEY childKey, V value) throws GroupCommitException {
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot;
     synchronized (this) {
       slot = putValueToSlot(childKey, value);
       if (slot == null) {
         // Needs a retry since the state of the group is changed.
-        return false;
+        return null;
       }
       updateStatus();
 
       delegateEmitTaskToWaiterIfReady();
     }
-    slot.waitUntilEmit();
-    return true;
+    return new EmitResult<>(slot.waitUntilEmit());
+  }
+
+  // Wraps the (possibly null) emit result so the caller can distinguish a successful emit (non-null
+  // holder, possibly carrying a null result) from a "retry needed" signal (null holder).
+  static final class EmitResult<R> {
+    @Nullable final R value;
+
+    EmitResult(@Nullable R value) {
+      this.value = value;
+    }
   }
 
   private synchronized void updateSlotsSize() {
@@ -185,7 +199,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
 
     if (newStatus == Status.SIZE_FIXED) {
       int readySlotCount = 0;
-      for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot :
+      for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot :
           slots.values()) {
         if (slot.isReady()) {
           readySlotCount++;
@@ -198,7 +212,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
 
     if (newStatus == Status.READY) {
       int doneSlotCount = 0;
-      for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot :
+      for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot :
           slots.values()) {
         if (slot.isDone()) {
           doneSlotCount++;
@@ -212,7 +226,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
   }
 
   synchronized boolean removeSlot(CHILD_KEY childKey) {
-    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot =
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot =
         slots.get(childKey);
     if (slot == null) {
       // Probably, the slot is already removed by the client or moved from NormalGroup to
@@ -231,7 +245,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
       return false;
     }
 
-    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> removed =
+    Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> removed =
         slots.remove(childKey);
     assert removed != null;
 
@@ -245,7 +259,7 @@ abstract class Group<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL
   }
 
   synchronized void abort() {
-    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V> slot :
+    for (Slot<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EMIT_FULL_KEY, V, R> slot :
         slots.values()) {
       // Tell the clients that the slots are aborted.
       slot.markAsFailed(

@@ -36,7 +36,7 @@ public class ConsensusCommitAdminRepairIntegrationTestWithObjectStorage
 
   @Override
   protected Properties getProps(String testName) {
-    return ObjectStorageEnv.getProperties(testName);
+    return ConsensusCommitObjectStorageEnv.getProperties(testName);
   }
 
   @Override

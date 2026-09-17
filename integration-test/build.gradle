@@ -19,6 +19,7 @@ dependencies {
     implementation "org.mockito:mockito-inline:${mockitoVersion}"
     implementation "org.apache.commons:commons-lang3:${commonsLangVersion}"
     implementation "com.google.code.gson:gson:${gsonVersion}"
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
 
     // for SpotBugs
     compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"

@@ -16,7 +16,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.transaction.consensuscommit.Attribute;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.CoordinatorStateAccessor;
 import com.scalar.db.util.AdminTestUtils;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,8 +49,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
       Paths.get("altered_schema.json").toAbsolutePath();
 
   private static final String NAMESPACE_BASE_NAME = "int_test_";
-  protected static final String TABLE_1 = "test_table1";
-  protected static final String TABLE_2 = "test_table2";
+  protected static final String TABLE_1 = "tbl1";
+  protected static final String TABLE_2 = "tbl2";
 
   private DistributedStorageAdmin storageAdmin;
   private DistributedTransactionAdmin transactionAdmin;
@@ -220,7 +220,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
                     .put("col12", "INT")
                     .put("col13", "BLOB")
                     .build())
-            .put("secondary-index", Arrays.asList("col3", "col12"))
+            .put("secondary-index", Arrays.asList("col8", "col12"))
             .put("compaction-strategy", "LCS")
             .put("network-strategy", "SimpleStrategy")
             .put("replication-factor", "1")
@@ -478,7 +478,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
             .addColumn("col13", DataType.BLOB)
             .removeSecondaryIndex("col1")
             .removeSecondaryIndex("col5")
-            .addSecondaryIndex("col3")
+            .addSecondaryIndex("col8")
             .addSecondaryIndex("col12")
             .build();
     TableMetadata expectedTable2Metadata =
@@ -536,7 +536,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     TableMetadata oldCoordinatorTableMetadata =
         TableMetadata.newBuilder()
             .addColumn(Attribute.ID, DataType.TEXT)
-            // `tx_child_ids` is missing.
+            // `tx_child_ids` and `tx_write_set` are missing.
             .addColumn(Attribute.STATE, DataType.INT)
             .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
             .addPartitionKey(Attribute.ID)
@@ -545,7 +545,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     storageAdmin.createNamespace(getCoordinatorNamespaceName(), storageOption());
     storageAdmin.createTable(
         getCoordinatorNamespaceName(),
-        Coordinator.TABLE,
+        CoordinatorStateAccessor.TABLE,
         oldCoordinatorTableMetadata,
         storageOption());
 
@@ -557,8 +557,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(exitCode).isEqualTo(0);
     waitForCreationIfNecessary();
     assertThat(transactionAdmin.coordinatorTablesExist()).isTrue();
-    assertThat(storageAdmin.getTableMetadata(getCoordinatorNamespaceName(), Coordinator.TABLE))
-        .isEqualTo(Coordinator.TABLE_METADATA);
+    assertThat(
+            storageAdmin.getTableMetadata(
+                getCoordinatorNamespaceName(), CoordinatorStateAccessor.TABLE))
+        .isEqualTo(CoordinatorStateAccessor.TABLE_METADATA);
   }
 
   private void deleteTables_ShouldDeleteTablesWithCoordinator() throws Exception {

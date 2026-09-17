@@ -20,12 +20,15 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
-/** @deprecated As of release 3.5.0. Will be removed in release 5.0.0 */
+/** @deprecated As of release 3.5.0. Will be removed in release 4.0.0 */
 @Deprecated
 @ThreadSafe
 public class TransactionService implements DistributedTransactionManager {
@@ -37,35 +40,35 @@ public class TransactionService implements DistributedTransactionManager {
     this.manager = manager;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     manager.with(namespace, tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
     manager.withNamespace(namespace);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return manager.getNamespace();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
     manager.withTable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
@@ -83,6 +86,17 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction begin(Map<String, String> attributes) throws TransactionException {
+    return manager.begin(attributes);
+  }
+
+  @Override
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.begin(txId, attributes);
+  }
+
+  @Override
   public DistributedTransaction beginReadOnly() throws TransactionException {
     return manager.beginReadOnly();
   }
@@ -90,6 +104,18 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
     return manager.beginReadOnly(txId);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return manager.beginReadOnly(attributes);
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.beginReadOnly(txId, attributes);
   }
 
   @Override
@@ -103,6 +129,17 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction start(Map<String, String> attributes) throws TransactionException {
+    return manager.start(attributes);
+  }
+
+  @Override
+  public DistributedTransaction start(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.start(txId, attributes);
+  }
+
+  @Override
   public DistributedTransaction startReadOnly() throws TransactionException {
     return manager.startReadOnly();
   }
@@ -110,6 +147,18 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction startReadOnly(String txId) throws TransactionException {
     return manager.startReadOnly(txId);
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return manager.startReadOnly(attributes);
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return manager.startReadOnly(txId, attributes);
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -158,6 +207,8 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.start(txId, isolation, strategy);
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return manager.resume(txId);
@@ -179,6 +230,18 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public boolean finishTransaction(String txId) throws TransactionException {
+    return manager.finishTransaction(txId);
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey)
+      throws TransactionException {
+    return manager.recoverRecord(namespace, table, partitionKey, clusteringKey);
+  }
+
+  @Override
   public Optional<Result> get(Get get) throws CrudException, UnknownTransactionStatusException {
     return manager.get(get);
   }
@@ -193,14 +256,14 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.getScanner(scan);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     manager.put(put);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -227,7 +290,7 @@ public class TransactionService implements DistributedTransactionManager {
     manager.delete(delete);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {

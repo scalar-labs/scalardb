@@ -1615,4 +1615,266 @@ public class ConsensusCommitUtilsTest {
                 .consistency(Consistency.LINEARIZABLE)
                 .build());
   }
+
+  @Test
+  public void
+      buildTransactionTableMetadata_tableMetadataWithSecondaryIndexGiven_shouldAddBeforeImageSecondaryIndex() {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .addSecondaryIndex(Attribute.BEFORE_PREFIX + BALANCE)
+            .build();
+
+    // Act
+    TableMetadata actual = ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      buildTransactionTableMetadata_WithIndexEventuallyConsistentReadEnabled_shouldNotAddBeforeImageSecondaryIndex() {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(Attribute.BEFORE_ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    // Act
+    TableMetadata actual = ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata, true);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      buildTransactionMetadataTableMetadata_tableMetadataWithSecondaryIndexGiven_shouldAddBeforeImageSecondaryIndex() {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(Attribute.BEFORE_PREFIX + BALANCE)
+            .build();
+
+    // Act
+    TableMetadata actual =
+        ConsensusCommitUtils.buildTransactionMetadataTableMetadata(tableMetadata);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      buildTransactionMetadataTableMetadata_WithIndexEventuallyConsistentReadEnabled_shouldNotAddBeforeImageSecondaryIndex() {
+    // Arrange
+    final String ACCOUNT_ID = "account_id";
+    final String ACCOUNT_TYPE = "account_type";
+    final String BALANCE = "balance";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .addSecondaryIndex(BALANCE)
+            .build();
+
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.ID, DataType.TEXT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.STATE, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.VERSION, DataType.INT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.PREPARED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + Attribute.COMMITTED_AT, DataType.BIGINT)
+            .addColumn(Attribute.BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+
+    // Act
+    TableMetadata actual =
+        ConsensusCommitUtils.buildTransactionMetadataTableMetadata(tableMetadata, true);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void createBeforeIndexScan_ScanWithIndex_shouldCreateScanWithBeforeIndexKey() {
+    // Arrange
+    Scan scanWithIndex =
+        Scan.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofInt("col1", 10)).build();
+
+    // Act
+    Scan result = ConsensusCommitUtils.createBeforeIndexScan(scanWithIndex);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .indexKey(Key.ofInt(Attribute.BEFORE_PREFIX + "col1", 10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void createBeforeIndexScan_GetWithIndex_shouldCreateScanWithBeforeIndexKey() {
+    // Arrange
+    Get getWithIndex =
+        Get.newBuilder().namespace("ns").table("tbl").indexKey(Key.ofText("col1", "value")).build();
+
+    // Act
+    Scan result = ConsensusCommitUtils.createBeforeIndexScan(getWithIndex);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .indexKey(Key.ofText(Attribute.BEFORE_PREFIX + "col1", "value"))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
+
+  @Test
+  public void
+      createBeforeIndexScanAll_ScanAllWithIndexedColumnCondition_shouldCreateScanAllWithBeforeImageConditions() {
+    // Arrange
+    TableMetadata metadata =
+        ConsensusCommitUtils.buildTransactionTableMetadata(
+            TableMetadata.newBuilder()
+                .addColumn("pk", DataType.INT)
+                .addColumn("col1", DataType.INT)
+                .addColumn("col2", DataType.TEXT)
+                .addPartitionKey("pk")
+                .addSecondaryIndex("col1")
+                .build());
+
+    ScanAll scanAll =
+        (ScanAll)
+            ScanAll.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column("col1").isEqualToInt(10))
+                .build();
+
+    // Act
+    Scan result = ConsensusCommitUtils.createBeforeIndexScanAll(scanAll, metadata);
+
+    // Assert
+    assertThat(result)
+        .isEqualTo(
+            Scan.newBuilder()
+                .namespace("ns")
+                .table("tbl")
+                .all()
+                .where(column(Attribute.BEFORE_PREFIX + "col1").isEqualToInt(10))
+                .consistency(Consistency.LINEARIZABLE)
+                .build());
+  }
 }

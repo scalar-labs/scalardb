@@ -1,7 +1,6 @@
 package com.scalar.db.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
@@ -38,19 +37,6 @@ public class BigIntColumnTest {
     assertThatThrownBy(column::getTimestampValue).isInstanceOf(UnsupportedOperationException.class);
     assertThatThrownBy(column::getTimestampTZValue)
         .isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
-  public void of_OutOfRangeBigIntValuesGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-
-    // Act Assert
-    assertThatCode(() -> BigIntColumn.of("col", BigIntColumn.MAX_VALUE)).doesNotThrowAnyException();
-    assertThatThrownBy(() -> BigIntColumn.of("col", BigIntColumn.MAX_VALUE + 1))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatCode(() -> BigIntColumn.of("col", BigIntColumn.MIN_VALUE)).doesNotThrowAnyException();
-    assertThatThrownBy(() -> BigIntColumn.of("col", BigIntColumn.MIN_VALUE - 1))
-        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

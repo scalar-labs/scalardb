@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
@@ -20,8 +19,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -29,6 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class RdbEngineMysql extends AbstractRdbEngine {
+
+  private static final String PERMIT_MYSQL_SCHEME_PARAMETER = "permitMysqlScheme";
+  private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
+      "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
@@ -93,7 +94,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     return false;
   }
 
@@ -105,12 +106,6 @@ class RdbEngineMysql extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP SCHEMA " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the schema failed: " + namespace, e);
   }
 
   @Override
@@ -152,8 +147,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " LIMIT 1";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
   }
 
   @Override
@@ -191,6 +186,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
     // Error number: 1050; Symbol: ER_TABLE_EXISTS_ERROR; SQLSTATE: 42S01
     // Message: Table '%s' already exists
     return e.getErrorCode() == 1050;
@@ -201,32 +197,40 @@ class RdbEngineMysql extends AbstractRdbEngine {
     if (e.getSQLState() == null) {
       return false;
     }
+
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
     // Error number: 1022; Symbol: ER_DUP_KEY; SQLSTATE: 23000
     // Message: Can't write; duplicate key in table '%s'
-    // etc... See: <https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html>
     return e.getSQLState().equals("23000");
   }
 
   @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // Error number: 1049; Symbol: ER_BAD_DB_ERROR; SQLSTATE: 42000
-    // Message: Unknown database '%s'
-
-    // Error number: 1146; Symbol: ER_NO_SUCH_TABLE; SQLSTATE: 42S02
-    // Message: Table '%s.%s' doesn't exist
-
-    return e.getErrorCode() == 1049 || e.getErrorCode() == 1146;
-  }
-
-  @Override
   public boolean isConflict(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
     // Error number: 1213; Symbol: ER_LOCK_DEADLOCK; SQLSTATE: 40001
     // Message: Deadlock found when trying to get lock; try restarting transaction
 
     // Error number: 1205; Symbol: ER_LOCK_WAIT_TIMEOUT; SQLSTATE: HY000
     // Message: Lock wait timeout exceeded; try restarting transaction
 
+    // Do not add the AWS Advanced JDBC Wrapper failover SQLStates (08001, 08S02, 08007) here.
+    // A conflict is converted into a RetriableExecutionException by JdbcDatabase, which tells the
+    // caller the operation definitely did not apply and is safe to retry. A failover gives no such
+    // guarantee: the outcome may be unknown, or the write may already have been applied on the old
+    // writer. See RdbEngineMysqlTest#isConflict_GivenFailoverSqlStates_ShouldReturnFalse.
     return e.getErrorCode() == 1213 || e.getErrorCode() == 1205;
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // https://dev.mysql.com/doc/mysql-errors/8.0/en/server-error-reference.html
+    // Error number: 1091; Symbol: ER_CANT_DROP_FIELD_OR_KEY; SQLSTATE: 42000
+    // Message: Can't DROP '%s'; check that column/key exists
+
+    // Error number: 1176; Symbol: ER_KEY_NOT_FOUND; SQLSTATE: 42000
+    // Message: Key '%s' doesn't exist in table '%s'
+
+    return e.getErrorCode() == 1091 || e.getErrorCode() == 1176;
   }
 
   @Override
@@ -288,6 +292,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String columnDescription,
       @Nullable DataType overrideDataType) {
     switch (type) {
+      case BOOLEAN:
+        return DataType.BOOLEAN;
       case BIT:
         if (columnSize != 1) {
           throw new IllegalArgumentException(
@@ -367,8 +373,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
         return DataType.DATE;
       case TIME:
         return DataType.TIME;
-        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
       case TIMESTAMP:
+        // Both MySQL TIMESTAMP and DATETIME data types are mapped to the TIMESTAMP JDBC type
         if (overrideDataType == DataType.TIMESTAMPTZ || typeName.equalsIgnoreCase("TIMESTAMP")) {
           return DataType.TIMESTAMPTZ;
         }
@@ -422,7 +428,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String getDriverClassName() {
-    return com.mysql.cj.jdbc.Driver.class.getName();
+    return org.mariadb.jdbc.Driver.class.getName();
   }
 
   @Override
@@ -473,7 +479,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
     if (localDateTime == null) {
       return TimestampTZColumn.ofNull(columnName);
     } else {
-      return TimestampTZColumn.of(columnName, localDateTime.toInstant(ZoneOffset.UTC));
+      return TimestampTZColumn.ofStrict(columnName, localDateTime.toInstant(ZoneOffset.UTC));
     }
   }
 
@@ -484,20 +490,46 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public Map<String, String> getConnectionProperties(JdbcConfig config) {
-    if (config.getDatabaseConfig().getScanFetchSize() == Integer.MIN_VALUE) {
-      // If the scan fetch size is set to Integer.MIN_VALUE, use the streaming mode.
-      return Collections.emptyMap();
+  public String adjustJdbcUrl(String jdbcUrl) {
+    String adjustedJdbcUrl = jdbcUrl;
+
+    // MariaDB Connector/J checks for "permitMysqlScheme" in the JDBC URL during URL parsing before
+    // any connection properties are applied. If the URL starts with "jdbc:mysql:" and doesn't
+    // contain "permitMysqlScheme", the driver rejects the URL entirely. That's why we need to embed
+    // it directly in the JDBC URL rather than using getConnectionProperties().
+    if (!adjustedJdbcUrl.contains(PERMIT_MYSQL_SCHEME_PARAMETER)) {
+      adjustedJdbcUrl = appendParameter(adjustedJdbcUrl, PERMIT_MYSQL_SCHEME_PARAMETER + "=true");
     }
 
-    // Otherwise, use the cursor fetch mode.
-    return Collections.singletonMap("useCursorFetch", "true");
+    // ScalarDB talks to MySQL through MariaDB Connector/J and does not bundle MySQL Connector/J.
+    // The AWS Advanced JDBC Wrapper, however, defaults to the MySQL Connector/J dialect for a
+    // "jdbc:mysql://" URL, so without this the wrapper asks for a driver that is not on the
+    // classpath. Users who set the dialect themselves keep their choice.
+    //
+    // The trailing "3" is MariaDB Connector/J's major version, which the wrapper builds into the
+    // dialect name -- it defines no equivalent for any other major version. Moving ScalarDB to a
+    // v4 driver therefore needs a wrapper that names a v4 dialect, and this value updated to match.
+    if (JdbcUtils.isAwsWrapperUrl(jdbcUrl)
+        && !adjustedJdbcUrl.contains(WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER)) {
+      adjustedJdbcUrl =
+          appendParameter(
+              adjustedJdbcUrl, WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER + "=mariadb-connector-j-3");
+    }
+
+    return adjustedJdbcUrl;
+  }
+
+  private static String appendParameter(String jdbcUrl, String parameter) {
+    return jdbcUrl + (jdbcUrl.contains("?") ? "&" : "?") + parameter;
   }
 
   @Override
-  public void setConnectionToReadOnly(Connection connection, boolean readOnly) throws SQLException {
-    // Observed performance degradation when using read-only connections in MySQL. So we do not
-    // set the read-only mode for MySQL connections.
+  public void setConnectionToReadOnly(Connection connection, boolean readOnly) {
+    // Do nothing. Setting a connection to read-only brings no benefit in MySQL: read-only is
+    // enforced at the ScalarDB layer (see ReadOnlyDistributedTransaction) and the read paths
+    // only issue SELECTs, while MariaDB Connector/J 3.5.10 and later issue SET SESSION
+    // TRANSACTION READ ONLY / READ WRITE, which adds two round trips per read since HikariCP
+    // restores the pool default on connection return. TiDB rejects the statement entirely.
   }
 
   @Override

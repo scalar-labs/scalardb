@@ -1,8 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.exception.transaction.CrudException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TransactionContext {
 
@@ -23,23 +25,42 @@ public class TransactionContext {
   // a transaction.
   public final boolean oneOperation;
 
+  // Whether a group commit slot was reserved for this transaction at begin time. It is true only
+  // when the group commit feature is enabled and a slot was actually reserved (see
+  // ConsensusCommitManager.begin()). The rollback and commit paths check this flag to decide
+  // whether the reserved slot must be released.
+  public final boolean groupCommitSlotReserved;
+
   // A list of scanners opened in the transaction
   public final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
-  // A list of recovery results performed in the transaction
-  public final List<RecoveryExecutor.Result> recoveryResults = new ArrayList<>();
+  // A list of recovery results for asynchronously executed recoveries. These are tracked so that
+  // their completion can be awaited before committing the transaction if necessary.
+  public final List<RecoveryExecutor.Result> recoveryResults = new CopyOnWriteArrayList<>();
 
   public TransactionContext(
       String transactionId,
       Snapshot snapshot,
       Isolation isolation,
       boolean readOnly,
-      boolean oneOperation) {
+      boolean oneOperation,
+      boolean groupCommitSlotReserved) {
     this.transactionId = transactionId;
     this.snapshot = snapshot;
     this.isolation = isolation;
     this.readOnly = readOnly;
     this.oneOperation = oneOperation;
+    this.groupCommitSlotReserved = groupCommitSlotReserved;
+  }
+
+  @VisibleForTesting
+  TransactionContext(
+      String transactionId,
+      Snapshot snapshot,
+      Isolation isolation,
+      boolean readOnly,
+      boolean oneOperation) {
+    this(transactionId, snapshot, isolation, readOnly, oneOperation, false);
   }
 
   public boolean isSnapshotReadRequired() {
@@ -74,6 +95,14 @@ public class TransactionContext {
               Snapshot.Key key = new Snapshot.Key(getSetEntry.getKey());
               return !snapshot.containsKeyInWriteSet(key) && !snapshot.containsKeyInDeleteSet(key);
             });
+  }
+
+  public boolean isCommitRequired() {
+    // commitRecords is required iff this transaction has writes or deletes to commit. In the
+    // TwoPhaseCommit protocol this is the single source the participant uses both to drive the
+    // Coordinator's commit-step skip (via PreparationResult#isCommitRequired) and to decide the
+    // validate-step self-release, so those two stay in lockstep.
+    return snapshot.hasWritesOrDeletes();
   }
 
   public boolean areAllScannersClosed() {

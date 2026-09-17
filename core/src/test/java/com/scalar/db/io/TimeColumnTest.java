@@ -138,18 +138,36 @@ class TimeColumnTest {
   }
 
   @Test
-  public void constructor_valueWithSubMicrosecondPrecision_ShouldThrowIllegalArgumentException() {
+  public void of_valueWithSubMicrosecondPrecision_ShouldTruncate() {
+    // Arrange
+    LocalTime timeWithThreeDigitNano = LocalTime.now(Clock.systemUTC()).withNano(123_456_789);
+    LocalTime timeWithTwoDigitNano = LocalTime.now(Clock.systemUTC()).withNano(123_456_780);
+    LocalTime timeWithOneDigitNano = LocalTime.now(Clock.systemUTC()).withNano(123_456_700);
+
+    // Act
+    TimeColumn col1 = TimeColumn.of("col", timeWithThreeDigitNano);
+    TimeColumn col2 = TimeColumn.of("col", timeWithTwoDigitNano);
+    TimeColumn col3 = TimeColumn.of("col", timeWithOneDigitNano);
+
+    // Assert
+    assertThat(col1.getTimeValue()).isEqualTo(timeWithThreeDigitNano.withNano(123_456_000));
+    assertThat(col2.getTimeValue()).isEqualTo(timeWithTwoDigitNano.withNano(123_456_000));
+    assertThat(col3.getTimeValue()).isEqualTo(timeWithOneDigitNano.withNano(123_456_000));
+  }
+
+  @Test
+  public void ofStrict_valueWithSubMicrosecondPrecision_ShouldThrowIllegalArgumentException() {
     // Arrange
     LocalTime timeWithThreeDigitNano = LocalTime.now(Clock.systemUTC()).withNano(123_456_789);
     LocalTime timeWithTwoDigitNano = LocalTime.now(Clock.systemUTC()).withNano(123_456_780);
     LocalTime timeWithOneDigitNano = LocalTime.now(Clock.systemUTC()).withNano(123_456_700);
 
     // Act Assert
-    assertThatThrownBy(() -> TimeColumn.of("col", timeWithThreeDigitNano))
+    assertThatThrownBy(() -> TimeColumn.ofStrict("col", timeWithThreeDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimeColumn.of("col", timeWithTwoDigitNano))
+    assertThatThrownBy(() -> TimeColumn.ofStrict("col", timeWithTwoDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> TimeColumn.of("col", timeWithOneDigitNano))
+    assertThatThrownBy(() -> TimeColumn.ofStrict("col", timeWithOneDigitNano))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

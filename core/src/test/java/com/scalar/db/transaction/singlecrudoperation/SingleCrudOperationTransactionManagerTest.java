@@ -1113,4 +1113,23 @@ public class SingleCrudOperationTransactionManagerTest {
     assertThatThrownBy(() -> transactionManager.batch(Arrays.asList(get1, get2)))
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  public void finishTransaction_ShouldThrowUnsupportedOperationException() {
+    // Act + Assert
+    assertThatThrownBy(() -> transactionManager.finishTransaction("any-id"))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageStartingWith("DB-CORE-10290:");
+  }
+
+  @Test
+  public void recoverRecord_ShouldThrowUnsupportedOperationException() {
+    // Act + Assert
+    assertThatThrownBy(
+            () ->
+                transactionManager.recoverRecord(
+                    "ns", "tbl", Key.ofText("pk", "pv"), Key.ofText("ck", "cv")))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageStartingWith("DB-CORE-10292:");
+  }
 }

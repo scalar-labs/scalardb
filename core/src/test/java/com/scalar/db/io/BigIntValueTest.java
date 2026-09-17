@@ -12,7 +12,7 @@ public class BigIntValueTest {
   @Test
   public void get_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     BigIntValue value = new BigIntValue(ANY_NAME, expected);
 
     // Act
@@ -25,7 +25,7 @@ public class BigIntValueTest {
   @Test
   public void getAsLong_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act
@@ -38,7 +38,7 @@ public class BigIntValueTest {
   @Test
   public void getAsFloat_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act
@@ -51,7 +51,7 @@ public class BigIntValueTest {
   @Test
   public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act
@@ -65,7 +65,7 @@ public class BigIntValueTest {
   public void
       getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act Assert
@@ -75,7 +75,7 @@ public class BigIntValueTest {
   @Test
   public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act Assert
@@ -85,7 +85,7 @@ public class BigIntValueTest {
   @Test
   public void getAsString_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act Assert
@@ -95,7 +95,7 @@ public class BigIntValueTest {
   @Test
   public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act Assert
@@ -106,7 +106,7 @@ public class BigIntValueTest {
   public void
       getAsByteBuffer_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    long expected = BigIntValue.MAX_VALUE;
+    long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
     // Act Assert
@@ -116,7 +116,7 @@ public class BigIntValueTest {
   @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
-    long some = BigIntValue.MAX_VALUE;
+    long some = Long.MAX_VALUE;
     BigIntValue one = new BigIntValue(ANY_NAME, some);
     BigIntValue another = new BigIntValue(ANY_NAME, some);
 
@@ -130,7 +130,7 @@ public class BigIntValueTest {
   @Test
   public void equals_DifferentObjectsSameValuesDifferentNamesGiven_ShouldReturnFalse() {
     // Arrange
-    long some = BigIntValue.MAX_VALUE;
+    long some = Long.MAX_VALUE;
     BigIntValue one = new BigIntValue(ANY_NAME, some);
     BigIntValue another = new BigIntValue(ANOTHER_NAME, some);
 
@@ -144,7 +144,7 @@ public class BigIntValueTest {
   @Test
   public void equals_SameObjectsGiven_ShouldReturnTrue() {
     // Arrange
-    long some = BigIntValue.MAX_VALUE;
+    long some = Long.MAX_VALUE;
     BigIntValue value = new BigIntValue(ANY_NAME, some);
 
     // Act
@@ -158,8 +158,8 @@ public class BigIntValueTest {
   @Test
   public void equals_DifferentObjectsDifferentValuesGiven_ShouldReturnFalse() {
     // Arrange
-    long one = BigIntValue.MAX_VALUE;
-    long another = BigIntValue.MAX_VALUE - 1;
+    long one = Long.MAX_VALUE;
+    long another = Long.MAX_VALUE - 1;
     BigIntValue oneValue = new BigIntValue(ANY_NAME, one);
     BigIntValue anotherValue = new BigIntValue(ANY_NAME, another);
 
@@ -188,8 +188,8 @@ public class BigIntValueTest {
   @Test
   public void compareTo_ThisBiggerThanGiven_ShouldReturnPositive() {
     // Arrange
-    long one = BigIntValue.MAX_VALUE;
-    long another = BigIntValue.MAX_VALUE - 1;
+    long one = Long.MAX_VALUE;
+    long another = Long.MAX_VALUE - 1;
     BigIntValue oneValue = new BigIntValue(ANY_NAME, one);
     BigIntValue anotherValue = new BigIntValue(ANY_NAME, another);
 
@@ -203,8 +203,8 @@ public class BigIntValueTest {
   @Test
   public void compareTo_ThisEqualsToGiven_ShouldReturnZero() {
     // Arrange
-    long one = BigIntValue.MAX_VALUE;
-    long another = BigIntValue.MAX_VALUE;
+    long one = Long.MAX_VALUE;
+    long another = Long.MAX_VALUE;
     BigIntValue oneValue = new BigIntValue(ANY_NAME, one);
     BigIntValue anotherValue = new BigIntValue(ANY_NAME, another);
 
@@ -218,8 +218,8 @@ public class BigIntValueTest {
   @Test
   public void compareTo_ThisSmallerThanGiven_ShouldReturnNegative() {
     // Arrange
-    long one = BigIntValue.MAX_VALUE - 1;
-    long another = BigIntValue.MAX_VALUE;
+    long one = Long.MAX_VALUE - 1;
+    long another = Long.MAX_VALUE;
     BigIntValue oneValue = new BigIntValue(ANY_NAME, one);
     BigIntValue anotherValue = new BigIntValue(ANY_NAME, another);
 
@@ -234,19 +234,5 @@ public class BigIntValueTest {
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
     assertThatThrownBy(() -> new BigIntValue(null, 0)).isInstanceOf(NullPointerException.class);
-  }
-
-  @Test
-  public void constructor_NumberOverMaxValueGiven_ShouldThrowIllegalArgumentException() {
-    // Act Assert
-    assertThatThrownBy(() -> new BigIntValue(ANY_NAME, BigIntValue.MAX_VALUE + 1))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void constructor_NumberUnderMinValueGiven_ShouldThrowIllegalArgumentException() {
-    // Act Assert
-    assertThatThrownBy(() -> new BigIntValue(ANY_NAME, BigIntValue.MIN_VALUE - 1))
-        .isInstanceOf(IllegalArgumentException.class);
   }
 }

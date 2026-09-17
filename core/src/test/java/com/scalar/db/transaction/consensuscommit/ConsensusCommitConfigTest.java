@@ -20,6 +20,7 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
     assertThat(config.getCoordinatorNamespace()).isNotPresent();
+    assertThat(config.getParticipantId()).isNotPresent();
     assertThat(config.getParallelExecutorCount()).isEqualTo(128);
     assertThat(config.isParallelPreparationEnabled()).isTrue();
     assertThat(config.isParallelValidationEnabled()).isTrue();
@@ -31,6 +32,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isOnePhaseCommitEnabled()).isFalse();
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
+    assertThat(config.isIndexEventuallyConsistentReadEnabled()).isFalse();
   }
 
   @Test
@@ -82,6 +84,20 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getCoordinatorNamespace()).isPresent();
     assertThat(config.getCoordinatorNamespace().get()).isEqualTo("changed_coordinator");
+  }
+
+  @Test
+  public void constructor_PropertiesWithParticipantIdGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.PARTICIPANT_ID, "participant-1");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.getParticipantId()).isPresent();
+    assertThat(config.getParticipantId().get()).isEqualTo("participant-1");
   }
 
   @Test
@@ -207,5 +223,19 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isIncludeMetadataEnabled()).isTrue();
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithIndexEventuallyConsistentReadEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isIndexEventuallyConsistentReadEnabled()).isTrue();
   }
 }

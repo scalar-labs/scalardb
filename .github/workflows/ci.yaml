@@ -94,16 +94,16 @@ jobs:
     if: ${{ !inputs.INTEGRATION_TEST_ONLY }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6.0.1
         with:
           java-version: 8
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6.3.0
 
       - name: Execute Gradle 'check' task
         id: run-gradle-check
@@ -155,16 +155,16 @@ jobs:
     if: ${{ !inputs.INTEGRATION_TEST_ONLY }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6.0.1
         with:
           java-version: 8
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6.3.0
 
       - name: Dockerfile Lint for ScalarDB Schema Loader
         run: ./gradlew schema-loader:dockerfileLint
@@ -190,7 +190,7 @@ jobs:
     outputs:
       test_matrix: ${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Groovy
         run: |
@@ -265,7 +265,7 @@ jobs:
       matrix: ${{ fromJSON(needs.integration-test-jobs-planner.outputs.test_matrix) }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download test configuration
         uses: actions/download-artifact@v8
@@ -307,14 +307,14 @@ jobs:
         run: ${{ env.SETUP_CMD }}
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6.0.1
         with:
           java-version: 8
           distribution: temurin
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         id: setup-int-test-jdk
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6.0.1
         # On Linux runner, skip if Oracle JDK is specified
         # On Windows runner, skip if Oracle JDK 8 or 11 is specified
         if: ${{ (runner.os == 'Linux' && env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle') || (runner.os == 'Windows' && !(env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (env.INT_TEST_JAVA_RUNTIME_VERSION == '8' || env.INT_TEST_JAVA_RUNTIME_VERSION == '11')))  }}
@@ -350,7 +350,7 @@ jobs:
           echo "JAVA_HOME=C:\Program Files\Java\${jdk_root_dir}" >> ${env:GITHUB_ENV}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6.3.0
 
       - name: Wait for the database to be ready
         if: ${{ env.DB_HEALTHCHECK_CMD != '' }}
@@ -415,7 +415,7 @@ jobs:
       - integration-test
     steps:
       - name: Delete test configuration
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         if: needs.integration-test.result == 'success'
         with:
           name: ci_internal_tests_config-${{ env.ARTIFACT_SUFFIX }}

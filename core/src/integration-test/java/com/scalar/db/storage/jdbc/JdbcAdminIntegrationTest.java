@@ -78,27 +78,59 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   }
 
   @SuppressWarnings("unused")
+  private boolean isSpanner() {
+    return JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isRenameKeyAndIndexColumnNotSupported() {
+    return JdbcEnv.isDb2() || JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isRenameTableNotSupported() {
+    return JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isIndexOnFloatColumnNotSupported() {
+    return JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isColumnTypeConversionToTextNotFullySupported() {
     return JdbcTestUtils.isDb2(rdbEngine)
         || JdbcTestUtils.isOracle(rdbEngine)
         || JdbcTestUtils.isSqlite(rdbEngine)
+        || JdbcTestUtils.isSpanner(rdbEngine)
         || isTidb();
   }
 
   @SuppressWarnings("unused")
   private boolean isWideningColumnTypeConversionNotFullySupported() {
-    return JdbcTestUtils.isOracle(rdbEngine) || JdbcTestUtils.isSqlite(rdbEngine);
+    return JdbcTestUtils.isOracle(rdbEngine)
+        || JdbcTestUtils.isSqlite(rdbEngine)
+        || JdbcTestUtils.isSpanner(rdbEngine);
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isDb2OrSpanner() {
+    return JdbcEnv.isDb2() || JdbcEnv.isSpanner();
   }
 
   @Test
   @Override
   @DisabledIf("isSqlite")
   public void
-      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException() {}
+      dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    super
+        .dropNamespace_ForNamespaceWithNonScalarDBManagedTables_ShouldThrowIllegalArgumentException();
+  }
 
   @Test
   @Override
-  @DisabledIf("isDb2")
+  @DisabledIf("isRenameKeyAndIndexColumnNotSupported")
   public void renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly()
       throws ExecutionException {
     super.renameColumn_ForPrimaryKeyColumn_ShouldRenameColumnCorrectly();
@@ -106,7 +138,7 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
 
   @Test
   @Override
-  @DisabledIf("isDb2")
+  @DisabledIf("isRenameKeyAndIndexColumnNotSupported")
   public void renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly()
       throws ExecutionException {
     super.renameColumn_ForIndexKeyColumn_ShouldRenameColumnAndIndexCorrectly();
@@ -149,6 +181,55 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
     } finally {
       admin.dropTable(getNamespace1(), getTable4(), true);
     }
+  }
+
+  @Test
+  @EnabledIf("isSpanner")
+  public void renameColumn_Spanner_ForAnyColumn_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    try {
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.TEXT)
+              .addColumn(getColumnName4(), DataType.TEXT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2())
+              .addSecondaryIndex(getColumnName3())
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
+      assertThatCode(
+              () ->
+                  admin.renameColumn(
+                      getNamespace1(), getTable4(), getColumnName1(), getColumnName5()))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.renameColumn(
+                      getNamespace1(), getTable4(), getColumnName2(), getColumnName5()))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.renameColumn(
+                      getNamespace1(), getTable4(), getColumnName3(), getColumnName5()))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.renameColumn(
+                      getNamespace1(), getTable4(), getColumnName4(), getColumnName5()))
+          .isInstanceOf(UnsupportedOperationException.class);
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+    }
+  }
+
+  @Test
+  @Override
+  @DisabledIf("isSpanner")
+  public void renameColumn_ShouldRenameColumnCorrectly() throws ExecutionException {
+    super.renameColumn_ShouldRenameColumnCorrectly();
   }
 
   @Test
@@ -508,6 +589,130 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
   }
 
   @Test
+  @EnabledIf("isSpanner")
+  public void
+      alterColumnType_Spanner_AlterColumnTypeFromEachExistingDataTypeToText_ShouldAlterColumnTypesCorrectlyIfSupported()
+          throws ExecutionException {
+    // Only BLOB to TEXT alteration is supported
+    try (DistributedStorage storage = storageFactory.getStorage()) {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.BLOB)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName11(), DataType.TIMESTAMP)
+              .addColumn(getColumnName12(), DataType.TIMESTAMPTZ)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
+              .build();
+
+      admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
+      PutBuilder.Buildable put =
+          Put.newBuilder()
+              .namespace(getNamespace1())
+              .table(getTable4())
+              .partitionKey(Key.ofInt(getColumnName1(), 1))
+              .clusteringKey(Key.ofInt(getColumnName2(), 2))
+              .intValue(getColumnName3(), 1)
+              .bigIntValue(getColumnName4(), 2L)
+              .floatValue(getColumnName5(), 3.0f)
+              .doubleValue(getColumnName6(), 4.0d)
+              .textValue(getColumnName7(), "5")
+              .blobValue(getColumnName8(), "6".getBytes(StandardCharsets.UTF_8))
+              .dateValue(getColumnName9(), LocalDate.now(ZoneId.of("UTC")))
+              .timeValue(getColumnName10(), LocalTime.now(ZoneId.of("UTC")))
+              .timestampValue(getColumnName11(), LocalDateTime.now(ZoneOffset.UTC))
+              .timestampTZValue(getColumnName12(), Instant.now());
+
+      storage.put(put.build());
+      storage.close();
+
+      // Act Assert
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName3(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName4(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName5(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName6(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName7(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName8(), DataType.TEXT))
+          .doesNotThrowAnyException();
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName9(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName10(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName11(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName12(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+
+      TableMetadata expectedTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addColumn(getColumnName4(), DataType.BIGINT)
+              .addColumn(getColumnName5(), DataType.FLOAT)
+              .addColumn(getColumnName6(), DataType.DOUBLE)
+              .addColumn(getColumnName7(), DataType.TEXT)
+              .addColumn(getColumnName8(), DataType.TEXT)
+              .addColumn(getColumnName9(), DataType.DATE)
+              .addColumn(getColumnName10(), DataType.TIME)
+              .addColumn(getColumnName11(), DataType.TIMESTAMP)
+              .addColumn(getColumnName12(), DataType.TIMESTAMPTZ)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
+              .build();
+      assertThat(admin.getTableMetadata(getNamespace1(), getTable4()))
+          .isEqualTo(expectedTableMetadata);
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+    }
+  }
+
+  @Test
   @Override
   @DisabledIf("isWideningColumnTypeConversionNotFullySupported")
   public void alterColumnType_WideningConversion_ShouldAlterColumnTypesCorrectly()
@@ -615,8 +820,173 @@ public class JdbcAdminIntegrationTest extends DistributedStorageAdminIntegration
     }
   }
 
+  @Test
+  @EnabledIf("isSpanner")
+  public void alterColumnType_Spanner_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    try {
+      Map<String, String> options = getCreationOptions();
+      TableMetadata currentTableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(getColumnName2(), DataType.INT)
+              .addColumn(getColumnName3(), DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addClusteringKey(getColumnName2(), Scan.Ordering.Order.ASC)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), currentTableMetadata, options);
+      assertThatCode(
+              () ->
+                  admin.alterColumnType(
+                      getNamespace1(), getTable4(), getColumnName3(), DataType.TEXT))
+          .isInstanceOf(UnsupportedOperationException.class);
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+    }
+  }
+
   @Override
   protected boolean isIndexOnBlobColumnSupported() {
-    return !(JdbcTestUtils.isDb2(rdbEngine) || JdbcTestUtils.isOracle(rdbEngine));
+    return !(JdbcTestUtils.isDb2(rdbEngine)
+        || JdbcTestUtils.isOracle(rdbEngine)
+        || JdbcTestUtils.isSpanner(rdbEngine));
+  }
+
+  @Override
+  protected boolean isIndexOnFloatColumnSupported() {
+    return !JdbcTestUtils.isSpanner(rdbEngine);
+  }
+
+  @Override
+  protected boolean isRenameTableSupported() {
+    return !JdbcTestUtils.isSpanner(rdbEngine);
+  }
+
+  @Test
+  @DisabledIf("isDb2")
+  public void dropIndex_WithLongIndexNameCreatedByOldNaming_ShouldDropIndexByFallback()
+      throws Exception {
+    // Use a long column name that causes the index name to exceed the max length
+    // The column name is chosen so that the original index name
+    // (index_{namespace}_{table}_{column}) is exactly 64 characters, which exceeds the 63-character
+    // limit to trigger shortening but is still within MySQL's 64-character limit.
+    String longColumn = "long_column_name_for_testing1";
+    JdbcAdminTestUtils testUtils = (JdbcAdminTestUtils) getAdminTestUtils(getTestName());
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(longColumn, DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(longColumn)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), tableMetadata, options);
+
+      // Replace the shortened index with the old (long) naming convention
+      String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
+      String originalIndexName =
+          String.join("_", "index", getNamespace1(), getTable4(), longColumn);
+      assertThat(originalIndexName.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH + 1);
+      testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
+      testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
+
+      // Act Assert - dropIndex should succeed via fallback
+      assertThatCode(() -> admin.dropIndex(getNamespace1(), getTable4(), longColumn))
+          .doesNotThrowAnyException();
+      assertThat(admin.indexExists(getNamespace1(), getTable4(), longColumn)).isFalse();
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+      testUtils.close();
+    }
+  }
+
+  @Test
+  @DisabledIf("isDb2OrSpanner")
+  public void renameTable_WithLongIndexNameCreatedByOldNaming_ShouldRenameIndexByFallback()
+      throws Exception {
+    // The column name is chosen so that the original index name
+    // (index_{namespace}_{table}_{column}) is exactly 64 characters, which exceeds the 63-character
+    // limit to trigger shortening but is still within MySQL's 64-character limit.
+    String longColumn = "long_column_name_for_testing1";
+    String newTableName = "new" + getTable4();
+    JdbcAdminTestUtils testUtils = (JdbcAdminTestUtils) getAdminTestUtils(getTestName());
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(longColumn, DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(longColumn)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), tableMetadata, options);
+
+      // Replace the shortened index with the old (long) naming convention
+      String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
+      String originalIndexName =
+          String.join("_", "index", getNamespace1(), getTable4(), longColumn);
+      assertThat(originalIndexName.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH + 1);
+      testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
+      testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
+
+      // Act Assert - renameTable should succeed via fallback
+      assertThatCode(() -> admin.renameTable(getNamespace1(), getTable4(), newTableName))
+          .doesNotThrowAnyException();
+      assertThat(admin.tableExists(getNamespace1(), newTableName)).isTrue();
+      assertThat(admin.indexExists(getNamespace1(), newTableName, longColumn)).isTrue();
+
+      // Verify the renamed index can be dropped
+      assertThatCode(() -> admin.dropIndex(getNamespace1(), newTableName, longColumn))
+          .doesNotThrowAnyException();
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+      admin.dropTable(getNamespace1(), newTableName, true);
+      testUtils.close();
+    }
+  }
+
+  @Test
+  @DisabledIf("isDb2OrSpanner")
+  public void renameColumn_WithLongIndexNameCreatedByOldNaming_ShouldRenameIndexByFallback()
+      throws Exception {
+    // The column name is chosen so that the original index name
+    // (index_{namespace}_{table}_{column}) is exactly 64 characters, which exceeds the 63-character
+    // limit to trigger shortening but is still within MySQL's 64-character limit.
+    String longColumn = "long_column_name_for_testing1";
+    String newColumnName = "new_col";
+    JdbcAdminTestUtils testUtils = (JdbcAdminTestUtils) getAdminTestUtils(getTestName());
+    try {
+      // Arrange
+      Map<String, String> options = getCreationOptions();
+      TableMetadata tableMetadata =
+          TableMetadata.newBuilder()
+              .addColumn(getColumnName1(), DataType.INT)
+              .addColumn(longColumn, DataType.INT)
+              .addPartitionKey(getColumnName1())
+              .addSecondaryIndex(longColumn)
+              .build();
+      admin.createTable(getNamespace1(), getTable4(), tableMetadata, options);
+
+      // Replace the shortened index with the old (long) naming convention
+      String shortenedIndexName = JdbcAdmin.getIndexName(getNamespace1(), getTable4(), longColumn);
+      String originalIndexName =
+          String.join("_", "index", getNamespace1(), getTable4(), longColumn);
+      assertThat(originalIndexName.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH + 1);
+      testUtils.dropIndex(getNamespace1(), getTable4(), shortenedIndexName);
+      testUtils.createIndex(getNamespace1(), getTable4(), longColumn, originalIndexName);
+
+      // Act Assert - renameColumn should succeed via fallback
+      assertThatCode(
+              () -> admin.renameColumn(getNamespace1(), getTable4(), longColumn, newColumnName))
+          .doesNotThrowAnyException();
+      assertThat(admin.indexExists(getNamespace1(), getTable4(), newColumnName)).isTrue();
+      assertThat(admin.indexExists(getNamespace1(), getTable4(), longColumn)).isFalse();
+    } finally {
+      admin.dropTable(getNamespace1(), getTable4(), true);
+      testUtils.close();
+    }
   }
 }

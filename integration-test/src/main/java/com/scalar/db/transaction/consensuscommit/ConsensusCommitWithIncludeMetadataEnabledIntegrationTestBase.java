@@ -37,7 +37,7 @@ public abstract class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBa
 
   protected static final String TEST_NAME = "cc_inc_meta";
   protected static final String NAMESPACE = "int_test_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
+  protected static final String TABLE = "tbl";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
@@ -58,9 +58,6 @@ public abstract class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBa
   public void beforeAll() throws Exception {
     initialize(TEST_NAME);
     Properties properties = getProperties(TEST_NAME);
-
-    // Add testName as a coordinator namespace suffix
-    ConsensusCommitTestUtils.addSuffixToCoordinatorNamespace(properties, TEST_NAME);
 
     // Enable to include metadata
     properties.setProperty(ConsensusCommitConfig.INCLUDE_METADATA_ENABLED, "true");
@@ -93,7 +90,15 @@ public abstract class ConsensusCommitWithIncludeMetadataEnabledIntegrationTestBa
 
   @BeforeEach
   public void setUp() throws Exception {
-    admin.truncateTable(namespace, TABLE);
+    truncateTable(namespace, TABLE);
+    truncateCoordinatorTables();
+  }
+
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    admin.truncateTable(namespace, table);
+  }
+
+  protected void truncateCoordinatorTables() throws ExecutionException {
     admin.truncateCoordinatorTables();
   }
 

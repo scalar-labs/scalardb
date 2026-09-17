@@ -261,7 +261,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates an 'equal' conditional expression for a TIME value.
+     * Creates an 'equal' conditional expression for a TIME value. If the value has sub-microsecond
+     * precision, it will be truncated to microseconds.
      *
      * @param value a TIME value used to compare with the target column
      * @return a conditional expression
@@ -271,7 +272,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates an 'equal' conditional expression for a TIMESTAMP value.
+     * Creates an 'equal' conditional expression for a TIMESTAMP value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMP value used to compare with the target column
      * @return a conditional expression
@@ -281,7 +283,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates an 'equal' conditional expression for a TIMESTAMPTZ value.
+     * Creates an 'equal' conditional expression for a TIMESTAMPTZ value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMPTZ value used to compare with the target column
      * @return a conditional expression
@@ -381,7 +384,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'not equal' conditional expression for a TIME value.
+     * Creates a 'not equal' conditional expression for a TIME value. If the value has
+     * sub-microsecond precision, it will be truncated to microseconds.
      *
      * @param value a TIME value used to compare with the target column
      * @return a conditional expression
@@ -391,7 +395,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'not equal' conditional expression for a TIMESTAMP value.
+     * Creates a 'not equal' conditional expression for a TIMESTAMP value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMP value used to compare with the target column
      * @return a conditional expression
@@ -401,7 +406,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'not equal' conditional expression for a TIMESTAMPTZ value.
+     * Creates a 'not equal' conditional expression for a TIMESTAMPTZ value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMPTZ value used to compare with the target column
      * @return a conditional expression
@@ -501,7 +507,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'greater than' conditional expression for a TIME value.
+     * Creates a 'greater than' conditional expression for a TIME value. If the value has
+     * sub-microsecond precision, it will be truncated to microseconds.
      *
      * @param value a TIME value used to compare with the target column
      * @return a conditional expression
@@ -511,7 +518,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'greater than' conditional expression for a TIMESTAMP value.
+     * Creates a 'greater than' conditional expression for a TIMESTAMP value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMP value used to compare with the target column
      * @return a conditional expression
@@ -521,7 +529,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'greater than' conditional expression for a TIMESTAMPTZ value.
+     * Creates a 'greater than' conditional expression for a TIMESTAMPTZ value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMPTZ value used to compare with the target column
      * @return a conditional expression
@@ -621,7 +630,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'greater than or equal' conditional expression for a TIME value.
+     * Creates a 'greater than or equal' conditional expression for a TIME value. If the value has
+     * sub-microsecond precision, it will be truncated to microseconds.
      *
      * @param value a TIME value used to compare with the target column
      * @return a conditional expression
@@ -631,7 +641,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'greater than or equal' conditional expression for a TIMESTAMP value.
+     * Creates a 'greater than or equal' conditional expression for a TIMESTAMP value. If the value
+     * has sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMP value used to compare with the target column
      * @return a conditional expression
@@ -641,7 +652,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'greater than or equal' conditional expression for a TIMESTAMPTZ value.
+     * Creates a 'greater than or equal' conditional expression for a TIMESTAMPTZ value. If the
+     * value has sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMPTZ value used to compare with the target column
      * @return a conditional expression
@@ -741,7 +753,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'less than' conditional expression for a TIME value.
+     * Creates a 'less than' conditional expression for a TIME value. If the value has
+     * sub-microsecond precision, it will be truncated to microseconds.
      *
      * @param value a TIME value used to compare with the target column
      * @return a conditional expression
@@ -751,7 +764,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'less than' conditional expression for a TIMESTAMP value.
+     * Creates a 'less than' conditional expression for a TIMESTAMP value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMP value used to compare with the target column
      * @return a conditional expression
@@ -761,7 +775,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'less than' conditional expression for a TIMESTAMPTZ value.
+     * Creates a 'less than' conditional expression for a TIMESTAMPTZ value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMPTZ value used to compare with the target column
      * @return a conditional expression
@@ -861,7 +876,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'less than or equal' conditional expression for a TIME value.
+     * Creates a 'less than or equal' conditional expression for a TIME value. If the value has
+     * sub-microsecond precision, it will be truncated to microseconds.
      *
      * @param value a TIME value used to compare with the target column
      * @return a conditional expression
@@ -871,7 +887,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'less than or equal' conditional expression for a TIMESTAMP value.
+     * Creates a 'less than or equal' conditional expression for a TIMESTAMP value. If the value has
+     * sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMP value used to compare with the target column
      * @return a conditional expression
@@ -881,7 +898,8 @@ public class ConditionBuilder {
     }
 
     /**
-     * Creates a 'less than or equal' conditional expression for a TIMESTAMPTZ value.
+     * Creates a 'less than or equal' conditional expression for a TIMESTAMPTZ value. If the value
+     * has sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param value a TIMESTAMPTZ value used to compare with the target column
      * @return a conditional expression

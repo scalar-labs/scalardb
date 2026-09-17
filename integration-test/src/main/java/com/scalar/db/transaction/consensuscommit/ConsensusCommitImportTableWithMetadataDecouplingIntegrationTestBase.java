@@ -8,7 +8,7 @@ public abstract class ConsensusCommitImportTableWithMetadataDecouplingIntegratio
 
   @Override
   protected String getTestName() {
-    return "cc_import_decoupling";
+    return "cc_import_dcpl";
   }
 
   @Override

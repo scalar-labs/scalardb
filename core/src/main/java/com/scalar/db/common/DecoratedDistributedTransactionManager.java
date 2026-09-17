@@ -19,8 +19,11 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 public abstract class DecoratedDistributedTransactionManager
     implements DistributedTransactionManager {
@@ -31,35 +34,35 @@ public abstract class DecoratedDistributedTransactionManager
     this.transactionManager = transactionManager;
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     transactionManager.with(namespace, tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withNamespace(String namespace) {
     transactionManager.withNamespace(namespace);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return transactionManager.getNamespace();
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public void withTable(String tableName) {
     transactionManager.withTable(tableName);
   }
 
-  /** @deprecated As of release 3.6.0. Will be removed in release 5.0.0 */
+  /** @deprecated As of release 3.6.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<String> getTable() {
@@ -77,6 +80,17 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
+  public DistributedTransaction begin(Map<String, String> attributes) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.begin(attributes));
+  }
+
+  @Override
+  public DistributedTransaction begin(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.begin(txId, attributes));
+  }
+
+  @Override
   public DistributedTransaction beginReadOnly() throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly());
   }
@@ -84,6 +98,18 @@ public abstract class DecoratedDistributedTransactionManager
   @Override
   public DistributedTransaction beginReadOnly(String txId) throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly(txId));
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly(attributes));
+  }
+
+  @Override
+  public DistributedTransaction beginReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.beginReadOnly(txId, attributes));
   }
 
   @Override
@@ -97,13 +123,36 @@ public abstract class DecoratedDistributedTransactionManager
   }
 
   @Override
-  public DistributedTransaction startReadOnly(String txId) throws TransactionException {
-    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(txId));
+  public DistributedTransaction start(Map<String, String> attributes) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.start(attributes));
+  }
+
+  @Override
+  public DistributedTransaction start(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.start(txId, attributes));
   }
 
   @Override
   public DistributedTransaction startReadOnly() throws TransactionException {
     return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly());
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId) throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(txId));
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(attributes));
+  }
+
+  @Override
+  public DistributedTransaction startReadOnly(String txId, Map<String, String> attributes)
+      throws TransactionException {
+    return decorateTransactionOnBeginOrStart(transactionManager.startReadOnly(txId, attributes));
   }
 
   /** @deprecated As of release 2.4.0. Will be removed in release 4.0.0. */
@@ -157,11 +206,15 @@ public abstract class DecoratedDistributedTransactionManager
     return transaction;
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return transactionManager.resume(txId);
   }
 
+  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
+  @Deprecated
   @Override
   public DistributedTransaction join(String txId) throws TransactionNotFoundException {
     return transactionManager.join(txId);
@@ -182,14 +235,14 @@ public abstract class DecoratedDistributedTransactionManager
     return transactionManager.getScanner(scan);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(Put put) throws CrudException, UnknownTransactionStatusException {
     transactionManager.put(put);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void put(List<Put> puts) throws CrudException, UnknownTransactionStatusException {
@@ -216,7 +269,7 @@ public abstract class DecoratedDistributedTransactionManager
     transactionManager.delete(delete);
   }
 
-  /** @deprecated As of release 3.13.0. Will be removed in release 5.0.0. */
+  /** @deprecated As of release 3.13.0. Will be removed in release 4.0.0. */
   @Deprecated
   @Override
   public void delete(List<Delete> deletes) throws CrudException, UnknownTransactionStatusException {
@@ -248,6 +301,18 @@ public abstract class DecoratedDistributedTransactionManager
   @Override
   public TransactionState abort(String txId) throws TransactionException {
     return transactionManager.abort(txId);
+  }
+
+  @Override
+  public boolean finishTransaction(String txId) throws TransactionException {
+    return transactionManager.finishTransaction(txId);
+  }
+
+  @Override
+  public boolean recoverRecord(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey)
+      throws TransactionException {
+    return transactionManager.recoverRecord(namespace, table, partitionKey, clusteringKey);
   }
 
   @Override

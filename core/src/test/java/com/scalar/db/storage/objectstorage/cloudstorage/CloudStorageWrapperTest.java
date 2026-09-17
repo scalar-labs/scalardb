@@ -8,10 +8,12 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.api.gax.paging.Page;
+import com.google.cloud.PageImpl;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -20,6 +22,7 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageBatch;
 import com.google.cloud.storage.StorageBatchResult;
 import com.google.cloud.storage.StorageException;
+import com.scalar.db.storage.objectstorage.ConflictOccurredException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
@@ -42,6 +45,8 @@ public class CloudStorageWrapperTest {
   private static final String ANY_PREFIX = "any_prefix/";
   private static final String ANY_DATA = "any_data";
   private static final long ANY_GENERATION = 12345L;
+  private static final long ANY_UPDATED_GENERATION = 12346L;
+  private static final String ANY_UPDATED_DATA = "any_updated_data";
 
   @Mock private CloudStorageConfig config;
   @Mock private Storage storage;
@@ -64,14 +69,16 @@ public class CloudStorageWrapperTest {
     BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
     Blob blob = mock(Blob.class);
     when(storage.get(blobId)).thenReturn(blob);
-    when(blob.getContent()).thenReturn(ANY_DATA.getBytes(StandardCharsets.UTF_8));
     when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenReturn(ANY_DATA.getBytes(StandardCharsets.UTF_8));
 
     // Act
     Optional<ObjectStorageWrapperResponse> result = wrapper.get(ANY_OBJECT_KEY);
 
     // Assert
     verify(storage).get(blobId);
+    verify(storage).readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION));
     assertThat(result).isPresent();
     assertThat(result.get().getPayload()).isEqualTo(ANY_DATA);
     assertThat(result.get().getVersion()).isEqualTo(String.valueOf(ANY_GENERATION));
@@ -102,6 +109,84 @@ public class CloudStorageWrapperTest {
   }
 
   @Test
+  public void get_WhenObjectDeletedAfterMetadataRetrieved_ShouldReturnEmptyOptional()
+      throws Exception {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(new StorageException(CloudStorageErrorCode.NOT_FOUND.get(), "Not Found"));
+
+    // Act
+    Optional<ObjectStorageWrapperResponse> result = wrapper.get(ANY_OBJECT_KEY);
+
+    // Assert
+    assertThat(result).isNotPresent();
+  }
+
+  @Test
+  public void get_WhenObjectUpdatedAfterMetadataRetrieved_ShouldRetryAndReturnUpdatedObjectData()
+      throws Exception {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION, ANY_UPDATED_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(
+            new StorageException(
+                CloudStorageErrorCode.PRECONDITION_FAILED.get(), "Precondition Failed"));
+    when(storage.readAllBytes(
+            blobId, Storage.BlobSourceOption.generationMatch(ANY_UPDATED_GENERATION)))
+        .thenReturn(ANY_UPDATED_DATA.getBytes(StandardCharsets.UTF_8));
+
+    // Act
+    Optional<ObjectStorageWrapperResponse> result = wrapper.get(ANY_OBJECT_KEY);
+
+    // Assert
+    verify(storage, times(2)).get(blobId);
+    assertThat(result).isPresent();
+    assertThat(result.get().getPayload()).isEqualTo(ANY_UPDATED_DATA);
+    assertThat(result.get().getVersion()).isEqualTo(String.valueOf(ANY_UPDATED_GENERATION));
+  }
+
+  @Test
+  public void get_WhenObjectUpdatedRepeatedly_ShouldThrowConflictOccurredException() {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(
+            new StorageException(
+                CloudStorageErrorCode.PRECONDITION_FAILED.get(), "Precondition Failed"));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.get(ANY_OBJECT_KEY)).isInstanceOf(ConflictOccurredException.class);
+    verify(storage, times(CloudStorageWrapper.GET_MAX_RETRY_COUNT + 1)).get(blobId);
+  }
+
+  @Test
+  public void
+      get_WhenStorageExceptionThrownWhileDownloadingPayload_ShouldThrowObjectStorageWrapperException() {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(new StorageException(500, "Any Error"));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.get(ANY_OBJECT_KEY))
+        .isInstanceOf(ObjectStorageWrapperException.class);
+    verify(storage).get(blobId);
+  }
+
+  @Test
   public void getKeys_PrefixGiven_ShouldReturnObjectKeys() throws Exception {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
@@ -115,10 +200,8 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2, blob3));
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     // Act
     Set<String> result = wrapper.getKeys(ANY_PREFIX);
@@ -130,10 +213,8 @@ public class CloudStorageWrapperTest {
   @Test
   public void getKeys_NoObjectsWithPrefix_ShouldReturnEmptySet() throws Exception {
     // Arrange
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Collections.emptyList());
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Collections.emptyList());
 
     // Act
     Set<String> result = wrapper.getKeys(ANY_PREFIX);
@@ -342,10 +423,8 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2, blob3));
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -359,6 +438,9 @@ public class CloudStorageWrapperTest {
     // Assert
     verify(storage).batch();
     verify(batch).submit();
+    verify(batch).delete(BlobId.of(BUCKET, objectKey1));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey2));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey3));
   }
 
   @Test
@@ -376,11 +458,9 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob3.getName()).thenReturn(objectKey3);
 
-    // Mock with iterateAll() that returns all blobs across pages
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    // Two linked pages, so iterateAll() has to follow the cursor to reach blob3.
+    Page<Blob> page = pagesOf(Arrays.asList(blob1, blob2), Collections.singletonList(blob3));
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2, blob3));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -394,15 +474,17 @@ public class CloudStorageWrapperTest {
     // Assert
     verify(storage).batch();
     verify(batch).submit();
+    // Every blob is deleted, including the one only reachable via the second page.
+    verify(batch).delete(BlobId.of(BUCKET, objectKey1));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey2));
+    verify(batch).delete(BlobId.of(BUCKET, objectKey3));
   }
 
   @Test
   public void deleteByPrefix_NoObjectsWithPrefix_ShouldDoNothing() throws Exception {
     // Arrange
-    @SuppressWarnings("unchecked")
-    Page<Blob> page = mock(Page.class);
+    Page<Blob> page = pageOf(Collections.emptyList());
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
-    when(page.iterateAll()).thenReturn(Collections.emptyList());
 
     // Act
     wrapper.deleteByPrefix(ANY_PREFIX);
@@ -431,5 +513,35 @@ public class CloudStorageWrapperTest {
 
     // Assert
     verify(storage).close();
+  }
+
+  /**
+   * Returns a single terminal {@link Page} holding {@code blobs}. {@link CloudStorageWrapper} only
+   * calls {@link Page#iterateAll()}, which on a page with no next-page cursor yields exactly these
+   * values without consulting the (unused) fetcher.
+   *
+   * <p>A real {@link PageImpl} is used rather than a Mockito mock or a hand-written {@code Page}
+   * implementation, because under Java 8 neither works. {@code Page} is annotated with JSpecify's
+   * {@code @NullMarked}, whose {@code @Target} lists {@code ElementType.MODULE} — an enum constant
+   * added in Java 9 — so reading its annotations through Java 8 reflection throws {@code
+   * ArrayStoreException: EnumConstantNotPresentExceptionProxy}. That breaks Mockito, which copies
+   * the mocked type's annotations onto the generated mock, and it equally breaks any test-source
+   * implementation of {@code Page}, because JUnit walks the supertypes of every class in the test
+   * source set during discovery. Instantiating an existing implementation avoids both.
+   */
+  private static Page<Blob> pageOf(Iterable<Blob> blobs) {
+    return new PageImpl<>(null, null, blobs);
+  }
+
+  /**
+   * Returns the first of two linked {@link Page}s, so that {@link Page#iterateAll()} only reaches
+   * {@code secondPageBlobs} by following the next-page cursor. The fetcher is a lambda so that the
+   * test source set gains no new type: {@code NextPageFetcher} is not {@code @NullMarked} today,
+   * but a lambda keeps this helper immune by construction if it ever becomes so — see the JUnit
+   * discovery problem described on {@link #pageOf(Iterable)}.
+   */
+  private static Page<Blob> pagesOf(Iterable<Blob> firstPageBlobs, Iterable<Blob> secondPageBlobs) {
+    Page<Blob> secondPage = pageOf(secondPageBlobs);
+    return new PageImpl<>(() -> secondPage, "next-page-cursor", firstPageBlobs);
   }
 }

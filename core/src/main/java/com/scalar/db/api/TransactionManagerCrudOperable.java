@@ -14,6 +14,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -27,6 +30,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -42,6 +48,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -54,6 +63,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -62,7 +74,8 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0.
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use the insert, upsert, or
+   *     update operations instead.
    */
   @Deprecated
   @Override
@@ -73,6 +86,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -81,8 +97,8 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
-   *     instead.
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use {@link #mutate(List)}
+   *     instead, or the insert, upsert, or update operations for individual writes.
    */
   @Deprecated
   @Override
@@ -92,6 +108,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -107,6 +126,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -120,6 +142,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -138,6 +163,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the operation are used as attributes for the transaction that is begun
+   * internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -155,6 +183,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
   /**
    * {@inheritDoc}
    *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
+   *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CrudException if the transaction CRUD operation fails due to transient or nontransient
@@ -163,7 +194,7 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
    * @throws UnsatisfiedConditionException if a condition is specified, and if the condition is not
    *     satisfied or the entry does not exist
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
-   * @deprecated As of release 3.13.0. Will be removed in release 5.0.0. Use {@link #mutate(List)}
+   * @deprecated As of release 3.13.0. Will be removed in release 4.0.0. Use {@link #mutate(List)}
    *     instead.
    */
   @Deprecated
@@ -174,6 +205,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
@@ -192,6 +226,9 @@ public interface TransactionManagerCrudOperable extends CrudOperable<Transaction
 
   /**
    * {@inheritDoc}
+   *
+   * <p>The attributes of the first operation in the list are used as attributes for the transaction
+   * that is begun internally.
    *
    * @throws CrudConflictException if the transaction CRUD operation fails due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning

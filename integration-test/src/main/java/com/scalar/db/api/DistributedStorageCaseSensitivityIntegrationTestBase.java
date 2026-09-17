@@ -8,7 +8,7 @@ public abstract class DistributedStorageCaseSensitivityIntegrationTestBase
 
   private static final String TEST_NAME = "storage_case";
   private static final String NAMESPACE = "Int_test_" + TEST_NAME;
-  private static final String TABLE = "Test_table";
+  private static final String TABLE = "Tbl";
   private static final String COL_NAME1 = "Column1";
   private static final String COL_NAME2 = "Column2";
   private static final String COL_NAME3 = "Column3";

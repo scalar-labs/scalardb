@@ -1,6 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -8,6 +11,9 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,6 +32,9 @@ public class JdbcUtilsTest {
   @BeforeEach
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+    // setConnectionCredentials is a default interface method that copies username/password from
+    // JdbcConfig to HikariConfig. Mocks no-op default methods, so call the real implementation.
+    doCallRealMethod().when(rdbEngine).setConnectionCredentials(any(), any());
   }
 
   @Test
@@ -45,8 +54,10 @@ public class JdbcUtilsTest {
     properties.setProperty(JdbcConfig.CONNECTION_POOL_KEEPALIVE_TIME_MILLIS, "60000");
 
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
-    when(rdbEngine.getDriverClassName()).thenReturn("com.mysql.cj.jdbc.Driver");
+    when(rdbEngine.getDriverClassName()).thenReturn("org.mariadb.jdbc.Driver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:mysql://localhost:3306/"))
+        .thenReturn("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -68,8 +79,9 @@ public class JdbcUtilsTest {
     // Assert
     HikariConfig hikariConfig = capturedConfig.get();
     assertThat(hikariConfig).isNotNull();
-    assertThat(hikariConfig.getDriverClassName()).isEqualTo("com.mysql.cj.jdbc.Driver");
-    assertThat(hikariConfig.getJdbcUrl()).isEqualTo("jdbc:mysql://localhost:3306/");
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("org.mariadb.jdbc.Driver");
+    assertThat(hikariConfig.getJdbcUrl())
+        .isEqualTo("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
     assertThat(hikariConfig.getUsername()).isEqualTo("root");
     assertThat(hikariConfig.getPassword()).isEqualTo("mysql");
 
@@ -101,6 +113,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:postgresql://localhost:5432/"))
+        .thenReturn("jdbc:postgresql://localhost:5432/");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -151,6 +165,9 @@ public class JdbcUtilsTest {
     when(rdbEngine.getDriverClassName()).thenReturn("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     when(rdbEngine.getConnectionProperties(config))
         .thenReturn(ImmutableMap.of("prop1", "prop1Value", "prop2", "prop2Value"));
+    when(rdbEngine.adjustJdbcUrl(
+            "jdbc:sqlserver://localhost:5432;prop1=prop1Value;prop3=prop3Value"))
+        .thenReturn("jdbc:sqlserver://localhost:5432;prop1=prop1Value;prop3=prop3Value");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -199,6 +216,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("oracle.jdbc.driver.OracleDriver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:oracle:thin:@localhost:1521/XEPDB1"))
+        .thenReturn("jdbc:oracle:thin:@localhost:1521/XEPDB1");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -255,6 +274,8 @@ public class JdbcUtilsTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
     when(rdbEngine.getDriverClassName()).thenReturn("com.microsoft.sqlserver.jdbc.SQLServerDriver");
     when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl("jdbc:sqlserver://localhost:1433"))
+        .thenReturn("jdbc:sqlserver://localhost:1433");
 
     AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
 
@@ -291,5 +312,221 @@ public class JdbcUtilsTest {
     assertThat(hikariConfig.getIdleTimeout()).isEqualTo(500000);
     assertThat(hikariConfig.getMaxLifetime()).isEqualTo(1100000);
     assertThat(hikariConfig.getKeepaliveTime()).isEqualTo(80000);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithShortName_ShouldReturnOriginalName() {
+    // Arrange
+    String name = "index_ns_tbl_col";
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+
+    // Assert
+    assertThat(result).isEqualTo(name);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithNameExactlyAtMaxLength_ShouldReturnOriginalName() {
+    // Arrange
+    String prefix = "index_";
+    int paddingLength = JdbcUtils.MAX_INDEX_NAME_LENGTH - prefix.length();
+    String padding = String.join("", Collections.nCopies(paddingLength, "c"));
+    String name = prefix + padding;
+    assertThat(name.length()).isEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH); // sanity check
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, prefix);
+
+    // Assert
+    assertThat(result).isEqualTo(name);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithNameExceedingMaxLength_ShouldReturnShortenedName() {
+    // Arrange
+    String name = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit";
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+
+    // Assert
+    assertThat(result).startsWith("index_");
+    assertThat(result.length()).isLessThanOrEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithNameExceedingMaxLength_ShouldPreservePrefix() {
+    // Arrange
+    String name = "index_clustering_order_my_long_namespace_my_long_table_name_exceeding_limit";
+
+    // Act
+    String result = JdbcUtils.shortenIndexNameIfNeeded(name, "index_clustering_order_");
+
+    // Assert
+    assertThat(result).startsWith("index_clustering_order_");
+    assertThat(result.length()).isLessThanOrEqualTo(JdbcUtils.MAX_INDEX_NAME_LENGTH);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithSameInput_ShouldReturnConsistentResult() {
+    // Arrange
+    String name = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit";
+
+    // Act
+    String result1 = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+    String result2 = JdbcUtils.shortenIndexNameIfNeeded(name, "index_");
+
+    // Assert
+    assertThat(result1).isEqualTo(result2);
+  }
+
+  @Test
+  public void shortenIndexNameIfNeeded_WithDifferentInputs_ShouldReturnDifferentResults() {
+    // Arrange
+    String name1 = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit_1";
+    String name2 = "index_my_namespace_my_table_a_very_long_column_name_that_exceeds_the_limit_2";
+
+    // Act
+    String result1 = JdbcUtils.shortenIndexNameIfNeeded(name1, "index_");
+    String result2 = JdbcUtils.shortenIndexNameIfNeeded(name2, "index_");
+
+    // Assert
+    assertThat(result1).isNotEqualTo(result2);
+  }
+
+  /**
+   * The AWS Advanced JDBC Wrapper supplies its own driver, and the URL must keep the
+   * "jdbc:aws-wrapper:" prefix because that is what routes the connection through it. The engine's
+   * own getDriverClassName() is left alone; only what reaches the pool changes.
+   */
+  @Test
+  public void initDataSource_GivenAwsWrapperUrl_ShouldUseWrapperDriverAndKeepPrefix() {
+    // Arrange
+    String jdbcUrl = "jdbc:aws-wrapper:postgresql://localhost:5432/test";
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.USERNAME, "postgres");
+    properties.setProperty(DatabaseConfig.PASSWORD, "postgres");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl(jdbcUrl)).thenReturn(jdbcUrl);
+
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine);
+    }
+
+    // Assert
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("software.amazon.jdbc.Driver");
+    assertThat(hikariConfig.getJdbcUrl()).isEqualTo(jdbcUrl);
+  }
+
+  @Test
+  public void initDataSource_GivenNonAwsWrapperUrl_ShouldKeepEngineDriverClass() {
+    // Arrange
+    String jdbcUrl = "jdbc:postgresql://localhost:5432/test";
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+    when(rdbEngine.getDriverClassName()).thenReturn("org.postgresql.Driver");
+    when(rdbEngine.getConnectionProperties(config)).thenReturn(Collections.emptyMap());
+    when(rdbEngine.adjustJdbcUrl(jdbcUrl)).thenReturn(jdbcUrl);
+
+    AtomicReference<HikariConfig> capturedConfig = new AtomicReference<>();
+
+    try (MockedStatic<JdbcUtils> jdbcUtils =
+        Mockito.mockStatic(
+            JdbcUtils.class, withSettings().defaultAnswer(Answers.CALLS_REAL_METHODS))) {
+      jdbcUtils
+          .when(() -> JdbcUtils.createDataSource(Mockito.any(HikariConfig.class)))
+          .thenAnswer(
+              invocation -> {
+                capturedConfig.set(invocation.getArgument(0));
+                return Mockito.mock(HikariDataSource.class);
+              });
+
+      // Act
+      JdbcUtils.initDataSource(config, rdbEngine);
+    }
+
+    // Assert
+    HikariConfig hikariConfig = capturedConfig.get();
+    assertThat(hikariConfig).isNotNull();
+    assertThat(hikariConfig.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+  }
+
+  @Test
+  public void isAwsWrapperUrl_ShouldMatchOnlyTheExactPrefix() {
+    // Act Assert
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapper:postgresql://h/db")).isTrue();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapper:mysql://h/db")).isTrue();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:postgresql://h/db")).isFalse();
+    assertThat(JdbcUtils.isAwsWrapperUrl("jdbc:aws-wrapperfoo:postgresql://h/db")).isFalse();
+    assertThat(JdbcUtils.isAwsWrapperUrl(null)).isFalse();
+  }
+
+  @Test
+  public void removeAwsWrapperPrefix_ShouldExposeUnderlyingUrl() {
+    // Act Assert
+    assertThat(JdbcUtils.removeAwsWrapperPrefix("jdbc:aws-wrapper:postgresql://h:5432/db"))
+        .isEqualTo("jdbc:postgresql://h:5432/db");
+    assertThat(
+            JdbcUtils.removeAwsWrapperPrefix(
+                "jdbc:aws-wrapper:mysql://h:3306/db?permitMysqlScheme=true"))
+        .isEqualTo("jdbc:mysql://h:3306/db?permitMysqlScheme=true");
+  }
+
+  /**
+   * HikariCP reads {@code hikaricp.configurationFile} in its constructor, so this setting can
+   * arrive without ScalarDB configuration being involved -- and AWS documentation recommends
+   * setting it when using their JDBC wrapper. It must be refused rather than silently breaking the
+   * inference {@link com.scalar.db.transaction.jdbc.JdbcTransaction#commit()} relies on.
+   */
+  @Test
+  public void initDataSource_GivenHikariExceptionOverrideConfigured_ShouldThrowException()
+      throws Exception {
+    // Arrange
+    Path configFile = Files.createTempFile("hikari", ".properties");
+    try {
+      Files.write(
+          configFile,
+          "exceptionOverrideClassName=software.amazon.jdbc.util.HikariCPSQLException"
+              .getBytes(StandardCharsets.UTF_8));
+      System.setProperty("hikaricp.configurationFile", configFile.toString());
+
+      Properties properties = new Properties();
+      properties.setProperty(
+          DatabaseConfig.CONTACT_POINTS, "jdbc:postgresql://localhost:5432/test");
+      properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+      JdbcConfig config = new JdbcConfig(new DatabaseConfig(properties));
+
+      // Act Assert
+      assertThatThrownBy(() -> JdbcUtils.initDataSource(config, rdbEngine))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("exceptionOverrideClassName");
+    } finally {
+      System.clearProperty("hikaricp.configurationFile");
+      Files.deleteIfExists(configFile);
+    }
   }
 }

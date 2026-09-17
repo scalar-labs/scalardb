@@ -237,13 +237,6 @@ public enum CoreError implements ScalarDbError {
       "",
       ""),
   TRANSACTION_ALREADY_EXISTS(Category.USER_ERROR, "0047", "The transaction already exists", "", ""),
-  TRANSACTION_NOT_FOUND(
-      Category.USER_ERROR,
-      "0048",
-      "A transaction associated with the specified transaction ID is not found. "
-          + "The transaction might have expired",
-      "",
-      ""),
   SYSTEM_NAMESPACE_SPECIFIED(
       Category.USER_ERROR, "0049", "%s is the system namespace name", "", ""),
   NAMESPACE_ALREADY_EXISTS(
@@ -292,10 +285,10 @@ public enum CoreError implements ScalarDbError {
           + "to use cross-partition scan with filtering or ordering",
       "",
       ""),
-  OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
+  COSMOS_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
       Category.USER_ERROR,
       "0063",
-      "This column value is out of range for BigInt. Value: %s",
+      "This column value is out of range for BigInt in Cosmos DB. Value: %s",
       "",
       ""),
   KEY_BUILD_ERROR_UNSUPPORTED_TYPE(
@@ -459,7 +452,8 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
       Category.USER_ERROR,
       "0106",
-      "Scanning data already-written or already-deleted by the same transaction is not allowed",
+      "Scanning data already-written or already-deleted by the same transaction is not allowed."
+          + " Record: %s",
       "",
       ""),
   CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
@@ -914,19 +908,22 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_INDEX_GET_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0260",
-      "Get operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "Get operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable index-based Get operations in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_INDEX_SCAN_NOT_ALLOWED_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0261",
-      "Scan operations by using an index is not allowed in the SERIALIZABLE isolation level",
+      "Scan operations using a secondary index are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable index-based Scan operations in the SERIALIZABLE isolation level",
       "",
       ""),
   CONSENSUS_COMMIT_CONDITION_ON_INDEXED_COLUMNS_NOT_ALLOWED_IN_CROSS_PARTITION_SCAN_IN_SERIALIZABLE(
       Category.USER_ERROR,
       "0262",
-      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level",
+      "Conditions on indexed columns in cross-partition scan operations are not allowed in the SERIALIZABLE isolation level without before-image indexes. "
+          + "Run repairTable() to create before-image indexes for the table, which will enable conditions on indexed columns in cross-partition scan operations in the SERIALIZABLE isolation level",
       "",
       ""),
   OBJECT_STORAGE_CLOUD_STORAGE_SERVICE_ACCOUNT_KEY_NOT_FOUND(
@@ -1036,6 +1033,129 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0280",
       "The condition for the Update operation must be UpdateIf or UpdateIfExists. Operation: %s",
+      "",
+      ""),
+  TABLE_METADATA_BUILD_ERROR_SECONDARY_INDEX_COLUMN_DEFINITION_NOT_SPECIFIED(
+      Category.USER_ERROR,
+      "0281",
+      "The column definition must be specified since %s is specified as a secondary index",
+      "",
+      ""),
+  OBJECT_STORAGE_OUT_OF_RANGE_COLUMN_VALUE_FOR_BIGINT(
+      Category.USER_ERROR,
+      "0282",
+      "This column value is out of range for BigInt in Object Storage. Value: %s",
+      "",
+      ""),
+  JDBC_SPANNER_RENAME_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR, "0283", "Spanner does not support renaming columns", "", ""),
+  JDBC_SPANNER_UNSUPPORTED_COLUMN_TYPE_CONVERSION(
+      Category.USER_ERROR,
+      "0284",
+      "Spanner does not support column type conversion except from BLOB to TEXT. Conversion: from %s to %s",
+      "",
+      ""),
+  JDBC_SPANNER_RENAME_TABLE_NOT_SUPPORTED(
+      Category.USER_ERROR, "0285", "Spanner does not support renaming tables", "", ""),
+  JDBC_SPANNER_LIKE_ESCAPE_CHARACTER_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0286",
+      "Spanner uses '\\' as the default LIKE escape character and it cannot be configured or disabled. Escape character: '%s'",
+      "",
+      ""),
+  JDBC_SPANNER_SERVICE_ACCOUNT_KEY_LOAD_FAILED(
+      Category.USER_ERROR, "0287", "Failed to load the service account key for Spanner", "", ""),
+  JDBC_SPANNER_CREDENTIALS_LIMIT_EXCEEDED(
+      Category.USER_ERROR,
+      "0288",
+      "All %d Spanner credential slots are already in use. ScalarDB's Spanner adapter supports up to that many distinct sets of Spanner credentials per JVM",
+      "",
+      ""),
+  JDBC_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0289",
+      "Finishing a transaction is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_FINISHING_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0290",
+      "Finishing a transaction is not supported in single CRUD operation transactions",
+      "",
+      ""),
+  JDBC_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0291",
+      "Recovering a record is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_RECOVERING_RECORD_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0292",
+      "Recovering a record is not supported in single CRUD operation transactions",
+      "",
+      ""),
+  CONSENSUS_COMMIT_PARTICIPANT_ID_IS_REQUIRED(
+      Category.USER_ERROR,
+      "0293",
+      "A participant ID is required for the new TwoPhaseCommitParticipant. "
+          + "Set the property: scalar.db.consensus_commit.participant_id",
+      "",
+      ""),
+  JDBC_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0294",
+      "Two-phase commit is not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_TWO_PHASE_COMMIT_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0295",
+      "Two-phase commit is not supported in single CRUD operation transactions",
+      "",
+      ""),
+  CONSENSUS_COMMIT_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0296",
+      "Global transactions are not supported in Consensus Commit transactions",
+      "",
+      ""),
+  JDBC_TRANSACTION_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0297",
+      "Global transactions are not supported in JDBC transactions",
+      "",
+      ""),
+  SINGLE_CRUD_OPERATION_TRANSACTION_GLOBAL_TRANSACTION_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0298",
+      "Global transactions are not supported in single CRUD operation transactions",
+      "",
+      ""),
+  BRANCH_TRANSACTION_ALREADY_ENDED(
+      Category.USER_ERROR, "0299", "The branch has already been ended. Transaction ID: %s", "", ""),
+  COORDINATOR_ONLY_GLOBAL_TRANSACTION_MANAGER_BRANCH_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0300",
+      "Branches are not supported by this coordinator-only global transaction manager because no participant is configured",
+      "",
+      ""),
+  BRANCH_TRANSACTION_SCANNER_NOT_CLOSED(
+      Category.USER_ERROR,
+      "0301",
+      "Some scanners were not closed. All scanners must be closed before ending the branch. Transaction ID: %s",
+      "",
+      ""),
+  JDBC_RDB_ENGINE_NOT_SUPPORTED_WITH_AWS_ADVANCED_JDBC_WRAPPER(
+      Category.USER_ERROR,
+      "0302",
+      "The RDB engine is not supported with the AWS Advanced JDBC Wrapper. Only Aurora PostgreSQL and Aurora MySQL are supported. JDBC connection URL: %s",
+      "",
+      ""),
+  JDBC_HIKARICP_EXCEPTION_OVERRIDE_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0303",
+      "The HikariCP exceptionOverrideClassName setting is not supported. ScalarDB determines whether a failed commit left the transaction in an unknown state by checking whether the connection survived, which relies on HikariCP discarding a connection that reports a connection exception. An override that keeps such a connection alive would make an unknown outcome be reported as a definite failure, which the caller is told is safe to retry. Configured class: %s",
       "",
       ""),
 
@@ -1169,6 +1289,31 @@ public enum CoreError implements ScalarDbError {
       Category.CONCURRENCY_ERROR,
       "0027",
       "A transaction conflict occurred in the mutation. Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_RETRY_LIMIT_EXCEEDED(
+      Category.CONCURRENCY_ERROR,
+      "0028",
+      "Before-image index recovery retry limit exceeded. Transaction ID: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_BEFORE_INDEX_RECOVERY_NEEDED_IN_SCANNER(
+      Category.CONCURRENCY_ERROR,
+      "0029",
+      "Records that need recovery were found during the before-image index check when closing the scanner. Transaction ID: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_RESOLVING_UNCOMMITTED_RECORD_RETRY_LIMIT_EXCEEDED(
+      Category.CONCURRENCY_ERROR,
+      "0030",
+      "Resolving an uncommitted record exceeded the retry limit during recovery. Transaction ID: %s",
+      "",
+      ""),
+  TRANSACTION_NOT_FOUND(
+      Category.CONCURRENCY_ERROR,
+      "0031",
+      "A transaction associated with the specified transaction ID is not found. "
+          + "The transaction might have expired",
       "",
       ""),
 
@@ -1372,6 +1517,18 @@ public enum CoreError implements ScalarDbError {
       "Getting the virtual table information failed. Table: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_FINISHING_TRANSACTION_FAILED(
+      Category.INTERNAL_ERROR,
+      "0068",
+      "Finishing the transaction failed. Transaction ID: %s; Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_RECOVERING_RECORD_FAILED(
+      Category.INTERNAL_ERROR,
+      "0069",
+      "Recovering the record failed. Table: %s; Partition Key: %s; Clustering Key: %s; Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
@@ -1380,12 +1537,6 @@ public enum CoreError implements ScalarDbError {
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0000",
       "Rolling back the transaction failed. Details: %s",
-      "",
-      ""),
-  CONSENSUS_COMMIT_COMMITTING_STATE_FAILED_WITH_NO_MUTATION_EXCEPTION_BUT_COORDINATOR_STATUS_DOES_NOT_EXIST(
-      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
-      "0001",
-      "Committing state failed with NoMutationException, but the coordinator status does not exist. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS(

@@ -23,6 +23,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -107,8 +109,8 @@ public class PutBuilderTest {
             .partitionKey(partitionKey1)
             .clusteringKey(clusteringKey1)
             .consistency(Consistency.EVENTUAL)
-            .bigIntValue("bigint1", BigIntColumn.MAX_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MAX_VALUE))
+            .bigIntValue("bigint1", Long.MAX_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MAX_VALUE))
             .blobValue("blob1", "blob".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(1))
             .booleanValue("bool1", true)
@@ -154,8 +156,8 @@ public class PutBuilderTest {
                     "true"),
                 condition1,
                 ImmutableMap.<String, Column<?>>builder()
-                    .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
-                    .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
+                    .put("bigint1", BigIntColumn.of("bigint1", Long.MAX_VALUE))
+                    .put("bigint2", BigIntColumn.of("bigint2", Long.MAX_VALUE))
                     .put("blob1", BlobColumn.of("blob1", "blob".getBytes(StandardCharsets.UTF_8)))
                     .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(1)))
                     .put("bool1", BooleanColumn.of("bool1", true))
@@ -263,8 +265,8 @@ public class PutBuilderTest {
             ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             condition1,
             ImmutableMap.<String, Column<?>>builder()
-                .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
-                .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
+                .put("bigint1", BigIntColumn.of("bigint1", Long.MAX_VALUE))
+                .put("bigint2", BigIntColumn.of("bigint2", Long.MAX_VALUE))
                 .put("blob1", BlobColumn.of("blob1", "blob".getBytes(StandardCharsets.UTF_8)))
                 .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(1)))
                 .put("bool1", BooleanColumn.of("bool1", true))
@@ -303,8 +305,8 @@ public class PutBuilderTest {
             ImmutableMap.of("a1", "v1", "a2", "v2", "a3", "v3"),
             condition1,
             ImmutableMap.<String, Column<?>>builder()
-                .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MAX_VALUE))
-                .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MAX_VALUE))
+                .put("bigint1", BigIntColumn.of("bigint1", Long.MAX_VALUE))
+                .put("bigint2", BigIntColumn.of("bigint2", Long.MAX_VALUE))
                 .put("blob1", BlobColumn.of("blob1", "blob".getBytes(StandardCharsets.UTF_8)))
                 .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(1)))
                 .put("bool1", BooleanColumn.of("bool1", true))
@@ -333,8 +335,8 @@ public class PutBuilderTest {
             .clusteringKey(clusteringKey2)
             .consistency(Consistency.LINEARIZABLE)
             .clearValues()
-            .bigIntValue("bigint1", BigIntColumn.MIN_VALUE)
-            .bigIntValue("bigint2", Long.valueOf(BigIntColumn.MIN_VALUE))
+            .bigIntValue("bigint1", Long.MIN_VALUE)
+            .bigIntValue("bigint2", Long.valueOf(Long.MIN_VALUE))
             .blobValue("blob1", "foo".getBytes(StandardCharsets.UTF_8))
             .blobValue("blob2", ByteBuffer.allocate(2))
             .booleanValue("bool1", false)
@@ -382,8 +384,8 @@ public class PutBuilderTest {
                     "true"),
                 condition2,
                 ImmutableMap.<String, Column<?>>builder()
-                    .put("bigint1", BigIntColumn.of("bigint1", BigIntColumn.MIN_VALUE))
-                    .put("bigint2", BigIntColumn.of("bigint2", BigIntColumn.MIN_VALUE))
+                    .put("bigint1", BigIntColumn.of("bigint1", Long.MIN_VALUE))
+                    .put("bigint2", BigIntColumn.of("bigint2", Long.MIN_VALUE))
                     .put("blob1", BlobColumn.of("blob1", "foo".getBytes(StandardCharsets.UTF_8)))
                     .put("blob2", BlobColumn.of("blob2", ByteBuffer.allocate(2)))
                     .put("bool1", BooleanColumn.of("bool1", false))
@@ -532,5 +534,60 @@ public class PutBuilderTest {
                 ImmutableMap.of(),
                 null,
                 new LinkedHashMap<>()));
+  }
+
+  @Test
+  public void build_WithOutOfRangeFractionalSecondForTimeValues_ShouldTruncateTimeRelatedValues() {
+    // Arrange
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    Instant timestampTZWithSubMillis = timestampWithSubMillis.toInstant(ZoneOffset.UTC);
+
+    // Act
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_1)
+            .table(TABLE_1)
+            .partitionKey(partitionKey1)
+            .timeValue("time", timeWithSubMicros)
+            .timestampValue("timestamp", timestampWithSubMillis)
+            .timestampTZValue("timestamptz", timestampTZWithSubMillis)
+            .build();
+
+    // Assert
+    assertThat(put.getColumns().get("time").getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+    assertThat(put.getColumns().get("timestamp").getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+    assertThat(put.getColumns().get("timestamptz").getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+  }
+
+  @Test
+  public void
+      build_FromExistingWithOutOfRangeFractionalSecondForTimeValues_ShouldTruncateTimeRelatedValues() {
+    // Arrange
+    Put existingPut =
+        Put.newBuilder().namespace(NAMESPACE_1).table(TABLE_1).partitionKey(partitionKey1).build();
+
+    LocalTime timeWithSubMicros = LocalTime.of(12, 30, 45, 123_456_789);
+    LocalDateTime timestampWithSubMillis = LocalDateTime.of(2024, 1, 15, 12, 30, 45, 123_456_789);
+    Instant timestampTZWithSubMillis = timestampWithSubMillis.toInstant(ZoneOffset.UTC);
+
+    // Act
+    Put put =
+        Put.newBuilder(existingPut)
+            .timeValue("time", timeWithSubMicros)
+            .timestampValue("timestamp", timestampWithSubMillis)
+            .timestampTZValue("timestamptz", timestampTZWithSubMillis)
+            .build();
+
+    // Assert
+    assertThat(put.getColumns().get("time").getTimeValue())
+        .isEqualTo(timeWithSubMicros.truncatedTo(ChronoUnit.MICROS));
+    assertThat(put.getColumns().get("timestamp").getTimestampValue())
+        .isEqualTo(timestampWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
+    assertThat(put.getColumns().get("timestamptz").getTimestampTZValue())
+        .isEqualTo(timestampTZWithSubMillis.truncatedTo(ChronoUnit.MILLIS));
   }
 }

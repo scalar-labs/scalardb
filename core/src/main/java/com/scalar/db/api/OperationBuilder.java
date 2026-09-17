@@ -268,7 +268,8 @@ public class OperationBuilder {
     T dateValue(String columnName, @Nullable LocalDate value);
 
     /**
-     * Adds the specified TIME value as a LocalTime to the list of put values.
+     * Adds the specified TIME value as a LocalTime to the list of put values. If the value has
+     * sub-microsecond precision, it will be truncated to microseconds.
      *
      * @param columnName a column name of the value
      * @param value a TIME value to put as LocalTime type
@@ -277,7 +278,8 @@ public class OperationBuilder {
     T timeValue(String columnName, @Nullable LocalTime value);
 
     /**
-     * Adds the specified TIMESTAMP value as a LocalDateTime value to the list of put values.
+     * Adds the specified TIMESTAMP value as a LocalDateTime value to the list of put values. If the
+     * value has sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param columnName a column name of the value
      * @param value a TIMESTAMP value to put as LocalDateTime type
@@ -286,7 +288,8 @@ public class OperationBuilder {
     T timestampValue(String columnName, @Nullable LocalDateTime value);
 
     /**
-     * Adds the specified TIMESTAMPTZ value as an Instant to the list of put values.
+     * Adds the specified TIMESTAMPTZ value as an Instant to the list of put values. If the value
+     * has sub-millisecond precision, it will be truncated to milliseconds.
      *
      * @param columnName a column name of the value
      * @param value a TIMESTAMPTZ value to put as Instant type
@@ -323,13 +326,23 @@ public class OperationBuilder {
     T clearValue(String columnName);
   }
 
+  /**
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
+   */
+  @Deprecated
   public interface ImplicitPreReadEnabled<T> {
     /**
      * Disables implicit pre-read for this put operation. This is a utility method for Consensus
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T disableImplicitPreRead();
 
     /**
@@ -337,7 +350,11 @@ public class OperationBuilder {
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T enableImplicitPreRead();
 
     /**
@@ -346,17 +363,31 @@ public class OperationBuilder {
      *
      * @param implicitPreReadEnabled whether implicit pre-read is enabled or not
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T implicitPreReadEnabled(boolean implicitPreReadEnabled);
   }
 
+  /**
+   * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+   *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+   *     operations instead.
+   */
+  @Deprecated
   public interface InsertModeEnabled<T> {
     /**
      * Disables the insert mode for this put operation. This is a utility method for Consensus
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T disableInsertMode();
 
     /**
@@ -364,7 +395,11 @@ public class OperationBuilder {
      * Commit.
      *
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T enableInsertMode();
 
     /**
@@ -373,7 +408,11 @@ public class OperationBuilder {
      *
      * @param insertModeEnabled whether the insert mode is enabled or not
      * @return the operation builder
+     * @deprecated As of release 3.19.0. Will be removed in release 4.0.0. Implicit pre-read and
+     *     insert mode are Consensus Commit internal details; use the insert, upsert, or update
+     *     operations instead.
      */
+    @Deprecated
     T insertModeEnabled(boolean insertModeEnabled);
   }
 

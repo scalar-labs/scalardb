@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
@@ -10,7 +10,6 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -37,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 class RdbEngineOracle extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
+  private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final String keyColumnSize;
   private final RdbEngineTimeTypeOracle timeTypeEngine;
 
@@ -94,7 +94,10 @@ class RdbEngineOracle extends AbstractRdbEngine {
       // can be used.
       sqls.add(
           "CREATE UNIQUE INDEX "
-              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + enclose(
+                  shortenIndexNameIfNeeded(
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX + schema + "_" + table,
+                      CLUSTERING_ORDER_INDEX_NAME_PREFIX))
               + " ON "
               + encloseFullTableName(schema, table)
               + " ("
@@ -115,7 +118,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isCreateMetadataSchemaDuplicateSchemaError(SQLException e) {
+  public boolean isDuplicateSchemaError(SQLException e) {
     // ORA-01920: user name 'string' conflicts with another user or role name
     return e.getErrorCode() == 1920;
   }
@@ -128,12 +131,6 @@ class RdbEngineOracle extends AbstractRdbEngine {
   @Override
   public String dropNamespaceSql(String namespace) {
     return "DROP USER " + enclose(namespace);
-  }
-
-  @Override
-  public void dropNamespaceTranslateSQLException(SQLException e, String namespace)
-      throws ExecutionException {
-    throw new ExecutionException("Dropping the user failed: " + namespace, e);
   }
 
   @Override
@@ -159,8 +156,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public String internalTableExistsCheckSql(String fullTableName) {
-    return "SELECT 1 FROM " + fullTableName + " FETCH FIRST 1 ROWS ONLY";
+  public String internalTableExistsCheckSql() {
+    return "SELECT 1 FROM ALL_TABLES" + " WHERE OWNER = ? AND TABLE_NAME = ?";
   }
 
   @Override
@@ -226,17 +223,17 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isUndefinedTableError(SQLException e) {
-    // ORA-00942: Table or view does not exist
-    return e.getErrorCode() == 942;
-  }
-
-  @Override
   public boolean isConflict(SQLException e) {
     // ORA-08177: can't serialize access for this transaction
     // ORA-00060: deadlock detected while waiting for resource
     // ORA-08176: consistent read failure; rollback data not available
     return e.getErrorCode() == 8177 || e.getErrorCode() == 60 || e.getErrorCode() == 8176;
+  }
+
+  @Override
+  public boolean isUndefinedIndexError(SQLException e) {
+    // ORA-01418: specified index does not exist
+    return e.getErrorCode() == 1418;
   }
 
   @Override
@@ -251,7 +248,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case BIGINT:
-        return "NUMBER(16)";
+        return "NUMBER(19)";
       case BLOB:
         return "BLOB";
       case BOOLEAN:
@@ -302,7 +299,11 @@ class RdbEngineOracle extends AbstractRdbEngine {
     String numericTypeDescription = String.format("%s(%d, %d)", typeName, columnSize, digits);
     switch (type) {
       case NUMERIC:
-        if (columnSize > 15) {
+        // NUMBER(18) is the maximum precision where all possible values fit within the Java long
+        // range. NUMBER(19) can hold values outside the Java long range (greater than
+        // Long.MAX_VALUE or less than Long.MIN_VALUE), so it is not safe to import since imported
+        // tables may contain data not managed by ScalarDB.
+        if (columnSize > 18) {
           throw new IllegalArgumentException(
               CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
                   numericTypeDescription, columnDescription));

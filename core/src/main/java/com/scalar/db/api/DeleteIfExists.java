@@ -16,7 +16,7 @@ import javax.annotation.concurrent.Immutable;
 public class DeleteIfExists implements MutationCondition {
 
   /**
-   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link ConditionBuilder}
+   * @deprecated As of release 3.6.0. Will be removed in release 4.0.0. Use {@link ConditionBuilder}
    *     to build a condition instead
    */
   @Deprecated

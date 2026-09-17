@@ -458,6 +458,15 @@ public class TableMetadata {
                       .buildMessage(k));
             }
           });
+      secondaryIndexNames.forEach(
+          k -> {
+            if (!columns.containsKey(k)) {
+              throw new IllegalStateException(
+                  CoreError
+                      .TABLE_METADATA_BUILD_ERROR_SECONDARY_INDEX_COLUMN_DEFINITION_NOT_SPECIFIED
+                      .buildMessage(k));
+            }
+          });
       return new TableMetadata(
           columns,
           partitionKeyNames,

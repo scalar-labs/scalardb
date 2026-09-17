@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.azure.cosmos.CosmosClient;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.DatabaseOperationAttributes;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
@@ -321,5 +322,22 @@ public class CosmosTest {
     // Act Assert
     assertThatThrownBy(() -> cosmos.mutate(Arrays.asList(put, delete)))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_WithScanAllWithOrdering_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .ordering(Scan.Ordering.asc("col1"))
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ENABLED, "true")
+            .attribute(DatabaseOperationAttributes.CROSS_PARTITION_SCAN_ORDERING_ENABLED, "true")
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> cosmos.scan(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 }

@@ -23,6 +23,7 @@ public class ConsensusCommitConfig {
   public static final String PREFIX = DatabaseConfig.PREFIX + "consensus_commit.";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
   public static final String COORDINATOR_NAMESPACE = PREFIX + "coordinator.namespace";
+  public static final String PARTICIPANT_ID = PREFIX + "participant_id";
 
   public static final String PARALLEL_EXECUTOR_COUNT = PREFIX + "parallel_executor_count";
   public static final String PARALLEL_PREPARATION_ENABLED = PREFIX + "parallel_preparation.enabled";
@@ -39,6 +40,8 @@ public class ConsensusCommitConfig {
   public static final String PARALLEL_IMPLICIT_PRE_READ =
       PREFIX + "parallel_implicit_pre_read.enabled";
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
+  public static final String INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED =
+      PREFIX + "index.eventually_consistent_read.enabled";
 
   public static final String COORDINATOR_GROUP_COMMIT_PREFIX = PREFIX + "coordinator.group_commit.";
   public static final String COORDINATOR_GROUP_COMMIT_ENABLED =
@@ -66,6 +69,7 @@ public class ConsensusCommitConfig {
 
   private final Isolation isolation;
   @Nullable private final String coordinatorNamespace;
+  @Nullable private final String participantId;
 
   private final int parallelExecutorCount;
   private final boolean parallelPreparationEnabled;
@@ -79,6 +83,7 @@ public class ConsensusCommitConfig {
   private final boolean onePhaseCommitEnabled;
   private final boolean parallelImplicitPreReadEnabled;
   private final boolean includeMetadataEnabled;
+  private final boolean indexEventuallyConsistentReadEnabled;
 
   private final boolean coordinatorGroupCommitEnabled;
   private final int coordinatorGroupCommitSlotCapacity;
@@ -99,7 +104,7 @@ public class ConsensusCommitConfig {
 
     if (properties.containsKey("scalar.db.isolation_level")) {
       logger.warn(
-          "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 5.0.0. "
+          "The property \"scalar.db.isolation_level\" is deprecated and will be removed in 4.0.0. "
               + "Please use \""
               + ISOLATION_LEVEL
               + "\" instead");
@@ -120,12 +125,13 @@ public class ConsensusCommitConfig {
       if (properties.containsKey("scalar.db.consensus_commit.serializable_strategy")) {
         logger.warn(
             "The property \"scalar.db.consensus_commit.serializable_strategy\" is deprecated and will "
-                + "be removed in 5.0.0. The EXTRA_READ strategy is always used for the SERIALIZABLE "
+                + "be removed in 4.0.0. The EXTRA_READ strategy is always used for the SERIALIZABLE "
                 + "isolation level.");
       }
     }
 
     coordinatorNamespace = getString(properties, COORDINATOR_NAMESPACE, null);
+    participantId = getString(properties, PARTICIPANT_ID, null);
 
     parallelExecutorCount =
         getInt(properties, PARALLEL_EXECUTOR_COUNT, DEFAULT_PARALLEL_EXECUTOR_COUNT);
@@ -152,6 +158,8 @@ public class ConsensusCommitConfig {
     parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
     includeMetadataEnabled = getBoolean(properties, INCLUDE_METADATA_ENABLED, false);
+    indexEventuallyConsistentReadEnabled =
+        getBoolean(properties, INDEX_EVENTUALLY_CONSISTENT_READ_ENABLED, false);
 
     coordinatorGroupCommitEnabled = getBoolean(properties, COORDINATOR_GROUP_COMMIT_ENABLED, false);
     coordinatorGroupCommitSlotCapacity =
@@ -189,6 +197,19 @@ public class ConsensusCommitConfig {
 
   public Optional<String> getCoordinatorNamespace() {
     return Optional.ofNullable(coordinatorNamespace);
+  }
+
+  /**
+   * Returns the stable logical identifier of this participant in the two-phase commit API path.
+   *
+   * <p>Required for the multi-participant TwoPhaseCommitParticipant implementation (constructor
+   * will throw if absent). Optional for the existing single-participant ConsensusCommit path, which
+   * never reads this property even when it is set.
+   *
+   * @return an {@code Optional} containing the configured participant ID, or empty if unset
+   */
+  public Optional<String> getParticipantId() {
+    return Optional.ofNullable(participantId);
   }
 
   public int getParallelExecutorCount() {
@@ -233,6 +254,10 @@ public class ConsensusCommitConfig {
 
   public boolean isIncludeMetadataEnabled() {
     return includeMetadataEnabled;
+  }
+
+  public boolean isIndexEventuallyConsistentReadEnabled() {
+    return indexEventuallyConsistentReadEnabled;
   }
 
   public boolean isCoordinatorGroupCommitEnabled() {
