@@ -904,6 +904,36 @@ public class CosmosOperationCheckerTest {
   }
 
   @Test
+  public void check_GetGivenForIndexedColumn_ShouldNotUseConcatenatedPartitionKey()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofInt(COL1, 0))
+            .build();
+
+    assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_ScanGivenForIndexedColumn_ShouldNotUseConcatenatedPartitionKey()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA1);
+
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .indexKey(Key.ofInt(COL1, 0))
+            .build();
+
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
+  }
+
+  @Test
   public void check_PutGiven_WhenPartitionKeyExceedsV1Limit_ShouldThrowIllegalArgumentException()
       throws ExecutionException {
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);

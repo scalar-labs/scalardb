@@ -8,6 +8,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
@@ -29,6 +30,7 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
+import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -174,6 +176,13 @@ public class CosmosOperationChecker extends OperationChecker {
     }
 
     TableMetadata metadata = getTableMetadata(operation);
+    // Index Gets/Scans put the index column in getPartitionKey(). That is not the Cosmos
+    // concatenated partition key, so concatenation and document-id length checks do not apply.
+    if (operation instanceof Selection
+        && ScalarDbUtils.isSecondaryIndexSpecified((Selection) operation, metadata)) {
+      return;
+    }
+
     CosmosOperation cosmosOperation = new CosmosOperation(operation, metadata);
     String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
     int partitionKeyByteLength = concatenatedPartitionKey.getBytes(StandardCharsets.UTF_8).length;
