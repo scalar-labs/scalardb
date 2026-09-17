@@ -2014,14 +2014,58 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
   }
 
   @Test
-  public void put_withPutIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
+  public void put_withPutIfOnPrimaryKeyColumn_shouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
     Put putIf =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
             .intValue(BALANCE, INITIAL_BALANCE)
             .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullText()).build())
+                ConditionBuilder.putIf(ConditionBuilder.column(ACCOUNT_ID).isEqualToInt(0)).build())
+            .enableImplicitPreRead()
+            .build();
+    TwoPhaseCommitTransaction transaction = manager1.start();
+
+    // Act Assert
+    try {
+      assertThatThrownBy(() -> transaction.put(putIf))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("The condition is not properly specified");
+    } finally {
+      transaction.rollback();
+    }
+  }
+
+  @Test
+  public void delete_withDeleteIfOnPrimaryKeyColumn_shouldThrowIllegalArgumentException()
+      throws TransactionException {
+    // Arrange
+    Delete deleteIf =
+        Delete.newBuilder(prepareDelete(0, 0, namespace1, TABLE_1))
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(ACCOUNT_ID).isEqualToInt(0))
+                    .build())
+            .build();
+    TwoPhaseCommitTransaction transaction = manager1.start();
+
+    // Act Assert
+    try {
+      assertThatThrownBy(() -> transaction.delete(deleteIf))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("The condition is not properly specified");
+    } finally {
+      transaction.rollback();
+    }
+  }
+
+  @Test
+  public void put_withPutIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
+      throws TransactionException {
+    // Arrange
+    Put putIf =
+        Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .condition(ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullInt()).build())
             .enableImplicitPreRead()
             .build();
 
