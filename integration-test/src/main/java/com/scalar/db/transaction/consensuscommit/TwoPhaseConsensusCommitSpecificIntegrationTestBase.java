@@ -288,6 +288,10 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rolled forward value
+
+    // Wait for the recovery to complete so that the asynchronous recovery does not outlive this
+    // test and collide with the truncation in the next test's setUp
+    ((TwoPhaseConsensusCommit) transaction).waitForRecoveryCompletion();
   }
 
   @Test
@@ -336,6 +340,10 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
+
+    // Wait for the recovery to complete so that the asynchronous recovery does not outlive this
+    // test and collide with the truncation in the next test's setUp
+    ((TwoPhaseConsensusCommit) transaction).waitForRecoveryCompletion();
   }
 
   @Test
@@ -478,6 +486,10 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     }
     transaction.prepare();
     transaction.commit();
+
+    // Wait for the recovery to complete so that the asynchronous recovery does not outlive this
+    // test and collide with the truncation in the next test's setUp
+    ((TwoPhaseConsensusCommit) transaction).waitForRecoveryCompletion();
   }
 
   @Test
@@ -525,6 +537,10 @@ public abstract class TwoPhaseConsensusCommitSpecificIntegrationTestBase {
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
+
+    // Wait for the recovery to complete so that the asynchronous recovery does not outlive this
+    // test and collide with the truncation in the next test's setUp
+    ((TwoPhaseConsensusCommit) transaction).waitForRecoveryCompletion();
   }
 
   @Test
