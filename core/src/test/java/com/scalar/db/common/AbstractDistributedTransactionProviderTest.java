@@ -18,7 +18,6 @@ import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -54,12 +53,6 @@ class AbstractDistributedTransactionProviderTest {
           public DistributedTransactionAdmin createDistributedTransactionAdmin(
               DatabaseConfig config) {
             return mock(DistributedTransactionAdmin.class);
-          }
-
-          @Override
-          protected TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-              DatabaseConfig config) {
-            return mock(TwoPhaseCommitTransactionManager.class);
           }
 
           @Override
@@ -234,12 +227,6 @@ class AbstractDistributedTransactionProviderTest {
       @Override
       public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
         return mock(DistributedTransactionAdmin.class);
-      }
-
-      @Override
-      protected TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-          DatabaseConfig config) {
-        return null;
       }
 
       @Override

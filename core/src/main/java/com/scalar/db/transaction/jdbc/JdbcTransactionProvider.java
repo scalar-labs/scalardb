@@ -5,12 +5,10 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.AbstractDistributedTransactionProvider;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcConfig;
-import javax.annotation.Nullable;
 
 public class JdbcTransactionProvider extends AbstractDistributedTransactionProvider {
 
@@ -28,16 +26,6 @@ public class JdbcTransactionProvider extends AbstractDistributedTransactionProvi
   @Override
   public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
     return new JdbcTransactionAdmin(config);
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Nullable
-  @Override
-  public TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-      DatabaseConfig config) {
-    return null;
   }
 
   @Override
