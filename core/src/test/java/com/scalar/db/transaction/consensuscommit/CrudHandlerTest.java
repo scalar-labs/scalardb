@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
@@ -919,7 +920,11 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, expected)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -951,7 +956,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -983,7 +988,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScanSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -1016,7 +1021,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -1070,7 +1075,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, recoveredResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1124,7 +1133,11 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot, never()).putIntoScanSet(any(), any());
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, recoveredResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1178,7 +1191,7 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScanSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
 
     assertThat(results)
         .containsExactly(
@@ -1438,7 +1451,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, transactionResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, transactionResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(
@@ -1501,7 +1518,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, recoveredResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1563,7 +1584,7 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap());
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of());
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(), ImmutableSet.of());
 
     assertThat(results).isEmpty();
   }
@@ -1749,7 +1770,12 @@ public class CrudHandlerTest {
             Maps.newLinkedHashMap(ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2)));
     verify(snapshot)
         .verifyNoOverlap(
-            scanWithLimit, ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2));
+            eq(scanWithLimit),
+            eq(ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2)),
+            eq(
+                scanType == ScanType.SCAN
+                    ? ImmutableSet.<Snapshot.Key>of()
+                    : ImmutableSet.of(key2, key3)));
 
     assertThat(results)
         .containsExactly(
@@ -1881,10 +1907,139 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key1, Optional.of(txResult1));
     verify(snapshot)
         .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key1, txResult1));
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key1, txResult1), ImmutableSet.of(key1));
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @Test
+  public void getScanner_ScannerProducedKeyAlreadyInWriteSet_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    TransactionResult txResult = new TransactionResult(result);
+    when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    // The transaction wrote the record before the scanner produced it
+    when(snapshot.containsKeyInWriteSet(key)).thenReturn(true);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    // The key must not be exempt, so the overlap check still rejects it
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of());
+  }
+
+  @Test
+  public void getScanner_ScannerProducedKeyAlreadyInDeleteSet_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    TransactionResult txResult = new TransactionResult(result);
+    when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(snapshot.containsKeyInDeleteSet(key)).thenReturn(true);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of());
+  }
+
+  @Test
+  public void getScanner_ScannerProducedRowFilteredOutByConjunction_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange: the storage row is committed but its current ANY_NAME_4 value (ANY_INT_1) does not
+    // satisfy the scan conjunction (ANY_NAME_4 = ANY_INT_2), so the conjunction filter drops it and
+    // the caller never sees it.
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+            .build();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    // A row that is never delivered must not become exempt. Otherwise a later write to that key
+    // would skip the range and conjunction checks even though the scan did not return the record.
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(), ImmutableSet.of());
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+  }
+
+  @Test
+  public void getScanner_SnapshotScannerProducedKeyAlreadyInWriteSet_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange: the scan is already in the scan set, so the cached snapshot scanner serves it
+    Scan scan = prepareScan();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    TransactionResult txResult = new TransactionResult(result);
+    when(snapshot.getResults(scan))
+        .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, txResult))));
+    when(snapshot.containsKeyInWriteSet(key)).thenReturn(true);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    // A repeated identical scan after a write must stay rejected
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of());
+    verify(storage, never()).scan(any());
+  }
+
+  @Test
+  public void getScanner_SnapshotScannerProducedCleanKey_ShouldExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    TransactionResult txResult = new TransactionResult(result);
+    when(snapshot.getResults(scan))
+        .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, txResult))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of(key));
   }
 
   @Test
@@ -1914,7 +2069,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScannerSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
@@ -1949,7 +2104,7 @@ public class CrudHandlerTest {
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot)
         .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
@@ -3814,7 +3969,7 @@ public class CrudHandlerTest {
     // The old record rolled forward to deleted (empty), so it must not be cached as a result.
     verify(snapshot, never()).putIntoReadSet(eq(keyOld), any());
     // An index Get is resolved like read() (not scan()), so it must never run overlap verification.
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
   }
 
   @Test
@@ -3840,7 +3995,7 @@ public class CrudHandlerTest {
         .hasMessageContaining("Please use scan() for non-exact match selection");
     verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
     verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
   }
 
   @Test
