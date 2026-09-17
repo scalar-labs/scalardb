@@ -93,4 +93,28 @@ public final class JdbcEnv {
     return isSpanner()
         && System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).contains("autoConfigEmulator");
   }
+
+  public static boolean isMysql() {
+    return JdbcEnv.getJdbcUrl().startsWith("jdbc:mysql:");
+  }
+
+  public static boolean isMariaDb() {
+    return JdbcEnv.getJdbcUrl().startsWith("jdbc:mariadb:");
+  }
+
+  public static boolean isPostgresql() {
+    return JdbcEnv.getJdbcUrl().startsWith("jdbc:postgresql:");
+  }
+
+  static String getJdbcUrl() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
+  }
+
+  static String getUsername() {
+    return System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
+  }
+
+  static String getPassword() {
+    return System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
+  }
 }
