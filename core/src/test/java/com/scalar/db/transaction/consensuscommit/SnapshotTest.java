@@ -2888,20 +2888,19 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_ScanWithRangeAndBinaryCollationGivenAndCaseDifferingWrittenKey_ShouldReproduceByteExactBehavior()
+      verifyNoOverlap_StartExclusiveBoundaryKeyCollatesEqualButNotByteIdentical_ShouldNotThrowException()
           throws CrudException {
     // Arrange
-    snapshot = prepareSnapshot(CollationComparators.BINARY);
-    Put put = preparePut(ANY_TEXT_1, "Apple");
-    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot = prepareSnapshot(CollationComparators.CASE_INSENSITIVE_ICU);
+    Put put = preparePut(ANY_TEXT_1, "apple");
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.CASE_INSENSITIVE_ICU), put);
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
             .table(ANY_TABLE_NAME)
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
-            // ["apple", "banana"]
-            .start(Key.ofText(ANY_NAME_2, "apple"), true)
-            .end(Key.ofText(ANY_NAME_2, "banana"), true)
+            // ("Apple", infinite)
+            .start(Key.ofText(ANY_NAME_2, "Apple"), false)
             .build();
 
     // Act
