@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createGet;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -19,9 +20,11 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
@@ -123,7 +126,8 @@ class ParticipantCommitHandler {
     logger.debug("Rollback from snapshot for {}", context.transactionId);
     try {
       RollbackMutationComposer composer =
-          new RollbackMutationComposer(context.transactionId, storage, tableMetadataManager);
+          new RollbackMutationComposer(
+              context.transactionId, tableMetadataManager, readLatestRecords(context));
       context.snapshot.to(composer);
       List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
@@ -133,6 +137,41 @@ class ParticipantCommitHandler {
       logger.info("Rolling back records failed. Transaction ID: {}", context.transactionId, e);
       // ignore since records are recovered lazily
     }
+  }
+
+  /**
+   * Reads the latest state of every record this transaction writes, which the rollback needs to
+   * decide what to restore.
+   *
+   * <p>The reads are independent of each other, so they run through the parallel executor. They are
+   * not subject to the mutation grouping the storage requires, so every record is read on its own,
+   * regardless of how the rollback mutations are grouped afterwards.
+   *
+   * @param context the transaction context
+   * @return the latest state of the records, by key. A key that has no record in storage is absent
+   * @throws ExecutionException if reading a record fails
+   */
+  private Map<Snapshot.Key, TransactionResult> readLatestRecords(TransactionContext context)
+      throws ExecutionException {
+    List<Snapshot.Key> keys = new ArrayList<>();
+    context.snapshot.getWriteSet().forEach(entry -> keys.add(entry.getKey()));
+    context.snapshot.getDeleteSet().forEach(entry -> keys.add(entry.getKey()));
+    if (keys.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    Map<Snapshot.Key, TransactionResult> latestRecords = new ConcurrentHashMap<>();
+    List<ParallelExecutorTask> tasks = new ArrayList<>(keys.size());
+    for (Snapshot.Key key : keys) {
+      tasks.add(
+          () ->
+              storage
+                  .get(createGet(key))
+                  .ifPresent(result -> latestRecords.put(key, new TransactionResult(result))));
+    }
+    parallelExecutor.readRecordsForRollback(tasks, context.transactionId);
+
+    return latestRecords;
   }
 
   private List<ParallelExecutorTask> toTasks(List<List<Mutation>> groupedMutations) {

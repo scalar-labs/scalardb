@@ -13,15 +13,14 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Scan;
@@ -51,7 +50,7 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -134,7 +133,6 @@ public class RollbackMutationComposerTest {
               .build());
 
   private RollbackMutationComposer composer;
-  @Mock private DistributedStorage storage;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
 
   @BeforeEach
@@ -144,7 +142,7 @@ public class RollbackMutationComposerTest {
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager);
+    composer = new RollbackMutationComposer(ANY_ID_2, tableMetadataManager, ImmutableMap.of());
   }
 
   private Get prepareGet() {
@@ -167,6 +165,20 @@ public class RollbackMutationComposerTest {
         .partitionKey(partitionKey)
         .consistency(Consistency.LINEARIZABLE)
         .build();
+  }
+
+  // A composer for a caller that has read the latest records itself, which is how a transaction
+  // rolls its records back
+  private RollbackMutationComposer composerWithLatestRecord(
+      Mutation mutation, @Nullable TransactionResult latestRecord) {
+    Snapshot.Key key =
+        mutation instanceof Put
+            ? new Snapshot.Key((Put) mutation)
+            : new Snapshot.Key((Delete) mutation);
+    return new RollbackMutationComposer(
+        ANY_ID_2,
+        tableMetadataManager,
+        latestRecord == null ? ImmutableMap.of() : ImmutableMap.of(key, latestRecord));
   }
 
   private Put preparePut() {
@@ -553,60 +565,58 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void add_PutAndNullResultGivenAndOldResultGivenFromStorage_ShouldDoNothing()
+  public void add_PutAndNullResultGivenAndOldResultGivenAsLatestRecord_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.PREPARED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePut();
+    composer = composerWithLatestRecord(put, result);
 
     // Act
     composer.add(put, null);
 
     // Assert
     assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
-  public void add_PutWithoutCkAndNullResultGivenAndOldResultGivenFromStorage_ShouldDoNothing()
+  public void add_PutWithoutCkAndNullResultGivenAndOldResultGivenAsLatestRecord_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.PREPARED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePutWithoutCk();
+    composer = composerWithLatestRecord(put, result);
 
     // Act
     composer.add(put, null);
 
     // Assert
     assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
-  public void add_PutAndNullResultGivenAndEmptyResultGivenFromStorage_ShouldDoNothing()
+  public void add_PutAndNullResultGivenAndNoLatestRecord_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
-    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
     Put put = preparePut();
+    composer = composerWithLatestRecord(put, null);
 
     // Act
     composer.add(put, null);
 
     // Assert
     assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
-  public void add_PutAndResultFromSnapshotGivenAndPreparedResultGivenFromStorage_ShouldComposePut()
-      throws ExecutionException {
+  public void
+      add_PutAndResultFromSnapshotGivenAndPreparedResultGivenAsLatestRecord_ShouldComposePut()
+          throws ExecutionException {
     // Arrange
     TransactionResult resultInSnapshot = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
     TransactionResult result = prepareResult(TransactionState.PREPARED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePut();
+    composer = composerWithLatestRecord(put, result);
 
     // Act
     composer.add(put, resultInSnapshot);
@@ -648,17 +658,17 @@ public class RollbackMutationComposerTest {
             .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
             .build();
     assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
-  public void add_PutAndResultFromSnapshotGivenAndDeletedResultGivenFromStorage_ShouldComposePut()
-      throws ExecutionException {
+  public void
+      add_PutAndResultFromSnapshotGivenAndDeletedResultGivenAsLatestRecord_ShouldComposePut()
+          throws ExecutionException {
     // Arrange
     TransactionResult resultInSnapshot = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
     TransactionResult result = prepareResult(TransactionState.DELETED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePut();
+    composer = composerWithLatestRecord(put, result);
 
     // Act
     composer.add(put, resultInSnapshot);
@@ -699,23 +709,21 @@ public class RollbackMutationComposerTest {
             .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
             .build();
     assertThat(actual).isEqualTo(expected);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
-  public void add_PutAndResultFromSnapshotGivenAndResultFromStorageHasDifferentId_ShouldDoNothing()
+  public void add_PutAndResultFromSnapshotGivenAndLatestRecordHasDifferentId_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePut();
+    composer = composerWithLatestRecord(put, result);
 
     // Act
     composer.add(put, result);
 
     // Assert
     assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
@@ -723,15 +731,14 @@ public class RollbackMutationComposerTest {
       throws ExecutionException {
     // Arrange
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
-    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
     Put put = preparePut();
+    composer = composerWithLatestRecord(put, null);
 
     // Act
     composer.add(put, result);
 
     // Assert
     assertThat(composer.get().size()).isEqualTo(0);
-    verify(storage).get(any(Get.class));
   }
 
   @Test
