@@ -59,6 +59,7 @@ public class CommitHandler {
       CoordinatorStateAccessor coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      AsyncExecutor asyncExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
       boolean onePhaseCommitEnabled) {
@@ -69,6 +70,7 @@ public class CommitHandler {
             storage,
             tableMetadataManager,
             parallelExecutor,
+            asyncExecutor,
             mutationsGrouper,
             onePhaseCommitEnabled);
   }
