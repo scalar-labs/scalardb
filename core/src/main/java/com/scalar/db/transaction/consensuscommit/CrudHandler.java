@@ -22,6 +22,7 @@ import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Column;
@@ -709,6 +710,16 @@ public class CrudHandler {
       Throwable cause = e.getCause();
       if (cause instanceof CrudException) {
         throw (CrudException) cause;
+      }
+      if (cause instanceof RetriableExecutionException) {
+        // The recovery mutation faced a conflict that outlived the retries in RecoveryHandler. The
+        // record is left unrecovered, and a subsequent read recovers it, so the caller can resolve
+        // this by retrying the transaction. Report it as a conflict to say so.
+        throw new CrudConflictException(
+            CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS.buildMessage(
+                cause.getMessage()),
+            cause,
+            transactionId);
       }
 
       throw new CrudException(
