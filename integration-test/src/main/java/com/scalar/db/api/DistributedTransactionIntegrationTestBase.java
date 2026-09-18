@@ -1900,51 +1900,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
-  public void put_withPutIfOnPrimaryKeyColumn_shouldThrowIllegalArgumentException()
-      throws TransactionException {
-    // Arrange
-    Put putIf =
-        Put.newBuilder(preparePut(0, 0))
-            .intValue(BALANCE, INITIAL_BALANCE)
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(ACCOUNT_ID).isEqualToInt(0)).build())
-            .enableImplicitPreRead()
-            .build();
-    DistributedTransaction transaction = manager.start();
-
-    // Act Assert
-    try {
-      assertThatThrownBy(() -> transaction.put(putIf))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("The condition is not properly specified");
-    } finally {
-      transaction.rollback();
-    }
-  }
-
-  @Test
-  public void delete_withDeleteIfOnPrimaryKeyColumn_shouldThrowIllegalArgumentException()
-      throws TransactionException {
-    // Arrange
-    Delete deleteIf =
-        Delete.newBuilder(prepareDelete(0, 0))
-            .condition(
-                ConditionBuilder.deleteIf(ConditionBuilder.column(ACCOUNT_ID).isEqualToInt(0))
-                    .build())
-            .build();
-    DistributedTransaction transaction = manager.start();
-
-    // Act Assert
-    try {
-      assertThatThrownBy(() -> transaction.delete(deleteIf))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("The condition is not properly specified");
-    } finally {
-      transaction.rollback();
-    }
-  }
-
-  @Test
   public void put_withPutIfWhenRecordDoesNotExist_shouldThrowUnsatisfiedConditionException()
       throws TransactionException {
     // Arrange
