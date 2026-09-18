@@ -415,17 +415,34 @@ public class MutationConditionsValidatorTest {
 
   @Test
   public void
-      validateConditionIsSatisfied_WithBinaryCollationAndEqOnText_ShouldThrowUnsatisfiedConditionException() {
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndGteOnCollateEqualText_ShouldNotThrow() {
     // Arrange
-    MutationConditionsValidator naturalValidator =
-        new MutationConditionsValidator(CollationComparators.BINARY);
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(CollationComparators.CASE_INSENSITIVE_ICU);
     prepareExistingTextColumn("Apple");
-    Put put = putIfExpression(ConditionBuilder.column(C1).isEqualToText("apple"));
+    Put put = putIfExpression(ConditionBuilder.column(C1).isGreaterThanOrEqualToText("apple"));
 
     // Act Assert
-    Assertions.assertThatThrownBy(
-            () -> naturalValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
-        .isInstanceOf(UnsatisfiedConditionException.class);
+    Assertions.assertThatCode(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      validateConditionIsSatisfied_WithCaseInsensitiveCollationAndLteOnCollateEqualText_ShouldNotThrow() {
+    // Arrange
+    MutationConditionsValidator collationValidator =
+        new MutationConditionsValidator(CollationComparators.CASE_INSENSITIVE_ICU);
+    prepareExistingTextColumn("apple");
+    Put put = putIfExpression(ConditionBuilder.column(C1).isLessThanOrEqualToText("Apple"));
+
+    // Act Assert
+    Assertions.assertThatCode(
+            () ->
+                collationValidator.checkIfConditionIsSatisfied(put, existingRecord, TRANSACTION_ID))
+        .doesNotThrowAnyException();
   }
 
   @Test
