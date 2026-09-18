@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -800,6 +801,49 @@ public class CrudHandlerTest {
     assertThat(results1).isEqualTo(results2);
     verify(storage, never()).get(get);
     verify(storage).get(getForStorage);
+  }
+
+  @Test
+  public void
+      get_CalledTwiceWithCaseDifferingKeySpellingUnderIcuAndRealSnapshot_SecondTimeShouldReturnFromSnapshot()
+          throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            CollationComparators.CASE_INSENSITIVE_ICU);
+    Get get = prepareGet();
+    Get getForStorage = toGetForStorageFrom(get);
+    Get anotherGet =
+        Get.newBuilder(get)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toUpperCase(Locale.ROOT)))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toUpperCase(Locale.ROOT)))
+            .build();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    snapshot =
+        new Snapshot(
+            ANY_ID_1,
+            tableMetadataManager,
+            parallelExecutor,
+            CollationComparators.CASE_INSENSITIVE_ICU);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    Optional<Result> results1 = handler.get(get, context);
+    Optional<Result> results2 = handler.get(anotherGet, context);
+
+    // Assert
+    assertThat(results1).isEqualTo(results2);
+    verify(storage).get(getForStorage);
+    verify(storage, never()).get(toGetForStorageFrom(anotherGet));
   }
 
   @Test

@@ -42,12 +42,14 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -109,8 +111,9 @@ public class SnapshotTest {
 
   private Snapshot snapshot;
   private ConcurrentMap<Snapshot.Key, Optional<TransactionResult>> readSet;
-  private ConcurrentMap<Get, Optional<TransactionResult>> getSet;
-  private Map<Scan, LinkedHashMap<Snapshot.Key, TransactionResult>> scanSet;
+  private ConcurrentMap<Snapshot.SelectionIdentity<Get>, Optional<TransactionResult>> getSet;
+  private Map<Snapshot.SelectionIdentity<Scan>, LinkedHashMap<Snapshot.Key, TransactionResult>>
+      scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
   private List<Snapshot.ScannerInfo> scannerSet;
@@ -370,7 +373,8 @@ public class SnapshotTest {
     snapshot.putIntoGetSet(get, Optional.of(result));
 
     // Assert
-    assertThat(getSet.get(get)).isEqualTo(Optional.of(result));
+    assertThat(getSet.get(new Snapshot.SelectionIdentity<>(get, CollationComparators.BINARY)))
+        .isEqualTo(Optional.of(result));
   }
 
   @Test
@@ -621,7 +625,8 @@ public class SnapshotTest {
     snapshot.putIntoScanSet(scan, expected);
 
     // Assert
-    assertThat(scanSet.get(scan)).isEqualTo(expected);
+    assertThat(scanSet.get(new Snapshot.SelectionIdentity<>(scan, CollationComparators.BINARY)))
+        .isEqualTo(expected);
   }
 
   @Test
@@ -879,6 +884,128 @@ public class SnapshotTest {
   }
 
   @Test
+  public void containsKeyInGetSet_GetWithCaseDifferingKeySpellingUnderIcu_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.CASE_INSENSITIVE_ICU);
+    snapshot.putIntoGetSet(prepareGet(), Optional.of(prepareResult(ANY_ID)));
+
+    // Act Assert
+    assertThat(snapshot.containsKeyInGetSet(prepareGetWithUpperCaseKeys())).isTrue();
+  }
+
+  @Test
+  public void containsKeyInGetSet_GetWithCaseDifferingKeySpellingUnderBinary_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.BINARY);
+    snapshot.putIntoGetSet(prepareGet(), Optional.of(prepareResult(ANY_ID)));
+
+    // Act Assert
+    assertThat(snapshot.containsKeyInGetSet(prepareGetWithUpperCaseKeys())).isFalse();
+  }
+
+  @Test
+  public void containsKeyInGetSet_GetWithSameKeyButOtherProjectionsUnderIcu_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.CASE_INSENSITIVE_ICU);
+    snapshot.putIntoGetSet(prepareGet(), Optional.of(prepareResult(ANY_ID)));
+    Get projected = Get.newBuilder(prepareGetWithUpperCaseKeys()).projection(ANY_NAME_3).build();
+
+    // Act Assert
+    assertThat(snapshot.containsKeyInGetSet(projected)).isFalse();
+  }
+
+  @Test
+  public void getResult_GetWithCaseDifferingKeySpellingUnderIcu_ShouldReturnStoredResult()
+      throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.CASE_INSENSITIVE_ICU);
+    TransactionResult result = prepareResult(ANY_ID);
+    snapshot.putIntoGetSet(prepareGet(), Optional.of(result));
+    Get get = prepareGetWithUpperCaseKeys();
+
+    // Act
+    Optional<TransactionResult> actual =
+        snapshot.getResult(new Snapshot.Key(get, CollationComparators.CASE_INSENSITIVE_ICU), get);
+
+    // Assert
+    assertThat(actual).hasValue(result);
+  }
+
+  @Test
+  public void getGetSet_CaseDifferingGetsStoredUnderIcu_ShouldHoldOneEntryUnderFirstSpelling() {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.CASE_INSENSITIVE_ICU);
+    Get first = prepareGet();
+    snapshot.putIntoGetSet(first, Optional.of(prepareResult(ANY_ID)));
+    snapshot.putIntoGetSet(prepareGetWithUpperCaseKeys(), Optional.empty());
+
+    // Act
+    Collection<Map.Entry<Get, Optional<TransactionResult>>> entries = snapshot.getGetSet();
+
+    // Assert
+    assertThat(entries).hasSize(1);
+    assertThat(entries.iterator().next().getKey()).isEqualTo(first);
+    assertThat(entries.iterator().next().getValue()).isEmpty();
+  }
+
+  @Test
+  public void getResults_ScanWithCaseDifferingKeySpellingsUnderIcu_ShouldReturnStoredResults() {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.CASE_INSENSITIVE_ICU);
+    LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+    results.put(mock(Snapshot.Key.class), mock(TransactionResult.class));
+    snapshot.putIntoScanSet(prepareScanWithStart("text1", "apple"), results);
+
+    // Act Assert
+    assertThat(snapshot.getResults(prepareScanWithStart("TEXT1", "Apple"))).hasValue(results);
+    assertThat(snapshot.getResults(prepareScanWithStart("TEXT1", "banana"))).isEmpty();
+  }
+
+  @Test
+  public void containsKeyInGetSet_GetWithCaseDifferingConjunctionValueUnderIcu_ShouldReturnTrue() {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.CASE_INSENSITIVE_ICU);
+    snapshot.putIntoGetSet(prepareGetWithConjunction("apple"), Optional.of(prepareResult(ANY_ID)));
+
+    // Act Assert
+    assertThat(snapshot.containsKeyInGetSet(prepareGetWithConjunction("APPLE"))).isTrue();
+    assertThat(snapshot.containsKeyInGetSet(prepareGetWithConjunction("banana"))).isFalse();
+  }
+
+  @Test
+  public void
+      containsKeyInGetSet_GetWithCaseDifferingConjunctionValueUnderBinary_ShouldReturnFalse() {
+    // Arrange
+    snapshot = prepareSnapshot(CollationComparators.BINARY);
+    snapshot.putIntoGetSet(prepareGetWithConjunction("apple"), Optional.of(prepareResult(ANY_ID)));
+
+    // Act Assert
+    assertThat(snapshot.containsKeyInGetSet(prepareGetWithConjunction("APPLE"))).isFalse();
+  }
+
+  private Get prepareGetWithConjunction(String name3Value) {
+    return Get.newBuilder(prepareGet())
+        .where(ConditionBuilder.column(ANY_NAME_3).isEqualToText(name3Value))
+        .build();
+  }
+
+  private Get prepareGetWithUpperCaseKeys() {
+    return Get.newBuilder(prepareGet())
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toUpperCase(Locale.ROOT)))
+        .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toUpperCase(Locale.ROOT)))
+        .build();
+  }
+
+  private Scan prepareScanWithStart(String partitionKeyValue, String startKeyValue) {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, partitionKeyValue))
+        .start(Key.ofText(ANY_NAME_2, startKeyValue), true)
+        .build();
+  }
+
+  @Test
   public void getResults_ScanNotContainedInScanSetGiven_ShouldReturnEmpty() {
     // Arrange
     snapshot = prepareSnapshot();
@@ -904,7 +1031,8 @@ public class SnapshotTest {
     Snapshot.Key key2 = mock(Snapshot.Key.class);
     Snapshot.Key key3 = mock(Snapshot.Key.class);
     scanSet.put(
-        scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
+        new Snapshot.SelectionIdentity<>(scan, CollationComparators.BINARY),
+        Maps.newLinkedHashMap(ImmutableMap.of(key1, result1, key2, result2, key3, result3)));
 
     // Act
     Optional<LinkedHashMap<Snapshot.Key, TransactionResult>> results = snapshot.getResults(scan);
