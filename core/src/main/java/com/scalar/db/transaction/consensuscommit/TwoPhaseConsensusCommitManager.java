@@ -61,6 +61,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
   private final TransactionTableMetadataManager tableMetadataManager;
   private final CoordinatorStateAccessor coordinator;
   private final ParallelExecutor parallelExecutor;
+  private final AsyncExecutor asyncExecutor;
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
   private final CommitHandler commit;
@@ -79,6 +80,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
+    asyncExecutor = new AsyncExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     crud =
@@ -96,6 +98,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
+            asyncExecutor,
             new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
@@ -122,6 +125,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
+    asyncExecutor = new AsyncExecutor(config);
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     recoveryExecutor = new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
     crud =
@@ -139,6 +143,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             coordinator,
             tableMetadataManager,
             parallelExecutor,
+            asyncExecutor,
             new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             config.isOnePhaseCommitEnabled());
@@ -163,6 +168,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
       DatabaseConfig databaseConfig,
       CoordinatorStateAccessor coordinator,
       ParallelExecutor parallelExecutor,
+      AsyncExecutor asyncExecutor,
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
       CommitHandler commit) {
@@ -175,6 +181,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
+    this.asyncExecutor = asyncExecutor;
     this.recoveryExecutor = recoveryExecutor;
     this.crud = crud;
     this.commit = commit;
@@ -498,9 +505,13 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
 
   @Override
   public void close() {
+    // Close the executors that drive work of their own first, so that what is in flight can finish
+    // while the storage and the parallel executor are still open. The asynchronous executor runs
+    // the commit and rollback phases, and the recovery executor recovers records
+    asyncExecutor.close();
+    recoveryExecutor.close();
+    parallelExecutor.close();
     storage.close();
     admin.close();
-    parallelExecutor.close();
-    recoveryExecutor.close();
   }
 }

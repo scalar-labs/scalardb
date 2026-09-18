@@ -69,6 +69,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final TransactionTableMetadataManager tableMetadataManager;
   private final CoordinatorStateAccessor coordinator;
   private final ParallelExecutor parallelExecutor;
+  private final AsyncExecutor asyncExecutor;
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
   private final CommitHandler commit;
@@ -87,6 +88,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
+    asyncExecutor = new AsyncExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -127,6 +129,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
+    asyncExecutor = new AsyncExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -167,6 +170,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       DatabaseConfig databaseConfig,
       CoordinatorStateAccessor coordinator,
       ParallelExecutor parallelExecutor,
+      AsyncExecutor asyncExecutor,
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
       CommitHandler commit,
@@ -180,6 +184,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
+    this.asyncExecutor = asyncExecutor;
     this.recoveryExecutor = recoveryExecutor;
     this.crud = crud;
     this.commit = commit;
@@ -208,6 +213,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
           config.isOnePhaseCommitEnabled(),
@@ -218,6 +224,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
           config.isOnePhaseCommitEnabled());
@@ -862,13 +869,18 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public void close() {
-    storage.close();
-    admin.close();
-    parallelExecutor.close();
+    // Close the executors that drive work of their own first, so that what is in flight can finish
+    // while the storage and the parallel executor are still open. The asynchronous executor runs
+    // the commit and rollback phases, the recovery executor recovers records, and the group
+    // committer drains the groups it still holds
+    asyncExecutor.close();
     recoveryExecutor.close();
     if (isGroupCommitEnabled()) {
       assert groupCommitter != null;
       groupCommitter.close();
     }
+    parallelExecutor.close();
+    storage.close();
+    admin.close();
   }
 }
