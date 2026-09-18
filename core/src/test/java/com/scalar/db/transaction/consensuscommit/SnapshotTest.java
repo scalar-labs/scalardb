@@ -3422,18 +3422,20 @@ public class SnapshotTest {
 
   @Test
   public void
-      verifyNoOverlap_PlainScanOfDistinctUnpairedSurrogatePartitionKeyUnderBinary_ShouldNotThrowException()
+      verifyNoOverlap_WrittenKeyBelowSupplementaryStartBoundaryInCodePointOrderUnderBinary_ShouldNotThrowException()
           throws CrudException {
-    // Arrange: the unpaired surrogates U+D800 and U+DC00 are distinct strings that
-    // String#getBytes(UTF_8) would encode identically, so BINARY equality must not go through bytes
+    // Arrange: U+E000 precedes U+10000 by code point but follows its high surrogate U+D800 by
+    // UTF-16 unit, so String#compareTo would place the written key inside the range
     snapshot = prepareSnapshot(CollationComparators.BINARY);
-    Put put = preparePut("\uD800", ANY_TEXT_2);
+    Put put = preparePut(ANY_TEXT_1, "\uE000");
     snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
     Scan scan =
         Scan.newBuilder()
             .namespace(ANY_NAMESPACE_NAME)
             .table(ANY_TABLE_NAME)
-            .partitionKey(Key.ofText(ANY_NAME_1, "\uDC00"))
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            // [U+10000, infinite)
+            .start(Key.ofText(ANY_NAME_2, "\uD800\uDC00"), true)
             .build();
 
     // Act
