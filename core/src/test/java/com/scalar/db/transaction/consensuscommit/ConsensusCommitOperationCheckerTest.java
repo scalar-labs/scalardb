@@ -35,10 +35,12 @@ import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -1003,18 +1005,12 @@ public class ConsensusCommitOperationCheckerTest {
   }
 
   @ParameterizedTest
-  @EnumSource(Isolation.class)
+  @MethodSource("scansWithLikeCondition")
   public void checkForScan_WithLikeConditionUnderIcuCollation_ShouldThrowIllegalArgumentException(
-      Isolation isolation) throws Exception {
+      Scan scan) throws Exception {
     // Arrange
-    Scan scan =
-        Scan.newBuilder()
-            .namespace("ns")
-            .table("tbl")
-            .partitionKey(Key.ofInt("pk", 1))
-            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
-            .build();
-    TransactionContext context = new TransactionContext("txId", null, isolation, false, false);
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> icuChecker().check(scan, context))
@@ -1024,10 +1020,32 @@ public class ConsensusCommitOperationCheckerTest {
         .hasMessageContaining(ANY_COL_1);
   }
 
-  @ParameterizedTest
-  @EnumSource(Isolation.class)
-  public void checkForGet_WithNotLikeConditionUnderIcuCollation_ShouldThrowIllegalArgumentException(
-      Isolation isolation) throws Exception {
+  private static Stream<Scan> scansWithLikeCondition() {
+    return Stream.of(
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build(),
+        ScanAll.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .all()
+            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build(),
+        Scan.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .indexKey(Key.ofInt("idx", 1))
+            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
+            .build());
+  }
+
+  @Test
+  public void
+      checkForGet_WithNotLikeConditionUnderIcuCollation_ShouldThrowIllegalArgumentException()
+          throws Exception {
     // Arrange
     Get get =
         Get.newBuilder()
@@ -1036,34 +1054,14 @@ public class ConsensusCommitOperationCheckerTest {
             .partitionKey(Key.ofInt("pk", 1))
             .where(ConditionBuilder.column(ANY_COL_1).isNotLikeText("app%"))
             .build();
-    TransactionContext context = new TransactionContext("txId", null, isolation, false, false);
+    TransactionContext context =
+        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
 
     // Act Assert
     assertThatThrownBy(() -> icuChecker().check(get, context))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("scalar.db.collation")
         .hasMessageContaining("NOT_LIKE");
-  }
-
-  @Test
-  public void
-      checkForScanAll_WithLikeConditionUnderIcuCollation_ShouldThrowIllegalArgumentException()
-          throws Exception {
-    // Arrange
-    Scan scan =
-        ScanAll.newBuilder()
-            .namespace("ns")
-            .table("tbl")
-            .all()
-            .where(ConditionBuilder.column(ANY_COL_1).isLikeText("app%"))
-            .build();
-    TransactionContext context =
-        new TransactionContext("txId", null, Isolation.SNAPSHOT, false, false);
-
-    // Act Assert
-    assertThatThrownBy(() -> icuChecker().check(scan, context))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("LIKE");
   }
 
   @Test
