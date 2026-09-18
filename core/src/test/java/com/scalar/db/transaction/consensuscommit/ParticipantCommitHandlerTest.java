@@ -351,6 +351,41 @@ class ParticipantCommitHandlerTest {
   }
 
   @Test
+  void rollbackRecords_WhenSuccessful_ShouldReadLatestRecordOfEveryWriteThroughParallelExecutor()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act
+    handler.rollbackRecords(context);
+
+    // Assert
+
+    // The snapshot has two writes, and the latest record of each is read once. The composer does
+    // not read them again
+    verify(storage, times(2)).get(any(Get.class));
+  }
+
+  @Test
+  void rollbackRecords_WhenReadingLatestRecordThrows_ShouldNotMutateAndNotPropagateException()
+      throws ExecutionException, CrudException {
+    // A failed read leaves the rollback to the lazy recovery, as a failed rollback mutation does
+
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    when(storage.get(any(Get.class))).thenThrow(ExecutionException.class);
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act (must not throw)
+    handler.rollbackRecords(context);
+
+    // Assert
+    verify(storage, never()).mutate(anyList());
+  }
+
+  @Test
   void rollbackRecords_WhenStorageThrows_ShouldNotPropagateException()
       throws ExecutionException, CrudException {
     // Lazy recovery picks up failed rollbacks, so rollbackRecords ignores storage failures.

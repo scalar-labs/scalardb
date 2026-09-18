@@ -135,6 +135,25 @@ public class ParallelExecutor {
     }
   }
 
+  public void readRecordsForRollback(List<ParallelExecutorTask> tasks, String transactionId)
+      throws ExecutionException {
+    try {
+      executeTasks(
+          tasks,
+          config.isParallelRollbackEnabled(),
+          // The results are needed to compose the rollback, so this always waits for the tasks even
+          // when the rollback itself is asynchronous
+          false,
+          true,
+          "readRecordsForRollback",
+          transactionId);
+    } catch (ValidationConflictException | CrudException e) {
+      throw new AssertionError(
+          "Tasks for reading records for a rollback should not throw ValidationConflictException and CrudException",
+          e);
+    }
+  }
+
   public void executeImplicitPreRead(List<ParallelExecutorTask> tasks, String transactionId)
       throws CrudException {
     try {

@@ -483,6 +483,24 @@ public final class ConsensusCommitUtils {
     return result.map(TransactionResult::new);
   }
 
+  /**
+   * Creates a {@link Get} that reads the record identified by the specified snapshot key. All
+   * columns are read (no projections) with linearizable consistency so the before image and the
+   * transaction metadata are available.
+   *
+   * @param key the snapshot key identifying the record
+   * @return a {@code Get} for the record
+   */
+  static Get createGet(Snapshot.Key key) {
+    GetBuilder.BuildableGet buildableGet =
+        Get.newBuilder()
+            .namespace(key.getNamespace())
+            .table(key.getTable())
+            .partitionKey(key.getPartitionKey());
+    key.getClusteringKey().ifPresent(buildableGet::clusteringKey);
+    return buildableGet.consistency(Consistency.LINEARIZABLE).build();
+  }
+
   private static Get buildReReadGet(
       Selection selection, Key partitionKey, Optional<Key> clusteringKey) {
     assert selection.forNamespace().isPresent() && selection.forTable().isPresent();
