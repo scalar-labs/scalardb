@@ -13,6 +13,7 @@ import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
@@ -37,6 +38,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,6 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -72,11 +75,11 @@ public class Snapshot {
 
   // The get set stores information about the records retrieved by Get operations in this
   // transaction. This is used for validation and snapshot reads.
-  private final ConcurrentMap<Get, Optional<TransactionResult>> getSet;
+  private final ConcurrentMap<SelectionIdentity<Get>, Optional<TransactionResult>> getSet;
 
   // The scan set stores information about the records retrieved by Scan operations in this
   // transaction. This is used for validation and snapshot reads.
-  private final Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet;
+  private final Map<SelectionIdentity<Scan>, LinkedHashMap<Key, TransactionResult>> scanSet;
 
   // The scanner set stores information about scanners that are not fully scanned. This is used for
   // validation.
@@ -113,8 +116,8 @@ public class Snapshot {
       ParallelExecutor parallelExecutor,
       CollationComparator collationComparator,
       ConcurrentMap<Key, Optional<TransactionResult>> readSet,
-      ConcurrentMap<Get, Optional<TransactionResult>> getSet,
-      Map<Scan, LinkedHashMap<Key, TransactionResult>> scanSet,
+      ConcurrentMap<SelectionIdentity<Get>, Optional<TransactionResult>> getSet,
+      Map<SelectionIdentity<Scan>, LinkedHashMap<Key, TransactionResult>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet,
       List<ScannerInfo> scannerSet) {
@@ -140,11 +143,11 @@ public class Snapshot {
   // Although this class is not thread-safe, this method is actually thread-safe because the getSet
   // is a concurrent map
   public void putIntoGetSet(Get get, Optional<TransactionResult> result) {
-    getSet.put(get, result);
+    getSet.put(identityOf(get), result);
   }
 
   public void putIntoScanSet(Scan scan, LinkedHashMap<Key, TransactionResult> results) {
-    scanSet.put(scan, results);
+    scanSet.put(identityOf(scan), results);
   }
 
   public void putIntoWriteSet(Key key, Put put) throws CrudException {
@@ -232,7 +235,12 @@ public class Snapshot {
   }
 
   public Collection<Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>>> getScanSet() {
-    return new ArrayList<>(scanSet.entrySet());
+    return scanSet.entrySet().stream()
+        .map(
+            e ->
+                new AbstractMap.SimpleImmutableEntry<Scan, LinkedHashMap<Key, TransactionResult>>(
+                    e.getKey().selection, e.getValue()))
+        .collect(Collectors.toList());
   }
 
   public Collection<ScannerInfo> getScannerSet() {
@@ -240,7 +248,12 @@ public class Snapshot {
   }
 
   public Collection<Map.Entry<Get, Optional<TransactionResult>>> getGetSet() {
-    return new ArrayList<>(getSet.entrySet());
+    return getSet.entrySet().stream()
+        .map(
+            e ->
+                new AbstractMap.SimpleImmutableEntry<Get, Optional<TransactionResult>>(
+                    e.getKey().selection, e.getValue()))
+        .collect(Collectors.toList());
   }
 
   CollationComparator getCollationComparator() {
@@ -257,7 +270,7 @@ public class Snapshot {
   }
 
   public boolean containsKeyInGetSet(Get get) {
-    return getSet.containsKey(get);
+    return getSet.containsKey(identityOf(get));
   }
 
   public boolean containsKeyInWriteSet(Key key) {
@@ -294,15 +307,16 @@ public class Snapshot {
   }
 
   public Optional<TransactionResult> getResult(Key key, Get get) throws CrudException {
-    Optional<TransactionResult> result = getSet.getOrDefault(get, Optional.empty());
+    Optional<TransactionResult> result = getSet.getOrDefault(identityOf(get), Optional.empty());
     return mergeResult(key, result, get.getConjunctions());
   }
 
   public Optional<LinkedHashMap<Key, TransactionResult>> getResults(Scan scan) {
-    if (!scanSet.containsKey(scan)) {
-      return Optional.empty();
-    }
-    return Optional.of(scanSet.get(scan));
+    return Optional.ofNullable(scanSet.get(identityOf(scan)));
+  }
+
+  private <T extends Selection> SelectionIdentity<T> identityOf(T selection) {
+    return new SelectionIdentity<>(selection, collationComparator);
   }
 
   private Optional<TransactionResult> mergeResult(Key key, Optional<TransactionResult> result)
@@ -603,13 +617,15 @@ public class Snapshot {
     List<ParallelExecutorTask> tasks = new ArrayList<>();
 
     // Scan set is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Scan, LinkedHashMap<Key, TransactionResult>> entry : scanSet.entrySet()) {
+    for (Map.Entry<SelectionIdentity<Scan>, LinkedHashMap<Key, TransactionResult>> entry :
+        scanSet.entrySet()) {
+      Scan scan = entry.getKey().selection;
       tasks.add(
           () -> {
-            TransactionTableMetadata txMetadata = getTransactionTableMetadata(entry.getKey());
+            TransactionTableMetadata txMetadata = getTransactionTableMetadata(scan);
             validateScanResults(
-                storage, entry.getKey(), entry.getValue(), false, txMetadata.getTableMetadata());
-            validateBeforeIndex(storage, entry.getKey(), txMetadata);
+                storage, scan, entry.getValue(), false, txMetadata.getTableMetadata());
+            validateBeforeIndex(storage, scan, txMetadata);
           });
     }
 
@@ -629,8 +645,8 @@ public class Snapshot {
     }
 
     // Get set is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Get, Optional<TransactionResult>> entry : getSet.entrySet()) {
-      Get get = entry.getKey();
+    for (Map.Entry<SelectionIdentity<Get>, Optional<TransactionResult>> entry : getSet.entrySet()) {
+      Get get = entry.getKey().selection;
       TransactionTableMetadata txMetadata = getTransactionTableMetadata(get);
       TableMetadata metadata = txMetadata.getTableMetadata();
 
@@ -1083,28 +1099,31 @@ public class Snapshot {
       List<Object> components = new ArrayList<>();
       components.add(namespace);
       components.add(table);
-      addColumns(components, partitionKey, comparator);
+      components.addAll(collatedColumns(partitionKey, comparator));
       // Keeps an absent clustering key distinct from a present-but-empty one.
       components.add(clusteringKey.isPresent());
-      clusteringKey.ifPresent(key -> addColumns(components, key, comparator));
+      clusteringKey.ifPresent(key -> components.addAll(collatedColumns(key, comparator)));
       return components;
     }
 
-    private static void addColumns(
-        List<Object> components, com.scalar.db.io.Key key, CollationComparator comparator) {
+    static List<Object> collatedColumns(com.scalar.db.io.Key key, CollationComparator comparator) {
+      List<Object> components = new ArrayList<>();
       for (Column<?> column : key.getColumns()) {
-        if (comparator.hasCanonicalTextForm()
-            && column.getDataType() == DataType.TEXT
-            && !column.hasNullValue()) {
-          // ByteBuffer gives the canonical bytes content-based equals/hashCode.
-          components.add(
-              new AbstractMap.SimpleImmutableEntry<>(
-                  column.getName(),
-                  ByteBuffer.wrap(comparator.canonicalTextFormOf(column.getTextValue()))));
-        } else {
-          components.add(column);
-        }
+        components.add(collatedColumn(column, comparator));
       }
+      return components;
+    }
+
+    static Object collatedColumn(Column<?> column, CollationComparator comparator) {
+      if (comparator.hasCanonicalTextForm()
+          && column.getDataType() == DataType.TEXT
+          && !column.hasNullValue()) {
+        // ByteBuffer gives the canonical bytes content-based equals/hashCode.
+        return new AbstractMap.SimpleImmutableEntry<>(
+            column.getName(),
+            ByteBuffer.wrap(comparator.canonicalTextFormOf(column.getTextValue())));
+      }
+      return column;
     }
 
     public String getNamespace() {
@@ -1171,6 +1190,75 @@ public class Snapshot {
           .add("partitionKey", partitionKey)
           .add("clusteringKey", clusteringKey)
           .toString();
+    }
+  }
+
+  /**
+   * Identity of a Get or Scan in the get set and scan set. Two selections share one entry when
+   * {@link Selection#equals} would hold with their TEXT columns (partition, clustering, start and
+   * end keys, and condition values) compared through the transaction's collation, so a record read
+   * again under another spelling of its key or predicate is served from the snapshot rather than
+   * from storage. The first spelling stored is the one returned to callers.
+   */
+  @Immutable
+  static final class SelectionIdentity<T extends Selection> {
+    final T selection;
+    private final List<Object> identity;
+
+    SelectionIdentity(T selection, CollationComparator comparator) {
+      this.selection = selection;
+      List<Object> components = new ArrayList<>();
+      components.add(new Key(selection, comparator));
+      components.add(selection.getConsistency());
+      components.add(selection.getAttributes());
+      components.add(selection.getProjections());
+      components.add(
+          selection.getConjunctions().stream()
+              .map(
+                  conjunction ->
+                      conjunction.getConditions().stream()
+                          .map(condition -> collatedCondition(condition, comparator))
+                          .collect(Collectors.toSet()))
+              .collect(Collectors.toSet()));
+      if (selection instanceof Scan) {
+        Scan scan = (Scan) selection;
+        components.add(scan.getStartClusteringKey().map(k -> Key.collatedColumns(k, comparator)));
+        components.add(scan.getStartInclusive());
+        components.add(scan.getEndClusteringKey().map(k -> Key.collatedColumns(k, comparator)));
+        components.add(scan.getEndInclusive());
+        components.add(scan.getOrderings());
+        components.add(scan.getLimit());
+      }
+      this.identity = components;
+    }
+
+    private static List<Object> collatedCondition(
+        ConditionalExpression condition, CollationComparator comparator) {
+      return Arrays.asList(
+          condition.getOperator(),
+          Key.collatedColumn(condition.getColumn(), comparator),
+          condition instanceof LikeExpression ? ((LikeExpression) condition).getEscape() : null);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o == this) {
+        return true;
+      }
+      if (!(o instanceof SelectionIdentity)) {
+        return false;
+      }
+      return identity.equals(((SelectionIdentity<?>) o).identity);
+    }
+
+    @Override
+    public int hashCode() {
+      return identity.hashCode();
+    }
+
+    @Override
+    public String toString() {
+      return selection.toString();
     }
   }
 
