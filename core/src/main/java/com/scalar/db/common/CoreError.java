@@ -1316,6 +1316,12 @@ public enum CoreError implements ScalarDbError {
           + "The transaction might have expired",
       "",
       ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS(
+      Category.CONCURRENCY_ERROR,
+      "0032",
+      "A conflict occurred when recovering records. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the internal error category
