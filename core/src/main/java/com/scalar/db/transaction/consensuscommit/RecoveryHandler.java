@@ -10,11 +10,13 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,10 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class RecoveryHandler {
   @VisibleForTesting static final long TRANSACTION_LIFETIME_MILLIS = 15000;
+
+  // The maximum number of retries for recovery mutations that the storage reports as a conflict.
+  // See mutate(List, String) for why retrying is safe and why no backoff is applied.
+  @VisibleForTesting static final int MAX_CONFLICT_RETRY_COUNT = 10;
   private static final Logger logger = LoggerFactory.getLogger(RecoveryHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
@@ -70,7 +76,7 @@ public class RecoveryHandler {
     RollbackMutationComposer composer = createRollbackMutationComposer(selection, result);
 
     try {
-      mutate(composer.get());
+      mutate(composer.get(), result.getId());
     } catch (NoMutationException e) {
       logger.info(
           "Rolling back for a record failed. Table: {}; Partition Key: {}; Clustering Key: {}; Transaction ID that wrote the record: {}",
@@ -114,7 +120,7 @@ public class RecoveryHandler {
     CommitMutationComposer composer = createCommitMutationComposer(selection, result);
 
     try {
-      mutate(composer.get());
+      mutate(composer.get(), result.getId());
     } catch (NoMutationException e) {
       logger.info(
           "Rolling forward for a record failed. Table: {}; Partition Key: {}; Clustering Key: {}; Transaction ID that wrote the record: {}",
@@ -202,11 +208,58 @@ public class RecoveryHandler {
     rollbackRecord(selection, result);
   }
 
-  private void mutate(List<Mutation> mutations) throws ExecutionException {
+  /**
+   * Applies the given recovery mutations, retrying them when the storage reports a conflict.
+   *
+   * <p>Retrying is needed because the recovery of several records runs on separate threads (see
+   * {@link RecoveryExecutor}), so two recovery tasks can write the same partition concurrently and
+   * the storage can report a conflict. Without a retry, that conflict fails the read or the commit
+   * that triggered the recovery, even though it is transient.
+   *
+   * <p>Retrying is safe. Recovery mutations are conditional on the record still being the one this
+   * recovery observed (its {@code tx_id} and {@code state}), so re-applying them cannot overwrite a
+   * newer state: if a concurrent actor resolved the record while we retried, the retry raises
+   * {@link NoMutationException}, which the callers already absorb as the record having been rolled
+   * back or committed by another transaction. A {@link RetriableExecutionException} also means the
+   * mutation definitely did not apply, so the failed attempt leaves no partial effect behind.
+   *
+   * <p>No backoff is applied. Some conflicts are reported only after the competing work has ended,
+   * for which waiting does not improve the odds (see {@code JdbcAdmin#executeWithConflictRetry}).
+   * Others are reported while the competing operation is still in progress, such as a DynamoDB
+   * {@code TransactionConflictException} raised against an in-flight {@code TransactWriteItems};
+   * the retries span several round trips, which is expected to outlast such an operation, and if
+   * they do not, the conflict reaches the caller as a conflict so that the transaction can be
+   * retried. The loop is bounded by {@link #MAX_CONFLICT_RETRY_COUNT} so that sustained contention
+   * surfaces to the caller instead of being absorbed indefinitely.
+   */
+  private void mutate(List<Mutation> mutations, @Nullable String transactionId)
+      throws ExecutionException {
     if (mutations.isEmpty()) {
       return;
     }
-    storage.mutate(mutations);
+
+    int attempt = 0;
+    while (true) {
+      try {
+        storage.mutate(mutations);
+        return;
+      } catch (RetriableExecutionException e) {
+        if (attempt >= MAX_CONFLICT_RETRY_COUNT) {
+          logger.warn(
+              "Giving up on conflicting recovery mutations after {} retries. Transaction ID that wrote the record: {}",
+              attempt,
+              transactionId,
+              e);
+          throw e;
+        }
+        attempt++;
+        logger.warn(
+            "Retrying conflicting recovery mutations (attempt {}). Transaction ID that wrote the record: {}",
+            attempt,
+            transactionId,
+            e);
+      }
+    }
   }
 
   boolean isTransactionExpired(TransactionResult result) {

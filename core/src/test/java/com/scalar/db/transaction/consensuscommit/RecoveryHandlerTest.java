@@ -11,6 +11,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +24,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -331,5 +333,89 @@ public class RecoveryHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.tryAbortExpiredTransaction(ANY_ID_1))
         .isInstanceOf(CoordinatorException.class);
+  }
+
+  @Test
+  public void rollbackRecord_WhenStorageReportsConflict_ShouldRetryUntilItSucceeds()
+      throws Exception {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    stubRollbackMutationComposer(result);
+    doThrow(new RetriableExecutionException("conflict")).doNothing().when(storage).mutate(any());
+
+    // Act
+    handler.rollbackRecord(selection, result);
+
+    // Assert
+    verify(storage, times(2)).mutate(any());
+  }
+
+  @Test
+  public void rollbackRecord_WhenStorageKeepsReportingConflict_ShouldGiveUpAfterMaxRetries()
+      throws Exception {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    stubRollbackMutationComposer(result);
+    RetriableExecutionException exception = new RetriableExecutionException("conflict");
+    doThrow(exception).when(storage).mutate(any());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.rollbackRecord(selection, result)).isEqualTo(exception);
+    verify(storage, times(RecoveryHandler.MAX_CONFLICT_RETRY_COUNT + 1)).mutate(any());
+  }
+
+  @Test
+  public void rollbackRecord_WhenStorageReportsNonConflictError_ShouldNotRetry() throws Exception {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    stubRollbackMutationComposer(result);
+    ExecutionException exception = new ExecutionException("error");
+    doThrow(exception).when(storage).mutate(any());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.rollbackRecord(selection, result)).isEqualTo(exception);
+    verify(storage).mutate(any());
+  }
+
+  @Test
+  public void rollbackRecord_WhenConflictIsFollowedByNoMutation_ShouldAbsorbNoMutationException()
+      throws Exception {
+    // A retry can find that a concurrent actor has already resolved the record, which the storage
+    // reports as NoMutationException. That is the expected outcome of a raced rollback, so it must
+    // stay absorbed rather than surface as a failure.
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    stubRollbackMutationComposer(result);
+    doThrow(new RetriableExecutionException("conflict"))
+        .doThrow(new NoMutationException("no mutation", Collections.emptyList()))
+        .when(storage)
+        .mutate(any());
+
+    // Act Assert
+    assertThatCode(() -> handler.rollbackRecord(selection, result)).doesNotThrowAnyException();
+    verify(storage, times(2)).mutate(any());
+  }
+
+  @Test
+  public void rollforwardRecord_WhenStorageReportsConflict_ShouldRetryUntilItSucceeds()
+      throws Exception {
+    // Arrange
+    TransactionResult result = preparePreparedResult(ANY_TIME_1);
+    CommitMutationComposer composer = mock(CommitMutationComposer.class);
+    doReturn(Collections.singletonList(mock(Mutation.class))).when(composer).get();
+    doReturn(composer).when(handler).createCommitMutationComposer(selection, result);
+    doThrow(new RetriableExecutionException("conflict")).doNothing().when(storage).mutate(any());
+
+    // Act
+    handler.rollforwardRecord(selection, result);
+
+    // Assert
+    verify(storage, times(2)).mutate(any());
+  }
+
+  private void stubRollbackMutationComposer(TransactionResult result) throws ExecutionException {
+    RollbackMutationComposer composer = mock(RollbackMutationComposer.class);
+    doReturn(Collections.singletonList(mock(Mutation.class))).when(composer).get();
+    doReturn(composer).when(handler).createRollbackMutationComposer(selection, result);
   }
 }
