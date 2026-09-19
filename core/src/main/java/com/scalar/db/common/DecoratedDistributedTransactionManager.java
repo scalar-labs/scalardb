@@ -17,7 +17,6 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import java.util.List;
@@ -204,20 +203,6 @@ public abstract class DecoratedDistributedTransactionManager
   protected DistributedTransaction decorateTransactionOnBeginOrStart(
       DistributedTransaction transaction) throws TransactionException {
     return transaction;
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
-    return transactionManager.resume(txId);
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public DistributedTransaction join(String txId) throws TransactionNotFoundException {
-    return transactionManager.join(txId);
   }
 
   @Override

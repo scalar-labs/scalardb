@@ -238,20 +238,6 @@ class GlobalTransactionBackedDistributedTransactionManagerTest {
   }
 
   @Test
-  void resume_ShouldThrowUnsupportedOperationException() {
-    assertThatThrownBy(() -> manager.resume("tx-1"))
-        .isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  // The adapter sits on the GlobalTransactionManager layer, which exposes no way to reach an
-  // existing global transaction, so join falls through to resume and is unsupported.
-  @Test
-  void join_ShouldThrowUnsupportedOperationException() {
-    assertThatThrownBy(() -> manager.join(CANONICAL_ID))
-        .isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
   void close_ShouldCloseCoordinatorAndParticipant() {
     manager.close();
 

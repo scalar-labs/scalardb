@@ -19,7 +19,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
@@ -32,7 +31,6 @@ import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
-import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.ReadOnlyDistributedTransaction;
 import com.scalar.db.config.DatabaseConfig;
@@ -41,7 +39,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
@@ -269,18 +266,6 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void begin_CalledTwiceWithSameTxId_ThrowTransactionException()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    // Act Assert
-    manager.begin(ANY_TX_ID);
-    assertThatThrownBy(() -> manager.begin(ANY_TX_ID)).isInstanceOf(TransactionException.class);
-  }
-
-  @Test
   public void
       beginReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode()
           throws TransactionException {
@@ -454,18 +439,6 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_CalledTwiceWithSameTxId_ThrowTransactionException()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    // Act Assert
-    manager.start(ANY_TX_ID);
-    assertThatThrownBy(() -> manager.start(ANY_TX_ID)).isInstanceOf(TransactionException.class);
-  }
-
-  @Test
   public void
       startReadOnly_NoArgumentGiven_ReturnConsensusCommitWithSomeTxIdAndSnapshotIsolationInReadOnlyMode()
           throws TransactionException {
@@ -494,164 +467,6 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(eq(ANY_TX_ID), eq(Isolation.SNAPSHOT), eq(true), eq(false));
 
     assertThat(transaction).isInstanceOf(ReadOnlyDistributedTransaction.class);
-  }
-
-  @Test
-  public void resume_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
-
-    // Act
-    DistributedTransaction transaction2 = manager.resume(ANY_TX_ID);
-
-    // Assert
-    assertThat(transaction1).isEqualTo(transaction2);
-  }
-
-  @Test
-  public void resume_CalledWithoutBegin_ThrowTransactionNotFoundException() {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
-  public void resume_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
-    transaction.commit();
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
-  public void resume_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
-
-    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
-    try {
-      transaction1.commit();
-    } catch (CommitException ignored) {
-      // expected
-    }
-
-    // Act
-    DistributedTransaction transaction2 = manager.resume(ANY_TX_ID);
-
-    // Assert
-    assertThat(transaction1).isEqualTo(transaction2);
-  }
-
-  @Test
-  public void resume_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
-    transaction.rollback();
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
-  public void join_CalledWithBegin_ReturnSameTransactionObject() throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
-
-    // Act
-    DistributedTransaction transaction2 = manager.join(ANY_TX_ID);
-
-    // Assert
-    assertThat(transaction1).isEqualTo(transaction2);
-  }
-
-  @Test
-  public void join_CalledWithoutBegin_ThrowTransactionNotFoundException() {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
-  public void join_CalledWithBeginAndCommit_ThrowTransactionNotFoundException()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
-    transaction.commit();
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
-  public void join_CalledWithBeginAndCommit_CommitExceptionThrown_ReturnSameTransactionObject()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    doThrow(CommitException.class).when(commit).commit(any(TransactionContext.class));
-
-    DistributedTransaction transaction1 = manager.begin(ANY_TX_ID);
-    try {
-      transaction1.commit();
-    } catch (CommitException ignored) {
-      // expected
-    }
-
-    // Act
-    DistributedTransaction transaction2 = manager.join(ANY_TX_ID);
-
-    // Assert
-    assertThat(transaction1).isEqualTo(transaction2);
-  }
-
-  @Test
-  public void join_CalledWithBeginAndRollback_ThrowTransactionNotFoundException()
-      throws TransactionException {
-    // Arrange
-    DistributedTransactionManager manager =
-        new ActiveTransactionManagedDistributedTransactionManager(this.manager, -1, -1);
-
-    DistributedTransaction transaction = manager.begin(ANY_TX_ID);
-    transaction.rollback();
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.join(ANY_TX_ID))
-        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
