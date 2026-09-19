@@ -512,12 +512,6 @@ public enum CoreError implements ScalarDbError {
       "Beginning a transaction is not allowed in single CRUD operation transactions",
       "",
       ""),
-  SINGLE_CRUD_OPERATION_TRANSACTION_RESUMING_TRANSACTION_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0140",
-      "Resuming a transaction is not allowed in single CRUD operation transactions",
-      "",
-      ""),
   GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
       Category.USER_ERROR,
       "0142",

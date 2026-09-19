@@ -37,7 +37,6 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.Key;
@@ -140,15 +139,6 @@ public class SingleCrudOperationTransactionManager extends AbstractDistributedTr
       String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
     throw new UnsupportedOperationException(
         CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_BEGINNING_TRANSACTION_NOT_ALLOWED
-            .buildMessage());
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
-    throw new UnsupportedOperationException(
-        CoreError.SINGLE_CRUD_OPERATION_TRANSACTION_RESUMING_TRANSACTION_NOT_ALLOWED
             .buildMessage());
   }
 
