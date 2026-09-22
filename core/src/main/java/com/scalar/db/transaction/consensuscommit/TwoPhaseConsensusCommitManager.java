@@ -95,6 +95,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     commit =
         new CommitHandler(
             storage,
+            recoveryExecutor,
             coordinator,
             tableMetadataManager,
             parallelExecutor,
@@ -140,6 +141,7 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
     commit =
         new CommitHandler(
             storage,
+            recoveryExecutor,
             coordinator,
             tableMetadataManager,
             parallelExecutor,

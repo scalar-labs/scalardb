@@ -1210,7 +1210,7 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
       Category.CONCURRENCY_ERROR,
       "0013",
-      "The record being prepared already exists. Details: %s",
+      "A conflict occurred. Either a record being inserted already exists or is being written by another transaction, or a record being updated or deleted has been modified by another transaction. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS(
