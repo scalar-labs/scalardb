@@ -73,6 +73,7 @@ class ParticipantCommitHandlerTest {
   private static final String ANY_TEXT_4 = "text4";
   private static final String ANY_ID = "id";
   private static final String ANY_ID_2 = "id2";
+  private static final String ANY_ID_3 = "id3";
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
   private static final long ANY_PREPARED_AT = 1000;
@@ -802,6 +803,87 @@ class ParticipantCommitHandlerTest {
   }
 
   @Test
+  void rollbackRecords_WhenWriteOfRecordReadBlockedByAnotherTransaction_ShouldNotExecuteRecovery()
+      throws Exception {
+    // The transaction read the key, so the record is left to the read of a retry, which triggers
+    // the lazy recovery
+
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithPut1();
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(preparePut1()),
+        Optional.of(
+            new TransactionResult(
+                prepareRecordPreparedBy(
+                    ANY_ID_3, ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED, false))));
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareRecordBlockingWrite(TransactionState.PREPARED)));
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act
+    handler.rollbackRecords(context);
+
+    // Assert
+    verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void rollbackRecords_WhenDeleteBlockedByAnotherTransaction_ShouldNotExecuteRecovery()
+      throws Exception {
+    // A delete is not considered, since the record of a delete is always read before it is
+    // prepared, and the record of a key the transaction read is left to the read of a retry
+
+    // Arrange
+    Snapshot snapshot = prepareSnapshot();
+    Delete delete = prepareDelete2();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    when(storage.get(any(Get.class)))
+        .thenReturn(
+            Optional.of(
+                prepareRecordPreparedBy(
+                    ANY_ID_2, ANY_TEXT_3, ANY_TEXT_4, TransactionState.PREPARED, false)));
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act
+    handler.rollbackRecords(context);
+
+    // Assert
+    verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void rollbackRecords_WhenBlockedWritesMixed_ShouldExecuteRecoveryOnlyForKeyNeverRead()
+      throws Exception {
+    // The transaction writes a key it never read and a key it read as having no record. Only the
+    // former can stay blocked, since the read of a retry recovers the latter
+
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    snapshot.putIntoReadSet(new Snapshot.Key(preparePut2()), Optional.empty());
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareRecordBlockingWrite(TransactionState.PREPARED)));
+    when(recoveryExecutor.execute(any(), any(), any(), any(), any()))
+        .thenReturn(prepareRecoveryResult());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act
+    handler.rollbackRecords(context);
+
+    // Assert
+    verify(recoveryExecutor)
+        .execute(
+            eq(new Snapshot.Key(preparePut1())),
+            any(Get.class),
+            any(TransactionResult.class),
+            eq(ANY_ID),
+            eq(RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER));
+    verify(recoveryExecutor, times(1)).execute(any(), any(), any(), any(), any());
+
+    // The rollback reads the records of both keys, which is not what decides the recovery
+    verify(storage, times(2)).get(any(Get.class));
+  }
+
+  @Test
   void rollbackRecords_WhenExecutingRecoveryFails_ShouldNotPropagateException() throws Exception {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithPut1();
@@ -814,6 +896,7 @@ class ParticipantCommitHandlerTest {
     // Act Assert
     handler.rollbackRecords(context);
 
+    verify(recoveryExecutor).execute(any(), any(), any(), any(), any());
     assertThat(context.recoveryResults).isEmpty();
   }
 
@@ -844,6 +927,86 @@ class ParticipantCommitHandlerTest {
             any(TransactionResult.class),
             eq(ANY_ID),
             eq(RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER));
+  }
+
+  @Test
+  void onePhaseCommitRecords_WhenNoMutationException_ShouldReadOnlyRecordsOfKeysNeverRead()
+      throws Exception {
+    // Only the records of the keys the transaction never read are read, since the others are not
+    // recovered. Reading the records of every write, as the rollback does, would read both
+
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(preparePut2()),
+        Optional.of(
+            new TransactionResult(
+                prepareRecordPreparedBy(
+                    ANY_ID_3, ANY_TEXT_3, ANY_TEXT_4, TransactionState.COMMITTED, false))));
+    when(tableMetadataManager.getTransactionTableMetadata(any()))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+    doThrow(NoMutationException.class).when(storage).mutate(anyList());
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(prepareRecordBlockingWrite(TransactionState.PREPARED)));
+    when(recoveryExecutor.execute(any(), any(), any(), any(), any()))
+        .thenReturn(prepareRecoveryResult());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.onePhaseCommitRecords(context))
+        .isInstanceOf(CommitConflictException.class);
+
+    verify(storage).get(ConsensusCommitUtils.createGet(new Snapshot.Key(preparePut1())));
+    verify(storage).get(any(Get.class));
+    verify(recoveryExecutor)
+        .execute(
+            eq(new Snapshot.Key(preparePut1())),
+            any(Get.class),
+            any(TransactionResult.class),
+            eq(ANY_ID),
+            eq(RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER));
+  }
+
+  @Test
+  void onePhaseCommitRecords_WhenNoMutationExceptionAndEveryKeyWasRead_ShouldNotRead()
+      throws Exception {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithPut1();
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(preparePut1()),
+        Optional.of(
+            new TransactionResult(
+                prepareRecordPreparedBy(
+                    ANY_ID_3, ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED, false))));
+    when(tableMetadataManager.getTransactionTableMetadata(any()))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+    doThrow(NoMutationException.class).when(storage).mutate(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.onePhaseCommitRecords(context))
+        .isInstanceOf(CommitConflictException.class);
+
+    verify(storage, never()).get(any(Get.class));
+    verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void
+      onePhaseCommitRecords_WhenNoMutationExceptionAndReadingRecordsFails_ShouldThrowCommitConflictException()
+          throws Exception {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithPut1();
+    doThrow(NoMutationException.class).when(storage).mutate(anyList());
+    doThrow(ExecutionException.class).when(storage).get(any(Get.class));
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.onePhaseCommitRecords(context))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(NoMutationException.class);
+
+    verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
   }
 
   // ---------- canOnePhaseCommit ----------
