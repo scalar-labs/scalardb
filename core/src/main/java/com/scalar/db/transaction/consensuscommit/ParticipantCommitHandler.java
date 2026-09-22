@@ -79,7 +79,7 @@ class ParticipantCommitHandler {
       parallelExecutor.prepareRecords(tasks, context.transactionId);
     } catch (NoMutationException e) {
       throw new PreparationConflictException(
-          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(e.getMessage()),
+          CoreError.CONSENSUS_COMMIT_CONDITIONAL_MUTATION_NOT_APPLIED.buildMessage(e.getMessage()),
           e,
           context.transactionId);
     } catch (RetriableExecutionException e) {
@@ -330,7 +330,7 @@ class ParticipantCommitHandler {
       rollbackRecords(context);
 
       throw new CommitConflictException(
-          CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(e.getMessage()),
+          CoreError.CONSENSUS_COMMIT_CONDITIONAL_MUTATION_NOT_APPLIED.buildMessage(e.getMessage()),
           e,
           context.transactionId);
     } catch (RetriableExecutionException e) {
