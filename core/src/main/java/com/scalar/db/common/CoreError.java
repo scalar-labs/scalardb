@@ -1207,7 +1207,7 @@ public enum CoreError implements ScalarDbError {
       "The %s condition of the %s operation is not satisfied. Targeting column(s): %s",
       "",
       ""),
-  CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
+  CONSENSUS_COMMIT_CONDITIONAL_MUTATION_NOT_APPLIED(
       Category.CONCURRENCY_ERROR,
       "0013",
       "A conflict occurred. Either a record being inserted already exists or is being written by another transaction, or a record being updated or deleted has been modified by another transaction. Details: %s",
