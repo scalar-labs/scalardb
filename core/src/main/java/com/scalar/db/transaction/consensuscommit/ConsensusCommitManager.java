@@ -6,13 +6,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
@@ -742,7 +740,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     checkNotNull(partitionKey);
 
     // Read the current physical state of the record.
-    Get get = buildRecordGet(namespace, table, partitionKey, clusteringKey);
+    Get get = ConsensusCommitUtils.createGet(namespace, table, partitionKey, clusteringKey);
     Optional<Result> resultOpt;
     try {
       resultOpt = storage.get(get);
@@ -804,22 +802,6 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           e,
           txId);
     }
-  }
-
-  private static Get buildRecordGet(
-      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
-    // Read all columns (no projections) with linearizable consistency so the before-image and the
-    // transaction metadata needed for recovery are available.
-    GetBuilder.BuildableGetWithPartitionKey builder =
-        Get.newBuilder()
-            .namespace(namespace)
-            .table(table)
-            .partitionKey(partitionKey)
-            .consistency(Consistency.LINEARIZABLE);
-    if (clusteringKey != null) {
-      builder.clusteringKey(clusteringKey);
-    }
-    return builder.build();
   }
 
   @VisibleForTesting
