@@ -659,7 +659,9 @@ public class CrudHandler {
       }
     }
 
-    // For each delete in the write set, if the record is not read yet, read the record
+    // For each delete in the write set, if the record is not read yet, read the record. This is
+    // unconditional, unlike the puts above, and ParticipantCommitHandler relies on it to leave the
+    // deletes out of the recovery of the records blocking the writes of a transaction
     for (Map.Entry<Snapshot.Key, Delete> entry : context.snapshot.getDeleteSet()) {
       Snapshot.Key key = entry.getKey();
       if (!context.snapshot.containsKeyInReadSet(key)) {
