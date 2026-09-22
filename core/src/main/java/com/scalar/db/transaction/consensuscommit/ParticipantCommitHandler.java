@@ -43,6 +43,7 @@ class ParticipantCommitHandler {
   private static final Logger logger = LoggerFactory.getLogger(ParticipantCommitHandler.class);
 
   private final DistributedStorage storage;
+  private final RecoveryExecutor recoveryExecutor;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final AsyncExecutor asyncExecutor;
@@ -52,12 +53,14 @@ class ParticipantCommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   ParticipantCommitHandler(
       DistributedStorage storage,
+      RecoveryExecutor recoveryExecutor,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       AsyncExecutor asyncExecutor,
       MutationsGrouper mutationsGrouper,
       boolean onePhaseCommitEnabled) {
     this.storage = checkNotNull(storage);
+    this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
     this.asyncExecutor = checkNotNull(asyncExecutor);
@@ -141,10 +144,11 @@ class ParticipantCommitHandler {
   }
 
   private void doRollbackRecords(TransactionContext context) {
+    // The latest state of the records this transaction writes, which the rollback needs to decide
+    // what to restore
+    Map<Snapshot.Key, TransactionResult> latestRecords = new ConcurrentHashMap<>();
+
     try {
-      // The latest state of the records this transaction writes, which the rollback needs to
-      // decide what to restore
-      Map<Snapshot.Key, TransactionResult> latestRecords = new ConcurrentHashMap<>();
       parallelExecutor.readRecordsForRollback(
           toReadTasks(context, latestRecords), context.transactionId);
 
@@ -158,6 +162,60 @@ class ParticipantCommitHandler {
     } catch (Exception e) {
       logger.info("Rolling back records failed. Transaction ID: {}", context.transactionId, e);
       // ignore since records are recovered lazily
+    }
+
+    tryRecoverRecordsBlockingWrites(context, latestRecords);
+  }
+
+  /**
+   * Triggers recovery for the records of other transactions that are not committed yet and that sit
+   * on the keys this transaction writes.
+   *
+   * <p>A write that creates an initial record is prepared with a {@code PutIfNotExists} condition,
+   * which fails when any record is physically present on the key. That is the case for an insert,
+   * and also for a write to a key that the transaction never read. Such a write never triggers the
+   * lazy recovery that the read path performs, so a record left behind by a transaction that did
+   * not finish blocks every subsequent attempt for that key until someone reads it, which never
+   * happens for a key that is only ever written this way.
+   *
+   * <p>The records are the ones the rollback read to decide what to restore, so recovering them
+   * costs no extra read. A record this transaction prepared itself is rolled back above, and a
+   * committed record is a duplicate key that no recovery can resolve; neither is recovered here.
+   *
+   * <p>This is best-effort. The recovery runs on a background thread that nothing here waits for,
+   * and it is skipped for a writer that may still be in flight, so a record is not necessarily
+   * resolved when this returns. The caller reports the failure as it did before; the next attempt
+   * of the transaction is what benefits from the recovery.
+   */
+  private void tryRecoverRecordsBlockingWrites(
+      TransactionContext context, Map<Snapshot.Key, TransactionResult> latestRecords) {
+    for (Map.Entry<Snapshot.Key, TransactionResult> entry : latestRecords.entrySet()) {
+      Snapshot.Key key = entry.getKey();
+      TransactionResult latestRecord = entry.getValue();
+      if (latestRecord.isCommitted() || context.transactionId.equals(latestRecord.getId())) {
+        continue;
+      }
+
+      try {
+        RecoveryExecutor.Result recoveryResult =
+            recoveryExecutor.execute(
+                key,
+                createGet(key),
+                latestRecord,
+                context.transactionId,
+                RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_RECOVER);
+
+        // Register the recovery task so that callers that wait for recovery completion (currently
+        // only tests) can observe it. The transaction itself does not wait for it: it is failing,
+        // and the record is recovered for the next attempt
+        context.recoveryResults.add(recoveryResult);
+      } catch (Exception e) {
+        logger.warn(
+            "Recovering a record blocking a write failed. Key: {}; Transaction ID: {}",
+            key,
+            context.transactionId,
+            e);
+      }
     }
   }
 
@@ -266,6 +324,11 @@ class ParticipantCommitHandler {
       // it is always executed in a single mutate API call.
       storage.mutate(composer.get());
     } catch (NoMutationException e) {
+      // Nothing was applied, since the mutations are executed in a single atomic call, so this
+      // rollback writes nothing. It is performed to recover the records blocking the writes of this
+      // transaction, which the caller does not do for a one-phase commit
+      rollbackRecords(context);
+
       throw new CommitConflictException(
           CoreError.CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS.buildMessage(e.getMessage()),
           e,

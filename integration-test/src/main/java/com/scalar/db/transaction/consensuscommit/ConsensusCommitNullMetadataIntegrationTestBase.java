@@ -176,6 +176,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
@@ -187,6 +188,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     } else {
       return new CommitHandler(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
