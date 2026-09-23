@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosDatabase;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
@@ -34,10 +34,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-/**
- * Integration tests investigating Cosmos DB partition key definition V1 vs V2 behavior in the
- * ScalarDB adapter. See {@code docs/cosmos-partition-key-v2-experiments.md} for background.
- */
+/** Integration tests for Cosmos DB partition key definition V1 vs V2 in the ScalarDB adapter. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class CosmosPartitionKeyVersionIntegrationTest {
 
@@ -63,21 +60,29 @@ public class CosmosPartitionKeyVersionIntegrationTest {
   }
 
   private void resetNamespace() throws ExecutionException {
+    // namespaceExists() only checks the namespaces metadata item. A prior failed run can leave the
+    // physical database/containers while that item is missing, so always drop leftovers first.
+    dropPhysicalDatabaseIfPresent();
     if (admin.namespaceExists(NAMESPACE)) {
       try {
         admin.dropNamespace(NAMESPACE);
-      } catch (Exception e) {
-        // Clean up orphaned containers when metadata is inconsistent from a prior failed run.
-        CosmosDatabase database = cosmosClient.getDatabase(NAMESPACE);
-        database.readAllContainers().forEach(c -> database.getContainer(c.getId()).delete());
-        try {
-          admin.dropNamespace(NAMESPACE);
-        } catch (Exception ignored) {
-          // Best effort; repairNamespace below recreates required state.
-        }
+      } catch (Exception ignored) {
+        // Physical database was already dropped; repairNamespace restores metadata.
       }
     }
     admin.repairNamespace(NAMESPACE, getCreationOptions());
+  }
+
+  private void dropPhysicalDatabaseIfPresent() {
+    try {
+      cosmosClient.getDatabase(NAMESPACE).read();
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return;
+      }
+      throw e;
+    }
+    cosmosClient.getDatabase(NAMESPACE).delete();
   }
 
   @AfterAll
@@ -104,7 +109,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     return CosmosEnv.getCreationOptions();
   }
 
-  // Experiment 1 — ScalarDB creates V2 containers by default
+  // New tables use partition key definition V2 by default
   @Test
   void createTable_shouldUsePartitionKeyDefinitionV2() throws ExecutionException {
     String table = "exp1_v2_baseline";
@@ -141,7 +146,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 2A — 101-byte partition key on V1
+  // 101-byte partition key is accepted on a V1 container
   @Test
   void putAndGet_with101BytePartitionKey_onV1Container_shouldSucceed() throws ExecutionException {
     String table = "exp2a_101_bytes";
@@ -160,7 +165,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 2B — 102-byte partition key on V1 is rejected by ScalarDB validation
+  // 102-byte partition key is rejected on a V1 container
   @Test
   void put_with102BytePartitionKey_onV1Container_shouldBeRejected() throws ExecutionException {
     String table = "exp2b_102_bytes";
@@ -176,7 +181,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiments 2C — V1 collision keys (>101 bytes) are rejected before reaching Cosmos
+  // V1 collision-pair keys (>101 bytes) are rejected before reaching Cosmos
   @Test
   void put_withColliding102ByteKeys_onV1Container_shouldBeRejected() throws ExecutionException {
     String table = "exp2c_v1_collision";
@@ -194,7 +199,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 2D — 200-byte partition key on V2
+  // 200-byte partition key is accepted on a V2 container
   @Test
   void putAndGet_with200BytePartitionKey_onV2Container_shouldSucceed() throws ExecutionException {
     String table = "exp2d_200_bytes";
@@ -212,7 +217,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 3 — V2 container CRUD with long partition key
+  // V2 container CRUD with a long partition key
   @Test
   void putAndGet_with150BytePartitionKey_onV2Container_shouldSucceed() throws ExecutionException {
     String table = "exp3_v2_150_bytes";
@@ -231,7 +236,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 4 — V2 separates keys that would collide under V1
+  // V2 keeps keys that would collide under V1 in separate partitions
   @Test
   void put_withColliding102ByteKeys_onV2Container_shouldNotSharePartition()
       throws ExecutionException {
@@ -253,7 +258,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 5A — document id at 255-char limit (V2; a 127-byte PK is illegal on V1)
+  // Document id at the 255-character Cosmos limit (V2; a 127-byte PK is illegal on V1)
   @Test
   void put_with255CharDocumentId_shouldSucceed() throws ExecutionException {
     String table = "exp5a_id_255";
@@ -272,7 +277,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 5B — document id over 255-char limit is rejected client-side
+  // Document id over 255 characters is rejected client-side
   @Test
   void put_with256CharDocumentId_shouldFail() throws ExecutionException {
     String table = "exp5b_id_256";
@@ -298,7 +303,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 6 — repairTable does not upgrade partition key version
+  // repairTable does not upgrade an existing V1 container to V2
   @Test
   void repairTable_shouldNotUpgradePartitionKeyVersionFromV1() throws ExecutionException {
     String table = "exp6_repair_no_upgrade";
@@ -321,7 +326,7 @@ public class CosmosPartitionKeyVersionIntegrationTest {
     }
   }
 
-  // Experiment 7 — stored-procedure mutations with long partition key on V2
+  // Stored-procedure mutations with a long partition key on V2
   @Test
   void mutate_with150BytePartitionKey_onV2Container_shouldSucceed() throws ExecutionException {
     String table = "exp7_v2_mutate";

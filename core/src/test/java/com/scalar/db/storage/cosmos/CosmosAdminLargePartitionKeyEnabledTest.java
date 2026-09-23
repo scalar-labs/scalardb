@@ -1,9 +1,11 @@
 package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Collections;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -14,8 +16,8 @@ public class CosmosAdminLargePartitionKeyEnabledTest {
     "nullOptions, true",
     "emptyOptions, true",
     "explicitTrue, true",
+    "explicitTrueUpperCase, true",
     "explicitFalse, false",
-    "invalidValue, false",
     "missingKeyWithOtherOptions, true"
   })
   void isLargePartitionKeyEnabled_ShouldResolveOptions(String scenario, boolean expected) {
@@ -33,16 +35,16 @@ public class CosmosAdminLargePartitionKeyEnabledTest {
                     ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, "true")))
             .isEqualTo(expected);
         break;
+      case "explicitTrueUpperCase":
+        assertThat(
+                CosmosAdmin.isLargePartitionKeyEnabled(
+                    ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, "TRUE")))
+            .isEqualTo(expected);
+        break;
       case "explicitFalse":
         assertThat(
                 CosmosAdmin.isLargePartitionKeyEnabled(
                     ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, "false")))
-            .isEqualTo(expected);
-        break;
-      case "invalidValue":
-        assertThat(
-                CosmosAdmin.isLargePartitionKeyEnabled(
-                    ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, "maybe")))
             .isEqualTo(expected);
         break;
       case "missingKeyWithOtherOptions":
@@ -54,5 +56,22 @@ public class CosmosAdminLargePartitionKeyEnabledTest {
       default:
         throw new IllegalArgumentException("Unknown scenario: " + scenario);
     }
+  }
+
+  @Test
+  void isLargePartitionKeyEnabled_WhenValueIsMalformed_ShouldThrowIllegalArgumentException() {
+    assertThatThrownBy(
+            () ->
+                CosmosAdmin.isLargePartitionKeyEnabled(
+                    ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, "maybe")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(CosmosAdmin.LARGE_PARTITION_KEY)
+        .hasMessageContaining("maybe");
+    assertThatThrownBy(
+            () ->
+                CosmosAdmin.isLargePartitionKeyEnabled(
+                    ImmutableMap.of(CosmosAdmin.LARGE_PARTITION_KEY, "treu")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("treu");
   }
 }

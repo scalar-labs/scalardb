@@ -9,6 +9,9 @@ import static com.scalar.db.api.ConditionBuilder.putIfNotExists;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 
@@ -87,6 +90,8 @@ public class CosmosOperationCheckerTest {
 
     when(cosmosAdmin.getPartitionKeyDefinitionVersion(NAMESPACE_NAME, TABLE_NAME))
         .thenReturn(Optional.empty());
+    when(databaseConfig.getMetadataCacheExpirationTimeSecs()).thenReturn(-1L);
+    when(storageInfoProvider.getStorageInfo(any())).thenReturn(STORAGE_INFO);
 
     operationChecker =
         new CosmosOperationChecker(
@@ -968,22 +973,38 @@ public class CosmosOperationCheckerTest {
   }
 
   @Test
-  public void check_ScanGiven_WhenPartitionKeyIsExactly2048BytesOnV2_ShouldSucceed()
+  public void check_GetGiven_WhenPartitionKeyExceedsV1Limit_ShouldSucceed()
       throws ExecutionException {
     when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
-    when(cosmosAdmin.getPartitionKeyDefinitionVersion(NAMESPACE_NAME, TABLE_NAME))
-        .thenReturn(Optional.of(PartitionKeyDefinitionVersion.V2));
+
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 102)))
+            .clusteringKey(Key.ofText(CKEY1, "a"))
+            .build();
+
+    assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
+    verify(cosmosAdmin, never()).getPartitionKeyDefinitionVersion(any(), any());
+  }
+
+  @Test
+  public void check_ScanGiven_WhenPartitionKeyExceedsV1Limit_ShouldSucceed()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
 
     Scan scan =
         Scan.newBuilder()
             .namespace(NAMESPACE_NAME)
             .table(TABLE_NAME)
-            .partitionKey(Key.ofText(PKEY1, repeat("x", 2048)))
+            .partitionKey(Key.ofText(PKEY1, repeat("x", 102)))
             .start(Key.ofText(CKEY1, "a"))
             .end(Key.ofText(CKEY1, "b"))
             .build();
 
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
+    verify(cosmosAdmin, never()).getPartitionKeyDefinitionVersion(any(), any());
   }
 
   @Test
@@ -1038,6 +1059,57 @@ public class CosmosOperationCheckerTest {
             .build();
 
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void check_PutsGivenForSameTable_ShouldReadPartitionKeyVersionOnce()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put1 =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a"))
+            .clusteringKey(Key.ofText(CKEY1, "1"))
+            .build();
+    Put put2 =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "b"))
+            .clusteringKey(Key.ofText(CKEY1, "2"))
+            .build();
+
+    operationChecker.check(put1);
+    operationChecker.check(put2);
+
+    verify(cosmosAdmin, times(1)).getPartitionKeyDefinitionVersion(NAMESPACE_NAME, TABLE_NAME);
+  }
+
+  @Test
+  public void check_MutationsGivenForSameTable_ShouldReadPartitionKeyVersionOnce()
+      throws ExecutionException {
+    when(metadataManager.getTableMetadata(any())).thenReturn(TABLE_METADATA2);
+
+    Put put =
+        Put.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a"))
+            .clusteringKey(Key.ofText(CKEY1, "1"))
+            .build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE_NAME)
+            .table(TABLE_NAME)
+            .partitionKey(Key.ofText(PKEY1, "a"))
+            .clusteringKey(Key.ofText(CKEY1, "1"))
+            .build();
+
+    operationChecker.check(Arrays.asList(put, delete));
+
+    verify(cosmosAdmin, times(1)).getPartitionKeyDefinitionVersion(NAMESPACE_NAME, TABLE_NAME);
   }
 
   private Put buildPutWithCondition(MutationCondition condition) {

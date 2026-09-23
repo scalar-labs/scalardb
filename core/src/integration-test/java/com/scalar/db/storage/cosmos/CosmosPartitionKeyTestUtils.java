@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Optional;
 
-/** Utilities for Cosmos DB partition key V1/V2 investigation tests. */
+/** Utilities for Cosmos DB partition key V1/V2 integration tests. */
 public final class CosmosPartitionKeyTestUtils {
 
   private CosmosPartitionKeyTestUtils() {}
@@ -47,7 +47,7 @@ public final class CosmosPartitionKeyTestUtils {
     return Optional.ofNullable(definition.getVersion());
   }
 
-  /** Returns true when the container uses V1 or leaves the version unset (ScalarDB default). */
+  /** Returns true when the container uses V1 or leaves the version unset (legacy default). */
   public static boolean isV1OrUnset(Optional<PartitionKeyDefinitionVersion> version) {
     return !version.isPresent() || version.get() == PartitionKeyDefinitionVersion.V1;
   }

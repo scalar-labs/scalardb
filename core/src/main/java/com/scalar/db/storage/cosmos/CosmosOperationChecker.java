@@ -1,6 +1,8 @@
 package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
@@ -8,11 +10,11 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
+import com.scalar.db.common.TableMetadataManager.TableKey;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -31,9 +33,11 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.util.ScalarDbUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 
 public class CosmosOperationChecker extends OperationChecker {
 
@@ -105,23 +109,31 @@ public class CosmosOperationChecker extends OperationChecker {
         public void visit(TimestampTZColumn column) {}
       };
 
-  private final CosmosAdmin cosmosAdmin;
+  private final LoadingCache<TableKey, Optional<PartitionKeyDefinitionVersion>>
+      partitionKeyVersionCache;
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CosmosOperationChecker(
       DatabaseConfig databaseConfig,
       TableMetadataManager metadataManager,
       StorageInfoProvider storageInfoProvider,
       CosmosAdmin cosmosAdmin) {
     super(databaseConfig, metadataManager, storageInfoProvider);
-    this.cosmosAdmin = cosmosAdmin;
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    long cacheExpirationTimeSecs = databaseConfig.getMetadataCacheExpirationTimeSecs();
+    // Same TTL as table metadata. Partition key version is immutable except drop/recreate, so
+    // expiry is the cutover invalidation window.
+    if (cacheExpirationTimeSecs >= 0) {
+      builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
+    }
+    partitionKeyVersionCache =
+        builder.build(
+            key -> cosmosAdmin.getPartitionKeyDefinitionVersion(key.namespace, key.table));
   }
 
   @Override
   public void check(Get get) throws ExecutionException {
     super.check(get);
     checkPrimaryKey(get);
-    checkPartitionKeyAndDocumentIdLengths(get);
   }
 
   @Override
@@ -134,7 +146,6 @@ public class CosmosOperationChecker extends OperationChecker {
     scan.getEndClusteringKey()
         .ifPresent(
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
-    checkPartitionKeyAndDocumentIdLengths(scan);
   }
 
   @Override
@@ -158,6 +169,18 @@ public class CosmosOperationChecker extends OperationChecker {
     checkCondition(delete, metadata);
   }
 
+  @Override
+  public void check(List<? extends Mutation> mutations) throws ExecutionException {
+    for (Mutation mutation : mutations) {
+      if (!mutation.forNamespace().isPresent() || !mutation.forTable().isPresent()) {
+        continue;
+      }
+      getCachedPartitionKeyDefinitionVersion(
+          mutation.forNamespace().get(), mutation.forTable().get());
+    }
+    super.check(mutations);
+  }
+
   private void checkPrimaryKey(Operation operation) {
     operation
         .getPartitionKey()
@@ -169,6 +192,8 @@ public class CosmosOperationChecker extends OperationChecker {
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
   }
 
+  // Write-time only. Get/Scan skip this so existing V1 rows whose concatenated partition key is
+  // longer than 101 bytes can still be read during migration.
   private void checkPartitionKeyAndDocumentIdLengths(Operation operation)
       throws ExecutionException {
     if (operation.getPartitionKey().getColumns().isEmpty()) {
@@ -176,19 +201,12 @@ public class CosmosOperationChecker extends OperationChecker {
     }
 
     TableMetadata metadata = getTableMetadata(operation);
-    // Index Gets/Scans put the index column in getPartitionKey(). That is not the Cosmos
-    // concatenated partition key, so concatenation and document-id length checks do not apply.
-    if (operation instanceof Selection
-        && ScalarDbUtils.isSecondaryIndexSpecified((Selection) operation, metadata)) {
-      return;
-    }
-
     CosmosOperation cosmosOperation = new CosmosOperation(operation, metadata);
     String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
     int partitionKeyByteLength = concatenatedPartitionKey.getBytes(StandardCharsets.UTF_8).length;
 
     Optional<PartitionKeyDefinitionVersion> version =
-        cosmosAdmin.getPartitionKeyDefinitionVersion(
+        getCachedPartitionKeyDefinitionVersion(
             operation.forNamespace().orElseThrow(IllegalArgumentException::new),
             operation.forTable().orElseThrow(IllegalArgumentException::new));
     int maxPartitionKeyBytes =
@@ -216,6 +234,22 @@ public class CosmosOperationChecker extends OperationChecker {
                 DOCUMENT_ID_MAX_LENGTH,
                 documentId.length()));
       }
+    }
+  }
+
+  private Optional<PartitionKeyDefinitionVersion> getCachedPartitionKeyDefinitionVersion(
+      String namespace, String table) throws ExecutionException {
+    try {
+      return partitionKeyVersionCache.get(new TableKey(namespace, table));
+    } catch (CompletionException e) {
+      if (e.getCause() instanceof ExecutionException) {
+        throw (ExecutionException) e.getCause();
+      }
+      throw new ExecutionException(
+          String.format(
+              "Reading the partition key definition version failed. Table: %s",
+              ScalarDbUtils.getFullTableName(namespace, table)),
+          e.getCause());
     }
   }
 

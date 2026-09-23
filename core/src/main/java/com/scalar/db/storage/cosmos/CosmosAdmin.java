@@ -219,11 +219,21 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   static boolean isLargePartitionKeyEnabled(Map<String, String> options) {
-    if (options == null || options.isEmpty()) {
+    if (options == null || !options.containsKey(LARGE_PARTITION_KEY)) {
       return Boolean.parseBoolean(DEFAULT_LARGE_PARTITION_KEY);
     }
-    return Boolean.parseBoolean(
-        options.getOrDefault(LARGE_PARTITION_KEY, DEFAULT_LARGE_PARTITION_KEY));
+    String value = options.get(LARGE_PARTITION_KEY);
+    if (value != null) {
+      value = value.trim();
+    }
+    if (Boolean.TRUE.toString().equalsIgnoreCase(value)) {
+      return true;
+    }
+    if (Boolean.FALSE.toString().equalsIgnoreCase(value)) {
+      return false;
+    }
+    throw new IllegalArgumentException(
+        CoreError.CONFIG_UTILS_INVALID_BOOLEAN_FORMAT.buildMessage(LARGE_PARTITION_KEY, value));
   }
 
   public Optional<PartitionKeyDefinitionVersion> getPartitionKeyDefinitionVersion(
