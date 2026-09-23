@@ -23,6 +23,9 @@ SOURCE_LABEL = {
     "webpage": "Web",
 }
 
+# Slack section mrkdwn text is limited to 3000 characters.
+_SECTION_LIMIT = 2800
+
 
 def _component_label(update: VersionUpdate) -> str:
     mapping = {
@@ -42,6 +45,28 @@ def _capability_context(feature: FeatureUpdate) -> Optional[str]:
     return "ScalarDB adapter — " + ", ".join(parts)
 
 
+def _section(text: str) -> Dict:
+    return {"type": "section", "text": {"type": "mrkdwn", "text": text}}
+
+
+def _chunk_lines(lines: List[str], limit: int = _SECTION_LIMIT) -> List[List[str]]:
+    chunks: List[List[str]] = []
+    current: List[str] = []
+    size = 0
+    for line in lines:
+        extra = len(line) + (1 if current else 0)
+        if current and size + extra > limit:
+            chunks.append(current)
+            current = [line]
+            size = len(line)
+        else:
+            current.append(line)
+            size += extra
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def build_slack_payload(
     version_updates: List[VersionUpdate],
     feature_updates: List[FeatureUpdate],
@@ -56,18 +81,14 @@ def build_slack_payload(
     total = len(version_updates) + len(feature_updates)
 
     if version_updates or feature_updates:
-        header = f"*ScalarDB Database Update Monitor — {total} new update(s)*"
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": header}})
+        blocks.append(
+            _section(f"*ScalarDB Database Update Monitor — {total} new update(s)*")
+        )
 
     if version_updates:
-        lines = [
-            "*VERSION updates*",
-            "```",
-            f"{'Database':<18} {'Component':<12} {'Current':<10} {'Latest':<10} {'Level':<6} Source",
-            "-" * 76,
-        ]
+        rows: List[str] = []
         for update in version_updates:
-            lines.append(
+            rows.append(
                 f"{update.database_name[:18]:<18} "
                 f"{_component_label(update):<12} "
                 f"{update.current_version:<10} "
@@ -76,16 +97,22 @@ def build_slack_payload(
                 f"{SOURCE_LABEL.get(update.source_type, update.source_type)}"
             )
             if len(update.new_versions) > 1:
-                lines.append(
+                rows.append(
                     f"  └ {len(update.new_versions)} new versions: "
                     f"{', '.join(update.new_versions[:5])}"
                     f"{'...' if len(update.new_versions) > 5 else ''}"
                 )
-        lines.append("```")
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(lines)}})
+        table_header = [
+            f"{'Database':<18} {'Component':<12} {'Current':<10} {'Latest':<10} {'Level':<6} Source",
+            "-" * 76,
+        ]
+        for index, chunk in enumerate(_chunk_lines(rows)):
+            title = "*VERSION updates*" if index == 0 else "*VERSION updates (cont.)*"
+            body = "\n".join(table_header + chunk)
+            blocks.append(_section(f"{title}\n```\n{body}\n```"))
 
     if feature_updates:
-        feature_lines = ["*FEATURE updates*"]
+        feature_lines: List[str] = []
         for feature in feature_updates:
             feature_lines.append(f"• *{feature.database_name}* — {feature.title}")
             if feature.description:
@@ -95,7 +122,9 @@ def build_slack_payload(
                 feature_lines.append(f"  _{capability}_")
             if feature.url:
                 feature_lines.append(f"  <{feature.url}|View announcement>")
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(feature_lines)}})
+        for index, chunk in enumerate(_chunk_lines(feature_lines)):
+            title = "*FEATURE updates*" if index == 0 else "*FEATURE updates (cont.)*"
+            blocks.append(_section(title + "\n" + "\n".join(chunk)))
 
     if errors:
         error_lines = [":warning: *Check failures:*"]
@@ -106,7 +135,7 @@ def build_slack_payload(
             )
         if len(errors) > 5:
             error_lines.append(f"• ...and {len(errors) - 5} more")
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(error_lines)}})
+        blocks.append(_section("\n".join(error_lines)))
 
     context_parts = []
     if run_url:

@@ -44,6 +44,11 @@ class MonitorEngine:
         first_run_policy = defaults.get("first_run_policy", "baseline_silent")
         if self.database_filter:
             databases = [db for db in databases if db["id"] == self.database_filter]
+            if not state.baseline_established:
+                logger.warning(
+                    "Running with --filter before the first full run; "
+                    "the next unfiltered run will still establish the baseline silently."
+                )
 
         if first_run_policy != "baseline_silent" and not state.baseline_established:
             state.baseline_established = True
@@ -223,12 +228,24 @@ class MonitorEngine:
             "relevance_reason": update.relevance_reason,
             "url": update.url,
             "adapter_capabilities": update.adapter_capabilities,
+            "version": update.version,
             "dedup_key": update.dedup_key(),
         }
 
     @staticmethod
     def _normalize_tag(value: str) -> str:
-        return value.lower().lstrip("v").split()[0].strip("()")
+        cleaned = value.strip().lower()
+        if cleaned.startswith("v") and len(cleaned) > 1 and cleaned[1].isdigit():
+            cleaned = cleaned[1:]
+        return cleaned.split()[0].strip("()")
+
+    def _feature_tag(self, feature: FeatureUpdate) -> Optional[str]:
+        raw = feature.version
+        if not raw and feature.url and "/releases/tag/" in feature.url:
+            raw = feature.url.rsplit("/releases/tag/", 1)[-1]
+        if not raw:
+            return None
+        return self._normalize_tag(raw)
 
     def _drop_version_only_features(
         self,
@@ -246,16 +263,21 @@ class MonitorEngine:
             database["id"]: {item.lower() for item in database.get("watch_features", [])}
             for database in databases
         }
+        names_by_db = {
+            database["id"]: {database["id"].lower(), database.get("name", "").lower()}
+            for database in databases
+        }
         kept: List[FeatureUpdate] = []
         for feature in features:
             if feature.source_type != "github_releases":
                 kept.append(feature)
                 continue
-            tag = self._normalize_tag(feature.title)
+            tag = self._feature_tag(feature)
             watches = watch_by_db.get(feature.database_id, set())
-            matched = {item.lower() for item in feature.matched_keywords}
+            generic = names_by_db.get(feature.database_id, {feature.database_id.lower()})
+            matched = {item.lower() for item in feature.matched_keywords} - generic
             has_feature_signal = bool(matched & watches) or "adapter" in feature.relevance_reason
-            if (feature.database_id, tag) in version_tags and not has_feature_signal:
+            if tag and (feature.database_id, tag) in version_tags and not has_feature_signal:
                 continue
             kept.append(feature)
         return kept

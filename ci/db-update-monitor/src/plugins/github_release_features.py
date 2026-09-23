@@ -65,6 +65,7 @@ class GitHubReleaseFeatureChecker(FeatureSourcePlugin):
                     adapter_capabilities=database.get("adapter_capabilities"),
                     published_at=published_raw,
                     include_all=include_all or bool(matched),
+                    version=release.get("tag_name"),
                 )
             )
 

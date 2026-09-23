@@ -9,6 +9,7 @@ import requests
 
 from models import ComponentType, VersionUpdate
 from plugins.base import SourcePlugin
+from text_util import USER_AGENT
 from version_normalizer import VersionNormalizer
 
 
@@ -57,7 +58,11 @@ class MavenVersionChecker(SourcePlugin):
         metadata_url = f"{repository.rstrip('/')}/{group_path}/{artifact_id}/maven-metadata.xml"
         timeout = upstream_config.get("timeout_seconds", 30)
 
-        response = requests.get(metadata_url, timeout=(10, timeout))
+        response = requests.get(
+            metadata_url,
+            timeout=(10, timeout),
+            headers={"User-Agent": USER_AGENT},
+        )
         response.raise_for_status()
         root = ET.fromstring(response.content)
         versions = [element.text for element in root.findall(".//version") if element.text]

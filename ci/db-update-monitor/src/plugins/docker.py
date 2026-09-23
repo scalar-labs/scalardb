@@ -9,6 +9,7 @@ import requests
 
 from models import ComponentType, VersionUpdate
 from plugins.base import SourcePlugin
+from text_util import USER_AGENT
 from version_normalizer import VersionNormalizer
 
 DOCKER_HUB_URL = "https://hub.docker.com/v2/repositories"
@@ -69,15 +70,23 @@ class DockerHubChecker(SourcePlugin):
         if registry != "dockerhub":
             raise ValueError(f"Unsupported docker registry: {registry}")
 
-        url = f"{DOCKER_HUB_URL}/{repository}/tags"
+        tags: List[str] = []
+        url: Optional[str] = f"{DOCKER_HUB_URL}/{repository}/tags"
+        params: Optional[Dict[str, Any]] = {"page_size": 100, "ordering": "-last_updated"}
         timeout = upstream_config.get("timeout_seconds", 30)
-        response = requests.get(
-            url,
-            params={"page_size": 100, "ordering": "-last_updated"},
-            timeout=(10, timeout),
-        )
-        response.raise_for_status()
-        return [item["name"] for item in response.json().get("results", []) if "name" in item]
+        max_pages = int(upstream_config.get("max_pages", 5))
+        headers = {"User-Agent": USER_AGENT}
+
+        for _ in range(max_pages):
+            if not url:
+                break
+            response = requests.get(url, params=params, timeout=(10, timeout), headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+            tags.extend(item["name"] for item in payload.get("results", []) if "name" in item)
+            url = payload.get("next")
+            params = None
+        return tags
 
     def _filter_tags(self, tags: List[str], upstream_config: Dict[str, Any]) -> List[str]:
         tag_pattern = upstream_config.get("tag_pattern")

@@ -63,6 +63,7 @@ class FeatureUpdate:
     adapter_capabilities: Optional[Dict[str, str]] = None
     published_at: Optional[str] = None
     include_all: bool = False
+    version: Optional[str] = None
     detected_at: str = field(default_factory=utc_now_iso)
 
     def dedup_key(self) -> str:

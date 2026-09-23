@@ -225,6 +225,7 @@ databases:
       - type: rss
         url: https://devblogs.microsoft.com/azure-sql/feed/
         keywords: ["SQL Server"]
+        match_scope: title
     components:
       - id: jdbc-driver
         type: jdbc-driver

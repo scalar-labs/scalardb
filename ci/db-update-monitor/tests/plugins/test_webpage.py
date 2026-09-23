@@ -24,8 +24,9 @@ def test_webpage_checker_emits_keyword_snippets():
         cursor=None,
     )
     assert cursor
-    assert updates
-    assert any("JSON" in update.matched_keywords or "json" in [k.lower() for k in update.matched_keywords] for update in updates)
+    assert len(updates) == 1
+    assert "JSON" in updates[0].matched_keywords
+    assert "deprecated" in [k.lower() for k in updates[0].matched_keywords]
 
 
 @responses.activate

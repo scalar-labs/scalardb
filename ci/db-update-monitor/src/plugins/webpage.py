@@ -55,22 +55,16 @@ class WebpageFeatureChecker(FeatureSourcePlugin):
         if not matched:
             return [], page_hash
 
-        snippets: List[FeatureUpdate] = []
-        lowered = text.lower()
-        for keyword in matched:
-            idx = lowered.find(keyword.lower())
-            start = max(0, idx - 120)
-            chunk = truncate(text[start : idx + len(keyword) + 200], 400)
-            snippets.append(
-                FeatureUpdate(
-                    database_id=database["id"],
-                    database_name=database["name"],
-                    title=f"{database['name']}: {keyword}",
-                    description=chunk,
-                    source_type=self.plugin_type(),
-                    matched_keywords=[keyword],
-                    url=url,
-                    adapter_capabilities=database.get("adapter_capabilities"),
-                )
+        snippet = truncate(text, 400)
+        return [
+            FeatureUpdate(
+                database_id=database["id"],
+                database_name=database["name"],
+                title=f"{database['name']}: {', '.join(matched)}",
+                description=snippet,
+                source_type=self.plugin_type(),
+                matched_keywords=matched,
+                url=url,
+                adapter_capabilities=database.get("adapter_capabilities"),
             )
-        return snippets, page_hash
+        ], page_hash

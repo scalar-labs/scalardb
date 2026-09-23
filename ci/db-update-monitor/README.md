@@ -36,6 +36,8 @@ cp state/last-run.clean.json state/last-run.json
 
 The next real run then establishes a new baseline (`baseline_established: false`) and does not send a historical Slack flood. Do not copy a populated test `last-run.json` into CI or the committed state file.
 
+`--filter` is for validating one database. Do not use it for the first production run: `baseline_established` is only set after an unfiltered run, so a filtered first run would leave the next full run silent as well.
+
 ## Configuration
 
 - `config/monitors.yaml` — database registry with `components`, optional `sources` and `watch_features`

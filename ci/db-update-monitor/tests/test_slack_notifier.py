@@ -43,3 +43,22 @@ def test_build_slack_payload_feature_section():
     assert "FEATURE updates" in text
     assert "Hierarchical partition keys GA" in text
     assert "v1_single_path" in text
+
+
+def test_build_slack_payload_splits_long_feature_section():
+    features = [
+        FeatureUpdate(
+            database_id="s3",
+            database_name="Amazon S3",
+            title=f"Announcement {index} " + ("x" * 80),
+            description="y" * 200,
+            source_type="rss",
+            matched_keywords=["Amazon S3"],
+            url=f"https://example.com/{index}",
+        )
+        for index in range(20)
+    ]
+    payload = build_slack_payload([], features, errors=[])
+    section_texts = [block["text"]["text"] for block in payload["blocks"] if block["type"] == "section"]
+    assert any("FEATURE updates (cont.)" in text for text in section_texts)
+    assert all(len(text) <= 3000 for text in section_texts)

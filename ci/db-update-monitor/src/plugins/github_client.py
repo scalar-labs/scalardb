@@ -7,6 +7,8 @@ from typing import Any, Dict, List
 
 import requests
 
+from text_util import USER_AGENT
+
 API_URL = "https://api.github.com"
 
 
@@ -16,7 +18,10 @@ def fetch_releases(
     per_page: int = 30,
     include_prerelease: bool = False,
 ) -> List[Dict[str, Any]]:
-    headers = {"Accept": "application/vnd.github+json"}
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": USER_AGENT,
+    }
     token = os.environ.get("GITHUB_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
