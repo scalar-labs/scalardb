@@ -1,8 +1,5 @@
 package com.scalar.db.storage.cosmos;
 
-import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
@@ -14,7 +11,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
-import com.scalar.db.common.TableMetadataManager.TableKey;
 import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -32,20 +28,11 @@ import com.scalar.db.io.TextColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
-import com.scalar.db.util.ScalarDbUtils;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
 public class CosmosOperationChecker extends OperationChecker {
 
   private static final long BIGINT_MAX_VALUE = 9007199254740992L;
   private static final long BIGINT_MIN_VALUE = -9007199254740992L;
-  private static final int V1_PARTITION_KEY_MAX_UTF8_BYTES = 101;
-  private static final int V2_PARTITION_KEY_MAX_UTF8_BYTES = 2048;
-  private static final int DOCUMENT_ID_MAX_LENGTH = 255;
 
   private static final char[] ILLEGAL_CHARACTERS_IN_PRIMARY_KEY = {
     // Colons are not allowed in primary-key columns due to the `ConcatenationVisitor` limitation.
@@ -109,25 +96,11 @@ public class CosmosOperationChecker extends OperationChecker {
         public void visit(TimestampTZColumn column) {}
       };
 
-  private final LoadingCache<TableKey, Optional<PartitionKeyDefinitionVersion>>
-      partitionKeyVersionCache;
-
   public CosmosOperationChecker(
       DatabaseConfig databaseConfig,
       TableMetadataManager metadataManager,
-      StorageInfoProvider storageInfoProvider,
-      CosmosAdmin cosmosAdmin) {
+      StorageInfoProvider storageInfoProvider) {
     super(databaseConfig, metadataManager, storageInfoProvider);
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
-    long cacheExpirationTimeSecs = databaseConfig.getMetadataCacheExpirationTimeSecs();
-    // Same TTL as table metadata. Partition key version is immutable except drop/recreate, so
-    // expiry is the cutover invalidation window.
-    if (cacheExpirationTimeSecs >= 0) {
-      builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
-    }
-    partitionKeyVersionCache =
-        builder.build(
-            key -> cosmosAdmin.getPartitionKeyDefinitionVersion(key.namespace, key.table));
   }
 
   @Override
@@ -152,7 +125,6 @@ public class CosmosOperationChecker extends OperationChecker {
   public void check(Put put) throws ExecutionException {
     super.check(put);
     checkPrimaryKey(put);
-    checkPartitionKeyAndDocumentIdLengths(put);
     checkBigIntColumnsInValues(put);
 
     TableMetadata metadata = getTableMetadata(put);
@@ -163,22 +135,9 @@ public class CosmosOperationChecker extends OperationChecker {
   public void check(Delete delete) throws ExecutionException {
     super.check(delete);
     checkPrimaryKey(delete);
-    checkPartitionKeyAndDocumentIdLengths(delete);
 
     TableMetadata metadata = getTableMetadata(delete);
     checkCondition(delete, metadata);
-  }
-
-  @Override
-  public void check(List<? extends Mutation> mutations) throws ExecutionException {
-    for (Mutation mutation : mutations) {
-      if (!mutation.forNamespace().isPresent() || !mutation.forTable().isPresent()) {
-        continue;
-      }
-      getCachedPartitionKeyDefinitionVersion(
-          mutation.forNamespace().get(), mutation.forTable().get());
-    }
-    super.check(mutations);
   }
 
   private void checkPrimaryKey(Operation operation) {
@@ -190,78 +149,6 @@ public class CosmosOperationChecker extends OperationChecker {
         .getClusteringKey()
         .ifPresent(
             c -> c.getColumns().forEach(column -> column.accept(PRIMARY_KEY_COLUMN_CHECKER)));
-  }
-
-  // Write-time only. Get/Scan skip this so existing V1 rows whose concatenated partition key is
-  // longer than 101 bytes can still be read during migration.
-  private void checkPartitionKeyAndDocumentIdLengths(Operation operation)
-      throws ExecutionException {
-    if (operation.getPartitionKey().getColumns().isEmpty()) {
-      return;
-    }
-
-    TableMetadata metadata = getTableMetadata(operation);
-    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadata);
-    String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
-    int partitionKeyByteLength = concatenatedPartitionKey.getBytes(StandardCharsets.UTF_8).length;
-
-    Optional<PartitionKeyDefinitionVersion> version =
-        getCachedPartitionKeyDefinitionVersion(
-            operation.forNamespace().orElseThrow(IllegalArgumentException::new),
-            operation.forTable().orElseThrow(IllegalArgumentException::new));
-    int maxPartitionKeyBytes =
-        isV2PartitionKey(version)
-            ? V2_PARTITION_KEY_MAX_UTF8_BYTES
-            : V1_PARTITION_KEY_MAX_UTF8_BYTES;
-
-    if (partitionKeyByteLength > maxPartitionKeyBytes) {
-      throw new IllegalArgumentException(
-          CoreError.COSMOS_CONCATENATED_PARTITION_KEY_TOO_LONG.buildMessage(
-              operation.forNamespace().orElseThrow(IllegalArgumentException::new),
-              operation.forTable().orElseThrow(IllegalArgumentException::new),
-              formatPartitionKeyVersion(version),
-              partitionKeyByteLength,
-              maxPartitionKeyBytes));
-    }
-
-    if (cosmosOperation.isPrimaryKeySpecified()) {
-      String documentId = cosmosOperation.getId();
-      if (documentId.length() > DOCUMENT_ID_MAX_LENGTH) {
-        throw new IllegalArgumentException(
-            CoreError.COSMOS_DOCUMENT_ID_TOO_LONG.buildMessage(
-                operation.forNamespace().orElseThrow(IllegalArgumentException::new),
-                operation.forTable().orElseThrow(IllegalArgumentException::new),
-                DOCUMENT_ID_MAX_LENGTH,
-                documentId.length()));
-      }
-    }
-  }
-
-  private Optional<PartitionKeyDefinitionVersion> getCachedPartitionKeyDefinitionVersion(
-      String namespace, String table) throws ExecutionException {
-    try {
-      return partitionKeyVersionCache.get(new TableKey(namespace, table));
-    } catch (CompletionException e) {
-      if (e.getCause() instanceof ExecutionException) {
-        throw (ExecutionException) e.getCause();
-      }
-      throw new ExecutionException(
-          String.format(
-              "Reading the partition key definition version failed. Table: %s",
-              ScalarDbUtils.getFullTableName(namespace, table)),
-          e.getCause());
-    }
-  }
-
-  private static boolean isV2PartitionKey(Optional<PartitionKeyDefinitionVersion> version) {
-    return version.isPresent() && version.get() == PartitionKeyDefinitionVersion.V2;
-  }
-
-  private static String formatPartitionKeyVersion(Optional<PartitionKeyDefinitionVersion> version) {
-    if (isV2PartitionKey(version)) {
-      return "V2";
-    }
-    return "V1";
   }
 
   private void checkBigIntColumnsInValues(Put put) {

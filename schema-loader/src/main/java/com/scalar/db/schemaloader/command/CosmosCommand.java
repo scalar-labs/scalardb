@@ -46,12 +46,6 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Cosmos DB")
   private Boolean noScaling;
 
-  @Option(
-      names = {"--legacy-partition-key"},
-      description =
-          "Use Cosmos DB partition key V1 (101-byte hash) instead of V2 large partition keys")
-  private Boolean legacyPartitionKey;
-
   // For test
   @Option(
       names = {"--table-metadata-database-prefix"},
@@ -122,9 +116,6 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
     }
     if (noScaling != null) {
       options.put(CosmosAdmin.NO_SCALING, noScaling.toString());
-    }
-    if (legacyPartitionKey != null && legacyPartitionKey) {
-      options.put(CosmosAdmin.LARGE_PARTITION_KEY, "false");
     }
 
     execute(props, options);

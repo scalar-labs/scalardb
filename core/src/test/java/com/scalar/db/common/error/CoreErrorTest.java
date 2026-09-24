@@ -56,41 +56,4 @@ public class CoreErrorTest {
     Assertions.assertThat(message)
         .isEqualTo("DB-CORE-10000: Only a single-column index is supported. Operation: " + put);
   }
-
-  @Test
-  public void buildCode_ForCosmosConcatenatedPartitionKeyTooLong_ShouldBuildCorrectCode() {
-    Assertions.assertThat(CoreError.COSMOS_CONCATENATED_PARTITION_KEY_TOO_LONG.buildCode())
-        .isEqualTo("DB-CORE-10148");
-  }
-
-  @Test
-  public void buildMessage_ForCosmosConcatenatedPartitionKeyTooLong_ShouldBuildCorrectMessage() {
-    String message =
-        CoreError.COSMOS_CONCATENATED_PARTITION_KEY_TOO_LONG.buildMessage(
-            "ns", "tbl", "V1", 150, 101);
-
-    Assertions.assertThat(message)
-        .isEqualTo(
-            "DB-CORE-10148: The concatenated partition key for table ns.tbl exceeds the maximum "
-                + "length for this container's partition key version (V1). Length: 150 bytes, "
-                + "maximum: 101 bytes. ScalarDB joins partition key columns with ':' and encodes "
-                + "BLOB columns as Base64.");
-  }
-
-  @Test
-  public void buildCode_ForCosmosDocumentIdTooLong_ShouldBuildCorrectCode() {
-    Assertions.assertThat(CoreError.COSMOS_DOCUMENT_ID_TOO_LONG.buildCode())
-        .isEqualTo("DB-CORE-10149");
-  }
-
-  @Test
-  public void buildMessage_ForCosmosDocumentIdTooLong_ShouldBuildCorrectMessage() {
-    String message = CoreError.COSMOS_DOCUMENT_ID_TOO_LONG.buildMessage("ns", "tbl", 255, 256);
-
-    Assertions.assertThat(message)
-        .isEqualTo(
-            "DB-CORE-10149: The document id for table ns.tbl exceeds Cosmos DB's maximum of 255 "
-                + "characters. ScalarDB builds the document id by joining partition key and "
-                + "clustering key columns with ':'. Length: 256 characters.");
-  }
 }

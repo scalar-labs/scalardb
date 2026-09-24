@@ -215,46 +215,6 @@ public class CosmosCommandTest extends StorageSpecificCommandTestBase {
   }
 
   @Test
-  public void call_WithLegacyPartitionKeyFlag_ShouldPassLargePartitionKeyFalseInOptions()
-      throws SchemaLoaderException {
-    // Arrange
-    Map<String, String> options =
-        ImmutableMap.<String, String>builder()
-            .put(CosmosAdmin.REQUEST_UNIT, ru)
-            .put(CosmosAdmin.NO_SCALING, noScaling.toString())
-            .put(CosmosAdmin.LARGE_PARTITION_KEY, "false")
-            .build();
-
-    TableSchema tableSchema = mock(TableSchema.class);
-    when(tableSchema.isTransactionTable()).thenReturn(false);
-    when(parser.parse()).thenReturn(Collections.singletonList(tableSchema));
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, host);
-    properties.setProperty(DatabaseConfig.PASSWORD, password);
-    properties.setProperty(DatabaseConfig.STORAGE, "cosmos");
-
-    // Act
-    commandLine.execute(
-        "-h",
-        host,
-        "-p",
-        password,
-        "--no-scaling",
-        "-r",
-        ru,
-        "--legacy-partition-key",
-        "-f",
-        schemaFile);
-
-    // Assert
-    verify(command).getSchemaParser(options);
-    verify(parser).parse();
-    verify(command).getSchemaOperator(properties);
-    verify(operator).createTables(anyList());
-  }
-
-  @Test
   public void call_MissingSchemaFile_ShouldExitWithErrorCode() {
     // Arrange
 
