@@ -748,6 +748,31 @@ public class ScalarDbUtilsTest {
   }
 
   @Test
+  public void columnsMatchAnyOfConjunctions_RangeOperatorsOnNullColumn_ShouldNotMatch() {
+    // Arrange
+    Map<String, Column<?>> columns =
+        ImmutableMap.of("text", TextColumn.ofNull("text"), "num", IntColumn.ofNull("num"));
+    Set<Conjunction> conjunctions =
+        ImmutableSet.of(
+            Conjunction.of(ConditionBuilder.column("text").isLessThanText("m")),
+            Conjunction.of(ConditionBuilder.column("text").isLessThanOrEqualToText("m")),
+            Conjunction.of(ConditionBuilder.column("text").isGreaterThanText("m")),
+            Conjunction.of(ConditionBuilder.column("text").isGreaterThanOrEqualToText("m")),
+            Conjunction.of(ConditionBuilder.column("num").isLessThanInt(5)),
+            Conjunction.of(ConditionBuilder.column("num").isLessThanOrEqualToInt(5)));
+
+    // Act Assert
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                columns, conjunctions, CollationComparators.BINARY))
+        .isFalse();
+    assertThat(
+            ScalarDbUtils.columnsMatchAnyOfConjunctions(
+                columns, conjunctions, CollationComparators.CASE_INSENSITIVE_ICU))
+        .isFalse();
+  }
+
+  @Test
   public void columnsMatchAnyOfConjunctions_NonTextEqWithCollation_ShouldStayByteExact() {
     // Arrange
     Map<String, Column<?>> matchingColumns = ImmutableMap.of("col", IntColumn.of("col", 5));
