@@ -404,14 +404,19 @@ public final class ScalarDbUtils {
         return !matchesEquality(column, condition, collationComparator);
       case IS_NOT_NULL:
         return !column.equals(condition.getColumn());
+        // A NULL satisfies no range condition, as in the storages' own evaluation.
       case GT:
-        return compareForRange(column, condition, collationComparator) > 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) > 0;
       case GTE:
-        return compareForRange(column, condition, collationComparator) >= 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) >= 0;
       case LT:
-        return compareForRange(column, condition, collationComparator) < 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) < 0;
       case LTE:
-        return compareForRange(column, condition, collationComparator) <= 0;
+        return !column.hasNullValue()
+            && compareForRange(column, condition, collationComparator) <= 0;
       case LIKE:
       case NOT_LIKE:
         // assert condition instanceof LikeExpression;
