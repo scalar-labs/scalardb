@@ -216,9 +216,7 @@ public class ConsensusCommitOperationChecker {
           CoreError.CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_PUT.buildMessage(
               condition.getClass().getSimpleName()));
     }
-    checkConditionIsNotTargetingMetadataColumns(put, condition, metadata);
-    ConditionChecker conditionChecker = createConditionChecker(metadata.getTableMetadata());
-    conditionChecker.check(condition, true);
+    checkCondition(put, condition, metadata);
   }
 
   private void check(Delete delete) throws ExecutionException {
@@ -232,23 +230,25 @@ public class ConsensusCommitOperationChecker {
           CoreError.CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_ON_DELETE.buildMessage(
               condition.getClass().getSimpleName()));
     }
-    TransactionTableMetadata transactionMetadata =
-        getTransactionTableMetadata(transactionTableMetadataManager, delete);
-    checkConditionIsNotTargetingMetadataColumns(delete, condition, transactionMetadata);
-    ConditionChecker conditionChecker =
-        createConditionChecker(transactionMetadata.getTableMetadata());
-    conditionChecker.check(condition, false);
+    checkCondition(
+        delete, condition, getTransactionTableMetadata(transactionTableMetadataManager, delete));
   }
 
-  private void checkConditionIsNotTargetingMetadataColumns(
-      Mutation mutation, MutationCondition mutationCondition, TransactionTableMetadata metadata) {
-    for (ConditionalExpression expression : mutationCondition.getExpressions()) {
+  private void checkCondition(
+      Mutation mutation, MutationCondition condition, TransactionTableMetadata metadata) {
+    for (ConditionalExpression expression : condition.getExpressions()) {
       String column = expression.getColumn().getName();
       if (metadata.getTransactionMetaColumnNames().contains(column)) {
         throw new IllegalArgumentException(
             CoreError.CONSENSUS_COMMIT_CONDITION_NOT_ALLOWED_TO_TARGET_TRANSACTION_METADATA_COLUMNS
                 .buildMessage(mutation.forFullTableName().get(), column));
       }
+    }
+    ConditionChecker conditionChecker = createConditionChecker(metadata.getTableMetadata());
+    if (!conditionChecker.check(condition, mutation instanceof Put)) {
+      throw new IllegalArgumentException(
+          CoreError.CONSENSUS_COMMIT_CONDITION_NOT_PROPERLY_SPECIFIED.buildMessage(
+              mutation.forFullTableName().get(), condition.getExpressions()));
     }
   }
 

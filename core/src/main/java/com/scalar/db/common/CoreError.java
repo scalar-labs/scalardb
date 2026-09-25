@@ -723,6 +723,12 @@ public enum CoreError implements ScalarDbError {
       "The column definition must be specified since %s is specified as a secondary index",
       "",
       ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_PROPERLY_SPECIFIED(
+      Category.USER_ERROR,
+      "0304",
+      "The condition is not properly specified. Table: %s; Expressions: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
