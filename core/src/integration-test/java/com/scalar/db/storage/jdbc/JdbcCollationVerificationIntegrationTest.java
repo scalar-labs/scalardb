@@ -33,16 +33,16 @@ public class JdbcCollationVerificationIntegrationTest {
         new JdbcAdminTestUtils(JdbcEnv.getProperties("collation_verification"));
     try (Connection connection = openBackendConnection();
         Statement statement = connection.createStatement()) {
-      statement.execute("DROP DATABASE IF EXISTS " + NAMESPACE);
-      statement.execute(
-          "CREATE DATABASE " + NAMESPACE + " CHARACTER SET utf8mb4 COLLATE " + STALE_COLLATION);
-      statement.execute(
-          "CREATE TABLE "
-              + NAMESPACE
-              + "."
-              + TABLE
-              + " (pk VARCHAR(128) NOT NULL, val LONGTEXT, PRIMARY KEY (pk))");
       try {
+        statement.execute("DROP DATABASE IF EXISTS " + NAMESPACE);
+        statement.execute(
+            "CREATE DATABASE " + NAMESPACE + " CHARACTER SET utf8mb4 COLLATE " + STALE_COLLATION);
+        statement.execute(
+            "CREATE TABLE "
+                + NAMESPACE
+                + "."
+                + TABLE
+                + " (pk VARCHAR(128) NOT NULL, val LONGTEXT, PRIMARY KEY (pk))");
         assertThatThrownBy(
                 () ->
                     adminTestUtils.alterTableCollation(
@@ -50,9 +50,10 @@ public class JdbcCollationVerificationIntegrationTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("stale collation");
       } finally {
-        statement.execute("DROP DATABASE " + NAMESPACE);
-        adminTestUtils.close();
+        statement.execute("DROP DATABASE IF EXISTS " + NAMESPACE);
       }
+    } finally {
+      adminTestUtils.close();
     }
   }
 
