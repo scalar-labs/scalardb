@@ -385,8 +385,65 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         connection -> {
           String enclosedCollation =
               rdbEngine.enclose(namespace) + "." + rdbEngine.enclose(collation);
+          // ScalarDB maps TEXT to "text" for regular columns but to VARCHAR(10485760) for key
+          // columns on PostgreSQL, so both character types must be enumerated, restating each
+          // column's own type. Each entry maps the statement up to the COLLATE clause to the
+          // collation the column currently carries.
+          Map<String, String> alterColumnPrefixes =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT column_name, data_type, character_maximum_length, collation_name"
+                      + " FROM information_schema.columns"
+                      + " WHERE table_schema = ? AND table_name = ?"
+                      + " AND data_type IN ('text', 'character varying')",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  rs -> {
+                    Map<String, String> prefixes = new LinkedHashMap<>();
+                    while (rs.next()) {
+                      String columnName = rs.getString(1);
+                      String dataType = rs.getString(2);
+                      long maxLength = rs.getLong(3);
+                      String columnCollation = rs.getString(4);
+                      String type = "text".equals(dataType) ? "TEXT" : "VARCHAR(" + maxLength + ")";
+                      prefixes.put(
+                          "ALTER TABLE "
+                              + rdbEngine.encloseFullTableName(namespace, table)
+                              + " ALTER COLUMN "
+                              + rdbEngine.enclose(columnName)
+                              + " TYPE "
+                              + type,
+                          columnCollation);
+                    }
+                    return prefixes;
+                  });
+          // The tables under collation test always have TEXT columns; finding none means the
+          // enumeration missed the table and the collation would silently not be applied
+          if (alterColumnPrefixes.isEmpty()) {
+            throw new IllegalStateException(
+                "No character-typed columns found on "
+                    + namespace
+                    + "."
+                    + table
+                    + " to apply the collation");
+          }
           // Drop-and-create rather than IF NOT EXISTS so a collation leaked by a prior broken run
-          // is never silently reused with an outdated definition
+          // is never silently reused with an outdated definition. Such a run also leaks the table,
+          // whose columns still depend on the collation and would make the drop fail, so move them
+          // back onto the database default first.
+          for (Map.Entry<String, String> alterColumnPrefix : alterColumnPrefixes.entrySet()) {
+            if (collation.equals(alterColumnPrefix.getValue())) {
+              JdbcAdmin.execute(
+                  connection,
+                  rdbEngine,
+                  alterColumnPrefix.getKey() + " COLLATE \"default\"",
+                  requiresExplicitCommit);
+            }
+          }
           JdbcAdmin.execute(
               connection,
               rdbEngine,
@@ -399,52 +456,12 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                   + enclosedCollation
                   + " (provider = icu, locale = 'und-u-ks-level1', deterministic = false)",
               requiresExplicitCommit);
-          // ScalarDB maps TEXT to "text" for regular columns but to VARCHAR(10485760) for key
-          // columns on PostgreSQL, so both character types must be enumerated, restating each
-          // column's own type
-          List<String> alterColumnStatements = new ArrayList<>();
-          executeQuery(
-              connection,
-              rdbEngine,
-              "SELECT column_name, data_type, character_maximum_length"
-                  + " FROM information_schema.columns"
-                  + " WHERE table_schema = ? AND table_name = ?"
-                  + " AND data_type IN ('text', 'character varying')",
-              requiresExplicitCommit,
-              ps -> {
-                ps.setString(1, namespace);
-                ps.setString(2, table);
-              },
-              rs -> {
-                while (rs.next()) {
-                  String columnName = rs.getString(1);
-                  String dataType = rs.getString(2);
-                  long maxLength = rs.getLong(3);
-                  String type = "text".equals(dataType) ? "TEXT" : "VARCHAR(" + maxLength + ")";
-                  alterColumnStatements.add(
-                      "ALTER TABLE "
-                          + rdbEngine.encloseFullTableName(namespace, table)
-                          + " ALTER COLUMN "
-                          + rdbEngine.enclose(columnName)
-                          + " TYPE "
-                          + type
-                          + " COLLATE "
-                          + enclosedCollation);
-                }
-                return null;
-              });
-          // The tables under collation test always have TEXT columns; finding none means the
-          // enumeration missed the table and the collation would silently not be applied
-          if (alterColumnStatements.isEmpty()) {
-            throw new IllegalStateException(
-                "No character-typed columns found on "
-                    + namespace
-                    + "."
-                    + table
-                    + " to apply the collation");
-          }
-          for (String alterColumnStatement : alterColumnStatements) {
-            JdbcAdmin.execute(connection, rdbEngine, alterColumnStatement, requiresExplicitCommit);
+          for (String alterColumnPrefix : alterColumnPrefixes.keySet()) {
+            JdbcAdmin.execute(
+                connection,
+                rdbEngine,
+                alterColumnPrefix + " COLLATE " + enclosedCollation,
+                requiresExplicitCommit);
           }
         });
   }
