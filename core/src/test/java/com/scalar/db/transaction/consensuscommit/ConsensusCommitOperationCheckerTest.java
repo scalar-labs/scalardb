@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
@@ -22,6 +24,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.checker.ConditionChecker;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -30,14 +33,17 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class ConsensusCommitOperationCheckerTest {
+  private static final String PK_COL = "pk";
   private static final String ANY_COL_1 = "any_col_1";
   private static final String ANY_COL_2 = "any_col_2";
   private static final String ANY_METADATA_COL_1 = "any_metadata_col_1";
@@ -54,6 +60,7 @@ public class ConsensusCommitOperationCheckerTest {
     MockitoAnnotations.openMocks(this).close();
     checker = spy(new ConsensusCommitOperationChecker(metadataManager, false));
     when(checker.createConditionChecker(any())).thenReturn(conditionChecker);
+    when(conditionChecker.check(any(), anyBoolean())).thenReturn(true);
     when(metadataManager.getTransactionTableMetadata(any())).thenReturn(tableMetadata);
     LinkedHashSet<String> metadataColumns = new LinkedHashSet<>();
     metadataColumns.add(ANY_METADATA_COL_1);
@@ -83,6 +90,24 @@ public class ConsensusCommitOperationCheckerTest {
     // Act Assert
     assertThatCode(() -> checker.check(put)).doesNotThrowAnyException();
     verify(conditionChecker).check(condition, true);
+  }
+
+  @Test
+  public void
+      checkForPut_WithConditionRejectedByConditionChecker_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    MutationCondition condition = mock(PutIf.class);
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
+    when(conditionChecker.check(condition, true)).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(put)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -169,6 +194,134 @@ public class ConsensusCommitOperationCheckerTest {
     // Act Assert
     assertThatCode(() -> checker.check(delete)).doesNotThrowAnyException();
     verify(conditionChecker).check(condition, false);
+  }
+
+  @Test
+  public void
+      checkForDelete_WithConditionRejectedByConditionChecker_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    MutationCondition condition = mock(DeleteIf.class);
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt("pk", 1))
+            .condition(condition)
+            .build();
+    when(conditionChecker.check(condition, false)).thenReturn(false);
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(delete)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidConditionalExpressions")
+  public void checkForPut_WithInvalidConditionalExpression_ShouldThrowIllegalArgumentException(
+      ConditionalExpression expression) {
+    // Arrange
+    useRealConditionChecker();
+    PutIf condition = ConditionBuilder.putIf(expression).build();
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt(PK_COL, 1))
+            .intValue(ANY_COL_1, 1)
+            .condition(condition)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(put))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.CONSENSUS_COMMIT_CONDITION_NOT_PROPERLY_SPECIFIED.buildMessage(
+                "ns.tbl", condition.getExpressions()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidConditionalExpressions")
+  public void checkForDelete_WithInvalidConditionalExpression_ShouldThrowIllegalArgumentException(
+      ConditionalExpression expression) {
+    // Arrange
+    useRealConditionChecker();
+    DeleteIf condition = ConditionBuilder.deleteIf(expression).build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt(PK_COL, 1))
+            .condition(condition)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> checker.check(delete))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.CONSENSUS_COMMIT_CONDITION_NOT_PROPERLY_SPECIFIED.buildMessage(
+                "ns.tbl", condition.getExpressions()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("validConditionalExpressions")
+  public void checkForPut_WithValidConditionalExpression_ShouldNotThrowAnyException(
+      ConditionalExpression expression) {
+    // Arrange
+    useRealConditionChecker();
+    Put put =
+        Put.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt(PK_COL, 1))
+            .intValue(ANY_COL_1, 1)
+            .condition(ConditionBuilder.putIf(expression).build())
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> checker.check(put)).doesNotThrowAnyException();
+  }
+
+  @ParameterizedTest
+  @MethodSource("validConditionalExpressions")
+  public void checkForDelete_WithValidConditionalExpression_ShouldNotThrowAnyException(
+      ConditionalExpression expression) {
+    // Arrange
+    useRealConditionChecker();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace("ns")
+            .table("tbl")
+            .partitionKey(Key.ofInt(PK_COL, 1))
+            .condition(ConditionBuilder.deleteIf(expression).build())
+            .build();
+
+    // Act Assert
+    assertThatCode(() -> checker.check(delete)).doesNotThrowAnyException();
+  }
+
+  static Stream<ConditionalExpression> invalidConditionalExpressions() {
+    return Stream.of(
+        ConditionBuilder.column(PK_COL).isEqualToInt(1),
+        ConditionBuilder.column(ANY_COL_2).isEqualToText(null),
+        ConditionBuilder.column("unknown_col").isEqualToInt(1),
+        ConditionBuilder.column(ANY_COL_1).isEqualToText("mismatched_type"));
+  }
+
+  static Stream<ConditionalExpression> validConditionalExpressions() {
+    return Stream.of(
+        ConditionBuilder.column(ANY_COL_1).isEqualToInt(1),
+        ConditionBuilder.column(ANY_COL_2).isNullText());
+  }
+
+  private void useRealConditionChecker() {
+    when(checker.createConditionChecker(any())).thenCallRealMethod();
+    when(tableMetadata.getTableMetadata())
+        .thenReturn(
+            TableMetadata.newBuilder()
+                .addColumn(PK_COL, DataType.INT)
+                .addColumn(ANY_COL_1, DataType.INT)
+                .addColumn(ANY_COL_2, DataType.TEXT)
+                .addPartitionKey(PK_COL)
+                .build());
   }
 
   @Test

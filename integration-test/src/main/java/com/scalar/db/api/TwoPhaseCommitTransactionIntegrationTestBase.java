@@ -1767,8 +1767,7 @@ public abstract class TwoPhaseCommitTransactionIntegrationTestBase {
     Put putIf =
         Put.newBuilder(preparePut(0, 0, namespace1, TABLE_1))
             .intValue(BALANCE, INITIAL_BALANCE)
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullText()).build())
+            .condition(ConditionBuilder.putIf(ConditionBuilder.column(BALANCE).isNullInt()).build())
             .enableImplicitPreRead()
             .build();
 
