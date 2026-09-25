@@ -950,4 +950,22 @@ public class TwoPhaseConsensusCommitTest {
     verify(context).closeScanners();
     verify(commit, never()).rollbackRecords(context);
   }
+
+  @Test
+  public void rollback_WithOpenScannerWhoseCloseWouldThrow_ShouldDiscardScanner()
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitScanner scanner = mock(ConsensusCommitScanner.class);
+    when(scanner.isClosed()).thenReturn(false);
+    // The user-facing close() would reject the scan for overlapping a write of this transaction
+    doThrow(IllegalArgumentException.class).when(scanner).close();
+    context.scanners.add(scanner);
+
+    // Act
+    transaction.rollback();
+
+    // Assert
+    verify(scanner).discard();
+    verify(scanner, never()).close();
+  }
 }
