@@ -68,6 +68,8 @@ public class ConditionChecker implements MutationConditionVisitor {
   }
 
   private void checkExpressions(List<ConditionalExpression> expressions) {
+    // A condition without expressions is rejected rather than read as an existence check
+    isValid = !expressions.isEmpty();
     for (ConditionalExpression expression : expressions) {
       if (expression.getOperator() == Operator.IS_NULL
           || expression.getOperator() == Operator.IS_NOT_NULL) {
