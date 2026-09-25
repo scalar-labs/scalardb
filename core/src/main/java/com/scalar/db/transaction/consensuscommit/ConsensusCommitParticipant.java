@@ -46,8 +46,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Consensus-commit-backed {@link TwoPhaseCommitParticipant} implementation.
@@ -72,8 +70,6 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
-  private static final Logger logger = LoggerFactory.getLogger(ConsensusCommitParticipant.class);
-
   private final ConsensusCommitConfig config;
   private final String participantId;
   private final DistributedStorage storage;
@@ -485,11 +481,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
       }
       TransactionContext context = pc.context();
       try {
-        try {
-          context.closeScanners();
-        } catch (CrudException e) {
-          logger.warn("Failed to close the scanner. Transaction ID: {}", transactionId, e);
-        }
+        context.closeScanners();
         if (pc.isPrepared()) {
           // Only a prepared transaction has PREPARED records in storage to roll back. An unprepared
           // transaction has only an in-memory snapshot, discarded by removing the context below.
@@ -524,8 +516,6 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
         // storage. Even if the transaction is PREPARED, we must not roll its records back here (the
         // outcome may be undetermined or COMMITTED); lazy recovery reconciles them on a later read.
         context.closeScanners();
-      } catch (CrudException e) {
-        logger.warn("Failed to close the scanner. Transaction ID: {}", transactionId, e);
       } finally {
         release(transactionId, pc);
       }
