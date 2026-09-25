@@ -7399,6 +7399,37 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void getScanner_WhenRollingBackWithOpenScannerOverlappingWrite_ShouldNotThrowException(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    // The scan range ends at a clustering key the populated records do not fill
+    Scan scan = prepareScan(0, 0, NUM_TYPES, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    TransactionCrudOperable.Scanner scanner = transaction.getScanner(scan);
+    Optional<Result> result = scanner.one();
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(ACCOUNT_TYPE)).isEqualTo(0);
+
+    // Inserting a key in the scan range that the scanner has not returned makes close() reject the
+    // scan, so rolling back must not close the scanner through close()
+    transaction.insert(
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, NUM_TYPES))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .build());
+
+    // Act Assert
+    assertThatCode(transaction::rollback).doesNotThrowAnyException();
+    assertThatCode(scanner::close).doesNotThrowAnyException();
+  }
+
+  @ParameterizedTest
   @EnumSource(value = Isolation.class, mode = EnumSource.Mode.EXCLUDE, names = "SERIALIZABLE")
   public void getAndUpdate_GetWithIndexGiven_ShouldUpdate(Isolation isolation)
       throws TransactionException {

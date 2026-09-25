@@ -235,11 +235,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void rollback() {
-    try {
-      context.closeScanners();
-    } catch (CrudException e) {
-      logger.warn("Failed to close the scanner", e);
-    }
+    context.closeScanners();
 
     // Release the reserved group commit slot if this transaction holds one.
     if (groupCommitter != null && context.groupCommitSlotReserved) {
