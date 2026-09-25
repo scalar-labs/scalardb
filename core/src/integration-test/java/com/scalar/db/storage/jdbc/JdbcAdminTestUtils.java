@@ -16,8 +16,11 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
@@ -218,32 +221,22 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         dataSource,
         requiresExplicitCommit,
         connection -> {
-          List<String> characterColumns = new ArrayList<>();
-          List<String> mismatchedColumns = new ArrayList<>();
-          executeQuery(
-              connection,
-              rdbEngine,
-              "SELECT column_name, collation_name FROM information_schema.columns"
-                  + " WHERE table_schema = ? AND table_name = ? AND collation_name IS NOT NULL",
-              requiresExplicitCommit,
-              ps -> {
-                ps.setString(1, namespace);
-                ps.setString(2, table);
-              },
-              rs -> {
-                while (rs.next()) {
-                  String columnName = rs.getString(1);
-                  String columnCollation = rs.getString(2);
-                  characterColumns.add(columnName);
-                  if (!collation.equalsIgnoreCase(columnCollation)) {
-                    mismatchedColumns.add(columnName + " (" + columnCollation + ")");
-                  }
-                }
-                return null;
-              });
+          Map<String, String> columnCollations =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT column_name, collation_name FROM information_schema.columns"
+                      + " WHERE table_schema = ? AND table_name = ?"
+                      + " AND collation_name IS NOT NULL",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  JdbcAdminTestUtils::toColumnCollations);
           // The tables under collation test always have TEXT columns; finding none means the
           // enumeration missed the table and the verification would be vacuous
-          if (characterColumns.isEmpty()) {
+          if (columnCollations.isEmpty()) {
             throw new IllegalStateException(
                 "No character-typed columns found on "
                     + namespace
@@ -251,6 +244,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     + table
                     + " to verify the collation");
           }
+          List<String> mismatchedColumns = mismatchedColumns(columnCollations, collation);
           if (!mismatchedColumns.isEmpty()) {
             throw new IllegalStateException(
                 "The character-typed columns of "
@@ -283,49 +277,32 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
         dataSource,
         requiresExplicitCommit,
         connection -> {
-          List<String> expandedCollation = new ArrayList<>();
-          executeQuery(
-              connection,
-              rdbEngine,
-              "SELECT NLS_COLLATION_NAME(NLS_COLLATION_ID(?)) FROM dual",
-              requiresExplicitCommit,
-              ps -> ps.setString(1, collation),
-              rs -> {
-                if (rs.next()) {
-                  expandedCollation.add(rs.getString(1));
-                }
-                return null;
-              });
-          if (expandedCollation.isEmpty() || expandedCollation.get(0) == null) {
+          String expected =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT NLS_COLLATION_NAME(NLS_COLLATION_ID(?)) FROM dual",
+                  requiresExplicitCommit,
+                  ps -> ps.setString(1, collation),
+                  rs -> rs.next() ? rs.getString(1) : null);
+          if (expected == null) {
             throw new IllegalStateException(
                 "The Oracle server does not recognize the collation " + collation);
           }
-          String expected = expandedCollation.get(0);
-          List<String> characterColumns = new ArrayList<>();
-          List<String> mismatchedColumns = new ArrayList<>();
-          executeQuery(
-              connection,
-              rdbEngine,
-              "SELECT column_name, collation FROM all_tab_cols"
-                  + " WHERE owner = ? AND table_name = ? AND collation IS NOT NULL"
-                  + " AND hidden_column = 'NO'",
-              requiresExplicitCommit,
-              ps -> {
-                ps.setString(1, namespace);
-                ps.setString(2, table);
-              },
-              rs -> {
-                while (rs.next()) {
-                  String columnName = rs.getString(1);
-                  String columnCollation = rs.getString(2);
-                  characterColumns.add(columnName);
-                  if (!expected.equalsIgnoreCase(columnCollation)) {
-                    mismatchedColumns.add(columnName + " (" + columnCollation + ")");
-                  }
-                }
-                return null;
-              });
-          if (characterColumns.isEmpty()) {
+          Map<String, String> columnCollations =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT column_name, collation FROM all_tab_cols"
+                      + " WHERE owner = ? AND table_name = ? AND collation IS NOT NULL"
+                      + " AND hidden_column = 'NO'",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  JdbcAdminTestUtils::toColumnCollations);
+          if (columnCollations.isEmpty()) {
             throw new IllegalStateException(
                 "No character-typed columns found on "
                     + namespace
@@ -333,6 +310,7 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     + table
                     + " to verify the collation");
           }
+          List<String> mismatchedColumns = mismatchedColumns(columnCollations, expected);
           if (!mismatchedColumns.isEmpty()) {
             throw new IllegalStateException(
                 "The character-typed columns of "
@@ -377,6 +355,27 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
    * and accent-insensitive); {@code ALTER COLUMN ... TYPE} rebuilds dependent indexes, including
    * the primary key, so no constraint dance is needed.
    */
+  /**
+   * Maps a result set of {@code (column name, collation)} rows to a column-name-to-collation map.
+   * Built inside the mapper so a conflict retry rebuilds it rather than doubling it.
+   */
+  private static Map<String, String> toColumnCollations(ResultSet rs) throws SQLException {
+    Map<String, String> columnCollations = new LinkedHashMap<>();
+    while (rs.next()) {
+      columnCollations.put(rs.getString(1), rs.getString(2));
+    }
+    return columnCollations;
+  }
+
+  /** Renders the {@code name (collation)} entries whose collation is not {@code expected}. */
+  private static List<String> mismatchedColumns(
+      Map<String, String> columnCollations, String expected) {
+    return columnCollations.entrySet().stream()
+        .filter(entry -> !expected.equalsIgnoreCase(entry.getValue()))
+        .map(entry -> entry.getKey() + " (" + entry.getValue() + ")")
+        .collect(Collectors.toList());
+  }
+
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void alterTableCollationForPostgresql(String namespace, String table, String collation)
       throws SQLException {
@@ -485,31 +484,33 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                   rs -> rs.next() ? rs.getString(1) : null);
 
           // Retrieve the primary key columns in their original order and sort directions
-          List<String> primaryKeyColumnClauses = new ArrayList<>();
-          executeQuery(
-              connection,
-              rdbEngine,
-              "SELECT c.name, ic.is_descending_key FROM sys.index_columns ic"
-                  + " JOIN sys.indexes i"
-                  + " ON ic.object_id = i.object_id AND ic.index_id = i.index_id"
-                  + " JOIN sys.columns c"
-                  + " ON ic.object_id = c.object_id AND ic.column_id = c.column_id"
-                  + " JOIN sys.tables t ON i.object_id = t.object_id"
-                  + " JOIN sys.schemas s ON t.schema_id = s.schema_id"
-                  + " WHERE i.is_primary_key = 1 AND s.name = ? AND t.name = ?"
-                  + " ORDER BY ic.key_ordinal",
-              requiresExplicitCommit,
-              ps -> {
-                ps.setString(1, namespace);
-                ps.setString(2, table);
-              },
-              rs -> {
-                while (rs.next()) {
-                  primaryKeyColumnClauses.add(
-                      rdbEngine.enclose(rs.getString(1)) + (rs.getBoolean(2) ? " DESC" : " ASC"));
-                }
-                return null;
-              });
+          List<String> primaryKeyColumnClauses =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT c.name, ic.is_descending_key FROM sys.index_columns ic"
+                      + " JOIN sys.indexes i"
+                      + " ON ic.object_id = i.object_id AND ic.index_id = i.index_id"
+                      + " JOIN sys.columns c"
+                      + " ON ic.object_id = c.object_id AND ic.column_id = c.column_id"
+                      + " JOIN sys.tables t ON i.object_id = t.object_id"
+                      + " JOIN sys.schemas s ON t.schema_id = s.schema_id"
+                      + " WHERE i.is_primary_key = 1 AND s.name = ? AND t.name = ?"
+                      + " ORDER BY ic.key_ordinal",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  rs -> {
+                    List<String> clauses = new ArrayList<>();
+                    while (rs.next()) {
+                      clauses.add(
+                          rdbEngine.enclose(rs.getString(1))
+                              + (rs.getBoolean(2) ? " DESC" : " ASC"));
+                    }
+                    return clauses;
+                  });
 
           // Every ScalarDB-created SQL Server table has a primary key, so its absence proves a
           // prior broken run left the table without one. Fail fast instead of silently altering
@@ -523,43 +524,44 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
 
           // Build an ALTER COLUMN statement for each character-typed column, restating its full
           // data type, length, and nullability
-          List<String> alterColumnStatements = new ArrayList<>();
-          executeQuery(
-              connection,
-              rdbEngine,
-              "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE"
-                  + " FROM INFORMATION_SCHEMA.COLUMNS"
-                  + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
-                  + " AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar')",
-              requiresExplicitCommit,
-              ps -> {
-                ps.setString(1, namespace);
-                ps.setString(2, table);
-              },
-              rs -> {
-                while (rs.next()) {
-                  String columnName = rs.getString(1);
-                  String dataType = rs.getString(2);
-                  int maxLength = rs.getInt(3);
-                  String length = maxLength == -1 ? "MAX" : String.valueOf(maxLength);
-                  String nullability =
-                      "YES".equalsIgnoreCase(rs.getString(4)) ? "NULL" : "NOT NULL";
-                  alterColumnStatements.add(
-                      "ALTER TABLE "
-                          + fullTableName
-                          + " ALTER COLUMN "
-                          + rdbEngine.enclose(columnName)
-                          + " "
-                          + dataType
-                          + "("
-                          + length
-                          + ") COLLATE "
-                          + collation
-                          + " "
-                          + nullability);
-                }
-                return null;
-              });
+          List<String> alterColumnStatements =
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE"
+                      + " FROM INFORMATION_SCHEMA.COLUMNS"
+                      + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
+                      + " AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar')",
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  rs -> {
+                    List<String> statements = new ArrayList<>();
+                    while (rs.next()) {
+                      String columnName = rs.getString(1);
+                      String dataType = rs.getString(2);
+                      int maxLength = rs.getInt(3);
+                      String length = maxLength == -1 ? "MAX" : String.valueOf(maxLength);
+                      String nullability =
+                          "YES".equalsIgnoreCase(rs.getString(4)) ? "NULL" : "NOT NULL";
+                      statements.add(
+                          "ALTER TABLE "
+                              + fullTableName
+                              + " ALTER COLUMN "
+                              + rdbEngine.enclose(columnName)
+                              + " "
+                              + dataType
+                              + "("
+                              + length
+                              + ") COLLATE "
+                              + collation
+                              + " "
+                              + nullability);
+                    }
+                    return statements;
+                  });
 
           runSqlServerCollationAlterSequence(
               connection,
