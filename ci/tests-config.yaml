@@ -99,7 +99,7 @@ dynamo:
 jdbc:
   - label: alloydb_%VERSION%
     display_name: AlloyDB %VERSION%
-    setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 google/alloydbomni:%VERSION%
+    setup: docker run -d --name alloydb -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS=--icu-locale=en-US-u-va-posix -p 5432:5432 google/alloydbomni:%VERSION%
     versions:
       - 15
       - 16
