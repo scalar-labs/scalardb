@@ -7,13 +7,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
@@ -3838,6 +3841,221 @@ public class CrudHandlerTest {
             eq(ANY_ID_1),
             eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER));
     verify(recoveryFuture, never()).get();
+  }
+
+  @Test
+  void getScanner_StorageScannerDiscarded_ShouldCloseWithoutTouchingSnapshot()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    clearInvocations(snapshot, storage);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verify(scanner).close();
+    assertThat(actualScanner.isClosed()).isTrue();
+    verifyNoInteractions(snapshot);
+    verify(storage, never()).scan(any());
+  }
+
+  @Test
+  void getScanner_StorageScannerRequiringBeforeIndexCheckDiscarded_ShouldNotRunBeforeIndexCheck()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanForStorage =
+        Scan.newBuilder(scanWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    Scanner storageScanner = mock(Scanner.class);
+    when(storageScanner.one()).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner);
+
+    // The before-index scan would find a prepared record if it ran
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(
+            Collections.<Result>singletonList(prepareResult(TransactionState.PREPARED)).iterator());
+    when(storage.scan(prepareExpectedBeforeIndexScan())).thenReturn(beforeIndexScanner);
+
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scanWithIndex, context);
+    assertThat(actualScanner.one()).isEmpty();
+    clearInvocations(snapshot, storage, recoveryExecutor);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verify(storageScanner).close();
+    assertThat(actualScanner.isClosed()).isTrue();
+    verify(storage, never()).scan(any());
+    verifyNoInteractions(recoveryExecutor, snapshot);
+  }
+
+  @Test
+  void getScanner_SnapshotScannerDiscarded_ShouldCloseWithoutTouchingSnapshot()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    when(snapshot.getResults(scan))
+        .thenReturn(
+            Optional.of(
+                Maps.newLinkedHashMap(ImmutableMap.of(key, new TransactionResult(result)))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    clearInvocations(snapshot);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    assertThat(actualScanner.isClosed()).isTrue();
+    verifyNoInteractions(snapshot);
+  }
+
+  @Test
+  void getScanner_StorageScannerDiscardedAfterClose_ShouldDoNothing()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    when(scanner.one()).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    actualScanner.close();
+    clearInvocations(snapshot, storage, scanner);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verifyNoInteractions(snapshot, storage, scanner);
+  }
+
+  @Test
+  void getScanner_StorageScannerClosedAfterDiscard_ShouldDoNothing()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    actualScanner.discard();
+    clearInvocations(snapshot, storage, scanner);
+
+    // Act
+    actualScanner.close();
+
+    // Assert
+    verifyNoInteractions(snapshot, storage, scanner);
+  }
+
+  @Test
+  void getScanner_SnapshotScannerClosedAfterDiscard_ShouldDoNothing() throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    when(snapshot.getResults(scan))
+        .thenReturn(
+            Optional.of(
+                Maps.newLinkedHashMap(ImmutableMap.of(key, new TransactionResult(result)))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    actualScanner.discard();
+    clearInvocations(snapshot);
+
+    // Act
+    actualScanner.close();
+
+    // Assert
+    verifyNoInteractions(snapshot);
+  }
+
+  @Test
+  void getScanner_SnapshotScannerClosedTwice_ShouldTouchSnapshotOnlyOnFirstClose()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    when(snapshot.getResults(scan))
+        .thenReturn(
+            Optional.of(
+                Maps.newLinkedHashMap(ImmutableMap.of(key, new TransactionResult(result)))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    clearInvocations(snapshot);
+    actualScanner.close();
+    // The first close verifies the scan against the snapshot
+    assertThat(mockingDetails(snapshot).getInvocations()).isNotEmpty();
+    clearInvocations(snapshot);
+
+    // Act
+    actualScanner.close();
+
+    // Assert
+    verifyNoInteractions(snapshot);
+  }
+
+  @Test
+  void getScanner_StorageScannerDiscardedAndUnderlyingCloseFails_ShouldNotThrow()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    when(scanner.one()).thenReturn(Optional.empty());
+    doThrow(IOException.class).when(scanner).close();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verify(scanner).close();
+    assertThat(actualScanner.isClosed()).isTrue();
   }
 
   @Test
