@@ -1072,6 +1072,15 @@ public class CrudHandler {
     }
 
     @Override
+    public void discard() {
+      if (closed.get()) {
+        return;
+      }
+
+      closeScanner();
+    }
+
+    @Override
     public boolean isClosed() {
       return closed.get();
     }
@@ -1140,8 +1149,17 @@ public class CrudHandler {
 
     @Override
     public void close() {
+      if (closed) {
+        return;
+      }
+
       closed = true;
       verifyNoOverlap(scan, results, context);
+    }
+
+    @Override
+    public void discard() {
+      closed = true;
     }
 
     @Override
