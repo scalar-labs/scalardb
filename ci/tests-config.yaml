@@ -106,7 +106,8 @@ jdbc:
     versions:
       - 15
       - 16
-    db_healthcheck: docker exec alloydb psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
+    # Connect over TCP, which the entrypoint's temporary server does not listen on
+    db_healthcheck: docker exec alloydb psql -h 127.0.0.1 -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
@@ -132,7 +133,8 @@ jdbc:
     versions:
       - 10.11
       - 11.4
-    db_healthcheck: docker exec mariadb mariadb -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
+    # Connect over TCP, which the entrypoint's temporary server does not listen on; localhost would use the socket
+    db_healthcheck: docker exec mariadb mariadb -h 127.0.0.1 -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec mariadb mariadb -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
@@ -154,7 +156,8 @@ jdbc:
       - 5.7
       - 8.0
       - 8.4
-    db_healthcheck: docker exec mysql mysql -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
+    # Connect over TCP, which the entrypoint's temporary server does not listen on; localhost would use the socket
+    db_healthcheck: docker exec mysql mysql -h 127.0.0.1 -uroot -pmysql -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec mysql mysql -uroot -pmysql -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
@@ -221,7 +224,8 @@ jdbc:
       - 15
       - 16
       - 17
-    db_healthcheck: docker exec postgresql psql -U postgres -c "SELECT 1;" > /dev/null 2>&1
+    # Connect over TCP, which the entrypoint's temporary server does not listen on
+    db_healthcheck: docker exec postgresql psql -h 127.0.0.1 -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       docker exec postgresql psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
@@ -237,12 +241,14 @@ jdbc:
         # so we create a symlink for later versions
         docker exec -u root sqlserver ln -s /opt/mssql-tools18 /opt/mssql-tools
       fi
-      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
     versions:
       - 2017
       - 2019
       - 2022
+    db_healthcheck: docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
+      # Create the database here, not in setup, because setup runs before db_healthcheck
+      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
       docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
         CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
         CREATE USER test FOR LOGIN test;
