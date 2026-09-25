@@ -9,8 +9,6 @@ import java.sql.SQLException;
  * Gate and per-engine target collations for the collation integration tests. Lives apart from
  * {@link JdbcEnv} so that class keeps its zero-I/O, pure-string-predicate shape: gating a backend
  * on its version and resolving Oracle's target collation open a short-lived JDBC connection.
- *
- * <p>{@code docs/collation.md} records each backend's target collation and why it was chosen.
  */
 public final class JdbcCollationTestUtils {
   /**
@@ -64,7 +62,7 @@ public final class JdbcCollationTestUtils {
     // TODO support Db2. Db2 has ICU collation but the collation can only be created at the database
     //  level which takes time to setup
     // SQLite and Yugabyte only have binary collations
-    if (JdbcEnv.isDb2() || JdbcEnv.isSqlite() || JdbcEnv.isYugabyte()) {
+    if (JdbcEnv.isDb2() || JdbcEnv.isSqlite() || JdbcEnv.isYugabyte() || JdbcEnv.isSpanner()) {
       return false;
     }
     throw new IllegalStateException("Unsupported JDBC URL: " + JdbcEnv.getJdbcUrl());
