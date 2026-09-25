@@ -186,7 +186,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
@@ -220,7 +220,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
@@ -257,7 +257,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
@@ -1088,10 +1088,12 @@ public class CosmosAdminTest {
     ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
         ArgumentCaptor.forClass(CosmosContainerProperties.class);
 
-    verify(database, atLeastOnce()).createContainerIfNotExists(containerPropertiesCaptor.capture());
-    assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
-    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
-        .isEqualTo(PartitionKeyDefinitionVersion.V2);
+    verify(database, times(2)).createContainerIfNotExists(containerPropertiesCaptor.capture());
+    for (CosmosContainerProperties captured : containerPropertiesCaptor.getAllValues()) {
+      assertThat(captured.getId()).isEqualTo(table);
+      assertThat(captured.getPartitionKeyDefinition().getVersion())
+          .isEqualTo(PartitionKeyDefinitionVersion.V2);
+    }
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -1184,8 +1186,7 @@ public class CosmosAdminTest {
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
     // Assert: physical container repair still runs, but the metadata upsert is skipped
-    verify(database, atLeastOnce())
-        .createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verify(database, times(2)).createContainerIfNotExists(any(CosmosContainerProperties.class));
     verify(metadataContainer, never()).upsertItem(any());
   }
 
@@ -1698,7 +1699,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
   }
@@ -1733,7 +1734,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
   }
@@ -1770,7 +1771,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
   }
@@ -1810,7 +1811,7 @@ public class CosmosAdminTest {
             refEq(
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
-    verify(metadataDatabase).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(tableMetadataContainer)
         .queryItems(
@@ -1820,5 +1821,16 @@ public class CosmosAdminTest {
     verify(metadataDatabase, times(4)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
     verify(namespacesContainer).upsertItem(new CosmosNamespace("ns1"));
     verify(namespacesContainer).upsertItem(new CosmosNamespace("ns2"));
+  }
+
+  private void verifyNamespacesContainerCreatedWithV2(CosmosDatabase metadataDatabase) {
+    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
+        ArgumentCaptor.forClass(CosmosContainerProperties.class);
+    verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
+    CosmosContainerProperties properties = containerPropertiesCaptor.getValue();
+    assertThat(properties.getId()).isEqualTo(CosmosAdmin.NAMESPACES_CONTAINER);
+    assertThat(properties.getPartitionKeyDefinition().getPaths()).containsExactly("/id");
+    assertThat(properties.getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
   }
 }
