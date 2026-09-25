@@ -1158,6 +1158,12 @@ public enum CoreError implements ScalarDbError {
       "The HikariCP exceptionOverrideClassName setting is not supported. ScalarDB determines whether a failed commit left the transaction in an unknown state by checking whether the connection survived, which relies on HikariCP discarding a connection that reports a connection exception. An override that keeps such a connection alive would make an unknown outcome be reported as a definite failure, which the caller is told is safe to retry. Configured class: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_PROPERLY_SPECIFIED(
+      Category.USER_ERROR,
+      "0304",
+      "The condition is not properly specified. Table: %s; Expressions: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1314,6 +1320,12 @@ public enum CoreError implements ScalarDbError {
       "0031",
       "A transaction associated with the specified transaction ID is not found. "
           + "The transaction might have expired",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS(
+      Category.CONCURRENCY_ERROR,
+      "0032",
+      "A conflict occurred when recovering records. Details: %s",
       "",
       ""),
 

@@ -36,8 +36,10 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -4516,5 +4518,52 @@ public class CrudHandlerTest {
     SCAN,
     SCANNER_ONE,
     SCANNER_ALL
+  }
+
+  @Test
+  public void
+      waitForRecoveryCompletion_RecoveryFailedWithRetriableExecutionException_ShouldThrowCrudConflictException()
+          throws Exception {
+    // Arrange
+    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RetriableExecutionException cause = new RetriableExecutionException("conflict");
+    when(recoveryFuture.get()).thenThrow(new java.util.concurrent.ExecutionException(cause));
+
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    context.recoveryResults.add(
+        new RecoveryExecutor.Result(key, Optional.empty(), recoveryFuture, true));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.waitForRecoveryCompletion(context))
+        .isInstanceOf(CrudConflictException.class)
+        .hasMessageStartingWith(
+            CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS.buildCode())
+        .hasCause(cause);
+  }
+
+  @Test
+  public void
+      waitForRecoveryCompletion_RecoveryFailedWithNonConflictExecutionException_ShouldThrowCrudException()
+          throws Exception {
+    // Arrange
+    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    ExecutionException cause = new ExecutionException("error");
+    when(recoveryFuture.get()).thenThrow(new java.util.concurrent.ExecutionException(cause));
+
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    context.recoveryResults.add(
+        new RecoveryExecutor.Result(key, Optional.empty(), recoveryFuture, true));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.waitForRecoveryCompletion(context))
+        .isInstanceOf(CrudException.class)
+        .isNotInstanceOf(CrudConflictException.class)
+        .hasCause(cause);
   }
 }
