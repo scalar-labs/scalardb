@@ -127,6 +127,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   protected String namespace1;
   protected String namespace2;
   private ParallelExecutor parallelExecutor;
+  private AsyncExecutor asyncExecutor;
 
   private DistributedStorage storage;
   private CoordinatorStateAccessor coordinator;
@@ -153,6 +154,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     createTables();
     originalStorage = factory.getStorage();
     parallelExecutor = new ParallelExecutor(consensusCommitConfig);
+    asyncExecutor = new AsyncExecutor(consensusCommitConfig);
   }
 
   protected void initialize(String testName) throws Exception {}
@@ -223,10 +225,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @AfterAll
   void afterAll() throws Exception {
+    // Close the executors first so that the work in flight can finish while the storage is still
+    // open, as the transaction managers do
+    asyncExecutor.close();
+    parallelExecutor.close();
+
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
-    parallelExecutor.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -11854,6 +11860,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         databaseConfig,
         coordinator,
         parallelExecutor,
+        asyncExecutor,
         recoveryExecutor,
         crud,
         commit,
@@ -11872,6 +11879,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           false,
@@ -11882,6 +11890,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           onePhaseCommitEnabled);

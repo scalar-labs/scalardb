@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createGet;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -22,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
@@ -43,6 +45,7 @@ class ParticipantCommitHandler {
   private final DistributedStorage storage;
   private final TransactionTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
+  private final AsyncExecutor asyncExecutor;
   private final MutationsGrouper mutationsGrouper;
   private final boolean onePhaseCommitEnabled;
 
@@ -51,11 +54,13 @@ class ParticipantCommitHandler {
       DistributedStorage storage,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
+      AsyncExecutor asyncExecutor,
       MutationsGrouper mutationsGrouper,
       boolean onePhaseCommitEnabled) {
     this.storage = checkNotNull(storage);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.asyncExecutor = checkNotNull(asyncExecutor);
     this.mutationsGrouper = checkNotNull(mutationsGrouper);
     this.onePhaseCommitEnabled = onePhaseCommitEnabled;
   }
@@ -105,6 +110,13 @@ class ParticipantCommitHandler {
   }
 
   void commitRecords(TransactionContext context, long committedAt) {
+    // An asynchronous commit runs on a thread of the async executor and reads the snapshot there,
+    // after this method returns. This is safe since the snapshot of a committed transaction is no
+    // longer modified
+    asyncExecutor.commitRecords(() -> doCommitRecords(context, committedAt), context.transactionId);
+  }
+
+  private void doCommitRecords(TransactionContext context, long committedAt) {
     try {
       CommitMutationComposer composer =
           new CommitMutationComposer(context.transactionId, committedAt, tableMetadataManager);
@@ -121,9 +133,23 @@ class ParticipantCommitHandler {
 
   void rollbackRecords(TransactionContext context) {
     logger.debug("Rollback from snapshot for {}", context.transactionId);
+
+    // An asynchronous rollback runs on a thread of the async executor and reads the snapshot
+    // there, after this method returns. This is safe since the snapshot of a transaction being
+    // rolled back is no longer modified
+    asyncExecutor.rollbackRecords(() -> doRollbackRecords(context), context.transactionId);
+  }
+
+  private void doRollbackRecords(TransactionContext context) {
     try {
+      // The latest state of the records this transaction writes, which the rollback needs to
+      // decide what to restore
+      Map<Snapshot.Key, TransactionResult> latestRecords = new ConcurrentHashMap<>();
+      parallelExecutor.readRecordsForRollback(
+          toReadTasks(context, latestRecords), context.transactionId);
+
       RollbackMutationComposer composer =
-          new RollbackMutationComposer(context.transactionId, storage, tableMetadataManager);
+          new RollbackMutationComposer(context.transactionId, tableMetadataManager, latestRecords);
       context.snapshot.to(composer);
       List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
@@ -133,6 +159,35 @@ class ParticipantCommitHandler {
       logger.info("Rolling back records failed. Transaction ID: {}", context.transactionId, e);
       // ignore since records are recovered lazily
     }
+  }
+
+  /**
+   * Creates the tasks that read the latest state of every record this transaction writes.
+   *
+   * <p>The reads are independent of each other, so they run through the parallel executor. They are
+   * not subject to the mutation grouping the storage requires, so every record is read on its own,
+   * regardless of how the rollback mutations are grouped afterwards.
+   *
+   * @param context the transaction context
+   * @param latestRecords the map the tasks put the latest state of the records into, by key. A key
+   *     that has no record in storage stays absent
+   * @return the tasks that read the records
+   */
+  private List<ParallelExecutorTask> toReadTasks(
+      TransactionContext context, Map<Snapshot.Key, TransactionResult> latestRecords) {
+    List<Snapshot.Key> keys = new ArrayList<>();
+    context.snapshot.getWriteSet().forEach(entry -> keys.add(entry.getKey()));
+    context.snapshot.getDeleteSet().forEach(entry -> keys.add(entry.getKey()));
+
+    List<ParallelExecutorTask> tasks = new ArrayList<>(keys.size());
+    for (Snapshot.Key key : keys) {
+      tasks.add(
+          () ->
+              storage
+                  .get(createGet(key))
+                  .ifPresent(result -> latestRecords.put(key, new TransactionResult(result))));
+    }
+    return tasks;
   }
 
   private List<ParallelExecutorTask> toTasks(List<List<Mutation>> groupedMutations) {

@@ -4,21 +4,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.StorageInfo;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -32,9 +42,15 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,10 +71,21 @@ class ParticipantCommitHandlerTest {
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
   private static final String ANY_ID = "id";
+  private static final String ANY_ID_2 = "id2";
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
   private static final long ANY_PREPARED_AT = 1000;
   private static final long ANY_COMMITTED_AT = 2000;
+
+  private static final TableMetadata TABLE_METADATA =
+      ConsensusCommitUtils.buildTransactionTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.INT)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .build());
 
   @Mock private DistributedStorage storage;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
@@ -66,6 +93,7 @@ class ParticipantCommitHandlerTest {
   @Mock private ConsensusCommitConfig config;
 
   private ParallelExecutor parallelExecutor;
+  private AsyncExecutor asyncExecutor;
   private MutationsGrouper mutationsGrouper;
   private ParticipantCommitHandler handler;
 
@@ -73,6 +101,7 @@ class ParticipantCommitHandlerTest {
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
     parallelExecutor = new ParallelExecutor(config);
+    asyncExecutor = new AsyncExecutor(config);
     mutationsGrouper = spy(new MutationsGrouper(storageInfoProvider));
     handler = newHandler(/* onePhaseCommitEnabled= */ false);
 
@@ -86,11 +115,17 @@ class ParticipantCommitHandlerTest {
   // exercise tryOnePhaseCommitRecords use the enabled variant; the rest use the default.
   private ParticipantCommitHandler newHandler(boolean onePhaseCommitEnabled) {
     return new ParticipantCommitHandler(
-        storage, tableMetadataManager, parallelExecutor, mutationsGrouper, onePhaseCommitEnabled);
+        storage,
+        tableMetadataManager,
+        parallelExecutor,
+        asyncExecutor,
+        mutationsGrouper,
+        onePhaseCommitEnabled);
   }
 
   @AfterEach
   void tearDown() {
+    asyncExecutor.close();
     parallelExecutor.close();
   }
 
@@ -135,6 +170,111 @@ class ParticipantCommitHandlerTest {
     snapshot.putIntoWriteSet(new Snapshot.Key(put2), put2);
     snapshot.putIntoGetSet(prepareGet(), Optional.empty());
     return snapshot;
+  }
+
+  private Delete prepareDelete2() {
+    return Delete.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3))
+        .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_4))
+        .build();
+  }
+
+  private Snapshot prepareSnapshotWithPutAndDelete() throws CrudException {
+    Snapshot snapshot = prepareSnapshot();
+    Put put = preparePut1();
+    Delete delete = prepareDelete2();
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    return snapshot;
+  }
+
+  // A record this transaction has prepared, as the rollback reads it from the storage
+  private Result prepareRecordPreparedByThisTransaction(
+      String partitionKeyValue,
+      String clusteringKeyValue,
+      TransactionState state,
+      boolean hasBeforeImage) {
+    ImmutableMap.Builder<String, Column<?>> columns =
+        ImmutableMap.<String, Column<?>>builder()
+            .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, partitionKeyValue))
+            .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, clusteringKeyValue))
+            .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_2))
+            .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, state.get()))
+            .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, hasBeforeImage ? 2 : 1));
+    if (hasBeforeImage) {
+      columns
+          .put(
+              Attribute.BEFORE_PREFIX + ANY_NAME_3,
+              IntColumn.of(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
+          .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_2))
+          .put(
+              Attribute.BEFORE_STATE,
+              IntColumn.of(Attribute.BEFORE_STATE, TransactionState.COMMITTED.get()))
+          .put(Attribute.BEFORE_VERSION, IntColumn.of(Attribute.BEFORE_VERSION, 1));
+    } else {
+      columns
+          .put(
+              Attribute.BEFORE_PREFIX + ANY_NAME_3,
+              IntColumn.ofNull(Attribute.BEFORE_PREFIX + ANY_NAME_3))
+          .put(Attribute.BEFORE_ID, TextColumn.ofNull(Attribute.BEFORE_ID))
+          .put(Attribute.BEFORE_STATE, IntColumn.ofNull(Attribute.BEFORE_STATE))
+          .put(Attribute.BEFORE_VERSION, IntColumn.ofNull(Attribute.BEFORE_VERSION));
+    }
+    return new ResultImpl(columns.build(), TABLE_METADATA);
+  }
+
+  // Stubs the storage with the records prepareSnapshotWithPutAndDelete() leaves prepared. The put
+  // inserted a new record, which has no before image, and the delete removed an existing one,
+  // which has a before image
+  private void stubLatestRecordsPreparedByThisTransaction() throws ExecutionException {
+    when(storage.get(ConsensusCommitUtils.createGet(new Snapshot.Key(preparePut1()))))
+        .thenReturn(
+            Optional.of(
+                prepareRecordPreparedByThisTransaction(
+                    ANY_TEXT_1, ANY_TEXT_2, TransactionState.PREPARED, false)));
+    when(storage.get(ConsensusCommitUtils.createGet(new Snapshot.Key(prepareDelete2()))))
+        .thenReturn(
+            Optional.of(
+                prepareRecordPreparedByThisTransaction(
+                    ANY_TEXT_3, ANY_TEXT_4, TransactionState.DELETED, true)));
+    when(tableMetadataManager.getTransactionTableMetadata(any()))
+        .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
+  }
+
+  // The put is rolled back by deleting the record it inserted, and the delete by restoring the
+  // before image of the record it removed. Both are conditioned on this transaction and the state
+  // it left the record in
+  private void assertRollbackMutationsForPutAndDelete(List<Mutation> mutations) {
+    assertThat(mutations).hasSize(2);
+    Map<Key, Mutation> mutationsByPartitionKey =
+        mutations.stream().collect(Collectors.toMap(Mutation::getPartitionKey, m -> m));
+
+    Mutation rollbackOfPut = mutationsByPartitionKey.get(Key.ofText(ANY_NAME_1, ANY_TEXT_1));
+    assertThat(rollbackOfPut).isInstanceOf(Delete.class);
+    assertThat(rollbackOfPut.getClusteringKey()).hasValue(Key.ofText(ANY_NAME_2, ANY_TEXT_2));
+    assertThat(rollbackOfPut.getCondition())
+        .hasValue(
+            ConditionBuilder.deleteIf(ConditionBuilder.column(Attribute.ID).isEqualToText(ANY_ID))
+                .and(
+                    ConditionBuilder.column(Attribute.STATE)
+                        .isEqualToInt(TransactionState.PREPARED.get()))
+                .build());
+
+    Mutation rollbackOfDelete = mutationsByPartitionKey.get(Key.ofText(ANY_NAME_1, ANY_TEXT_3));
+    assertThat(rollbackOfDelete).isInstanceOf(Put.class);
+    assertThat(rollbackOfDelete.getClusteringKey()).hasValue(Key.ofText(ANY_NAME_2, ANY_TEXT_4));
+    assertThat(rollbackOfDelete.getCondition())
+        .hasValue(
+            ConditionBuilder.putIf(ConditionBuilder.column(Attribute.ID).isEqualToText(ANY_ID))
+                .and(
+                    ConditionBuilder.column(Attribute.STATE)
+                        .isEqualToInt(TransactionState.DELETED.get()))
+                .build());
+    assertThat(((Put) rollbackOfDelete).getColumns().get(ANY_NAME_3).getIntValue())
+        .isEqualTo(ANY_INT_1);
   }
 
   private Snapshot prepareSnapshotWithoutWrites() {
@@ -321,6 +461,44 @@ class ParticipantCommitHandlerTest {
   }
 
   @Test
+  void commitRecords_WhenAsyncCommitEnabled_ShouldCommitRecordsInBackground() throws Exception {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    AtomicReference<Thread> mutateThread = new AtomicReference<>();
+    doAnswer(
+            invocation -> {
+              mutateThread.set(Thread.currentThread());
+              return null;
+            })
+        .when(storage)
+        .mutate(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    when(config.isAsyncCommitEnabled()).thenReturn(true);
+    when(config.getParallelExecutorCount()).thenReturn(4);
+    AsyncExecutor enabledAsyncExecutor = new AsyncExecutor(config);
+    ParticipantCommitHandler asyncHandler =
+        new ParticipantCommitHandler(
+            storage,
+            tableMetadataManager,
+            parallelExecutor,
+            enabledAsyncExecutor,
+            mutationsGrouper,
+            false);
+
+    try {
+      // Act
+      asyncHandler.commitRecords(context, ANY_COMMITTED_AT);
+
+      // Assert
+      verify(storage, timeout(10000).times(2)).mutate(anyList());
+      assertThat(mutateThread.get()).isNotEqualTo(Thread.currentThread());
+    } finally {
+      enabledAsyncExecutor.close();
+    }
+  }
+
+  @Test
   void commitRecords_WhenStorageThrows_ShouldNotPropagateException()
       throws ExecutionException, CrudException {
     // Lazy recovery picks up failed commits, so commitRecords ignores storage failures.
@@ -348,6 +526,116 @@ class ParticipantCommitHandlerTest {
 
     // Assert
     verify(snapshot).to(any(RollbackMutationComposer.class));
+  }
+
+  @Test
+  void rollbackRecords_WhenSuccessful_ShouldReadLatestRecordOfEveryWriteThroughParallelExecutor()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    when(storage.get(any(Get.class))).thenReturn(Optional.empty());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+    ParallelExecutor spiedParallelExecutor = spy(parallelExecutor);
+    ParticipantCommitHandler handlerWithSpiedParallelExecutor =
+        new ParticipantCommitHandler(
+            storage,
+            tableMetadataManager,
+            spiedParallelExecutor,
+            asyncExecutor,
+            mutationsGrouper,
+            false);
+
+    // Act
+    handlerWithSpiedParallelExecutor.rollbackRecords(context);
+
+    // Assert
+
+    // The snapshot has two writes, and the latest record of each is read once through the parallel
+    // executor. The composer does not read them again
+    verify(spiedParallelExecutor)
+        .readRecordsForRollback(argThat(tasks -> tasks.size() == 2), eq(ANY_ID));
+    verify(storage, times(2)).get(any(Get.class));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void rollbackRecords_WhenLatestRecordsArePreparedByThisTransaction_ShouldRollBackWriteAndDelete()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithPutAndDelete();
+    stubLatestRecordsPreparedByThisTransaction();
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act
+    handler.rollbackRecords(context);
+
+    // Assert
+    ArgumentCaptor<List<Mutation>> captor = ArgumentCaptor.forClass(List.class);
+    verify(storage, times(2)).mutate(captor.capture());
+    assertRollbackMutationsForPutAndDelete(
+        captor.getAllValues().stream().flatMap(List::stream).collect(Collectors.toList()));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void rollbackRecords_WhenAsyncRollbackEnabled_ShouldRollBackWriteAndDeleteInBackground()
+      throws Exception {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithPutAndDelete();
+    stubLatestRecordsPreparedByThisTransaction();
+    AtomicReference<Thread> mutateThread = new AtomicReference<>();
+    doAnswer(
+            invocation -> {
+              mutateThread.set(Thread.currentThread());
+              return null;
+            })
+        .when(storage)
+        .mutate(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    when(config.isAsyncRollbackEnabled()).thenReturn(true);
+    when(config.getParallelExecutorCount()).thenReturn(4);
+    AsyncExecutor enabledAsyncExecutor = new AsyncExecutor(config);
+    ParticipantCommitHandler asyncHandler =
+        new ParticipantCommitHandler(
+            storage,
+            tableMetadataManager,
+            parallelExecutor,
+            enabledAsyncExecutor,
+            mutationsGrouper,
+            false);
+
+    try {
+      // Act
+      asyncHandler.rollbackRecords(context);
+
+      // Assert
+      verify(storage, timeout(10000).times(2)).mutate(anyList());
+      assertThat(mutateThread.get()).isNotEqualTo(Thread.currentThread());
+      ArgumentCaptor<List<Mutation>> captor = ArgumentCaptor.forClass(List.class);
+      verify(storage, times(2)).mutate(captor.capture());
+      assertRollbackMutationsForPutAndDelete(
+          captor.getAllValues().stream().flatMap(List::stream).collect(Collectors.toList()));
+    } finally {
+      enabledAsyncExecutor.close();
+    }
+  }
+
+  @Test
+  void rollbackRecords_WhenReadingLatestRecordThrows_ShouldNotMutateAndNotPropagateException()
+      throws ExecutionException, CrudException {
+    // A failed read leaves the rollback to the lazy recovery, as a failed rollback mutation does
+
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    when(storage.get(any(Get.class))).thenThrow(ExecutionException.class);
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act (must not throw)
+    handler.rollbackRecords(context);
+
+    // Assert
+    verify(storage, never()).mutate(anyList());
   }
 
   @Test
