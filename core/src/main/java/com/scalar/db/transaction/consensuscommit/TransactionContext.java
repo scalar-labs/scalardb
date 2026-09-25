@@ -34,8 +34,12 @@ public class TransactionContext {
   // A list of scanners opened in the transaction
   public final List<ConsensusCommitScanner> scanners = new ArrayList<>();
 
-  // A list of recovery results for asynchronously executed recoveries. These are tracked so that
-  // their completion can be awaited before committing the transaction if necessary.
+  // The recovery tasks this transaction has started. The ones started while reading a record are
+  // awaited before the transaction writes its records when it writes or deletes that record, or
+  // when its reads may be validated, i.e., in SERIALIZABLE (see
+  // CrudHandler#waitForRecoveryCompletionIfNecessary). The ones started for the records blocking
+  // the writes of the transaction, once it has failed to commit or is rolled back, are not
+  // awaited: they are there for the next attempt. Tests use them to wait for a recovery.
   public final List<RecoveryExecutor.Result> recoveryResults = new CopyOnWriteArrayList<>();
 
   public TransactionContext(

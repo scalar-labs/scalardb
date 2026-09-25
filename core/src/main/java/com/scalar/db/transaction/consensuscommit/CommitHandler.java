@@ -59,6 +59,7 @@ public class CommitHandler {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CommitHandler(
       DistributedStorage storage,
+      RecoveryExecutor recoveryExecutor,
       CoordinatorStateAccessor coordinator,
       TransactionTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
@@ -71,6 +72,7 @@ public class CommitHandler {
     this.participantCommitHandler =
         new ParticipantCommitHandler(
             storage,
+            recoveryExecutor,
             tableMetadataManager,
             parallelExecutor,
             asyncExecutor,
