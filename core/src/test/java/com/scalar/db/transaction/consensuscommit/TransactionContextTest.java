@@ -1,9 +1,13 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.Optional;
@@ -161,6 +165,35 @@ public class TransactionContextTest {
 
     // Assert
     assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void closeScanners_ShouldDiscardOnlyUnclosedScannersWithoutClosingThem()
+      throws CrudException {
+    // Arrange
+    ConsensusCommitScanner closedScanner = mock(ConsensusCommitScanner.class);
+    ConsensusCommitScanner openScanner1 = mock(ConsensusCommitScanner.class);
+    ConsensusCommitScanner openScanner2 = mock(ConsensusCommitScanner.class);
+    when(closedScanner.isClosed()).thenReturn(true);
+    when(openScanner1.isClosed()).thenReturn(false);
+    when(openScanner2.isClosed()).thenReturn(false);
+
+    TransactionContext context =
+        new TransactionContext(ANY_ID, snapshot, Isolation.SNAPSHOT, false, false);
+    context.scanners.add(closedScanner);
+    context.scanners.add(openScanner1);
+    context.scanners.add(openScanner2);
+
+    // Act
+    context.closeScanners();
+
+    // Assert
+    verify(closedScanner, never()).discard();
+    verify(openScanner1).discard();
+    verify(openScanner2).discard();
+    verify(closedScanner, never()).close();
+    verify(openScanner1, never()).close();
+    verify(openScanner2, never()).close();
   }
 
   @Test
