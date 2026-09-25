@@ -150,11 +150,8 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    if (e.getSQLState() == null) {
-      return false;
-    }
-    // 42P07: duplicate_table
-    return e.getSQLState().equals("42P07");
+    // Since the "IF NOT EXISTS" syntax is used to create a table, we always return false
+    return false;
   }
 
   @Override
