@@ -30,12 +30,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
-  private static final Logger logger = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
   private final TransactionContext context;
   private final CrudHandler crud;
   private final CommitHandler commit;
@@ -246,11 +243,7 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
 
   @Override
   public void rollback() throws RollbackException {
-    try {
-      context.closeScanners();
-    } catch (CrudException e) {
-      logger.warn("Failed to close the scanner. Transaction ID: {}", getId(), e);
-    }
+    context.closeScanners();
 
     if (!needRollback) {
       return;

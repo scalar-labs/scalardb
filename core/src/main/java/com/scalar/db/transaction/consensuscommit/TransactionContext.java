@@ -1,7 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.exception.transaction.CrudException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -101,10 +100,15 @@ public class TransactionContext {
     return scanners.stream().allMatch(ConsensusCommitScanner::isClosed);
   }
 
-  public void closeScanners() throws CrudException {
+  /**
+   * Discards the scanners that are still open without checking or recording their results. Must
+   * only be called when the transaction will not be committed or prepared afterwards. See {@link
+   * ConsensusCommitScanner#discard()}.
+   */
+  public void closeScanners() {
     for (ConsensusCommitScanner scanner : scanners) {
       if (!scanner.isClosed()) {
-        scanner.close();
+        scanner.discard();
       }
     }
   }
