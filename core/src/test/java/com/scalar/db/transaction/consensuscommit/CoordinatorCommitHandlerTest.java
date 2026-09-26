@@ -129,9 +129,9 @@ class CoordinatorCommitHandlerTest {
   @Test
   void commitState_WhenCoordinatorConflictAndCommittedReturnedInGetState_ShouldReturnPersisted()
       throws Exception {
-    // Two-phase Commit can drive the same commit twice (multiple participants / recovery), so the
-    // COMMITTED case is reachable and treated as success — the persisted row's committedAt is
-    // returned, not the value we tried to write.
+    // A retried putIfNotExists can lose the race to this commit's own earlier attempt that was
+    // applied although reported as failed, so the COMMITTED case is reachable and treated as
+    // success — the persisted row's committedAt is returned.
 
     // Arrange
     doThrow(CoordinatorConflictException.class)
@@ -230,11 +230,12 @@ class CoordinatorCommitHandlerTest {
 
   @Test
   void abortState_WhenConflictAndNoStatePersisted_ShouldReturnAborted() throws Exception {
-    // Unlike forceAbortState (the One-phase Commit I/F abort-by-id path), abortState is used by the
-    // self-abort path and all Two-phase Commit I/F aborts, which cannot be racing a real, deletable
-    // COMMITTED row. A conflicting-then-absent coordinator state is therefore determinable as
-    // ABORTED (the conflict was a lazy-recovery ABORTED later removed by the Coordinator state
-    // cleanup process), not an honest UNKNOWN.
+    // Unlike forceAbortState (the abort-by-id path), abortState is used only on the self-abort path
+    // -- a commit orchestrator aborting its own transaction after a prepare or validate failure,
+    // before commitState -- and so cannot be racing a real, deletable COMMITTED row. A
+    // conflicting-then-absent coordinator state is therefore determinable as ABORTED (the conflict
+    // was a lazy-recovery ABORTED later removed by the Coordinator state cleanup process), not an
+    // honest UNKNOWN.
 
     // Arrange
     doThrow(CoordinatorConflictException.class)
