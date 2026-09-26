@@ -1,13 +1,14 @@
 package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.BranchTransaction;
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.GlobalTransaction;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,7 +19,7 @@ import org.mockito.MockitoAnnotations;
 
 class DistributedTransactionBackedGlobalTransactionManagerTest {
 
-  @Mock private DistributedTransactionManager manager;
+  @Mock private ResumableDistributedTransactionManager manager;
   @Mock private DistributedTransaction transaction;
 
   private DistributedTransactionBackedGlobalTransactionManager globalManager;
@@ -63,11 +64,11 @@ class DistributedTransactionBackedGlobalTransactionManagerTest {
 
   @Test
   void beginBranch_WithEmptyAttributes_ShouldReturnPlainBranchTransaction() throws Exception {
-    when(manager.join("tx-1")).thenReturn(transaction);
+    when(manager.resume("tx-1")).thenReturn(transaction);
 
     BranchTransaction branch = globalManager.beginBranch("tx-1", Collections.emptyMap());
 
-    verify(manager).join("tx-1");
+    verify(manager).resume("tx-1");
     assertThat(branch).isInstanceOf(DistributedTransactionBackedBranchTransaction.class);
     branch.end(BranchTransaction.Status.SUCCESS);
   }
@@ -75,13 +76,22 @@ class DistributedTransactionBackedGlobalTransactionManagerTest {
   @Test
   void beginBranch_WithNonEmptyAttributes_ShouldReturnAttributePropagatingBranchTransaction()
       throws Exception {
-    when(manager.join("tx-1")).thenReturn(transaction);
+    when(manager.resume("tx-1")).thenReturn(transaction);
 
     BranchTransaction branch = globalManager.beginBranch("tx-1", attrs("k", "v"));
 
-    verify(manager).join("tx-1");
+    verify(manager).resume("tx-1");
     assertThat(branch).isInstanceOf(AttributePropagatingBranchTransaction.class);
     branch.end(BranchTransaction.Status.SUCCESS);
+  }
+
+  @Test
+  void beginBranch_ResumeThrowsTransactionNotFoundException_ShouldPropagateIt() throws Exception {
+    TransactionNotFoundException exception = new TransactionNotFoundException("not found", "tx-1");
+    when(manager.resume("tx-1")).thenThrow(exception);
+
+    assertThatThrownBy(() -> globalManager.beginBranch("tx-1", Collections.emptyMap()))
+        .isSameAs(exception);
   }
 
   @Test
