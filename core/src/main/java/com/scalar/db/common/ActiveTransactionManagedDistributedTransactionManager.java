@@ -27,9 +27,19 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A decorator that registers every transaction it begins or starts, so that a server continuing a
+ * transaction across requests can get it back by its ID with {@link #resume(String)}. A registered
+ * transaction is removed when it is committed, rolled back, or aborted, and is disposed of when it
+ * expires or is evicted.
+ *
+ * <p>{@link #resume(String)} returns a transaction exactly as this manager registered it, so wrap
+ * this manager outside every decorator whose behavior a resumed transaction must carry.
+ */
 @ThreadSafe
 public class ActiveTransactionManagedDistributedTransactionManager
-    extends DecoratedDistributedTransactionManager {
+    extends DecoratedDistributedTransactionManager
+    implements ResumableDistributedTransactionManager {
 
   private static final Logger logger =
       LoggerFactory.getLogger(ActiveTransactionManagedDistributedTransactionManager.class);
@@ -71,15 +81,6 @@ public class ActiveTransactionManagedDistributedTransactionManager
     return new ActiveTransaction(transaction);
   }
 
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public DistributedTransaction join(String txId) throws TransactionNotFoundException {
-    return resume(txId);
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
   @Override
   public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
     return registry
