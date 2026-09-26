@@ -14,7 +14,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BlobColumn;
@@ -1290,55 +1289,6 @@ public abstract class DistributedTransactionIntegrationTestBase {
     scanner.close();
 
     transaction.commit();
-  }
-
-  @Test
-  public void resume_WithBeginningTransaction_ShouldReturnBegunTransaction()
-      throws TransactionException {
-    // Arrange
-    DistributedTransaction transaction = manager.begin();
-
-    // Act
-    DistributedTransaction resumed = manager.resume(transaction.getId());
-
-    // Assert
-    assertThat(resumed.getId()).isEqualTo(transaction.getId());
-
-    transaction.commit();
-  }
-
-  @Test
-  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionNotFoundException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.resume("txId"))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
-  public void resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionNotFoundException()
-      throws TransactionException {
-    // Arrange
-    DistributedTransaction transaction = manager.begin();
-    transaction.commit();
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
-  public void
-      resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionNotFoundException()
-          throws TransactionException {
-    // Arrange
-    DistributedTransaction transaction = manager.begin();
-    transaction.rollback();
-
-    // Act Assert
-    assertThatThrownBy(() -> manager.resume(transaction.getId()))
-        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test

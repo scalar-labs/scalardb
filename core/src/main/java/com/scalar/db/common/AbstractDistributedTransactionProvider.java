@@ -25,17 +25,6 @@ public abstract class AbstractDistributedTransactionProvider
           new AttributePropagatingDistributedTransactionManager(transactionManager);
     }
 
-    if (config.isActiveTransactionManagementEnabled()) {
-      // Wrap the transaction manager for active transaction management. This must be the
-      // outermost wrapping so that transactions returned by resume / join (which come from the
-      // active transaction registry) carry the behavior of every inner decorator.
-      transactionManager =
-          new ActiveTransactionManagedDistributedTransactionManager(
-              transactionManager,
-              config.getActiveTransactionManagementExpirationTimeMillis(),
-              config.getActiveTransactionManagementMaxActiveTransactions());
-    }
-
     return transactionManager;
   }
 
@@ -46,7 +35,7 @@ public abstract class AbstractDistributedTransactionProvider
   public final TwoPhaseCommitCoordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
     TwoPhaseCommitCoordinator coordinator = createRawTwoPhaseCommitCoordinator(config);
 
-    if (config.isActiveTransactionManagementEnabled()) {
+    if (config.isTwoPhaseCommitActiveTransactionManagementEnabled()) {
       // Wrap the coordinator for active transaction management. This must be the outermost wrapping
       // so that the idle-expiry reap traverses every inner decorator via releaseTransactionContext.
       coordinator =
@@ -71,7 +60,7 @@ public abstract class AbstractDistributedTransactionProvider
       participant = new AttributePropagatingTwoPhaseCommitParticipant(participant);
     }
 
-    if (config.isActiveTransactionManagementEnabled()) {
+    if (config.isTwoPhaseCommitActiveTransactionManagementEnabled()) {
       // Wrap the participant for active transaction management. This must be the outermost wrapping
       // so that the idle-expiry reap traverses every inner decorator via releaseTransactionContext.
       participant =

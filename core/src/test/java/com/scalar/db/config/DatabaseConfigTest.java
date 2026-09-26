@@ -37,11 +37,12 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
-    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS);
     assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
         .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
+    assertThat(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
     assertThat(config.isCrossPartitionScanOrderingEnabled()).isFalse();
@@ -69,11 +70,12 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
-    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS);
     assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
         .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
+    assertThat(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -102,11 +104,12 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
-    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS);
     assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
         .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
+    assertThat(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -137,11 +140,12 @@ public class DatabaseConfigTest {
     assertThat(config.getTransactionManager()).isEqualTo("consensus-commit");
     assertThat(config.getMetadataCacheExpirationTimeSecs())
         .isEqualTo(DatabaseConfig.DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS);
-    assertThat(config.isActiveTransactionManagementEnabled()).isTrue();
-    assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(-1);
+    assertThat(config.getActiveTransactionManagementExpirationTimeMillis())
+        .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS);
     assertThat(config.getActiveTransactionManagementMaxActiveTransactions())
         .isEqualTo(DatabaseConfig.DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS);
     assertThat(config.isAttributePropagationEnabled()).isTrue();
+    assertThat(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).isTrue();
     assertThat(config.getDefaultNamespaceName()).isEmpty();
     assertThat(config.isCrossPartitionScanEnabled()).isTrue();
     assertThat(config.isCrossPartitionScanFilteringEnabled()).isFalse();
@@ -343,7 +347,6 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
-    props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, "false");
     props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, "3600");
     props.setProperty(DatabaseConfig.ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS, "5000");
 
@@ -357,7 +360,6 @@ public class DatabaseConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.isActiveTransactionManagementEnabled()).isFalse();
     assertThat(config.getActiveTransactionManagementExpirationTimeMillis()).isEqualTo(3600);
     assertThat(config.getActiveTransactionManagementMaxActiveTransactions()).isEqualTo(5000);
   }
@@ -454,5 +456,23 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.isAttributePropagationEnabled()).isFalse();
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithTwoPhaseCommitActiveTransactionManagementEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(
+        DatabaseConfig.TWO_PHASE_COMMIT_ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, "false");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).isFalse();
   }
 }

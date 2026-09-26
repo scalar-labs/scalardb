@@ -32,10 +32,10 @@ public class DatabaseConfig {
   private String storage;
   private String transactionManager;
   private long metadataCacheExpirationTimeSecs;
-  private boolean activeTransactionManagementEnabled;
   private long activeTransactionManagementExpirationTimeMillis;
   private int activeTransactionManagementMaxActiveTransactions;
   private boolean attributePropagationEnabled;
+  private boolean twoPhaseCommitActiveTransactionManagementEnabled;
   @Nullable private String defaultNamespaceName;
   private boolean crossPartitionScanEnabled;
   private boolean crossPartitionScanFilteringEnabled;
@@ -51,14 +51,14 @@ public class DatabaseConfig {
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String METADATA_CACHE_EXPIRATION_TIME_SECS =
       PREFIX + "metadata.cache_expiration_time_secs";
-  public static final String ACTIVE_TRANSACTION_MANAGEMENT_ENABLED =
-      PREFIX + "active_transaction_management.enabled";
   public static final String ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS =
       PREFIX + "active_transaction_management.expiration_time_millis";
   public static final String ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS =
       PREFIX + "active_transaction_management.max_active_transactions";
   public static final String ATTRIBUTE_PROPAGATION_ENABLED =
       PREFIX + "attribute_propagation.enabled";
+  public static final String TWO_PHASE_COMMIT_ACTIVE_TRANSACTION_MANAGEMENT_ENABLED =
+      PREFIX + "two_phase_commit.active_transaction_management.enabled";
   public static final String DEFAULT_NAMESPACE_NAME = PREFIX + "default_namespace_name";
   public static final String SCAN_PREFIX = PREFIX + "cross_partition_scan.";
   public static final String CROSS_PARTITION_SCAN = SCAN_PREFIX + "enabled";
@@ -67,6 +67,7 @@ public class DatabaseConfig {
   public static final String SCAN_FETCH_SIZE = PREFIX + "scan_fetch_size";
 
   public static final int DEFAULT_METADATA_CACHE_EXPIRATION_TIME_SECS = 60;
+  public static final long DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS = 60000;
   public static final int DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_MAX_ACTIVE_TRANSACTIONS = 10000;
   public static final String DEFAULT_SYSTEM_NAMESPACE_NAME = "scalardb";
   public static final int DEFAULT_SCAN_FETCH_SIZE = 10;
@@ -111,13 +112,13 @@ public class DatabaseConfig {
     password = getString(getProperties(), PASSWORD, null);
     transactionManager = getTransactionManager(getProperties());
     metadataCacheExpirationTimeSecs = getMetadataCacheExpirationTimeSecs(getProperties());
-    activeTransactionManagementEnabled =
-        getBoolean(getProperties(), ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, true);
     activeTransactionManagementExpirationTimeMillis =
         getActiveTransactionManagementExpirationTimeMillis(getProperties());
     activeTransactionManagementMaxActiveTransactions =
         getActiveTransactionManagementMaxActiveTransactions(getProperties());
     attributePropagationEnabled = getBoolean(getProperties(), ATTRIBUTE_PROPAGATION_ENABLED, true);
+    twoPhaseCommitActiveTransactionManagementEnabled =
+        getBoolean(getProperties(), TWO_PHASE_COMMIT_ACTIVE_TRANSACTION_MANAGEMENT_ENABLED, true);
     defaultNamespaceName = getString(getProperties(), DEFAULT_NAMESPACE_NAME, null);
     crossPartitionScanEnabled = getBoolean(getProperties(), CROSS_PARTITION_SCAN, true);
     crossPartitionScanFilteringEnabled =
@@ -164,10 +165,6 @@ public class DatabaseConfig {
     return metadataCacheExpirationTimeSecs;
   }
 
-  public boolean isActiveTransactionManagementEnabled() {
-    return activeTransactionManagementEnabled;
-  }
-
   public long getActiveTransactionManagementExpirationTimeMillis() {
     return activeTransactionManagementExpirationTimeMillis;
   }
@@ -178,6 +175,10 @@ public class DatabaseConfig {
 
   public boolean isAttributePropagationEnabled() {
     return attributePropagationEnabled;
+  }
+
+  public boolean isTwoPhaseCommitActiveTransactionManagementEnabled() {
+    return twoPhaseCommitActiveTransactionManagementEnabled;
   }
 
   public Optional<String> getDefaultNamespaceName() {
@@ -212,7 +213,10 @@ public class DatabaseConfig {
   }
 
   public static long getActiveTransactionManagementExpirationTimeMillis(Properties properties) {
-    return getLong(properties, ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS, -1);
+    return getLong(
+        properties,
+        ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS,
+        DEFAULT_ACTIVE_TRANSACTION_MANAGEMENT_EXPIRATION_TIME_MILLIS);
   }
 
   public static int getActiveTransactionManagementMaxActiveTransactions(Properties properties) {

@@ -23,6 +23,7 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
@@ -261,48 +262,6 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
   }
 
   @Test
-  public void join_ShouldReturnBegunActiveTransaction() throws TransactionException {
-    // Arrange
-    String txId = "txId1";
-
-    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
-    when(wrappedTransaction.getId()).thenReturn(txId);
-
-    when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
-
-    DistributedTransaction expected = transactionManager.begin(txId);
-
-    // Act
-    DistributedTransaction actual = transactionManager.join(txId);
-
-    // Assert
-    assertThat(actual)
-        .isInstanceOf(
-            ActiveTransactionManagedDistributedTransactionManager.ActiveTransaction.class);
-
-    assertThat(((DecoratedDistributedTransaction) actual).getOriginalTransaction())
-        .isEqualTo(((DecoratedDistributedTransaction) expected).getOriginalTransaction());
-  }
-
-  @Test
-  public void join_ActiveTransactionAlreadyCommitted_ShouldThrowTransactionNotFoundException()
-      throws TransactionException {
-    String txId = "txId1";
-
-    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
-    when(wrappedTransaction.getId()).thenReturn(txId);
-
-    when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
-
-    DistributedTransaction transaction = transactionManager.begin(txId);
-    transaction.commit();
-
-    // Act Assert
-    assertThatThrownBy(() -> transactionManager.join(txId))
-        .isInstanceOf(TransactionNotFoundException.class);
-  }
-
-  @Test
   public void resume_ShouldReturnBegunActiveTransaction() throws TransactionException {
     // Arrange
     String txId = "txId1";
@@ -318,12 +277,14 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
     DistributedTransaction actual = transactionManager.resume(txId);
 
     // Assert
-    assertThat(actual)
-        .isInstanceOf(
-            ActiveTransactionManagedDistributedTransactionManager.ActiveTransaction.class);
+    assertThat(actual).isSameAs(expected);
+  }
 
-    assertThat(((DecoratedDistributedTransaction) actual).getOriginalTransaction())
-        .isEqualTo(((DecoratedDistributedTransaction) expected).getOriginalTransaction());
+  @Test
+  public void resume_TransactionNotBegun_ShouldThrowTransactionNotFoundException() {
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.resume("txId1"))
+        .isInstanceOf(TransactionNotFoundException.class);
   }
 
   @Test
@@ -338,6 +299,74 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
 
     DistributedTransaction activeTransaction = transactionManager.begin(txId);
     activeTransaction.rollback();
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.resume(txId))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void resume_ActiveTransactionAlreadyCommitted_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn(txId);
+    when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
+    DistributedTransaction transaction = transactionManager.begin(txId);
+    transaction.commit();
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.resume(txId))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void resume_CommitFailed_ShouldReturnTransaction() throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn(txId);
+    doThrow(new CommitException("commit failed", txId)).when(wrappedTransaction).commit();
+    when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
+    DistributedTransaction transaction = transactionManager.begin(txId);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
+
+    // Act
+    DistributedTransaction actual = transactionManager.resume(txId);
+
+    // Assert
+    // The transaction stays active so that it can still be rolled back
+    assertThat(actual).isSameAs(transaction);
+  }
+
+  @Test
+  public void resume_RollbackFailed_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn(txId);
+    doThrow(new RollbackException("rollback failed", txId)).when(wrappedTransaction).rollback();
+    when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
+    DistributedTransaction transaction = transactionManager.begin(txId);
+    assertThatThrownBy(transaction::rollback).isInstanceOf(RollbackException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> transactionManager.resume(txId))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void resume_ActiveTransactionAlreadyAborted_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    // Arrange
+    String txId = "txId1";
+    DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
+    when(wrappedTransaction.getId()).thenReturn(txId);
+    when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
+    DistributedTransaction transaction = transactionManager.begin(txId);
+    transaction.abort();
 
     // Act Assert
     assertThatThrownBy(() -> transactionManager.resume(txId))
