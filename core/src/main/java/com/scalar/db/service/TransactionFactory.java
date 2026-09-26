@@ -3,7 +3,6 @@ package com.scalar.db.service;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.GlobalTransactionManager;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.File;
 import java.io.IOException;
@@ -11,11 +10,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Properties;
-import javax.annotation.Nullable;
 
 /**
  * A factory class to instantiate {@link DistributedTransactionManager} and {@link
- * DistributedTransactionAdmin} and {@link TwoPhaseCommitTransactionManager}
+ * DistributedTransactionAdmin}
  */
 public final class TransactionFactory {
   private final DatabaseConfig config;
@@ -47,19 +45,6 @@ public final class TransactionFactory {
    */
   public DistributedTransactionAdmin getTransactionAdmin() {
     return ProviderManager.createDistributedTransactionAdmin(config);
-  }
-
-  /**
-   * Returns a {@link TwoPhaseCommitTransactionManager} instance
-   *
-   * @return a {@link TwoPhaseCommitTransactionManager} instance. If the transaction manager does
-   *     not support the two-phase commit interface, returns {@code null}.
-   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
-   */
-  @Deprecated
-  @Nullable
-  public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
-    return ProviderManager.createTwoPhaseCommitTransactionManager(config);
   }
 
   /**

@@ -4,12 +4,10 @@ import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.AbstractDistributedTransactionProvider;
 import com.scalar.db.common.GlobalTransactionBackedDistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Properties;
-import javax.annotation.Nullable;
 
 /**
  * A test-only {@link com.scalar.db.api.DistributedTransactionProvider} that exposes the
@@ -55,18 +53,6 @@ public class TwoPhaseCommitBackedConsensusCommitProvider
   @Override
   public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
     return new ConsensusCommitAdmin(toConsensusCommitConfig(config));
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Nullable
-  @Override
-  public TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-      DatabaseConfig config) {
-    // Not exercised by these integration tests; the facade is reached via the distributed-manager
-    // factory method above.
-    return null;
   }
 
   @Override

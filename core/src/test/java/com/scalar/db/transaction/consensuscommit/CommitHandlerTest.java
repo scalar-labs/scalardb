@@ -781,20 +781,6 @@ public class CommitHandlerTest {
   }
 
   @Test
-  public void commitStateWithoutWriteSet_ShouldDelegateToCoordinatorHandler() throws Exception {
-    Snapshot snapshot = snapshotWithoutWrites();
-    TransactionContext context =
-        createTransactionContext(anyId(), snapshot, Isolation.SNAPSHOT, false, false);
-    when(coordinatorCommitHandler.commitState(eq(context.transactionId), any()))
-        .thenReturn(ANY_COMMITTED_AT);
-
-    long result = handler.commitStateWithoutWriteSet(context);
-
-    verify(coordinatorCommitHandler).commitState(eq(context.transactionId), any());
-    assertThat(result).isEqualTo(ANY_COMMITTED_AT);
-  }
-
-  @Test
   public void abortState_ShouldDelegateToCoordinatorHandler() throws Exception {
     Snapshot snapshot = snapshotWithWrites();
     TransactionContext context =
@@ -803,13 +789,6 @@ public class CommitHandlerTest {
     handler.abortState(context);
 
     verify(coordinatorCommitHandler).abortState(eq(context.transactionId), any());
-  }
-
-  @Test
-  public void abortStateWithoutWriteSet_ShouldDelegateToCoordinatorHandler() throws Exception {
-    handler.abortStateWithoutWriteSet(anyId());
-
-    verify(coordinatorCommitHandler).abortState(eq(anyId()), any());
   }
 
   @Test
