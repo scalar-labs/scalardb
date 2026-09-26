@@ -34,6 +34,7 @@ import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.collect.ImmutableMap;
@@ -185,7 +186,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
@@ -219,7 +220,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
@@ -256,7 +257,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).createItem(new CosmosNamespace(namespace));
   }
@@ -309,6 +310,8 @@ public class CosmosAdminTest {
 
     verify(database).createContainer(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -343,6 +346,8 @@ public class CosmosAdminTest {
         .isEqualTo(CosmosAdmin.TABLE_METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
     CosmosTableMetadata cosmosTableMetadata =
         CosmosTableMetadata.newBuilder()
             .id(getFullTableName(namespace, table))
@@ -414,6 +419,8 @@ public class CosmosAdminTest {
 
     verify(database).createContainer(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -437,6 +444,8 @@ public class CosmosAdminTest {
         .isEqualTo(CosmosAdmin.TABLE_METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
     CosmosTableMetadata cosmosTableMetadata =
         CosmosTableMetadata.newBuilder()
             .id(getFullTableName(namespace, table))
@@ -777,7 +786,7 @@ public class CosmosAdminTest {
 
     when(client.getDatabase(namespace)).thenReturn(database);
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -810,7 +819,8 @@ public class CosmosAdminTest {
     admin.createIndex(namespace, table, "c3");
 
     // Assert
-    verify(database).createContainerIfNotExists(table, "/concatenatedPartitionKey");
+    verify(database, atLeastOnce())
+        .createContainerIfNotExists(any(CosmosContainerProperties.class));
 
     ArgumentCaptor<IndexingPolicy> indexingPolicyCaptor =
         ArgumentCaptor.forClass(IndexingPolicy.class);
@@ -846,7 +856,7 @@ public class CosmosAdminTest {
 
     when(client.getDatabase(namespace)).thenReturn(database);
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -879,7 +889,8 @@ public class CosmosAdminTest {
     admin.dropIndex(namespace, table, "c2");
 
     // Assert
-    verify(database).createContainerIfNotExists(table, "/concatenatedPartitionKey");
+    verify(database, atLeastOnce())
+        .createContainerIfNotExists(any(CosmosContainerProperties.class));
 
     ArgumentCaptor<IndexingPolicy> indexingPolicyCaptor =
         ArgumentCaptor.forClass(IndexingPolicy.class);
@@ -943,7 +954,7 @@ public class CosmosAdminTest {
 
     // Existing container properties
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -1003,7 +1014,7 @@ public class CosmosAdminTest {
 
     // Existing container properties
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -1064,7 +1075,7 @@ public class CosmosAdminTest {
 
     // Existing container properties
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -1077,8 +1088,12 @@ public class CosmosAdminTest {
     ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
         ArgumentCaptor.forClass(CosmosContainerProperties.class);
 
-    verify(database).createContainerIfNotExists(containerPropertiesCaptor.capture());
-    assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    verify(database, times(2)).createContainerIfNotExists(containerPropertiesCaptor.capture());
+    for (CosmosContainerProperties captured : containerPropertiesCaptor.getAllValues()) {
+      assertThat(captured.getId()).isEqualTo(table);
+      assertThat(captured.getPartitionKeyDefinition().getVersion())
+          .isEqualTo(PartitionKeyDefinitionVersion.V2);
+    }
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -1119,7 +1134,7 @@ public class CosmosAdminTest {
     when(storedProcedure.read()).thenThrow(cosmosException);
 
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -1171,7 +1186,7 @@ public class CosmosAdminTest {
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
     // Assert: physical container repair still runs, but the metadata upsert is skipped
-    verify(database).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verify(database, times(2)).createContainerIfNotExists(any(CosmosContainerProperties.class));
     verify(metadataContainer, never()).upsertItem(any());
   }
 
@@ -1498,7 +1513,7 @@ public class CosmosAdminTest {
         .thenReturn(storedProcedure);
     // Existing container properties
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -1684,7 +1699,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
   }
@@ -1719,7 +1734,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
   }
@@ -1756,7 +1771,7 @@ public class CosmosAdminTest {
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
     verify(client, times(4)).getDatabase(METADATA_DATABASE);
-    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(namespacesContainer).upsertItem(new CosmosNamespace(namespace));
   }
@@ -1796,7 +1811,7 @@ public class CosmosAdminTest {
             refEq(
                 ThroughputProperties.createManualThroughput(
                     Integer.parseInt(CosmosAdmin.DEFAULT_REQUEST_UNIT))));
-    verify(metadataDatabase).createContainerIfNotExists(CosmosAdmin.NAMESPACES_CONTAINER, "/id");
+    verifyNamespacesContainerCreatedWithV2(metadataDatabase);
     verify(namespacesContainer).createItem(new CosmosNamespace(METADATA_DATABASE));
     verify(tableMetadataContainer)
         .queryItems(
@@ -1806,5 +1821,16 @@ public class CosmosAdminTest {
     verify(metadataDatabase, times(4)).getContainer(CosmosAdmin.NAMESPACES_CONTAINER);
     verify(namespacesContainer).upsertItem(new CosmosNamespace("ns1"));
     verify(namespacesContainer).upsertItem(new CosmosNamespace("ns2"));
+  }
+
+  private void verifyNamespacesContainerCreatedWithV2(CosmosDatabase metadataDatabase) {
+    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
+        ArgumentCaptor.forClass(CosmosContainerProperties.class);
+    verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
+    CosmosContainerProperties properties = containerPropertiesCaptor.getValue();
+    assertThat(properties.getId()).isEqualTo(CosmosAdmin.NAMESPACES_CONTAINER);
+    assertThat(properties.getPartitionKeyDefinition().getPaths()).containsExactly("/id");
+    assertThat(properties.getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
   }
 }
