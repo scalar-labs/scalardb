@@ -51,9 +51,19 @@ public class DeleteStatementHandler {
     try {
       delete(delete, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
+      // A resent request can fail because of its own earlier, applied attempt, so the mutation must
+      // not be reported as not applied
+      if (SdkAttempts.earlierAttemptMayHaveBeenApplied(e)) {
+        throw new ExecutionException(
+            CoreError.DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY.buildMessage(e.getMessage()), e);
+      }
       throw new NoMutationException(
           CoreError.NO_MUTATION_APPLIED.buildMessage(), Collections.singletonList(delete), e);
     } catch (TransactionConflictException e) {
+      if (SdkAttempts.earlierAttemptMayHaveBeenApplied(e)) {
+        throw new ExecutionException(
+            CoreError.DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY.buildMessage(e.getMessage()), e);
+      }
       throw new RetriableExecutionException(
           CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
           e);

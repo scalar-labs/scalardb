@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -30,6 +31,7 @@ import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedExce
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 
 public abstract class DeleteStatementHandlerTestBase {
   private static final String ANY_NAMESPACE_NAME = "namespace";
@@ -192,6 +194,118 @@ public abstract class DeleteStatementHandlerTestBase {
     // Act Assert
     assertThatThrownBy(() -> handler.handle(delete))
         .isInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void handle_ConditionalCheckFailedExceptionThrownSentOnce_ShouldThrowNoMutationException() {
+    // Arrange
+    ConditionalCheckFailedException toThrow =
+        (ConditionalCheckFailedException)
+            ConditionalCheckFailedException.builder().message("message").numAttempts(1).build();
+    doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isInstanceOf(NoMutationException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_ConditionalCheckFailedExceptionThrownWithoutNumAttempts_ShouldThrowNoMutationException() {
+    // Arrange
+    ConditionalCheckFailedException toThrow =
+        (ConditionalCheckFailedException)
+            ConditionalCheckFailedException.builder().message("message").build();
+    doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isInstanceOf(NoMutationException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_ConditionalCheckFailedExceptionThrownResent_ShouldThrowExecutionExceptionForUnknownOutcome() {
+    // Arrange
+    ConditionalCheckFailedException toThrow =
+        (ConditionalCheckFailedException)
+            ConditionalCheckFailedException.builder().message("message").numAttempts(2).build();
+    doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void handle_TransactionConflictExceptionThrownSentOnce_ShouldThrowRetriableExecutionException() {
+    // Arrange
+    TransactionConflictException toThrow =
+        (TransactionConflictException)
+            TransactionConflictException.builder().message("message").numAttempts(1).build();
+    doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_TransactionConflictExceptionThrownWithoutNumAttempts_ShouldThrowRetriableExecutionException() {
+    // Arrange
+    TransactionConflictException toThrow =
+        (TransactionConflictException)
+            TransactionConflictException.builder().message("message").build();
+    doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_TransactionConflictExceptionThrownResent_ShouldThrowExecutionExceptionForUnknownOutcome() {
+    // Arrange
+    TransactionConflictException toThrow =
+        (TransactionConflictException)
+            TransactionConflictException.builder().message("message").numAttempts(2).build();
+    doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    Delete delete =
+        Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isExactlyInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
 }
