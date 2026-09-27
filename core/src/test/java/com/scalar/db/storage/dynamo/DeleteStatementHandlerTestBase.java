@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
@@ -302,6 +303,21 @@ public abstract class DeleteStatementHandlerTestBase {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     Delete delete =
         Delete.newBuilder(prepareDelete()).condition(ConditionBuilder.deleteIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void handle_SdkClientExceptionThrown_ShouldThrowExecutionException() {
+    // Arrange
+    SdkClientException toThrow = SdkClientException.create("message");
+    doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
+    Delete delete = prepareDelete();
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(delete))

@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
@@ -303,6 +304,19 @@ public abstract class PutStatementHandlerTestBase {
             TransactionConflictException.builder().message("message").numAttempts(2).build();
     doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
     Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void handle_SdkClientExceptionThrown_ShouldThrowExecutionException() {
+    // Arrange
+    SdkClientException toThrow = SdkClientException.create("message");
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = preparePut();
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(put))

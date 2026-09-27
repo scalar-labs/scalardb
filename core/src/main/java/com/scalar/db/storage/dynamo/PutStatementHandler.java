@@ -17,10 +17,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
@@ -68,7 +68,7 @@ public class PutStatementHandler {
       throw new RetriableExecutionException(
           CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
           e);
-    } catch (DynamoDbException e) {
+    } catch (SdkException e) {
       throw new ExecutionException(
           CoreError.DYNAMO_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }
