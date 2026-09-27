@@ -1543,6 +1543,12 @@ public enum CoreError implements ScalarDbError {
       "One-phase committing records failed. Details: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0006",
+      "The committing state in the coordinator conflicted after the write was retried. An earlier attempt may have been applied, so the transaction may have been committed. Details: %s",
+      "",
+      ""),
   ;
 
   private static final String COMPONENT_NAME = "DB-CORE";
