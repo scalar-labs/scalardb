@@ -72,6 +72,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   private ConsensusCommitAdmin consensusCommitAdmin;
   protected String namespace;
   private ParallelExecutor parallelExecutor;
+  private AsyncExecutor asyncExecutor;
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
@@ -98,6 +99,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig, false);
     originalStorage = factory.getStorage();
     parallelExecutor = new ParallelExecutor(consensusCommitConfig);
+    asyncExecutor = new AsyncExecutor(consensusCommitConfig);
 
     adminTestUtils = getAdminTestUtils(testName);
   }
@@ -147,6 +149,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             databaseConfig,
             coordinator,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,
@@ -164,6 +167,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           false,
@@ -174,6 +178,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           false);
@@ -189,11 +194,15 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
+    // Close the executors first so that the work in flight can finish while the storage is still
+    // open, as the transaction managers do
+    asyncExecutor.close();
+    parallelExecutor.close();
+    recoveryExecutor.close();
+
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
-    parallelExecutor.close();
-    recoveryExecutor.close();
     adminTestUtils.close();
   }
 

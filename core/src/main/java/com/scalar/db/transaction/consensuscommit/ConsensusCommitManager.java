@@ -6,13 +6,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
@@ -69,6 +67,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
   private final TransactionTableMetadataManager tableMetadataManager;
   private final CoordinatorStateAccessor coordinator;
   private final ParallelExecutor parallelExecutor;
+  private final AsyncExecutor asyncExecutor;
   private final RecoveryExecutor recoveryExecutor;
   private final CrudHandler crud;
   private final CommitHandler commit;
@@ -87,6 +86,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
+    asyncExecutor = new AsyncExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -127,6 +127,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     ConsensusCommitConfig config = new ConsensusCommitConfig(databaseConfig);
     coordinator = new CoordinatorStateAccessor(storage, config);
     parallelExecutor = new ParallelExecutor(config);
+    asyncExecutor = new AsyncExecutor(config);
     tableMetadataManager =
         new TransactionTableMetadataManager(
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
@@ -167,6 +168,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       DatabaseConfig databaseConfig,
       CoordinatorStateAccessor coordinator,
       ParallelExecutor parallelExecutor,
+      AsyncExecutor asyncExecutor,
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
       CommitHandler commit,
@@ -180,6 +182,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
+    this.asyncExecutor = asyncExecutor;
     this.recoveryExecutor = recoveryExecutor;
     this.crud = crud;
     this.commit = commit;
@@ -208,6 +211,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
           config.isOnePhaseCommitEnabled(),
@@ -218,6 +222,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
           config.isOnePhaseCommitEnabled());
@@ -735,7 +740,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     checkNotNull(partitionKey);
 
     // Read the current physical state of the record.
-    Get get = buildRecordGet(namespace, table, partitionKey, clusteringKey);
+    Get get = ConsensusCommitUtils.createGet(namespace, table, partitionKey, clusteringKey);
     Optional<Result> resultOpt;
     try {
       resultOpt = storage.get(get);
@@ -799,22 +804,6 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     }
   }
 
-  private static Get buildRecordGet(
-      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
-    // Read all columns (no projections) with linearizable consistency so the before-image and the
-    // transaction metadata needed for recovery are available.
-    GetBuilder.BuildableGetWithPartitionKey builder =
-        Get.newBuilder()
-            .namespace(namespace)
-            .table(table)
-            .partitionKey(partitionKey)
-            .consistency(Consistency.LINEARIZABLE);
-    if (clusteringKey != null) {
-      builder.clusteringKey(clusteringKey);
-    }
-    return builder.build();
-  }
-
   @VisibleForTesting
   boolean isGroupCommitEnabled() {
     return groupCommitter != null;
@@ -862,13 +851,18 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   @Override
   public void close() {
-    storage.close();
-    admin.close();
-    parallelExecutor.close();
+    // Close the executors that drive work of their own first, so that what is in flight can finish
+    // while the storage and the parallel executor are still open. The asynchronous executor runs
+    // the commit and rollback phases, the recovery executor recovers records, and the group
+    // committer drains the groups it still holds
+    asyncExecutor.close();
     recoveryExecutor.close();
     if (isGroupCommitEnabled()) {
       assert groupCommitter != null;
       groupCommitter.close();
     }
+    parallelExecutor.close();
+    storage.close();
+    admin.close();
   }
 }
