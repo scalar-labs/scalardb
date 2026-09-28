@@ -5,25 +5,21 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createAfterImageColumnsFromBeforeImage;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteBuilder;
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
-import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -35,16 +31,30 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class RollbackMutationComposer extends AbstractMutationComposer {
 
-  private final DistributedStorage storage;
+  // The latest state of the records the transaction writes, read by the caller. Empty when the
+  // caller drives this composer with the record to roll back, which it passes to `add` directly.
+  private final Map<Snapshot.Key, TransactionResult> latestRecords;
 
-  // Rollback restores before-images and does not write a fresh phase timestamp, so the inherited
-  // `timestamp` field is unused here. We pass 0L to the base constructor only to satisfy it; there
-  // is no commit-phase timestamp to thread in on the rollback path.
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  /**
+   * Creates a composer that uses the latest records the caller has read. The records a transaction
+   * writes are read together elsewhere, which lets them be read in parallel and lets the caller use
+   * them for other purposes. A caller that drives this composer with the record to roll back, which
+   * it passes to {@link #add(Operation, TransactionResult)} itself, passes no records here.
+   *
+   * @param id the ID of the transaction to roll back
+   * @param tableMetadataManager a transaction table metadata manager
+   * @param latestRecords the latest state of the records the transaction writes, by key. A key that
+   *     has no record in storage is absent from this map
+   */
   public RollbackMutationComposer(
-      String id, DistributedStorage storage, TransactionTableMetadataManager tableMetadataManager) {
+      String id,
+      TransactionTableMetadataManager tableMetadataManager,
+      Map<Snapshot.Key, TransactionResult> latestRecords) {
+    // Rollback restores before-images and does not write a fresh phase timestamp, so the inherited
+    // `timestamp` field is unused here. We pass 0L to the base constructor only to satisfy it;
+    // there is no commit-phase timestamp to thread in on the rollback path.
     super(id, 0L, tableMetadataManager);
-    this.storage = storage;
+    this.latestRecords = ImmutableMap.copyOf(latestRecords);
   }
 
   /** Rollback in either prepare phase in commit or lazy recovery phase in read. */
@@ -53,7 +63,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     TransactionResult latest;
     if (result == null || !Objects.equals(result.getId(), id)) {
       // For rollback in prepare phase, we need to check the latest status of the record.
-      latest = getLatestResult(base, result).orElse(null);
+      latest = getLatestRecord(base).orElse(null);
       if (latest == null) {
         // The record was not prepared (yet) by this transaction or has already been rollback
         // deleted.
@@ -77,6 +87,20 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       // no record to rollback, so it should be deleted
       mutations.add(composeDelete(base, latest));
     }
+  }
+
+  /**
+   * Returns the latest state of the record the specified operation targets, from the records the
+   * caller has read.
+   */
+  private Optional<TransactionResult> getLatestRecord(Operation base) {
+    // A caller that passes no latest records drives this composer with the record to roll back, so
+    // this is only reached for the mutations of a transaction
+    assert base instanceof Mutation;
+
+    Snapshot.Key key =
+        base instanceof Put ? new Snapshot.Key((Put) base) : new Snapshot.Key((Delete) base);
+    return Optional.ofNullable(latestRecords.get(key));
   }
 
   private Put composePut(Operation base, TransactionResult result) throws ExecutionException {
@@ -139,41 +163,5 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     clusteringKey.ifPresent(deleteBuilder::clusteringKey);
 
     return deleteBuilder.build();
-  }
-
-  private Optional<TransactionResult> getLatestResult(
-      Operation operation, @Nullable TransactionResult result) throws ExecutionException {
-    Key partitionKey;
-    @Nullable Key clusteringKey;
-    if (operation instanceof Mutation) {
-      // for usual rollback
-      partitionKey = operation.getPartitionKey();
-      clusteringKey = operation.getClusteringKey().orElse(null);
-    } else {
-      assert operation instanceof Selection;
-      if (result != null) {
-        // for rollback in lazy recovery
-        TransactionTableMetadata metadata =
-            tableMetadataManager.getTransactionTableMetadata(operation);
-        partitionKey = ScalarDbUtils.getPartitionKey(result, metadata.getTableMetadata());
-        clusteringKey =
-            ScalarDbUtils.getClusteringKey(result, metadata.getTableMetadata()).orElse(null);
-      } else {
-        throw new AssertionError(
-            "This path should not be reached since the EXTRA_WRITE strategy is deleted");
-      }
-    }
-
-    GetBuilder.BuildableGetWithPartitionKey getBuilder =
-        Get.newBuilder()
-            .namespace(operation.forNamespace().get())
-            .table(operation.forTable().get())
-            .partitionKey(partitionKey)
-            .consistency(Consistency.LINEARIZABLE);
-    if (clusteringKey != null) {
-      getBuilder.clusteringKey(clusteringKey);
-    }
-
-    return storage.get(getBuilder.build()).map(TransactionResult::new);
   }
 }
