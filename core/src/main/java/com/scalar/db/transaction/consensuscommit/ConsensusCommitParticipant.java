@@ -111,6 +111,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     this.commit =
         new ParticipantCommitHandler(
             storage,
+            recoveryExecutor,
             tableMetadataManager,
             parallelExecutor,
             asyncExecutor,
