@@ -105,7 +105,7 @@ jobs:
               JdbcSchemaLoaderIntegrationTest
               JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
 
-          - name: "CC base & TwoPhase & SingleCrud & JDBC transaction"
+          - name: "CC base & SingleCrud & JDBC transaction"
             label: spanner_group4
             tests: >-
               ConsensusCommitIntegrationTestWithJdbcDatabase
@@ -114,10 +114,6 @@ jobs:
               ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
               ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
               ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-              TwoPhaseConsensusCommitIntegrationTestWithJdbcDatabase
-              TwoPhaseConsensusCommitSpecificIntegrationTestWithJdbcDatabase
-              TwoPhaseConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
-              TwoPhaseConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
               SingleCrudOperationTransactionIntegrationTestWithJdbcDatabase
               SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
               JdbcTransactionCrossPartitionScanIntegrationTest
@@ -234,7 +230,7 @@ jobs:
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
         run: |
           # Build the --tests arguments; for group_commit, filter to ConsensusCommit* only
-          # (prefix match — must match the should-run guard above so TwoPhase* classes are excluded)
+          # (prefix match — must match the should-run guard above)
           TESTS_ARGS=""
           for test_class in ${{ matrix.test_group.tests }}; do
             if [ "${{ matrix.group_commit_enabled }}" = "true" ]; then

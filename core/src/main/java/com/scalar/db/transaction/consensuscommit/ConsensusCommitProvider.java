@@ -5,7 +5,6 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.AbstractDistributedTransactionProvider;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
@@ -26,14 +25,6 @@ public class ConsensusCommitProvider extends AbstractDistributedTransactionProvi
   @Override
   public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
     return new ConsensusCommitAdmin(config);
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-      DatabaseConfig config) {
-    return new TwoPhaseConsensusCommitManager(config);
   }
 
   @Override

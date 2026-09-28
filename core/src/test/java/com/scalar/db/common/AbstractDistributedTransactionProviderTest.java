@@ -18,7 +18,6 @@ import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -57,12 +56,6 @@ class AbstractDistributedTransactionProviderTest {
           }
 
           @Override
-          protected TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-              DatabaseConfig config) {
-            return mock(TwoPhaseCommitTransactionManager.class);
-          }
-
-          @Override
           protected TwoPhaseCommitCoordinator createRawTwoPhaseCommitCoordinator(
               DatabaseConfig config) {
             return rawCoordinator;
@@ -82,8 +75,17 @@ class AbstractDistributedTransactionProviderTest {
   }
 
   @Test
+  void
+      createDistributedTransactionManager_WhenTwoPhaseCommitActiveTransactionManagementEnabled_ShouldNotApplyIt() {
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
+
+    assertThat(provider.createDistributedTransactionManager(config))
+        .isNotInstanceOf(ActiveTransactionManagedDistributedTransactionManager.class);
+  }
+
+  @Test
   void createTwoPhaseCommitCoordinator_WhenActiveTransactionManagementDisabled_ShouldReturnRaw() {
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(false);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(false);
 
     TwoPhaseCommitCoordinator coordinator = provider.createTwoPhaseCommitCoordinator(config);
 
@@ -92,7 +94,7 @@ class AbstractDistributedTransactionProviderTest {
 
   @Test
   void createTwoPhaseCommitCoordinator_WhenActiveTransactionManagementEnabled_ShouldWrap() {
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
 
     TwoPhaseCommitCoordinator coordinator = provider.createTwoPhaseCommitCoordinator(config);
 
@@ -102,7 +104,7 @@ class AbstractDistributedTransactionProviderTest {
   @Test
   void createTwoPhaseCommitCoordinator_WhenUnsupported_ShouldThrowUnsupportedOperationException() {
     // Active transaction management is enabled to prove the raw factory throws before wrapping.
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
 
     assertThatThrownBy(() -> unsupportedProvider().createTwoPhaseCommitCoordinator(config))
         .isInstanceOf(UnsupportedOperationException.class);
@@ -111,7 +113,7 @@ class AbstractDistributedTransactionProviderTest {
   @Test
   void createTwoPhaseCommitParticipant_WhenAllDisabled_ShouldReturnRaw() {
     when(config.isAttributePropagationEnabled()).thenReturn(false);
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(false);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(false);
 
     TwoPhaseCommitParticipant participant = provider.createTwoPhaseCommitParticipant(config);
 
@@ -121,7 +123,7 @@ class AbstractDistributedTransactionProviderTest {
   @Test
   void createTwoPhaseCommitParticipant_WhenOnlyAttributePropagationEnabled_ShouldWrapWithIt() {
     when(config.isAttributePropagationEnabled()).thenReturn(true);
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(false);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(false);
 
     TwoPhaseCommitParticipant participant = provider.createTwoPhaseCommitParticipant(config);
 
@@ -132,7 +134,7 @@ class AbstractDistributedTransactionProviderTest {
   void
       createTwoPhaseCommitParticipant_WhenOnlyActiveTransactionManagementEnabled_ShouldWrapWithIt() {
     when(config.isAttributePropagationEnabled()).thenReturn(false);
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
 
     TwoPhaseCommitParticipant participant = provider.createTwoPhaseCommitParticipant(config);
 
@@ -142,7 +144,7 @@ class AbstractDistributedTransactionProviderTest {
   @Test
   void createTwoPhaseCommitParticipant_WhenActiveTransactionManagementEnabled_ShouldBeOutermost() {
     when(config.isAttributePropagationEnabled()).thenReturn(true);
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
 
     TwoPhaseCommitParticipant participant = provider.createTwoPhaseCommitParticipant(config);
 
@@ -155,7 +157,7 @@ class AbstractDistributedTransactionProviderTest {
       createTwoPhaseCommitParticipant_WhenBothEnabled_ShouldPropagateAttributesInsideActiveManagement()
           throws Exception {
     when(config.isAttributePropagationEnabled()).thenReturn(true);
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
 
     TwoPhaseCommitParticipant participant = provider.createTwoPhaseCommitParticipant(config);
 
@@ -183,7 +185,7 @@ class AbstractDistributedTransactionProviderTest {
   void createGlobalTransactionManager_WhenBothEnabled_ShouldWireDecoratedParticipant()
       throws Exception {
     when(config.isAttributePropagationEnabled()).thenReturn(true);
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
     when(config.getActiveTransactionManagementMaxActiveTransactions()).thenReturn(100);
     when(rawCoordinator.begin(any(), anyBoolean(), anyMap())).thenReturn("tx-1");
     // The coordinator tracks enlisted participants keyed by participant ID.
@@ -210,7 +212,7 @@ class AbstractDistributedTransactionProviderTest {
   void createTwoPhaseCommitParticipant_WhenUnsupported_ShouldThrowUnsupportedOperationException() {
     // Both wrappings are enabled to prove the raw factory throws before either wrapping.
     when(config.isAttributePropagationEnabled()).thenReturn(true);
-    when(config.isActiveTransactionManagementEnabled()).thenReturn(true);
+    when(config.isTwoPhaseCommitActiveTransactionManagementEnabled()).thenReturn(true);
 
     assertThatThrownBy(() -> unsupportedProvider().createTwoPhaseCommitParticipant(config))
         .isInstanceOf(UnsupportedOperationException.class);
@@ -234,12 +236,6 @@ class AbstractDistributedTransactionProviderTest {
       @Override
       public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
         return mock(DistributedTransactionAdmin.class);
-      }
-
-      @Override
-      protected TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-          DatabaseConfig config) {
-        return null;
       }
 
       @Override

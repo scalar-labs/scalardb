@@ -22,12 +22,6 @@ import org.junit.jupiter.api.Test;
  * abort(id)}, {@code rollback(id)}); the base tests that exercise them are disabled below (they
  * throw {@link UnsupportedOperationException}). Their underlying behavior is covered by the
  * Coordinator / Participant unit tests.
- *
- * <p>The {@code resume} tests are left enabled. Although the raw facade does not implement {@code
- * resume}, the manager returned by {@link com.scalar.db.service.TransactionFactory} is wrapped by
- * the (default-enabled) active-transaction-management decorator, which serves {@code resume} from
- * its own registry without delegating to the facade, so those tests run against the manager users
- * actually get.
  */
 public abstract class TwoPhaseCommitBackedConsensusCommitIntegrationTestBase
     extends ConsensusCommitIntegrationTestBase {

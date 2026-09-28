@@ -70,15 +70,6 @@ public class SingleCrudOperationTransactionManagerTest {
   }
 
   @Test
-  public void resume_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-
-    // Act Assert
-    assertThatThrownBy(() -> transactionManager.resume("id"))
-        .isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
   public void get_ShouldReturnResult() throws ExecutionException, TransactionException {
     // Arrange
     Get get =

@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
@@ -36,15 +37,11 @@ import org.slf4j.LoggerFactory;
  * commit-state → commit-records, plus the abort/rollback path on failure) and the {@link
  * BeforePreparationHook} integration. {@link #forceAbortState(String)} is exposed on this class as
  * a convenience pass-through to the Coordinator-side handler so the manager-level rollback callers
- * (ConsensusCommit / TwoPhaseConsensusCommit / ConsensusCommitManager) can depend on the
- * orchestrator alone.
+ * (ConsensusCommit / ConsensusCommitManager) can depend on the orchestrator alone.
  *
- * <p>Several public methods are exposed on this class so direct callers (notably {@link
- * TwoPhaseConsensusCommit}) can drive individual commit phases without depending on the specialized
- * handlers directly. {@code prepareRecords}, {@code commitRecords}, {@code rollbackRecords}, {@code
- * commitStateWithoutWriteSet}, and {@code abortStateWithoutWriteSet} are thin pass-throughs. {@code
- * commitState} and {@code abortState} are not: they encode the transaction's write set via {@link
- * WriteSetEncoder} before delegating to the Coordinator-side handler.
+ * <p>{@code commitState} and {@code abortState} are not verbatim delegations: they encode the
+ * transaction's write set via {@link WriteSetEncoder} before handing it to the Coordinator-side
+ * handler.
  */
 @ThreadSafe
 public class CommitHandler {
@@ -256,27 +253,28 @@ public class CommitHandler {
     return hasWritesOrDeletes || !coordinatorWriteOmissionOnReadOnlyEnabled;
   }
 
-  // ---------- Pass-through methods that delegate to the specialized handlers. ----------
-  // Exposed on this class so direct callers (TwoPhaseConsensusCommit / ConsensusCommit /
-  // ConsensusCommitManager / RecoveryHandler / tests) can drive individual commit phases through
-  // the orchestrator's primary dependency.
-  //
-  // TODO: revisit this if/when the Two-phase Commit I/F is removed.
+  // ---------- Record-phase steps, delegated to the participant-side handler. ----------
+  // The orchestrator calls these on itself rather than on participantCommitHandler directly, so a
+  // spied CommitHandler can stub or verify an individual phase. Inlining the self-calls would
+  // silently disable the Consensus Commit integration tests that do so.
 
-  public void prepareRecords(TransactionContext context, long preparedAt)
-      throws PreparationException {
+  @VisibleForTesting
+  void prepareRecords(TransactionContext context, long preparedAt) throws PreparationException {
     participantCommitHandler.prepareRecords(context, preparedAt);
   }
 
-  public void validateRecords(TransactionContext context) throws ValidationException {
+  @VisibleForTesting
+  void validateRecords(TransactionContext context) throws ValidationException {
     participantCommitHandler.validateRecords(context);
   }
 
-  public void commitRecords(TransactionContext context, long committedAt) {
+  @VisibleForTesting
+  void commitRecords(TransactionContext context, long committedAt) {
     participantCommitHandler.commitRecords(context, committedAt);
   }
 
-  public void rollbackRecords(TransactionContext context) {
+  @VisibleForTesting
+  void rollbackRecords(TransactionContext context) {
     participantCommitHandler.rollbackRecords(context);
   }
 
@@ -304,30 +302,10 @@ public class CommitHandler {
         context.transactionId, WriteSetEncoder.encodeSingleGroupWriteSet(context));
   }
 
-  // 2PC-only. Delegates to commitState(id, null) / abortState(id, null), which the group-commit
-  // coordinator handler overrides to route through the group committer. That null never reaches the
-  // group committer here because 2PC forbids group commit
-  // (TwoPhaseConsensusCommitManager#throwIfGroupCommitIsEnabled) and never builds a
-  // CommitHandlerWithGroupCommit.
-  //
-  // TODO: revisit this if/when the Two-phase Commit I/F is removed.
-  public long commitStateWithoutWriteSet(TransactionContext context)
-      throws CommitConflictException, UnknownTransactionStatusException {
-    return coordinatorCommitHandler.commitState(context.transactionId, null);
-  }
-
   public TransactionState abortState(TransactionContext context)
       throws UnknownTransactionStatusException {
     return coordinatorCommitHandler.abortState(
         context.transactionId, WriteSetEncoder.encodeSingleGroupWriteSet(context));
-  }
-
-  // 2PC-only; see the null-write-set note on commitStateWithoutWriteSet above.
-  //
-  // TODO: revisit this if/when the Two-phase Commit I/F is removed.
-  public TransactionState abortStateWithoutWriteSet(String id)
-      throws UnknownTransactionStatusException {
-    return coordinatorCommitHandler.abortState(id, null);
   }
 
   public TransactionState forceAbortState(String id) throws UnknownTransactionStatusException {
