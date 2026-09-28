@@ -34,6 +34,7 @@ import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.collect.ImmutableMap;
@@ -269,6 +270,8 @@ public abstract class CosmosAdminTestBase {
 
     verify(database).createContainer(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -303,6 +306,8 @@ public abstract class CosmosAdminTestBase {
         .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
     CosmosTableMetadata cosmosTableMetadata =
         CosmosTableMetadata.newBuilder()
             .id(getFullTableName(namespace, table))
@@ -371,6 +376,8 @@ public abstract class CosmosAdminTestBase {
 
     verify(database).createContainer(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -394,6 +401,8 @@ public abstract class CosmosAdminTestBase {
         .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
+    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getVersion())
+        .isEqualTo(PartitionKeyDefinitionVersion.V2);
     CosmosTableMetadata cosmosTableMetadata =
         CosmosTableMetadata.newBuilder()
             .id(getFullTableName(namespace, table))
@@ -637,7 +646,7 @@ public abstract class CosmosAdminTestBase {
 
     when(client.getDatabase(namespace)).thenReturn(database);
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -670,7 +679,8 @@ public abstract class CosmosAdminTestBase {
     admin.createIndex(namespace, table, "c3");
 
     // Assert
-    verify(database).createContainerIfNotExists(table, "/concatenatedPartitionKey");
+    verify(database, atLeastOnce())
+        .createContainerIfNotExists(any(CosmosContainerProperties.class));
 
     ArgumentCaptor<IndexingPolicy> indexingPolicyCaptor =
         ArgumentCaptor.forClass(IndexingPolicy.class);
@@ -706,7 +716,7 @@ public abstract class CosmosAdminTestBase {
 
     when(client.getDatabase(namespace)).thenReturn(database);
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -739,7 +749,8 @@ public abstract class CosmosAdminTestBase {
     admin.dropIndex(namespace, table, "c2");
 
     // Assert
-    verify(database).createContainerIfNotExists(table, "/concatenatedPartitionKey");
+    verify(database, atLeastOnce())
+        .createContainerIfNotExists(any(CosmosContainerProperties.class));
 
     ArgumentCaptor<IndexingPolicy> indexingPolicyCaptor =
         ArgumentCaptor.forClass(IndexingPolicy.class);
@@ -803,7 +814,7 @@ public abstract class CosmosAdminTestBase {
 
     // Existing container properties (for updateIndexingPolicy)
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -863,7 +874,7 @@ public abstract class CosmosAdminTestBase {
 
     // Existing container properties (for updateIndexingPolicy)
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -924,7 +935,7 @@ public abstract class CosmosAdminTestBase {
 
     // Existing container properties
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -937,8 +948,12 @@ public abstract class CosmosAdminTestBase {
     ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
         ArgumentCaptor.forClass(CosmosContainerProperties.class);
 
-    verify(database).createContainerIfNotExists(containerPropertiesCaptor.capture());
-    assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
+    verify(database, times(2)).createContainerIfNotExists(containerPropertiesCaptor.capture());
+    for (CosmosContainerProperties captured : containerPropertiesCaptor.getAllValues()) {
+      assertThat(captured.getId()).isEqualTo(table);
+      assertThat(captured.getPartitionKeyDefinition().getVersion())
+          .isEqualTo(PartitionKeyDefinitionVersion.V2);
+    }
 
     // check index related info
     IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
@@ -979,7 +994,7 @@ public abstract class CosmosAdminTestBase {
     when(storedProcedure.read()).thenThrow(cosmosException);
 
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
@@ -1031,7 +1046,7 @@ public abstract class CosmosAdminTestBase {
     admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
 
     // Assert: physical container repair still runs, but the metadata upsert is skipped
-    verify(database).createContainerIfNotExists(any(CosmosContainerProperties.class));
+    verify(database, times(2)).createContainerIfNotExists(any(CosmosContainerProperties.class));
     verify(metadataContainer, never()).upsertItem(any());
   }
 
@@ -1358,7 +1373,7 @@ public abstract class CosmosAdminTestBase {
         .thenReturn(storedProcedure);
     // Existing container properties
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
-    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+    when(database.createContainerIfNotExists(any(CosmosContainerProperties.class)))
         .thenReturn(response);
     CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
     when(response.getProperties()).thenReturn(properties);
