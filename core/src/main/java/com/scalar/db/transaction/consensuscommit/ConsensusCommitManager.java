@@ -208,6 +208,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
@@ -220,6 +221,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     } else {
       return new CommitHandler(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
