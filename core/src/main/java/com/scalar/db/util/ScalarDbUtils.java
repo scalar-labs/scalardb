@@ -398,6 +398,11 @@ public final class ScalarDbUtils {
    *
    * <p>Range and equality operators on TEXT columns compare through the given comparator. {@code
    * LIKE} and {@code NOT_LIKE} always match on exact characters, whatever the collation.
+   *
+   * @param columns the columns of a record keyed by column name
+   * @param conjunctions the conjunctions to evaluate
+   * @param collationComparator the comparator for TEXT columns
+   * @return {@code true} if the columns match any of the conjunctions
    */
   public static boolean columnsMatchAnyOfConjunctions(
       Map<String, Column<?>> columns,
