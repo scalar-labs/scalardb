@@ -31,7 +31,6 @@ import com.scalar.db.api.UpsertBuilder;
 import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.Collation;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.BigIntValue;
@@ -63,7 +62,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
@@ -368,15 +366,8 @@ public final class ScalarDbUtils {
   }
 
   private static final CollationComparator BINARY_COLLATION_COMPARATOR =
-      binaryCollationComparator();
+      CollationComparator.binary();
 
-  private static CollationComparator binaryCollationComparator() {
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    properties.setProperty(DatabaseConfig.COLLATION, Collation.BINARY.name());
-    return CollationComparator.from(new DatabaseConfig(properties));
-  }
   // TODO Temporary code, will be changed in a later PR
   /**
    * Returns whether the given columns match any of the given conjunctions under {@link

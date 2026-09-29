@@ -68,6 +68,28 @@ public class CollationComparatorTest {
   }
 
   @Test
+  public void binary_ShouldReturnComparatorEquivalentToConfiguredBinaryCollation() {
+    // Arrange
+    CollationComparator configured =
+        CollationComparator.from(config(props(DatabaseConfig.COLLATION, "BINARY")));
+    String[] corpus = {"apple", "Apple", "", "á", "𐀀", "￿"};
+
+    // Act
+    CollationComparator comparator = CollationComparator.binary();
+
+    // Assert
+    assertThat(comparator.collation()).isEqualTo(Collation.BINARY);
+    assertThat(comparator.hasCanonicalTextForm()).isFalse();
+    for (String a : corpus) {
+      for (String b : corpus) {
+        assertThat(sign(comparator.textComparator().compare(a, b)))
+            .as("order of (%s, %s)", a, b)
+            .isEqualTo(sign(configured.textComparator().compare(a, b)));
+      }
+    }
+  }
+
+  @Test
   public void textEquals_WhenIcuCaseInsensitive_ShouldFollowCollation() {
     // Arrange
     CollationComparator comparator =
