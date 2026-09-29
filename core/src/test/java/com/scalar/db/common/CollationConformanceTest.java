@@ -20,23 +20,22 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Cross-site ordering conformance.
+ * Comparator-level ordering conformance.
  *
- * <p>The configured collation reaches three in-memory comparison sites, and all three build on the
- * single {@link CollationComparator} so they cannot drift:
+ * <p>Checks that the orderings a {@link CollationComparator} exposes agree with each other:
  *
  * <ul>
- *   <li>object-storage scan sort / range filter — uses {@link
- *       CollationComparator#columnComparator()};
- *   <li>{@code ScalarDbUtils} in-memory conjunction range filtering — uses the same {@code
- *       columnComparator()} through {@link ScalarDbUtils#columnsMatchAnyOfConjunctions};
- *   <li>the Consensus Commit snapshot scan-after-write range check — uses {@link
- *       CollationComparator#keyComparator()}.
+ *   <li>{@link CollationComparator#textComparator()} on text values;
+ *   <li>{@link CollationComparator#columnComparator()} on TEXT columns;
+ *   <li>{@link CollationComparator#keyComparator()} on single-text-column keys;
+ *   <li>the range decisions of {@link ScalarDbUtils#columnsMatchAnyOfConjunctions} given the same
+ *       comparator.
  * </ul>
  *
- * <p>This test proves the three surfaces order a shared text corpus (including nulls, mixed
- * text/non-text keys, and supplementary-plane characters) identically for {@code BINARY} and ICU,
- * and that an unset collation defaults to the {@code BINARY} (UTF-8 byte order) collation.
+ * <p>The test calls these directly and does not exercise the storage or transaction code that uses
+ * them. It covers a shared text corpus (including nulls, mixed text/non-text keys, and
+ * supplementary-plane characters) for {@code BINARY} and ICU, and that an unset collation defaults
+ * to the {@code BINARY} (UTF-8 byte order) collation.
  */
 public class CollationConformanceTest {
 
@@ -66,7 +65,7 @@ public class CollationConformanceTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"BINARY", "ICU_PRIMARY", "ICU_TERTIARY"})
-  void allThreeSites_OrderSharedTextCorpusIdentically(String mode) {
+  void textColumnKeyComparatorsAndRangeFilter_OrderSharedTextCorpusIdentically(String mode) {
     CollationComparator comparator = comparatorFor(mode);
 
     Comparator<String> textCmp = comparator.textComparator();
@@ -77,10 +76,10 @@ public class CollationConformanceTest {
       for (String b : CORPUS) {
         int text = sign(textCmp.compare(a, b));
 
-        // Object-storage site: per-column comparator on TEXT columns.
+        // Per-column comparator on TEXT columns.
         int column = sign(columnCmp.compare(TextColumn.of("col", a), TextColumn.of("col", b)));
 
-        // Snapshot site: key comparator on single-text-column keys.
+        // Key comparator on single-text-column keys.
         int key = sign(keyCmp.compare(Key.ofText("col", a), Key.ofText("col", b)));
 
         assertThat(column)
@@ -90,7 +89,7 @@ public class CollationConformanceTest {
             .as("key vs text ordering for (%s, %s) under %s", a, b, mode)
             .isEqualTo(text);
 
-        // ScalarDbUtils filter site: a `>= b` range decision must agree with the ordering, i.e.
+        // ScalarDbUtils range filter: a `>= b` range decision must agree with the ordering, i.e.
         // `a` matches `col >= b` iff columnComparator(a, b) >= 0.
         boolean matchesGte = filterMatchesGte(comparator, a, b);
         assertThat(matchesGte)
