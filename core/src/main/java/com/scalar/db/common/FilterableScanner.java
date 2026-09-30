@@ -22,12 +22,15 @@ public class FilterableScanner extends AbstractScanner {
   private final Scanner scanner;
   private final List<String> projections;
   private final Set<Conjunction> conjunctions;
+  private final CollationComparator collationComparator;
   @Nullable private Integer left = null;
 
-  public FilterableScanner(Selection selection, Scanner scanner) {
+  public FilterableScanner(
+      Selection selection, Scanner scanner, CollationComparator collationComparator) {
     this.scanner = scanner;
     this.projections = selection.getProjections();
     this.conjunctions = selection.getConjunctions();
+    this.collationComparator = collationComparator;
     if (selection instanceof Scan) {
       Scan scan = (Scan) selection;
       this.left = scan.getLimit() > 0 ? scan.getLimit() : null;
@@ -43,7 +46,8 @@ public class FilterableScanner extends AbstractScanner {
     while (true) {
       Optional<Result> one = scanner.one();
       if (one.isPresent()) {
-        if (ScalarDbUtils.columnsMatchAnyOfConjunctions(one.get().getColumns(), conjunctions)) {
+        if (ScalarDbUtils.columnsMatchAnyOfConjunctions(
+            one.get().getColumns(), conjunctions, collationComparator)) {
           if (left != null) {
             left--;
           }
