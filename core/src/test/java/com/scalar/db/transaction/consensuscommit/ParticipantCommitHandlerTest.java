@@ -19,6 +19,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.StorageInfo;
+import com.scalar.db.common.CollationComparators;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -124,15 +125,16 @@ class ParticipantCommitHandlerTest {
   }
 
   private Snapshot prepareSnapshot() {
-    return new Snapshot(ANY_ID, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(
+        ANY_ID, tableMetadataManager, new ParallelExecutor(config), CollationComparators.BINARY);
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
     Put put1 = preparePut1();
     Put put2 = preparePut2();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
-    snapshot.putIntoWriteSet(new Snapshot.Key(put2), put2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put1, CollationComparators.BINARY), put1);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put2, CollationComparators.BINARY), put2);
     snapshot.putIntoGetSet(prepareGet(), Optional.empty());
     return snapshot;
   }
@@ -413,8 +415,9 @@ class ParticipantCommitHandlerTest {
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .build();
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
-    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.empty());
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, CollationComparators.BINARY), delete);
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(delete, CollationComparators.BINARY), Optional.empty());
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert
