@@ -58,6 +58,7 @@ class ConsensusCommitParticipantTest {
   @Mock private ConsensusCommitConfig config;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private ParallelExecutor parallelExecutor;
+  @Mock private AsyncExecutor asyncExecutor;
   @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CrudHandler crud;
   @Mock private ParticipantCommitHandler commit;
@@ -86,6 +87,7 @@ class ConsensusCommitParticipantTest {
             config,
             tableMetadataManager,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,
@@ -112,6 +114,7 @@ class ConsensusCommitParticipantTest {
                     config,
                     tableMetadataManager,
                     parallelExecutor,
+                    asyncExecutor,
                     recoveryExecutor,
                     crud,
                     commit,

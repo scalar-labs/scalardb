@@ -104,6 +104,11 @@ public interface CrudOperable<E extends TransactionException> {
    * DistributedTransaction#commit()} or {@link GlobalTransaction#commit()} may throw {@link
    * CommitConflictException} in case of a conflict error.
    *
+   * <p>Note that a conflict error caused by an already existing entry is not resolved by retrying
+   * the transaction with the same key, since the entry still exists on the next attempt. To
+   * distinguish an existing entry from a transient conflict, read the entry before inserting it. In
+   * any case, limit the number of retries.
+   *
    * @param insert a {@code Insert} command
    * @throws E if the transaction CRUD operation fails
    */
