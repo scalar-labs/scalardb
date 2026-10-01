@@ -251,13 +251,19 @@ public class UpdateStatementHandlerTest {
                   "AND",
                   ANY_NAME_4 + "!=?",
                   "AND",
+                  ANY_NAME_4 + "!=null",
+                  "AND",
                   ANY_NAME_4 + ">?",
                   "AND",
                   ANY_NAME_4 + ">=?",
                   "AND",
                   ANY_NAME_4 + "<?",
                   "AND",
-                  ANY_NAME_4 + "<=?;"
+                  ANY_NAME_4 + "<=?",
+                  "AND",
+                  ANY_NAME_4 + "=?",
+                  "AND",
+                  ANY_NAME_4 + "!=?;"
                 });
     configureBehavior(expected);
     put =
@@ -269,6 +275,8 @@ public class UpdateStatementHandlerTest {
                     .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanOrEqualToInt(ANY_INT_2))
                     .and(ConditionBuilder.column(ANY_NAME_4).isLessThanInt(ANY_INT_2))
                     .and(ConditionBuilder.column(ANY_NAME_4).isLessThanOrEqualToInt(ANY_INT_2))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isNullInt())
+                    .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
                     .build())
             .build();
 
