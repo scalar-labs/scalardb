@@ -131,7 +131,9 @@ public class DynamoConditionalMutationIntegrationTest
               Namespace.of(config.getNamespacePrefix().orElse(""), getNamespace()).prefixed(),
               TABLE);
       List<Map<String, AttributeValue>> items =
-          client.scan(ScanRequest.builder().tableName(tableName).build()).items();
+          client
+              .scan(ScanRequest.builder().tableName(tableName).consistentRead(true).build())
+              .items();
       assertThat(items).hasSize(1);
 
       Map<String, AttributeValue> key = new HashMap<>();
