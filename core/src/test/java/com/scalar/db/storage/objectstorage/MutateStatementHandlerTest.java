@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -239,6 +240,22 @@ public class MutateStatementHandlerTest {
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put))
         .isInstanceOf(ExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_PutGiven_WhenWrapperGetThrowsConflictOccurredException_ShouldThrowRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Put put = preparePut();
+    ConflictOccurredException exception =
+        new ConflictOccurredException("Test error", new RuntimeException());
+    when(wrapper.get(anyString())).thenThrow(exception);
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(RetriableExecutionException.class)
         .hasCause(exception);
   }
 

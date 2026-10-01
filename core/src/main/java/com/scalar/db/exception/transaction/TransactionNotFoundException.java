@@ -1,7 +1,7 @@
 package com.scalar.db.exception.transaction;
 
 /**
- * An exception thrown when a transaction you are trying to resume is not found or
+ * An exception thrown when a transaction specified by its transaction ID is not found or
  * beginning/starting/joining a transaction fails due to transient faults. You can retry the
  * transaction from the beginning.
  */

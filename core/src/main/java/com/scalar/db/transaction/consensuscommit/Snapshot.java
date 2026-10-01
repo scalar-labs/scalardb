@@ -74,9 +74,17 @@ public class Snapshot {
   private final List<ScannerInfo> scannerSet;
 
   // The write set stores information about writes in this transaction.
+  //
+  // Invariant: a key must never leave writeSet ∪ deleteSet, not even transiently on an exception
+  // path. Scanners test membership of this union at the moment they produce a record to decide
+  // whether a write happened before or after the read, so a key that briefly belongs to neither set
+  // would be misread as never written. putIntoWriteSet and putIntoDeleteSet are currently the only
+  // mutators of these two maps and both preserve it; any new mutator must preserve it too. See
+  // putIntoWriteSet for the details.
   private final Map<Key, Put> writeSet;
 
-  // The delete set stores information about deletes in this transaction.
+  // The delete set stores information about deletes in this transaction. See the invariant
+  // documented on writeSet above.
   private final Map<Key, Delete> deleteSet;
 
   public Snapshot(
@@ -132,13 +140,25 @@ public class Snapshot {
     scanSet.put(scan, results);
   }
 
+  /**
+   * Adds the specified {@link Put} to the write set.
+   *
+   * <p>Invariant: a key must never leave {@code writeSet ∪ deleteSet}. Together with {@link
+   * #putIntoDeleteSet}, this method is the only mutator of those two sets, and both preserve the
+   * invariant even on their exception paths. Scanners rely on it: they decide whether a write
+   * happened before or after a record was read by testing membership of that union at the moment
+   * the record is produced, so a key that temporarily belongs to neither set would be misread as
+   * never written.
+   *
+   * @param key the key of the record to write
+   * @param put the put operation to add
+   * @throws CrudException if retrieving the table metadata fails
+   */
   public void putIntoWriteSet(Key key, Put put) throws CrudException {
     if (deleteSet.containsKey(key)) {
       // If a Put is performed on a previously deleted record within the same transaction, move it
       // from the delete set to the write set. Since Delete clears all column values, any columns
       // not explicitly specified in the Put must be set to null to ensure correct behavior.
-
-      deleteSet.remove(key);
 
       PutBuilder.BuildableFromExisting putBuilder = Put.newBuilder(put);
 
@@ -162,7 +182,12 @@ public class Snapshot {
       // preparation.
       putBuilder = putBuilder.enableImplicitPreRead();
 
-      writeSet.put(key, putBuilder.build());
+      // Build the merged Put before touching either set. Everything above can throw, and moving the
+      // key out of the delete set first would leave it in neither set, breaking the invariant
+      // documented on this method.
+      Put mergedPut = putBuilder.build();
+      deleteSet.remove(key);
+      writeSet.put(key, mergedPut);
     } else if (writeSet.containsKey(key)) {
       if (isInsertModeEnabled(put)) {
         throw new IllegalArgumentException(
@@ -190,6 +215,16 @@ public class Snapshot {
     }
   }
 
+  /**
+   * Adds the specified {@link Delete} to the delete set.
+   *
+   * <p>Preserves the {@code writeSet ∪ deleteSet} invariant documented on {@link #putIntoWriteSet}:
+   * the insert-mode rejection below throws before the key is removed from the write set, and
+   * nothing runs between that removal and the insertion into the delete set.
+   *
+   * @param key the key of the record to delete
+   * @param delete the delete operation to add
+   */
   public void putIntoDeleteSet(Key key, Delete delete) {
     Put put = writeSet.get(key);
     if (put != null) {
@@ -347,8 +382,9 @@ public class Snapshot {
   }
 
   /**
-   * Verifies that the scan does not overlap with the previous write or delete operations of the
-   * same transaction to prevent incorrect results.
+   * Verifies that the scan does not overlap with the write or delete operations of the same
+   * transaction, ignoring the keys that the scan is known to have produced before they were
+   * written, to prevent incorrect results.
    *
    * <p>For instance, consider the following records in the database, where X is the partition key
    * and Y is the clustering key: R1(X=1, Y=1), R2(X=1, Y=2), R3(X=1, Y=3), and R4(X=1, Y=4).
@@ -372,46 +408,82 @@ public class Snapshot {
    * impossible to determine whether the scanned results include any records that match the keys
    * from previous writes or deletes.
    *
+   * <p>The exempt keys carry the ordering information that plain overlap detection lacks. Both
+   * examples above are writes that happened <i>before</i> the scan, which is why the scan result is
+   * wrong. A write issued <i>after</i> the scan already returned the record is harmless: the caller
+   * has seen the value it would have seen under "run the whole scan, then apply the write". A
+   * scanner therefore records a key as exempt only when the key was absent from both the write set
+   * and the delete set at the moment the record was produced, and those keys are skipped here. A
+   * key written before the scan produced it is never recorded as exempt and is still rejected.
+   *
+   * <p>The exemption is per-scan. A different scan or scanner covering the same key does not
+   * inherit it, because that other read would return a stale record. Pass an empty set for a scan
+   * that carries no ordering information, such as the batch scan path, which reproduces the
+   * behaviour of rejecting every overlap.
+   *
    * @param scan the scan to be verified
    * @param results the results of the scan
+   * @param exemptKeys the keys that this scan produced before the transaction wrote them
    */
-  public void verifyNoOverlap(Scan scan, Map<Snapshot.Key, TransactionResult> results) {
-    if (isWriteSetOrDeleteSetOverlappedWith(scan, results)) {
+  public void verifyNoOverlap(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
+    Key overlappedKey = getKeyOverlappedWithWriteSetOrDeleteSet(scan, results, exemptKeys);
+    if (overlappedKey != null) {
       throw new IllegalArgumentException(
           CoreError.CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED
-              .buildMessage());
+              .buildMessage(overlappedKey));
     }
   }
 
-  private boolean isWriteSetOrDeleteSetOverlappedWith(
-      Scan scan, Map<Snapshot.Key, TransactionResult> results) {
-    if (isDeleteSetOverlappedWith(results)) {
-      return true;
+  /**
+   * Returns a key that this transaction has written or deleted and that the given scan covers, or
+   * null if there is none. When several keys overlap, the returned one is whichever is found first
+   * while iterating the write set or the delete set, so it is not defined which one it is. It is
+   * intended as a pointer for the user, not as an exhaustive report.
+   */
+  @Nullable
+  private Key getKeyOverlappedWithWriteSetOrDeleteSet(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
+    Key key = getKeyOverlappedWithDeleteSet(results, exemptKeys);
+    if (key != null) {
+      return key;
     }
 
     if (scan instanceof ScanWithIndex) {
-      return isWriteSetOverlappedWith((ScanWithIndex) scan, results);
+      return getKeyOverlappedWithWriteSet((ScanWithIndex) scan, results, exemptKeys);
     } else if (scan instanceof ScanAll) {
-      return isWriteSetOverlappedWith((ScanAll) scan, results);
+      return getKeyOverlappedWithWriteSet((ScanAll) scan, results, exemptKeys);
     } else {
-      return isWriteSetOverlappedWith(scan, results);
+      return getKeyOverlappedWithWriteSet(scan, results, exemptKeys);
     }
   }
 
-  private boolean isDeleteSetOverlappedWith(Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithDeleteSet(
+      Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Delete> entry : deleteSet.entrySet()) {
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
     }
-    return false;
+    return null;
   }
 
-  private boolean isWriteSetOverlappedWith(
-      ScanWithIndex scanWithIndex, Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithWriteSet(
+      ScanWithIndex scanWithIndex,
+      Map<Snapshot.Key, TransactionResult> results,
+      Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
+
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
 
       Put put = entry.getValue();
@@ -429,14 +501,15 @@ public class Snapshot {
       String indexColumnName = indexColumn.getName();
       if (columns.containsKey(indexColumnName)
           && columns.get(indexColumnName).equals(indexColumn)) {
-        return true;
+        return entry.getKey();
       }
     }
-    return false;
+    return null;
   }
 
-  private boolean isWriteSetOverlappedWith(
-      ScanAll scanAll, Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithWriteSet(
+      ScanAll scanAll, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
       // We need to consider three cases here to prevent scan-after-write.
       //   1) A put operation overlaps the scan range regardless of the update (put) results.
@@ -451,9 +524,15 @@ public class Snapshot {
       // case, we cannot find the overlap using the scan results since the database is not updated
       // yet. Thus, we need to evaluate if the scan condition potentially matches put operations.
 
+      // An exempt key is excluded from all three cases. Case 3 in particular would otherwise fire
+      // on a record the scan already returned whose updated columns still match the conjunctions.
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
+
       // Check for cases 1 and 2
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
 
       // Check for case 3
@@ -464,17 +543,22 @@ public class Snapshot {
       }
 
       if (areConjunctionsOverlapped(put, scanAll)) {
-        return true;
+        return entry.getKey();
       }
     }
-    return false;
+    return null;
   }
 
-  private boolean isWriteSetOverlappedWith(
-      Scan scan, Map<Snapshot.Key, TransactionResult> results) {
+  @Nullable
+  private Key getKeyOverlappedWithWriteSet(
+      Scan scan, Map<Snapshot.Key, TransactionResult> results, Set<Snapshot.Key> exemptKeys) {
     for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      if (exemptKeys.contains(entry.getKey())) {
+        continue;
+      }
+
       if (results.containsKey(entry.getKey())) {
-        return true;
+        return entry.getKey();
       }
 
       Put put = entry.getValue();
@@ -490,7 +574,7 @@ public class Snapshot {
 
       // If partition keys match and a primary key does not have a clustering key
       if (!put.getClusteringKey().isPresent()) {
-        return true;
+        return entry.getKey();
       }
 
       com.scalar.db.io.Key writtenKey = put.getClusteringKey().get();
@@ -499,7 +583,7 @@ public class Snapshot {
 
       // If no range is specified, which means it scans the whole partition space
       if (!isStartGiven && !isEndGiven) {
-        return true;
+        return entry.getKey();
       }
 
       if (isStartGiven && isEndGiven) {
@@ -509,7 +593,7 @@ public class Snapshot {
         if ((scan.getStartInclusive() && writtenKey.equals(startKey))
             || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
             || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
-          return true;
+          return entry.getKey();
         }
       }
 
@@ -518,7 +602,7 @@ public class Snapshot {
         // If startKey <= writtenKey
         if ((scan.getStartInclusive() && startKey.equals(writtenKey))
             || writtenKey.compareTo(startKey) > 0) {
-          return true;
+          return entry.getKey();
         }
       }
 
@@ -527,11 +611,11 @@ public class Snapshot {
         // If writtenKey <= endKey
         if ((scan.getEndInclusive() && writtenKey.equals(endKey))
             || writtenKey.compareTo(endKey) < 0) {
-          return true;
+          return entry.getKey();
         }
       }
     }
-    return false;
+    return null;
   }
 
   private boolean areConjunctionsOverlapped(Put put, Scan scan) {

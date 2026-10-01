@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
-import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import java.util.List;
@@ -102,9 +101,13 @@ public interface CrudOperable<E extends TransactionException> {
    * Insert} command. If the entry already exists, a conflict error occurs. Note that the location
    * where the conflict error is thrown depends on the implementation of the transaction manager.
    * This method may throw {@link CrudConflictException}. Alternatively, {@link
-   * DistributedTransaction#commit()} or {@link TwoPhaseCommitTransaction#prepare()} may throw
-   * {@link CommitConflictException} or {@link PreparationConflictException} respectively in case of
-   * a conflict error.
+   * DistributedTransaction#commit()} or {@link GlobalTransaction#commit()} may throw {@link
+   * CommitConflictException} in case of a conflict error.
+   *
+   * <p>Note that a conflict error caused by an already existing entry is not resolved by retrying
+   * the transaction with the same key, since the entry still exists on the next attempt. To
+   * distinguish an existing entry from a transient conflict, read the entry before inserting it. In
+   * any case, limit the number of retries.
    *
    * @param insert a {@code Insert} command
    * @throws E if the transaction CRUD operation fails

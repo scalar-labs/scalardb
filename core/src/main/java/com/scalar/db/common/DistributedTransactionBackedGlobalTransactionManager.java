@@ -45,12 +45,13 @@ import javax.annotation.concurrent.ThreadSafe;
  * transaction — the {@link BranchTransaction#end(BranchTransaction.Status)} bookkeeping is per
  * handle — so begin each branch once and drive it through that one handle.
  *
- * <p>The shared transaction lives in the manager instance this backing wraps, so a global
- * transaction and all of its branches must be driven through that same instance — in practice,
- * within one process. This backing is for in-process orchestration; the separated, multi-process
- * arrangement is what {@link TwoPhaseCommitBackedGlobalTransactionManager} is for. (The current
- * implementation resolves the shared transaction via {@link
- * DistributedTransactionManager#join(String)}.)
+ * <p>{@code beginBranch} resolves the shared transaction through {@link
+ * ResumableDistributedTransactionManager#resume(String)}, so where the branches of a global
+ * transaction can be begun is where the manager can resume the transaction. For example, with an
+ * {@link ActiveTransactionManagedDistributedTransactionManager}, which resumes the transactions it
+ * began itself, a global transaction and all of its branches must be driven within one process. The
+ * separated, multi-participant arrangement is what {@link
+ * TwoPhaseCommitBackedGlobalTransactionManager} is for.
  *
  * <p>The per-branch {@code attributes} passed to {@code beginBranch} are propagated client-side
  * into each CRUD operation issued on the branch (via {@link
@@ -61,11 +62,11 @@ import javax.annotation.concurrent.ThreadSafe;
 public class DistributedTransactionBackedGlobalTransactionManager
     implements GlobalTransactionManager {
 
-  private final DistributedTransactionManager manager;
+  private final ResumableDistributedTransactionManager manager;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public DistributedTransactionBackedGlobalTransactionManager(
-      DistributedTransactionManager manager) {
+      ResumableDistributedTransactionManager manager) {
     this.manager = manager;
   }
 
@@ -83,11 +84,11 @@ public class DistributedTransactionBackedGlobalTransactionManager
   @Override
   public BranchTransaction beginBranch(String transactionId, Map<String, String> attributes)
       throws TransactionException {
-    // Look up the shared underlying transaction by the global transaction ID (via the manager's
-    // join) and front it with a branch handle; per-branch attributes are applied client-side by
+    // Look up the shared underlying transaction by the global transaction ID and front it with a
+    // branch handle; per-branch attributes are applied client-side by
     // AttributePropagatingBranchTransaction.
     BranchTransaction branch =
-        new DistributedTransactionBackedBranchTransaction(manager.join(transactionId));
+        new DistributedTransactionBackedBranchTransaction(manager.resume(transactionId));
     return attributes.isEmpty()
         ? branch
         : new AttributePropagatingBranchTransaction(branch, attributes);

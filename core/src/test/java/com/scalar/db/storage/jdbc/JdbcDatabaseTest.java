@@ -35,6 +35,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -276,6 +277,29 @@ public class JdbcDatabaseTest {
   }
 
   @Test
+  public void put_WithConflictError_ShouldThrowRetriableExecutionException() throws Exception {
+    // Arrange
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
+    when(sqlException.getSQLState()).thenReturn("40001");
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Put put =
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
+              jdbcDatabase.put(put);
+            })
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(sqlException);
+    verify(connection).close();
+  }
+
+  @Test
   public void
       whenPutOperationExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
@@ -338,6 +362,28 @@ public class JdbcDatabaseTest {
               jdbcDatabase.delete(delete);
             })
         .isInstanceOf(NoMutationException.class);
+    verify(connection).close();
+  }
+
+  @Test
+  public void delete_WithConflictError_ShouldThrowRetriableExecutionException() throws Exception {
+    // Arrange
+    when(jdbcCrudService.delete(any(), any())).thenThrow(sqlException);
+    when(sqlException.getSQLState()).thenReturn("40001");
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Delete delete =
+                  Delete.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .build();
+              jdbcDatabase.delete(delete);
+            })
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(sqlException);
     verify(connection).close();
   }
 
@@ -489,6 +535,30 @@ public class JdbcDatabaseTest {
     verify(connection).setAutoCommit(false);
     verify(jdbcCrudService).mutate(any(), any());
     verify(connection).rollback();
+    verify(connection).close();
+  }
+
+  @Test
+  public void mutate_WithSingleMutationAndConflictError_ShouldThrowRetriableExecutionException()
+      throws Exception {
+    // Arrange
+    when(jdbcCrudService.put(any(), any())).thenThrow(sqlException);
+    when(sqlException.getSQLState()).thenReturn("40001");
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Put put =
+                  Put.newBuilder()
+                      .namespace(NAMESPACE)
+                      .table(TABLE)
+                      .partitionKey(Key.ofText("p1", "val1"))
+                      .textValue("v1", "val2")
+                      .build();
+              jdbcDatabase.mutate(Collections.singletonList(put));
+            })
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(sqlException);
     verify(connection).close();
   }
 

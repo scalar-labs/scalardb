@@ -58,6 +58,7 @@ class ConsensusCommitParticipantTest {
   @Mock private ConsensusCommitConfig config;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private ParallelExecutor parallelExecutor;
+  @Mock private AsyncExecutor asyncExecutor;
   @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CrudHandler crud;
   @Mock private ParticipantCommitHandler commit;
@@ -86,6 +87,7 @@ class ConsensusCommitParticipantTest {
             config,
             tableMetadataManager,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,
@@ -112,6 +114,7 @@ class ConsensusCommitParticipantTest {
                     config,
                     tableMetadataManager,
                     parallelExecutor,
+                    asyncExecutor,
                     recoveryExecutor,
                     crud,
                     commit,
@@ -861,6 +864,22 @@ class ConsensusCommitParticipantTest {
   }
 
   @Test
+  void rollbackRecords_WithOpenScannerWhoseCloseWouldThrow_ShouldDiscardScannerAndReleaseContext()
+      throws Exception {
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    ConsensusCommitScanner raw = mock(ConsensusCommitScanner.class);
+    openScanner(raw);
+    // The user-facing close() would reject the scan for overlapping a write of this transaction
+    doThrow(IllegalArgumentException.class).when(raw).close();
+
+    participant.rollbackRecords(ANY_TX_ID);
+
+    verify(raw).discard();
+    verify(raw, never()).close();
+    assertThat(getContext(ANY_TX_ID)).isNull();
+  }
+
+  @Test
   void rollbackRecords_UnknownTransactionId_ShouldBeNoOp() {
     // Unlike the other record-level steps, rollbackRecords is lenient: an absent context (never
     // joined, already released when later steps were skipped, or a prior rollback) leaves nothing
@@ -917,6 +936,23 @@ class ConsensusCommitParticipantTest {
     assertThat(getContext(ANY_TX_ID)).isNull();
     assertThatThrownBy(() -> participant.validateRecords(ANY_TX_ID))
         .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  void
+      releaseTransactionContext_WithOpenScannerWhoseCloseWouldThrow_ShouldDiscardScannerAndReleaseContext()
+          throws Exception {
+    participant.join(ANY_TX_ID, false, Collections.emptyMap());
+    ConsensusCommitScanner raw = mock(ConsensusCommitScanner.class);
+    openScanner(raw);
+    // The user-facing close() would reject the scan for overlapping a write of this transaction
+    doThrow(IllegalArgumentException.class).when(raw).close();
+
+    participant.releaseTransactionContext(ANY_TX_ID);
+
+    verify(raw).discard();
+    verify(raw, never()).close();
+    assertThat(getContext(ANY_TX_ID)).isNull();
   }
 
   @Test

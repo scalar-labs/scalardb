@@ -83,40 +83,26 @@ class CoordinatorCommitHandler {
               id);
         }
         // Otherwise the coordinator state is present and COMMITTED, which means this transaction
-        // has already committed. Only Two-phase Commit I/F reaches this branch: there the same
-        // transaction's commit can be driven more than once -- re-invoked for recovery, or
-        // committed by multiple participants -- so an earlier or concurrent commit of this
-        // transaction may have already written its COMMITTED state, and this commit then loses the
-        // putIfNotExists race and observes it here. With One-phase Commit I/F this is unreachable:
-        // this commit is the only writer of the COMMITTED state and it just lost the race, so the
-        // conflicting row was an ABORTED from a lazy recovery, handled above. The transaction is
-        // committed, so return the persisted row's committedAt and let the caller commit the
-        // records with it (keeping the row and the records on a single timestamp).
-        //
-        // TODO: revisit this if/when the Two-phase Commit I/F is removed -- it would then be
-        // unreachable (a COMMITTED state could never be observed after a conflict here).
+        // has already committed. No other actor writes this transaction's COMMITTED state, so the
+        // row is this commit's own: an earlier attempt of the putIfNotExists was applied although
+        // it was reported as failed (e.g., a write timeout or a lost response), and a retry of it
+        // then lost the race to that row. The transaction is committed, so return the persisted
+        // row's committedAt and let the caller commit the records with it (keeping the row and the
+        // records on a single timestamp).
 
         return persisted.getCreatedAt();
       } else {
         // The coordinator state is absent: a row existed when our putIfNotExists lost the race, but
-        // it is gone now. In both interfaces this means the conflicting row was an ABORTED written
-        // by a lazy recovery (which also rolled the records back) and later removed by the
-        // Coordinator state cleanup process, so the transaction is definitively aborted. Report a
-        // conflict (the orchestrator rolls the records back) -- the same outcome as the
-        // present-ABORTED case above.
+        // it is gone now. This means the conflicting row was an ABORTED written by a lazy recovery
+        // (which also rolled the records back) and later removed by the Coordinator state cleanup
+        // process, so the transaction is definitively aborted. Report a conflict (the orchestrator
+        // rolls the records back) -- the same outcome as the present-ABORTED case above.
         //
-        // A COMMITTED row can be ruled out here in both interfaces:
-        //   - One-phase Commit I/F: this commit is the only writer of this transaction's COMMITTED
-        //     state, and it just lost the race, so the conflicting row could only have been an
-        //     ABORTED from a lazy recovery -- a COMMITTED for this transaction never existed.
-        //   - Two-phase Commit I/F: other participants or re-driven commits of the same transaction
-        //     can also write COMMITTED, so the conflict could in principle have been against a
-        //     COMMITTED row. But the Two-phase Commit I/F does not assume finishTransaction,
-        //     and a COMMITTED coordinator row is only ever removed by finishTransaction (the
-        //     periodic cleanup removes only ABORTED rows). So a COMMITTED row never disappears
-        //     here: had the conflict been against one, it would still be present and handled by
-        //     the present-COMMITTED branch above. An absent row therefore means the conflict was
-        //     an ABORTED.
+        // A COMMITTED row can be ruled out here. The only COMMITTED row this conflict can have
+        // been against is this commit's own, and a COMMITTED coordinator row is only ever removed
+        // by finishTransaction (the periodic cleanup removes only ABORTED rows), which runs after
+        // the transaction has terminated. Had the conflict been against it, it would still be
+        // present and handled by the present-COMMITTED branch above.
         //
         // Group commit reaches an absent state by a second, more common route, and the outcome is
         // still correct. There the conflicting putIfNotExists is keyed on the parent ID (the group
@@ -127,8 +113,6 @@ class CoordinatorCommitHandler {
         // this child was never committed (a committed child would either be listed in the parent
         // row or have its own full-ID COMMITTED row, and getState would return it). Rolling back
         // and reporting a retryable conflict is the correct outcome for such an uncommitted child.
-        //
-        // TODO: revisit this if/when the Two-phase Commit I/F is removed.
 
         throw new CommitConflictException(
             CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
@@ -157,21 +141,12 @@ class CoordinatorCommitHandler {
       coordinator.putState(state);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
-      // Resolves the final transaction state after our ABORTED putIfNotExists lost the race, for
-      // the self-abort path and all Two-phase Commit I/F aborts. Follows the persisted state when
-      // present; an absent row is determinable as ABORTED here:
-      //   - One-phase Commit I/F self-abort (abortState from a commit-path failure, before
-      //     commitState runs): the transaction provably never committed, so the conflicting row
-      //     could only have been a lazy-recovery ABORTED, later removed by the cleanup process.
-      //   - Two-phase Commit I/F (rollback and abort-by-id): other participants can write
-      //     COMMITTED, but the Two-phase Commit I/F does not assume finishTransaction, and a
-      //     COMMITTED coordinator row is only ever removed by finishTransaction (the periodic
-      //     cleanup removes only ABORTED rows). So a COMMITTED never disappears: had the conflict
-      //     been against one, it would still be present and returned above. An absent row therefore
-      //     means the conflict was an ABORTED.
-      //
-      // TODO: revisit this if/when the Two-phase Commit I/F is removed
-
+      // Resolves the final transaction state after our ABORTED putIfNotExists lost the race, on the
+      // self-abort path: a commit orchestrator (CommitHandler or ConsensusCommitCoordinator)
+      // aborting its own transaction after a prepare or validate failure, before commitState.
+      // Follows the persisted state when present; an absent row is determinable as ABORTED here,
+      // because the transaction provably never committed, so the conflicting row could only have
+      // been a lazy-recovery ABORTED, later removed by the cleanup process.
       return readCoordinatorStateAfterAbortConflict(id, e).orElse(TransactionState.ABORTED);
     } catch (CoordinatorException e) {
       throw new UnknownTransactionStatusException(
@@ -191,18 +166,14 @@ class CoordinatorCommitHandler {
       coordinator.forceAbort(id);
       return TransactionState.ABORTED;
     } catch (CoordinatorConflictException e) {
-      // Resolves the final transaction state after our ABORTED putIfNotExists lost the race, for
-      // the One-phase Commit I/F abort-by-id path (DistributedTransactionManager.rollback(String) /
-      // abort(String)). Follows the persisted state when present. Unlike the self-abort and
-      // Two-phase Commit I/F aborts, an absent row here is genuinely undeterminable: abort-by-id
-      // can target a transaction that actually committed, and in One-phase Commit I/F
+      // Resolves the final transaction state after our ABORTED putIfNotExists lost the race, on the
+      // abort-by-id path (DistributedTransactionManager.rollback(String) / abort(String)). Follows
+      // the persisted state when present. Unlike the self-abort above, an absent row here is
+      // genuinely undeterminable: abort-by-id can target a transaction that actually committed, and
       // finishTransaction can remove that COMMITTED row, so an absent row may be a cleaned-up
       // COMMITTED rather than a cleaned-up ABORTED. Report an honest
       // UnknownTransactionStatusException preserving the original conflict, rather than fabricating
       // a terminal state.
-      //
-      // TODO: revisit this if/when the Two-phase Commit I/F is removed
-
       Optional<TransactionState> persisted = readCoordinatorStateAfterAbortConflict(id, e);
       if (persisted.isPresent()) {
         return persisted.get();

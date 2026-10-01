@@ -108,6 +108,9 @@ public class MutateStatementHandler extends StatementHandler {
               () ->
                   new ObjectStoragePartitionSnapshot(
                       objectKey, new ObjectStoragePartition(null), null));
+    } catch (ConflictOccurredException e) {
+      throw new RetriableExecutionException(
+          CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } catch (ObjectStorageWrapperException e) {
       throw new ExecutionException(
           CoreError.OBJECT_STORAGE_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);

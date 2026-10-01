@@ -5,9 +5,7 @@ import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
-import javax.annotation.Nullable;
 
 public abstract class AbstractDistributedTransactionProvider
     implements DistributedTransactionProvider {
@@ -27,62 +25,17 @@ public abstract class AbstractDistributedTransactionProvider
           new AttributePropagatingDistributedTransactionManager(transactionManager);
     }
 
-    if (config.isActiveTransactionManagementEnabled()) {
-      // Wrap the transaction manager for active transaction management. This must be the
-      // outermost wrapping so that transactions returned by resume / join (which come from the
-      // active transaction registry) carry the behavior of every inner decorator.
-      transactionManager =
-          new ActiveTransactionManagedDistributedTransactionManager(
-              transactionManager,
-              config.getActiveTransactionManagementExpirationTimeMillis(),
-              config.getActiveTransactionManagementMaxActiveTransactions());
-    }
-
     return transactionManager;
   }
 
   protected abstract DistributedTransactionManager createRawDistributedTransactionManager(
       DatabaseConfig config);
 
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Nullable
-  @Override
-  public final TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
-      DatabaseConfig config) {
-    TwoPhaseCommitTransactionManager transactionManager =
-        createRawTwoPhaseCommitTransactionManager(config);
-
-    if (transactionManager == null) {
-      return null;
-    }
-
-    // Wrap the transaction manager for state management
-    transactionManager = new StateManagedTwoPhaseCommitTransactionManager(transactionManager);
-
-    if (config.isActiveTransactionManagementEnabled()) {
-      // Wrap the transaction manager for active transaction management
-      transactionManager =
-          new ActiveTransactionManagedTwoPhaseCommitTransactionManager(
-              transactionManager,
-              config.getActiveTransactionManagementExpirationTimeMillis(),
-              config.getActiveTransactionManagementMaxActiveTransactions());
-    }
-
-    return transactionManager;
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Nullable
-  protected abstract TwoPhaseCommitTransactionManager createRawTwoPhaseCommitTransactionManager(
-      DatabaseConfig config);
-
   @Override
   public final TwoPhaseCommitCoordinator createTwoPhaseCommitCoordinator(DatabaseConfig config) {
     TwoPhaseCommitCoordinator coordinator = createRawTwoPhaseCommitCoordinator(config);
 
-    if (config.isActiveTransactionManagementEnabled()) {
+    if (config.isTwoPhaseCommitActiveTransactionManagementEnabled()) {
       // Wrap the coordinator for active transaction management. This must be the outermost wrapping
       // so that the idle-expiry reap traverses every inner decorator via releaseTransactionContext.
       coordinator =
@@ -107,7 +60,7 @@ public abstract class AbstractDistributedTransactionProvider
       participant = new AttributePropagatingTwoPhaseCommitParticipant(participant);
     }
 
-    if (config.isActiveTransactionManagementEnabled()) {
+    if (config.isTwoPhaseCommitActiveTransactionManagementEnabled()) {
       // Wrap the participant for active transaction management. This must be the outermost wrapping
       // so that the idle-expiry reap traverses every inner decorator via releaseTransactionContext.
       participant =

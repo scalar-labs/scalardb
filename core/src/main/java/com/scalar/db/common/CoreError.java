@@ -452,14 +452,8 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
       Category.USER_ERROR,
       "0106",
-      "Scanning data already-written or already-deleted by the same transaction is not allowed",
-      "",
-      ""),
-  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
-      Category.USER_ERROR,
-      "0107",
-      "The transaction is not validated. When using the SERIALIZABLE isolation level,"
-          + " you need to call validate() before calling commit()",
+      "Scanning data already-written or already-deleted by the same transaction is not allowed."
+          + " Record: %s",
       "",
       ""),
   DYNAMO_BATCH_SIZE_EXCEEDED(
@@ -516,18 +510,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0139",
       "Beginning a transaction is not allowed in single CRUD operation transactions",
-      "",
-      ""),
-  SINGLE_CRUD_OPERATION_TRANSACTION_RESUMING_TRANSACTION_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0140",
-      "Resuming a transaction is not allowed in single CRUD operation transactions",
-      "",
-      ""),
-  CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0141",
-      "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
       "",
       ""),
   GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
@@ -631,12 +613,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0205",
       "Some scanners were not closed. All scanners must be closed before committing the transaction",
-      "",
-      ""),
-  TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
-      Category.USER_ERROR,
-      "0206",
-      "Some scanners were not closed. All scanners must be closed before preparing the transaction",
       "",
       ""),
   MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
@@ -1157,6 +1133,12 @@ public enum CoreError implements ScalarDbError {
       "The HikariCP exceptionOverrideClassName setting is not supported. ScalarDB determines whether a failed commit left the transaction in an unknown state by checking whether the connection survived, which relies on HikariCP discarding a connection that reports a connection exception. An override that keeps such a connection alive would make an unknown outcome be reported as a definite failure, which the caller is told is safe to retry. Configured class: %s",
       "",
       ""),
+  CONSENSUS_COMMIT_CONDITION_NOT_PROPERLY_SPECIFIED(
+      Category.USER_ERROR,
+      "0304",
+      "The condition is not properly specified. Table: %s; Expressions: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category
@@ -1206,10 +1188,10 @@ public enum CoreError implements ScalarDbError {
       "The %s condition of the %s operation is not satisfied. Targeting column(s): %s",
       "",
       ""),
-  CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
+  CONSENSUS_COMMIT_CONDITIONAL_MUTATION_NOT_APPLIED(
       Category.CONCURRENCY_ERROR,
       "0013",
-      "The record being prepared already exists. Details: %s",
+      "A conflict occurred. Either a record being inserted already exists or is being written by another transaction, or a record being updated or deleted has been modified by another transaction. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS(
@@ -1313,6 +1295,12 @@ public enum CoreError implements ScalarDbError {
       "0031",
       "A transaction associated with the specified transaction ID is not found. "
           + "The transaction might have expired",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS(
+      Category.CONCURRENCY_ERROR,
+      "0032",
+      "A conflict occurred when recovering records. Details: %s",
       "",
       ""),
 
@@ -1437,13 +1425,6 @@ public enum CoreError implements ScalarDbError {
       "Scanning records from the underlying storage failed. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
-      Category.INTERNAL_ERROR,
-      "0041",
-      "Rollback failed because the transaction has already been committed",
-      "",
-      ""),
-  CONSENSUS_COMMIT_ROLLBACK_FAILED(Category.INTERNAL_ERROR, "0042", "Rollback failed", "", ""),
   JDBC_TRANSACTION_INSERT_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0043", "The Insert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPSERT_OPERATION_FAILED(
