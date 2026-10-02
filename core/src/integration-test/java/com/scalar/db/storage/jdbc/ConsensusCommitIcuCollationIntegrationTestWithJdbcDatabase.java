@@ -1,12 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitCollationIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIcuCollationIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 @EnabledIf("com.scalar.db.storage.jdbc.JdbcCollationTestUtils#isCollationTestSupported")
-public class ConsensusCommitCollationIntegrationTestWithJdbcDatabase
-    extends ConsensusCommitCollationIntegrationTestBase {
+public class ConsensusCommitIcuCollationIntegrationTestWithJdbcDatabase
+    extends ConsensusCommitIcuCollationIntegrationTestBase {
 
   private JdbcAdminTestUtils jdbcAdminTestUtils;
 
