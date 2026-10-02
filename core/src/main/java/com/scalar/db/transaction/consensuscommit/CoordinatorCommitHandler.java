@@ -23,7 +23,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>When {@code commitState} loses a putState race and the persisted state turns out to be ABORTED
  * (or absent), this handler reports a {@link CommitConflictException} and leaves the rollback of
- * the transaction's prepared records to the caller.
+ * the transaction's prepared records to the caller. If the putState was sent more than once, the
+ * row it lost to may be this transaction's own earlier attempt, so such a state is reported as an
+ * {@link UnknownTransactionStatusException} instead, and the records must not be rolled back.
  */
 @ThreadSafe
 class CoordinatorCommitHandler {
@@ -66,16 +68,38 @@ class CoordinatorCommitHandler {
 
   /**
    * Resolves a putState conflict. Returns the {@code committedAt} of the already-persisted
-   * COMMITTED state when this transaction turns out to be already committed; otherwise reports the
-   * conflict (the caller rolls the records back) by throwing {@link CommitConflictException}.
+   * COMMITTED state when this transaction turns out to be already committed. Otherwise, reports the
+   * conflict (the caller rolls the records back) by throwing {@link CommitConflictException}, or,
+   * when the putState was sent more than once, reports an unknown status (the caller must not roll
+   * the records back) by throwing {@link UnknownTransactionStatusException}.
    */
   long handleCommitConflict(String id, Exception cause)
       throws CommitConflictException, UnknownTransactionStatusException {
+    // An earlier attempt of a putState that was sent more than once may have been applied although
+    // it was reported as failed, so the row the putState lost to may be this transaction's own.
+    boolean mayHaveConflictedWithOwnWrite =
+        cause instanceof CoordinatorConflictException
+            && ((CoordinatorConflictException) cause).getNumAttempts() > 1;
     try {
       Optional<CoordinatorStateAccessor.State> s = coordinator.getState(id);
       if (s.isPresent()) {
         CoordinatorStateAccessor.State persisted = s.get();
         if (persisted.getState() == TransactionState.ABORTED) {
+          if (mayHaveConflictedWithOwnWrite) {
+            // This ABORTED row may not reflect this transaction's outcome. An earlier attempt may
+            // have written this transaction's COMMITTED row, finishTransaction may then have rolled
+            // the records forward and removed that row, and an ABORTED row may have been written
+            // for the same transaction after that -- by a lazy recovery that had observed a record
+            // still PREPARED, or by an abort by ID. Rolling the records back would then destroy
+            // committed records, so report the status as unknown and leave the records to lazy
+            // recovery: if the ABORTED is genuine, they are still PREPARED and are rolled back
+            // according to this row; otherwise, they are already committed and nobody touches them.
+            throw new UnknownTransactionStatusException(
+                CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY
+                    .buildMessage(cause.getMessage()),
+                cause,
+                id);
+          }
           throw new CommitConflictException(
               CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
                   cause.getMessage()),
@@ -83,32 +107,48 @@ class CoordinatorCommitHandler {
               id);
         }
         // Otherwise the coordinator state is present and COMMITTED, which means this transaction
-        // has already committed. Only Two-phase Commit I/F reaches this branch: there the same
-        // transaction's commit can be driven more than once -- re-invoked for recovery, or
+        // has already committed. In both interfaces, the row can be this commit's own: an earlier
+        // attempt of the putIfNotExists was applied although it was reported as failed (e.g., a
+        // write timeout or a lost response), and a retry of it then lost the race to that row.
+        // With One-phase Commit I/F, this is the only way to reach this branch, because no other
+        // actor writes this transaction's COMMITTED state. With Two-phase Commit I/F, the same
+        // transaction's commit can also be driven more than once -- re-invoked for recovery, or
         // committed by multiple participants -- so an earlier or concurrent commit of this
         // transaction may have already written its COMMITTED state, and this commit then loses the
-        // putIfNotExists race and observes it here. With One-phase Commit I/F this is unreachable:
-        // this commit is the only writer of the COMMITTED state and it just lost the race, so the
-        // conflicting row was an ABORTED from a lazy recovery, handled above. The transaction is
-        // committed, so return the persisted row's committedAt and let the caller commit the
-        // records with it (keeping the row and the records on a single timestamp).
-        //
-        // TODO: revisit this if/when the Two-phase Commit I/F is removed -- it would then be
-        // unreachable (a COMMITTED state could never be observed after a conflict here).
+        // putIfNotExists race and observes it here. The transaction is committed, so return the
+        // persisted row's committedAt and let the caller commit the records with it (keeping the
+        // row and the records on a single timestamp).
 
         return persisted.getCreatedAt();
       } else {
         // The coordinator state is absent: a row existed when our putIfNotExists lost the race, but
-        // it is gone now. In both interfaces this means the conflicting row was an ABORTED written
-        // by a lazy recovery (which also rolled the records back) and later removed by the
-        // Coordinator state cleanup process, so the transaction is definitively aborted. Report a
-        // conflict (the orchestrator rolls the records back) -- the same outcome as the
-        // present-ABORTED case above.
+        // it is gone now.
+        //
+        // If the putState was sent more than once, the row may have been this transaction's own
+        // COMMITTED row: an earlier attempt may have been applied although it was reported as
+        // failed, and finishTransaction, which rolls the records forward before it removes the row,
+        // may have removed it since. The transaction may therefore have committed, so report the
+        // status as unknown instead of a conflict, and leave the records as they are -- committed,
+        // or still PREPARED for lazy recovery to resolve.
+        if (mayHaveConflictedWithOwnWrite) {
+          throw new UnknownTransactionStatusException(
+              CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY
+                  .buildMessage(cause.getMessage()),
+              cause,
+              id);
+        }
+
+        // Otherwise, this commit's putIfNotExists was never applied, and in both interfaces this
+        // means the conflicting row was an ABORTED written by a lazy recovery (which also rolled
+        // the records back) and later removed by the Coordinator state cleanup process, so the
+        // transaction is definitively aborted. Report a conflict (the orchestrator rolls the
+        // records back) -- the same outcome as the present-ABORTED case above.
         //
         // A COMMITTED row can be ruled out here in both interfaces:
         //   - One-phase Commit I/F: this commit is the only writer of this transaction's COMMITTED
-        //     state, and it just lost the race, so the conflicting row could only have been an
-        //     ABORTED from a lazy recovery -- a COMMITTED for this transaction never existed.
+        //     state, and its putIfNotExists was never applied, so the conflicting row could only
+        //     have been an ABORTED from a lazy recovery -- a COMMITTED for this transaction never
+        //     existed.
         //   - Two-phase Commit I/F: other participants or re-driven commits of the same transaction
         //     can also write COMMITTED, so the conflict could in principle have been against a
         //     COMMITTED row. But the Two-phase Commit I/F does not assume finishTransaction,
@@ -127,6 +167,9 @@ class CoordinatorCommitHandler {
         // this child was never committed (a committed child would either be listed in the parent
         // row or have its own full-ID COMMITTED row, and getState would return it). Rolling back
         // and reporting a retryable conflict is the correct outcome for such an uncommitted child.
+        // (When the emitter's putState was sent more than once, the parent row may have been
+        // written after this child's own COMMITTED parent row was removed, so that case is reported
+        // as unknown above.)
         //
         // TODO: revisit this if/when the Two-phase Commit I/F is removed.
 
