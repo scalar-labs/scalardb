@@ -128,8 +128,6 @@ jdbc:
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
-    # utf8mb4_nopad_bin (NO PAD, available since MariaDB 10.2) is the exact byte-order match
-    # for scalar.db.collation=BINARY; legacy utf8mb4_bin PADs trailing spaces.
     setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_nopad_bin
     versions:
       - 10.11
@@ -240,8 +238,6 @@ jdbc:
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
-    # Pin the byte-order C locale explicitly (with UTF8 encoding) so the default collation
-    # exactly matches scalar.db.collation=BINARY instead of relying on the alpine image default.
     setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--locale=C --encoding=UTF8" -p 5432:5432 postgres:%VERSION%-alpine
     versions:
       - 13
