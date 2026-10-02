@@ -84,67 +84,69 @@ class ImportProcessorTest {
   @Test
   void process_withSingleCrudMode_shouldProcessAllDataChunks() {
     // Arrange
-    BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
-    when(params.getDao()).thenReturn(dao);
-    when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
+    try (BufferedReader reader = new BufferedReader(new StringReader("test data"))) {
+        when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
+        when(params.getDao()).thenReturn(dao);
+        when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
 
-    TestImportProcessor processor = new TestImportProcessor(params);
-    processor.addListener(eventListener);
+        TestImportProcessor processor = new TestImportProcessor(params);
+        processor.addListener(eventListener);
 
-    // Act
-    processor.process(2, 1, reader);
+        // Act
+        processor.process(2, 1, reader);
 
-    // Assert
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
-    // Verify that data chunks were processed
-    verify(eventListener, times(1)).onDataChunkCompleted(any(ImportDataChunkStatus.class));
+        // Assert
+        verify(eventListener, times(1)).onAllDataChunksCompleted();
+        // Verify that data chunks were processed
+        verify(eventListener, times(1)).onDataChunkCompleted(any(ImportDataChunkStatus.class));
+    }
   }
 
   @Test
-  void process_withConsensusCommitMode_shouldProcessAllDataChunks() throws TransactionException {
+  void process_withConsensusCommitMode_shouldProcessAllDataChunks() throws TransactionException, IOException {
     // Arrange
-    BufferedReader reader = new BufferedReader(new StringReader("test data"));
-    when(params.getTransactionMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
-    when(params.getDao()).thenReturn(dao);
-    when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
-    when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
-    when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
-    when(distributedTransactionManager.start()).thenReturn(distributedTransaction);
+    try (BufferedReader reader = new BufferedReader(new StringReader("test data"))) {
+      when(params.getTransactionMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
+      when(params.getDao()).thenReturn(dao);
+      when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
+      when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
+      when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
+      when(distributedTransactionManager.start()).thenReturn(distributedTransaction);
 
-    TestImportProcessor processor = new TestImportProcessor(params);
-    processor.addListener(eventListener);
+      TestImportProcessor processor = new TestImportProcessor(params);
+      processor.addListener(eventListener);
 
-    // Act
-    processor.process(2, 1, reader);
+      // Act
+      processor.process(2, 1, reader);
 
-    // Assert
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
-    // Verify that data chunks were processed
-    verify(eventListener, times(1)).onDataChunkCompleted(any(ImportDataChunkStatus.class));
+      // Assert
+      verify(eventListener, times(1)).onAllDataChunksCompleted();
+      // Verify that data chunks were processed
+      verify(eventListener, times(1)).onDataChunkCompleted(any(ImportDataChunkStatus.class));
+    }
   }
 
   @Test
-  void process_withEmptyData_shouldNotProcessAnyDataChunks() {
+  void process_withEmptyData_shouldNotProcessAnyDataChunks() throws IOException {
     // Arrange
     TestImportProcessor processor = new TestImportProcessor(params);
     processor.addListener(eventListener);
 
-    BufferedReader reader = new BufferedReader(new StringReader(""));
+    try (BufferedReader reader = new BufferedReader(new StringReader(""))) {
+      // Act
+      processor.process(2, 1, reader);
 
-    // Act
-    processor.process(2, 1, reader);
-
-    // Assert
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
-    // Verify that no data chunks were processed
-    verify(eventListener, times(0)).onDataChunkCompleted(any());
+      // Assert
+      verify(eventListener, times(1)).onAllDataChunksCompleted();
+      // Verify that no data chunks were processed
+      verify(eventListener, times(0)).onDataChunkCompleted(any());
+    }
   }
 
   // Thread executor behavior tests
 
   @Test
-  void process_withMultipleDataChunks_shouldUseThreadPool() {
+  void process_withMultipleDataChunks_shouldUseThreadPool() throws IOException {
     // Arrange
     final int maxThreads = 4;
     when(importOptions.getMaxThreads()).thenReturn(maxThreads);
@@ -157,7 +159,6 @@ class ImportProcessorTest {
     for (int i = 0; i < 20; i++) {
       testData.append("test data line ").append(i).append("\n");
     }
-    BufferedReader reader = new BufferedReader(new StringReader(testData.toString()));
 
     // Create a latch to ensure tasks take some time to complete
     CountDownLatch latch = new CountDownLatch(1);
@@ -167,38 +168,40 @@ class ImportProcessorTest {
     processor.addListener(eventListener);
     processor.setProcessingLatch(latch);
 
-    // Act
-    processor.process(2, 1, reader);
+    try (BufferedReader reader = new BufferedReader(new StringReader(testData.toString()))) {
+      // Act
+      processor.process(2, 1, reader);
 
-    // Assert
-    // Verify that multiple threads were used but not more than maxThreads
-    assertTrue(processor.getMaxConcurrentThreads().get() > 1, "Should use multiple threads");
-    assertTrue(
-        processor.getMaxConcurrentThreads().get() <= maxThreads, "Should not exceed max threads");
+      // Assert
+      // Verify that multiple threads were used but not more than maxThreads
+      assertTrue(processor.getMaxConcurrentThreads().get() > 1, "Should use multiple threads");
+      assertTrue(
+          processor.getMaxConcurrentThreads().get() <= maxThreads, "Should not exceed max threads");
 
-    // Verify that all data chunks were processed
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
+      // Verify that all data chunks were processed
+      verify(eventListener, times(1)).onAllDataChunksCompleted();
+    }
   }
 
   @Test
-  void process_withInterruption_shouldShutdownGracefully() {
+  void process_withInterruption_shouldShutdownGracefully() throws IOException {
     // Arrange
-    BufferedReader reader = new BufferedReader(new StringReader("test data\nmore data\n"));
-
     // Create a processor that will be interrupted
     TestImportProcessor processor = new TestImportProcessor(params);
     processor.addListener(eventListener);
     processor.setSimulateInterruption(true);
 
-    // Act & Assert
-    assertThrows(RuntimeException.class, () -> processor.process(2, 1, reader));
+    try (BufferedReader reader = new BufferedReader(new StringReader("test data\nmore data\n"))) {
+      // Act & Assert
+      assertThrows(RuntimeException.class, () -> processor.process(2, 1, reader));
 
-    // Verify that onAllDataChunksCompleted was still called (in finally block)
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
+      // Verify that onAllDataChunksCompleted was still called (in finally block)
+      verify(eventListener, times(1)).onAllDataChunksCompleted();
+    }
   }
 
   @Test
-  void process_withLargeNumberOfTasks_shouldWaitForAllTasksToComplete() {
+  void process_withLargeNumberOfTasks_shouldWaitForAllTasksToComplete() throws IOException {
     // Arrange
     final int maxThreads = 2;
     when(importOptions.getMaxThreads()).thenReturn(maxThreads);
@@ -211,52 +214,52 @@ class ImportProcessorTest {
     for (int i = 0; i < 50; i++) {
       testData.append("test data line ").append(i).append("\n");
     }
-    BufferedReader reader = new BufferedReader(new StringReader(testData.toString()));
 
     // Create a TestImportProcessor with a small processing delay
     TestImportProcessor processor = new TestImportProcessor(params);
     processor.addListener(eventListener);
     processor.setProcessingDelayMs(10); // 10ms delay per chunk
 
-    // Act
-    processor.process(2, 1, reader);
+    try (BufferedReader reader = new BufferedReader(new StringReader(testData.toString()))) {
+      // Act
+      processor.process(2, 1, reader);
 
-    // Assert
-    // Verify that all tasks were completed
-    assertTrue(processor.getProcessedChunksCount().get() > 0, "All tasks should be completed");
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
+      // Assert
+      // Verify that all tasks were completed
+      assertTrue(processor.getProcessedChunksCount().get() > 0, "All tasks should be completed");
+      verify(eventListener, times(1)).onAllDataChunksCompleted();
+    }
   }
 
   @Test
-  void process_withShutdown_shouldShutdownExecutorsGracefully() {
+  void process_withShutdown_shouldShutdownExecutorsGracefully() throws IOException {
     // Arrange
     when(params.getTransactionMode()).thenReturn(TransactionMode.SINGLE_CRUD);
     when(params.getDao()).thenReturn(dao);
     when(params.getTableColumnDataTypes()).thenReturn(tableColumnDataTypes);
     when(params.getTableMetadataByTableName()).thenReturn(tableMetadataByTableName);
 
-    BufferedReader reader =
-        new BufferedReader(new StringReader("test data\nmore data\neven more data\n"));
-
     // Create a TestImportProcessor with a longer processing delay
     TestImportProcessor processor = new TestImportProcessor(params);
     processor.addListener(eventListener);
     processor.setProcessingDelayMs(50); // 50ms delay per chunk
 
-    // Act
-    processor.process(1, 1, reader);
+    try (BufferedReader reader =
+        new BufferedReader(new StringReader("test data\nmore data\neven more data\n"))) {
+      // Act
+      processor.process(1, 1, reader);
 
-    // Assert
-    // Verify that all data chunks were processed and executors were shut down gracefully
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
-    assertEquals(3, processor.getProcessedChunksCount().get(), "All chunks should be processed");
+      // Assert
+      // Verify that all data chunks were processed and executors were shut down gracefully
+      verify(eventListener, times(1)).onAllDataChunksCompleted();
+      assertEquals(3, processor.getProcessedChunksCount().get(), "All chunks should be processed");
+    }
   }
 
   @Test
   void process_withUnexpectedExceptionInTransaction_shouldHandleGracefully()
-      throws TransactionException {
+      throws TransactionException, IOException {
     // Arrange
-    BufferedReader reader = new BufferedReader(new StringReader("test data"));
     when(params.getTransactionMode()).thenReturn(TransactionMode.CONSENSUS_COMMIT);
     when(params.getDistributedTransactionManager()).thenReturn(distributedTransactionManager);
     when(distributedTransactionManager.start()).thenThrow(new RuntimeException("Unexpected error"));
@@ -264,22 +267,24 @@ class ImportProcessorTest {
     TestImportProcessor processor = new TestImportProcessor(params);
     processor.addListener(eventListener);
 
-    // Act
-    processor.process(2, 1, reader);
+    try (BufferedReader reader = new BufferedReader(new StringReader("test data"))) {
+      // Act
+      processor.process(2, 1, reader);
 
-    // Assert
-    verify(eventListener, times(1)).onAllDataChunksCompleted();
+      // Assert
+      verify(eventListener, times(1)).onAllDataChunksCompleted();
 
-    // Capture and verify the transaction batch result
-    ArgumentCaptor<ImportTransactionBatchResult> resultCaptor =
-        ArgumentCaptor.forClass(ImportTransactionBatchResult.class);
-    verify(eventListener, times(1)).onTransactionBatchCompleted(resultCaptor.capture());
+      // Capture and verify the transaction batch result
+      ArgumentCaptor<ImportTransactionBatchResult> resultCaptor =
+          ArgumentCaptor.forClass(ImportTransactionBatchResult.class);
+      verify(eventListener, times(1)).onTransactionBatchCompleted(resultCaptor.capture());
 
-    ImportTransactionBatchResult result = resultCaptor.getValue();
-    assertFalse(result.isSuccess());
-    assertEquals(0, result.getTransactionBatchId());
-    assertEquals(1, result.getDataChunkId());
-    assertTrue(result.getErrors().get(0).contains("Unexpected error"));
+      ImportTransactionBatchResult result = resultCaptor.getValue();
+      assertFalse(result.isSuccess());
+      assertEquals(0, result.getTransactionBatchId());
+      assertEquals(1, result.getDataChunkId());
+      assertTrue(result.getErrors().get(0).contains("Unexpected error"));
+    }
   }
 
   /**
