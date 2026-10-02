@@ -36,9 +36,9 @@ import org.slf4j.LoggerFactory;
  * {@code "apple"} vs {@code "Apple"}) appear only in non-key value positions.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DistributedStorageCollationIntegrationTestBase {
+public abstract class DistributedStorageIcuCollationIntegrationTestBase {
   private static final Logger logger =
-      LoggerFactory.getLogger(DistributedStorageCollationIntegrationTestBase.class);
+      LoggerFactory.getLogger(DistributedStorageIcuCollationIntegrationTestBase.class);
 
   private static final String TEST_NAME = "storage_collation";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;

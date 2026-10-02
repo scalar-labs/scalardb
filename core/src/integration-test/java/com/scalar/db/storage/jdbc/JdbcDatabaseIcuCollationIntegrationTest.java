@@ -1,12 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.api.DistributedStorageCollationIntegrationTestBase;
+import com.scalar.db.api.DistributedStorageIcuCollationIntegrationTestBase;
 import java.util.Properties;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 @EnabledIf("com.scalar.db.storage.jdbc.JdbcCollationTestUtils#isCollationTestSupported")
-public class JdbcDatabaseCollationIntegrationTest
-    extends DistributedStorageCollationIntegrationTestBase {
+public class JdbcDatabaseIcuCollationIntegrationTest
+    extends DistributedStorageIcuCollationIntegrationTestBase {
 
   private JdbcAdminTestUtils jdbcAdminTestUtils;
 

@@ -43,9 +43,9 @@ import org.slf4j.LoggerFactory;
  * are used because the suite also runs on SQL Server with a {@code _CI_AI} collation.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class ConsensusCommitCollationIntegrationTestBase {
+public abstract class ConsensusCommitIcuCollationIntegrationTestBase {
   private static final Logger logger =
-      LoggerFactory.getLogger(ConsensusCommitCollationIntegrationTestBase.class);
+      LoggerFactory.getLogger(ConsensusCommitIcuCollationIntegrationTestBase.class);
 
   private static final String TEST_NAME = "cc_collation";
   private static final String NAMESPACE = "int_test_" + TEST_NAME;
