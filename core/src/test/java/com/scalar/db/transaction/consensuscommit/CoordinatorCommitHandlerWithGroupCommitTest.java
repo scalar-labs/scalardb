@@ -175,8 +175,9 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
       commitState_WhenGroupCommitExceptionWithCoordinatorConflictCause_ShouldCancelSlotAndHandleConflict()
           throws Exception {
     // A plain GroupCommitException (not GroupCommitConflictException) whose cause is a
-    // CoordinatorConflictException is routed to handleCommitConflict. With the coordinator state
-    // absent on re-read, that resolves to a definitive conflict (CommitConflictException).
+    // CoordinatorConflictException is routed to handleCommitConflict. The conflict does not record
+    // that the putState was sent more than once, so with the coordinator state absent on re-read,
+    // that resolves to a definitive conflict (CommitConflictException).
     // Arrange
     CoordinatorConflictException cause = new CoordinatorConflictException("coordinator conflict");
     GroupCommitException groupCommitException =
@@ -218,6 +219,92 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
     verify(groupCommitter).remove(fullId);
     // The state is unknown, so the coordinator state is never re-read to resolve a conflict.
     verify(coordinator, never()).getState(anyString());
+  }
+
+  @Test
+  void
+      commitState_WhenGroupCommitExceptionWithConflictAfterMoreThanOneAttemptAndNoStatePersisted_ShouldCancelSlotAndThrowUnknown()
+          throws Exception {
+    // The emitter's putState was sent more than once, so the parent row it conflicted with may have
+    // been this group's own COMMITTED row, removed by finishTransaction since.
+    // Arrange
+    CoordinatorConflictException cause = conflictAfterAttempts(2);
+    doThrow(new GroupCommitException("group commit failed", cause))
+        .when(groupCommitter)
+        .ready(eq(fullId), any(CoordinatorGroupCommitValue.class));
+    when(coordinator.getState(anyString())).thenReturn(Optional.empty());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commitState(fullId, null))
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasCause(cause);
+    verify(groupCommitter).remove(fullId);
+  }
+
+  @Test
+  void
+      commitState_WhenGroupCommitExceptionWithConflictAfterMoreThanOneAttemptAndAbortedStatePersisted_ShouldCancelSlotAndThrowUnknown()
+          throws Exception {
+    // Arrange
+    CoordinatorConflictException cause = conflictAfterAttempts(2);
+    doThrow(new GroupCommitException("group commit failed", cause))
+        .when(groupCommitter)
+        .ready(eq(fullId), any(CoordinatorGroupCommitValue.class));
+    when(coordinator.getState(anyString()))
+        .thenReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(
+                    fullId, TransactionState.ABORTED, System.currentTimeMillis())));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commitState(fullId, null))
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasCause(cause);
+    verify(groupCommitter).remove(fullId);
+  }
+
+  @Test
+  void
+      commitState_WhenGroupCommitExceptionWithConflictAfterMoreThanOneAttemptAndCommittedStatePersisted_ShouldReturnPersistedCommittedAt()
+          throws Exception {
+    // Arrange
+    doThrow(new GroupCommitException("group commit failed", conflictAfterAttempts(2)))
+        .when(groupCommitter)
+        .ready(eq(fullId), any(CoordinatorGroupCommitValue.class));
+    when(coordinator.getState(anyString()))
+        .thenReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(fullId, TransactionState.COMMITTED, 999L)));
+
+    // Act
+    long committedAt = handler.commitState(fullId, null);
+
+    // Assert
+    assertThat(committedAt).isEqualTo(999L);
+  }
+
+  @Test
+  void
+      commitState_WhenEmitterPutStateConflictsAfterMoreThanOneAttemptAndNoStatePersisted_ShouldThrowUnknown()
+          throws Exception {
+    // Unlike the tests above, ready() is not stubbed: the group is emitted through the real group
+    // committer, so the emitter's conflict travels through the group committer's own exception
+    // wrapping before it reaches the handler. The attempt count must survive that trip; otherwise
+    // this resolves to a conflict and the caller rolls back records that may have been committed.
+    // Arrange
+    CoordinatorConflictException cause = conflictAfterAttempts(2);
+    doThrow(cause).when(coordinator).putState(any(CoordinatorStateAccessor.State.class));
+    when(coordinator.getState(anyString())).thenReturn(Optional.empty());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commitState(fullId, null))
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasCause(cause);
+  }
+
+  private static CoordinatorConflictException conflictAfterAttempts(int numAttempts) {
+    return new CoordinatorConflictException(
+        "conflict", numAttempts, new RuntimeException("no mutation"));
   }
 
   // ---------- cancelGroupCommit (slot release; driven by the orchestrator) ----------
