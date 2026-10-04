@@ -34,9 +34,11 @@ public class VirtualTableInfoManager {
    * Returns virtual table information corresponding to the specified operation.
    *
    * @param operation an operation
-   * @return the virtual table information or null if the table is not a virtual table
+   * @return the virtual table information or null if the table is not a virtual table or does not
+   *     exist
    * @throws ExecutionException if the operation fails
-   * @throws IllegalArgumentException if the table does not exist
+   * @throws IllegalArgumentException if the operation does not have a target namespace or table
+   *     name
    */
   @Nullable
   public VirtualTableInfo getVirtualTableInfo(Operation operation) throws ExecutionException {
@@ -52,9 +54,9 @@ public class VirtualTableInfoManager {
    *
    * @param namespace a namespace to retrieve
    * @param table a table to retrieve
-   * @return the virtual table information or null if the table is not a virtual table
+   * @return the virtual table information or null if the table is not a virtual table or does not
+   *     exist
    * @throws ExecutionException if the operation fails
-   * @throws IllegalArgumentException if the table does not exist
    */
   @Nullable
   public VirtualTableInfo getVirtualTableInfo(String namespace, String table)

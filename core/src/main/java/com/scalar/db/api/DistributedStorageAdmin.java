@@ -246,9 +246,8 @@ public interface DistributedStorageAdmin extends Admin, AutoCloseable {
    * @param namespace the namespace
    * @param table the table
    * @return the virtual table information or {@code Optional.empty()} if the table is not a virtual
-   *     table
+   *     table or does not exist
    * @throws ExecutionException if the operation fails
-   * @throws IllegalArgumentException if the table does not exist
    */
   Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table)
       throws ExecutionException;
