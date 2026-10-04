@@ -1325,6 +1325,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         return null;
       }
       return createTableMetadata(metadata);
+    } catch (ResourceNotFoundException e) {
+      // The metadata table does not exist. It is created with the first table and deleted with the
+      // last one, so no table has metadata in this state
+      return null;
     } catch (Exception e) {
       throw new ExecutionException(
           "Failed to read the table metadata for the " + fullName + " table", e);
