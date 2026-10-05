@@ -267,6 +267,22 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
+  public void tableExists_ShouldReadTableMetadataWithoutListingTables() throws ExecutionException {
+    // Arrange
+    GetItemResponse response = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
+    when(response.item()).thenReturn(Collections.emptyMap());
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(client).getItem(any(GetItemRequest.class));
+    verify(client, never()).listTables(any(ListTablesRequest.class));
+  }
+
+  @Test
   public void dropNamespace_WithOtherNamespacesExisting_ShouldDropNamespace()
       throws ExecutionException {
     // Arrange

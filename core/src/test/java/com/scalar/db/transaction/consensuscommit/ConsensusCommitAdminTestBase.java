@@ -903,6 +903,65 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void tableExists_ForTransactionTable_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder().addColumn("col1", DataType.INT).addPartitionKey("col1").build();
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isTrue();
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForNonTransactionTable_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(tableMetadata);
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForNonExistingTable_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(null);
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForCoordinatorTable_ShouldReturnFalse() throws ExecutionException {
+    // Act
+    boolean actual = admin.tableExists(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never())
+        .getTableMetadata(coordinatorNamespaceName, CoordinatorStateAccessor.TABLE);
+  }
+
+  @Test
   public void repairTable_ForNonVirtualTable_ShouldNotCheckTableExistenceOrReadTableMetadata()
       throws ExecutionException {
     // Arrange

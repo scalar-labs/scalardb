@@ -18,9 +18,7 @@ import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -188,11 +186,8 @@ public class CommonDistributedStorageAdminTest {
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
 
-    // Mock getNamespaceTableNames for tableExists() to work
-    // All tables (namespace, leftSourceNamespace, rightSourceNamespace) are in "ns"
-    // Return source tables that exist, but not the target table
-    when(admin.getNamespaceTableNames("ns"))
-        .thenReturn(new HashSet<>(Arrays.asList(leftSourceTable, rightSourceTable)));
+    // The target table does not exist
+    when(admin.getTableMetadata(namespace, table)).thenReturn(null);
 
     TableMetadata leftTableMetadata =
         TableMetadata.newBuilder()
@@ -375,10 +370,8 @@ public class CommonDistributedStorageAdminTest {
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
 
-    // Mock getNamespaceTableNames for tableExists() to work
-    // All tables are in "ns" namespace
-    when(admin.getNamespaceTableNames("ns"))
-        .thenReturn(new HashSet<>(Arrays.asList(leftSourceTable, rightSourceTable)));
+    // The target table does not exist
+    when(admin.getTableMetadata(namespace, table)).thenReturn(null);
 
     TableMetadata leftTableMetadata =
         TableMetadata.newBuilder()
@@ -433,10 +426,8 @@ public class CommonDistributedStorageAdminTest {
     when(admin.getStorageInfo(leftSourceNamespace)).thenReturn(storageInfo);
     when(admin.namespaceExists(namespace)).thenReturn(true);
 
-    // Mock getNamespaceTableNames for tableExists() to work
-    // All tables are in "ns" namespace
-    when(admin.getNamespaceTableNames("ns"))
-        .thenReturn(new HashSet<>(Arrays.asList(leftSourceTable, rightSourceTable)));
+    // The target table does not exist
+    when(admin.getTableMetadata(namespace, table)).thenReturn(null);
 
     TableMetadata leftTableMetadata =
         TableMetadata.newBuilder()
@@ -530,6 +521,22 @@ public class CommonDistributedStorageAdminTest {
     assertThatThrownBy(() -> commonDistributedStorageAdmin.getVirtualTableInfo(namespace, table))
         .isInstanceOf(ExecutionException.class)
         .hasCause(exception);
+  }
+
+  @Test
+  public void tableExists_AdminThrowsExecutionException_ShouldThrowExecutionException()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+
+    when(admin.getTableMetadata(namespace, table)).thenThrow(new ExecutionException("error"));
+
+    // Act Assert
+    assertThatThrownBy(() -> commonDistributedStorageAdmin.tableExists(namespace, table))
+        .isInstanceOf(ExecutionException.class)
+        .hasMessageContaining("Checking the table existence failed");
+    verify(admin, never()).getNamespaceTableNames(namespace);
   }
 
   @Test
