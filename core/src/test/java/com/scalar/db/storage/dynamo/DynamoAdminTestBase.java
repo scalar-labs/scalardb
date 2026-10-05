@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
@@ -18,8 +21,10 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,13 +33,19 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClient;
+import software.amazon.awssdk.services.applicationautoscaling.model.ApplicationAutoScalingException;
 import software.amazon.awssdk.services.applicationautoscaling.model.DeleteScalingPolicyRequest;
 import software.amazon.awssdk.services.applicationautoscaling.model.DeregisterScalableTargetRequest;
+import software.amazon.awssdk.services.applicationautoscaling.model.ObjectNotFoundException;
 import software.amazon.awssdk.services.applicationautoscaling.model.PutScalingPolicyRequest;
+import software.amazon.awssdk.services.applicationautoscaling.model.PutScalingPolicyResponse;
 import software.amazon.awssdk.services.applicationautoscaling.model.RegisterScalableTargetRequest;
+import software.amazon.awssdk.services.applicationautoscaling.model.RegisterScalableTargetResponse;
+import software.amazon.awssdk.services.applicationautoscaling.model.ScalableDimension;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -1189,17 +1200,18 @@ public abstract class DynamoAdminTestBase {
     assertThat(updateContinuousBackupsRequestCaptor.getAllValues().get(1).tableName())
         .isEqualTo(getFullMetadataTableName());
 
-    // Check scaling policy
-    ArgumentCaptor<RegisterScalableTargetRequest> registerScalableTargetRequestArgumentCaptor =
-        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    // Check scaling policy: the scalable targets of the existing table are already registered, so
+    // only their scaling policies are put
+    ArgumentCaptor<PutScalingPolicyRequest> putScalingPolicyRequestArgumentCaptor =
+        ArgumentCaptor.forClass(PutScalingPolicyRequest.class);
     verify(applicationAutoScalingClient, times(2))
-        .registerScalableTarget(registerScalableTargetRequestArgumentCaptor.capture());
-    registerScalableTargetRequestArgumentCaptor
+        .putScalingPolicy(putScalingPolicyRequestArgumentCaptor.capture());
+    putScalingPolicyRequestArgumentCaptor
         .getAllValues()
         .forEach(
-            captor ->
-                Assertions.assertThat(captor.resourceId())
-                    .isEqualTo("table/" + getFullTableName()));
+            captor -> Assertions.assertThat(captor.resourceId()).isEqualTo(getTableResourceId()));
+    verify(applicationAutoScalingClient, never())
+        .registerScalableTarget(any(RegisterScalableTargetRequest.class));
 
     // Check added metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
@@ -1219,6 +1231,291 @@ public abstract class DynamoAdminTestBase {
                 .tableName(getFullMetadataTableName())
                 .item(itemValues)
                 .build());
+  }
+
+  private String getTableResourceId() {
+    return "table/" + getFullTableName();
+  }
+
+  private String getIndexResourceId(String indexColumnName) {
+    return getTableResourceId()
+        + "/index/"
+        + getFullTableName()
+        + ".global_index."
+        + indexColumnName;
+  }
+
+  /**
+   * Stubs an existing table with an ACTIVE global secondary index on the c2 column, and an existing
+   * metadata table.
+   *
+   * @return the metadata of the table
+   */
+  private TableMetadata stubExistingTableWithActiveIndexForRepair() {
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.TEXT)
+            .addSecondaryIndex("c2")
+            .build();
+
+    // The index name format is "<fullTableName>.global_index.<column>"
+    GlobalSecondaryIndexDescription gsiDescription =
+        GlobalSecondaryIndexDescription.builder()
+            .indexName(getFullTableName() + ".global_index.c2")
+            .indexStatus(IndexStatus.ACTIVE)
+            .build();
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(tableDescription.globalSecondaryIndexes()).thenReturn(ImmutableList.of(gsiDescription));
+    DescribeTableResponse tableResponse = mock(DescribeTableResponse.class);
+    when(tableResponse.table()).thenReturn(tableDescription);
+
+    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
+        .thenReturn(tableResponse);
+    when(client.describeTable(
+            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
+        .thenReturn(tableIsActiveResponse);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(backupIsEnabledResponse);
+    return metadata;
+  }
+
+  /**
+   * Stubs Application Auto Scaling so that putting a scaling policy fails with {@link
+   * ObjectNotFoundException} unless its scalable target is registered, as the real service does.
+   *
+   * @param registeredScalableTargets the scalable targets registered at the start, each given as
+   *     the value of {@link #scalableTarget(String, ScalableDimension)}
+   */
+  private void stubScalableTargets(String... registeredScalableTargets) {
+    Set<String> registered = new HashSet<>(Arrays.asList(registeredScalableTargets));
+    when(applicationAutoScalingClient.registerScalableTarget(
+            any(RegisterScalableTargetRequest.class)))
+        .thenAnswer(
+            invocation -> {
+              RegisterScalableTargetRequest request = invocation.getArgument(0);
+              registered.add(scalableTarget(request.resourceId(), request.scalableDimension()));
+              return RegisterScalableTargetResponse.builder().build();
+            });
+    when(applicationAutoScalingClient.putScalingPolicy(any(PutScalingPolicyRequest.class)))
+        .thenAnswer(
+            invocation -> {
+              PutScalingPolicyRequest request = invocation.getArgument(0);
+              if (!registered.contains(
+                  scalableTarget(request.resourceId(), request.scalableDimension()))) {
+                throw ObjectNotFoundException.builder()
+                    .message("No scalable target registered")
+                    .build();
+              }
+              return PutScalingPolicyResponse.builder().build();
+            });
+  }
+
+  private String scalableTarget(String resourceId, ScalableDimension scalableDimension) {
+    return resourceId + "|" + scalableDimension;
+  }
+
+  @Test
+  public void repairTable_WhenExistingTableHasRegisteredAutoScaling_ShouldOnlyPutScalingPolicies()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+    stubScalableTargets(
+        scalableTarget(getTableResourceId(), ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS),
+        scalableTarget(getTableResourceId(), ScalableDimension.DYNAMODB_TABLE_WRITE_CAPACITY_UNITS),
+        scalableTarget(
+            getIndexResourceId("c2"), ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS),
+        scalableTarget(
+            getIndexResourceId("c2"), ScalableDimension.DYNAMODB_INDEX_WRITE_CAPACITY_UNITS));
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of(DynamoAdmin.REQUEST_UNIT, "100"));
+
+    // Assert: the registered scaling ranges are kept even though a request unit is given, so no
+    // scalable target is registered again
+    ArgumentCaptor<PutScalingPolicyRequest> captor =
+        ArgumentCaptor.forClass(PutScalingPolicyRequest.class);
+    verify(applicationAutoScalingClient, times(4)).putScalingPolicy(captor.capture());
+    assertThat(captor.getAllValues())
+        .extracting(PutScalingPolicyRequest::resourceId)
+        .containsExactlyInAnyOrder(
+            getTableResourceId(),
+            getTableResourceId(),
+            getIndexResourceId("c2"),
+            getIndexResourceId("c2"));
+    verify(applicationAutoScalingClient, never())
+        .registerScalableTarget(any(RegisterScalableTargetRequest.class));
+  }
+
+  @Test
+  public void repairTable_WhenExistingIndexHasNoAutoScaling_ShouldRegisterItWithGivenRequestUnit()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+    stubScalableTargets(
+        scalableTarget(getTableResourceId(), ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS),
+        scalableTarget(
+            getTableResourceId(), ScalableDimension.DYNAMODB_TABLE_WRITE_CAPACITY_UNITS));
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of(DynamoAdmin.REQUEST_UNIT, "100"));
+
+    // Assert
+    ArgumentCaptor<RegisterScalableTargetRequest> registerCaptor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(2)).registerScalableTarget(registerCaptor.capture());
+    assertThat(registerCaptor.getAllValues())
+        .allSatisfy(
+            request -> {
+              assertThat(request.resourceId()).isEqualTo(getIndexResourceId("c2"));
+              assertThat(request.minCapacity()).isEqualTo(10);
+              assertThat(request.maxCapacity()).isEqualTo(100);
+            });
+    assertThat(registerCaptor.getAllValues())
+        .extracting(RegisterScalableTargetRequest::scalableDimension)
+        .containsExactlyInAnyOrder(
+            ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS,
+            ScalableDimension.DYNAMODB_INDEX_WRITE_CAPACITY_UNITS);
+
+    // The scaling policies of the two index targets are put again after the registration
+    ArgumentCaptor<PutScalingPolicyRequest> putCaptor =
+        ArgumentCaptor.forClass(PutScalingPolicyRequest.class);
+    verify(applicationAutoScalingClient, times(6)).putScalingPolicy(putCaptor.capture());
+    assertThat(putCaptor.getAllValues())
+        .extracting(PutScalingPolicyRequest::resourceId)
+        .containsExactlyInAnyOrder(
+            getTableResourceId(),
+            getTableResourceId(),
+            getIndexResourceId("c2"),
+            getIndexResourceId("c2"),
+            getIndexResourceId("c2"),
+            getIndexResourceId("c2"));
+  }
+
+  @Test
+  public void repairTable_WhenExistingTableHasNoAutoScaling_ShouldRegisterOnlyTheTable()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+    stubScalableTargets(
+        scalableTarget(
+            getIndexResourceId("c2"), ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS),
+        scalableTarget(
+            getIndexResourceId("c2"), ScalableDimension.DYNAMODB_INDEX_WRITE_CAPACITY_UNITS));
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    ArgumentCaptor<RegisterScalableTargetRequest> registerCaptor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(2)).registerScalableTarget(registerCaptor.capture());
+    assertThat(registerCaptor.getAllValues())
+        .extracting(RegisterScalableTargetRequest::resourceId)
+        .containsOnly(getTableResourceId());
+  }
+
+  @Test
+  public void repairTable_WhenOnlyWriteScalableTargetIsMissing_ShouldRegisterOnlyWriteTarget()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+    stubScalableTargets(
+        scalableTarget(getTableResourceId(), ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS),
+        scalableTarget(
+            getIndexResourceId("c2"), ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS),
+        scalableTarget(
+            getIndexResourceId("c2"), ScalableDimension.DYNAMODB_INDEX_WRITE_CAPACITY_UNITS));
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert
+    ArgumentCaptor<RegisterScalableTargetRequest> registerCaptor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient).registerScalableTarget(registerCaptor.capture());
+    assertThat(registerCaptor.getValue().resourceId()).isEqualTo(getTableResourceId());
+    assertThat(registerCaptor.getValue().scalableDimension())
+        .isEqualTo(ScalableDimension.DYNAMODB_TABLE_WRITE_CAPACITY_UNITS);
+  }
+
+  @Test
+  public void
+      repairTable_WhenNoScalableTargetIsRegistered_ShouldRegisterAllBeforePuttingTheirPolicies()
+          throws ExecutionException {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+    stubScalableTargets();
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
+
+    // Assert: the policies of all the targets are put first, then all the missing targets are
+    // registered, and then their policies are put again
+    InOrder inOrder = inOrder(applicationAutoScalingClient);
+    inOrder
+        .verify(applicationAutoScalingClient, times(4))
+        .putScalingPolicy(any(PutScalingPolicyRequest.class));
+    inOrder
+        .verify(applicationAutoScalingClient, times(4))
+        .registerScalableTarget(any(RegisterScalableTargetRequest.class));
+    inOrder
+        .verify(applicationAutoScalingClient, times(4))
+        .putScalingPolicy(any(PutScalingPolicyRequest.class));
+    inOrder.verifyNoMoreInteractions();
+  }
+
+  @Test
+  public void repairTable_WithNoScalingForExistingTable_ShouldNotCallAutoScaling()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of(DynamoAdmin.NO_SCALING, "true"));
+
+    // Assert
+    verifyNoInteractions(applicationAutoScalingClient);
+  }
+
+  @Test
+  public void repairTable_WhenPuttingScalingPolicyFails_ShouldThrowExecutionException() {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+    when(applicationAutoScalingClient.putScalingPolicy(any(PutScalingPolicyRequest.class)))
+        .thenThrow(ApplicationAutoScalingException.builder().message("InvalidAction").build());
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(ExecutionException.class);
+    verify(applicationAutoScalingClient, never())
+        .registerScalableTarget(any(RegisterScalableTargetRequest.class));
+    // The missing auto scaling is enabled after the table metadata is written
+    verify(client)
+        .putItem(
+            argThat(
+                (PutItemRequest request) ->
+                    request.tableName().equals(getFullMetadataTableName())));
+  }
+
+  @Test
+  public void
+      repairTable_WhenRegisteringMissingScalableTargetFails_ShouldThrowExecutionException() {
+    // Arrange
+    TableMetadata metadata = stubExistingTableWithActiveIndexForRepair();
+    stubScalableTargets();
+    when(applicationAutoScalingClient.registerScalableTarget(
+            any(RegisterScalableTargetRequest.class)))
+        .thenThrow(ApplicationAutoScalingException.builder().message("AccessDenied").build());
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of()))
+        .isInstanceOf(ExecutionException.class);
   }
 
   private void stubExistingTableAndMetadataTableForRepair() {
@@ -1341,55 +1638,6 @@ public abstract class DynamoAdminTestBase {
   }
 
   @Test
-  public void
-      repairTable_WhenExistingTableHasSecondaryIndex_ShouldNotRegisterAutoScalingForThatIndex()
-          throws ExecutionException {
-    // Arrange
-    TableMetadata metadata =
-        TableMetadata.newBuilder()
-            .addPartitionKey("c1")
-            .addColumn("c1", DataType.TEXT)
-            .addColumn("c2", DataType.TEXT)
-            .addSecondaryIndex("c2")
-            .build();
-
-    // The table exists and already has the c2 global secondary index (ACTIVE).
-    // The index name format is "<fullTableName>.global_index.<column>".
-    String globalIndexName = getFullTableName() + ".global_index.c2";
-    GlobalSecondaryIndexDescription gsiDescription =
-        GlobalSecondaryIndexDescription.builder()
-            .indexName(globalIndexName)
-            .indexStatus(IndexStatus.ACTIVE)
-            .build();
-    TableDescription tableDescription = mock(TableDescription.class);
-    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
-    when(tableDescription.globalSecondaryIndexes()).thenReturn(ImmutableList.of(gsiDescription));
-    DescribeTableResponse tableResponse = mock(DescribeTableResponse.class);
-    when(tableResponse.table()).thenReturn(tableDescription);
-
-    when(client.describeTable(DescribeTableRequest.builder().tableName(getFullTableName()).build()))
-        .thenReturn(tableResponse);
-    when(client.describeTable(
-            DescribeTableRequest.builder().tableName(getFullMetadataTableName()).build()))
-        .thenReturn(tableIsActiveResponse);
-    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
-        .thenReturn(backupIsEnabledResponse);
-
-    // Act
-    admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
-
-    // Assert: auto scaling is registered only for the table, never for the existing index's GSI.
-    // (Before the fix, createTableInternal registered scaling for the index even though the table
-    // already existed, which would fail against a real DynamoDB for a not-yet-created index.)
-    ArgumentCaptor<RegisterScalableTargetRequest> captor =
-        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
-    verify(applicationAutoScalingClient, times(2)).registerScalableTarget(captor.capture());
-    assertThat(captor.getAllValues())
-        .allSatisfy(
-            request -> assertThat(request.resourceId()).isEqualTo("table/" + getFullTableName()));
-  }
-
-  @Test
   public void repairTable_WithNonExistingTableAndMetadataTables_shouldCreateBothTables()
       throws ExecutionException {
     // Arrange
@@ -1449,6 +1697,9 @@ public abstract class DynamoAdminTestBase {
             captor ->
                 Assertions.assertThat(captor.resourceId())
                     .isEqualTo("table/" + getFullTableName()));
+    // The repair creates the table, so its auto scaling is enabled only once, at creation
+    verify(applicationAutoScalingClient, times(2))
+        .putScalingPolicy(any(PutScalingPolicyRequest.class));
 
     // Check added metadata
     Map<String, AttributeValue> itemValues = new HashMap<>();
@@ -1531,12 +1782,39 @@ public abstract class DynamoAdminTestBase {
     String indexName = getFullTableName() + ".global_index.c3";
     when(globalSecondaryIndexDescription.indexName()).thenReturn(indexName);
     when(globalSecondaryIndexDescription.indexStatus()).thenReturn(IndexStatus.ACTIVE);
+    // No scalable target is registered
+    stubScalableTargets();
 
     // Act
     admin.repairTable(NAMESPACE, TABLE, metadata, ImmutableMap.of());
 
     // Assert
     verify(client, times(1)).updateTable(any(UpdateTableRequest.class));
+
+    // The missing auto scaling of the existing table is enabled by repairTable(), and that of the
+    // missing index is enabled once by createIndex() without putting its scaling policy first
+    ArgumentCaptor<RegisterScalableTargetRequest> registerCaptor =
+        ArgumentCaptor.forClass(RegisterScalableTargetRequest.class);
+    verify(applicationAutoScalingClient, times(4)).registerScalableTarget(registerCaptor.capture());
+    assertThat(registerCaptor.getAllValues())
+        .extracting(RegisterScalableTargetRequest::resourceId)
+        .containsExactly(
+            getTableResourceId(),
+            getTableResourceId(),
+            getIndexResourceId("c3"),
+            getIndexResourceId("c3"));
+    ArgumentCaptor<PutScalingPolicyRequest> putCaptor =
+        ArgumentCaptor.forClass(PutScalingPolicyRequest.class);
+    verify(applicationAutoScalingClient, times(6)).putScalingPolicy(putCaptor.capture());
+    assertThat(putCaptor.getAllValues())
+        .extracting(PutScalingPolicyRequest::resourceId)
+        .containsExactly(
+            getTableResourceId(),
+            getTableResourceId(),
+            getTableResourceId(),
+            getTableResourceId(),
+            getIndexResourceId("c3"),
+            getIndexResourceId("c3"));
   }
 
   @Test
