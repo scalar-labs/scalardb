@@ -66,6 +66,25 @@ public class ConditionExpressionBuilderTest {
   }
 
   @Test
+  public void build_PutIfWithNotEqualConditionGiven_ShouldExcludeMissingAndNullTypeAttributes() {
+    // Arrange
+    PutIf condition =
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_1).isNotEqualToInt(ANY_INT))
+            .build();
+    ConditionExpressionBuilder builder =
+        new ConditionExpressionBuilder(
+            DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
+
+    // Act
+    condition.accept(builder);
+    String actual = builder.build();
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo("(attribute_exists(#ccol0) AND NOT #ccol0 = :cnull AND NOT #ccol0 = :cval0)");
+  }
+
+  @Test
   public void visit_PutIfExistsAcceptCalled_ShouldReturnEmpty() {
     // Arrange
     PutIfExists condition = new PutIfExists();

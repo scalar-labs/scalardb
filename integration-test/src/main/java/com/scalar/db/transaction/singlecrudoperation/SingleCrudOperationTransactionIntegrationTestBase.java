@@ -429,6 +429,24 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   public void
       update_withUpdateIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException() {}
 
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      put_withPutIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      update_withUpdateIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      delete_withDeleteIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
   @Disabled("Single CRUD operation transactions don't support getState()")
   @Override
   @Test
