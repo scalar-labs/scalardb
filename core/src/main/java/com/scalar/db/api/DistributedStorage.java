@@ -1,6 +1,8 @@
 package com.scalar.db.api;
 
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +26,19 @@ import java.util.Optional;
  * located with the partition key and the clustering key, which we call it primary key. Both a
  * partition key and a clustering key also comprise a list of values. Having clustering key is
  * optional, so in that case, primary key is composed of only partition key.
+ *
+ * <h3>Outcome of a failed mutation</h3>
+ *
+ * When {@link #put(Put)}, {@link #put(List)}, {@link #delete(Delete)}, {@link #delete(List)}, or
+ * {@link #mutate(List)} throws an exception, its type tells whether the mutations were applied:
+ *
+ * <ul>
+ *   <li>{@link NoMutationException}: none of the mutations was applied because a condition was not
+ *       satisfied.
+ *   <li>{@link RetriableExecutionException}: none of the mutations was applied, and the operation
+ *       can be retried.
+ *   <li>Any other {@link ExecutionException}: the mutations may or may not have been applied.
+ * </ul>
  *
  * <h3>Usage Examples</h3>
  *

@@ -1401,6 +1401,12 @@ public enum CoreError implements ScalarDbError {
       "Getting the virtual table information failed. Table: %s",
       "",
       ""),
+  DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY(
+      Category.INTERNAL_ERROR,
+      "0070",
+      "The mutation may have been applied because the AWS SDK retried the request, so its outcome is unknown. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
