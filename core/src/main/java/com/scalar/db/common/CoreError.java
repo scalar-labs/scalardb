@@ -1540,6 +1540,12 @@ public enum CoreError implements ScalarDbError {
       "Recovering the record failed. Table: %s; Partition Key: %s; Clustering Key: %s; Details: %s",
       "",
       ""),
+  DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY(
+      Category.INTERNAL_ERROR,
+      "0070",
+      "The mutation may have been applied because the AWS SDK retried the request, so its outcome is unknown. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
