@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Result;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.dynamo.request.PaginatedRequest;
 import com.scalar.db.storage.dynamo.request.PaginatedRequestResponse;
 import java.util.Arrays;
@@ -20,7 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 public class QueryScannerTest {
 
@@ -37,7 +40,7 @@ public class QueryScannerTest {
   }
 
   @Test
-  public void one_ShouldReturnResult() {
+  public void one_ShouldReturnResult() throws ExecutionException {
     // Arrange
     Map<String, AttributeValue> item = Collections.emptyMap();
     Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
@@ -66,7 +69,7 @@ public class QueryScannerTest {
   }
 
   @Test
-  public void all_ShouldReturnResults() {
+  public void all_ShouldReturnResults() throws ExecutionException {
     // Arrange
     Map<String, AttributeValue> item = Collections.emptyMap();
     Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
@@ -120,7 +123,7 @@ public class QueryScannerTest {
   }
 
   @Test
-  public void one_ResponseWithLastEvaluatedKey_ShouldReturnResults() {
+  public void one_ResponseWithLastEvaluatedKey_ShouldReturnResults() throws ExecutionException {
     // Arrange
     Map<String, AttributeValue> item = Collections.emptyMap();
     Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
@@ -156,7 +159,8 @@ public class QueryScannerTest {
   }
 
   @Test
-  public void one_RequestWithLimitAndResponseWithLastEvaluatedKey_ShouldReturnResults() {
+  public void one_RequestWithLimitAndResponseWithLastEvaluatedKey_ShouldReturnResults()
+      throws ExecutionException {
     // Arrange
     int limit = 3;
 
@@ -192,5 +196,50 @@ public class QueryScannerTest {
     verify(resultInterpreter, times(limit)).interpret(item);
     verify(request).execute(FETCH_SIZE);
     verify(request).execute(lastEvaluatedKey, limit - items1.size());
+  }
+
+  @Test
+  void one_DynamoDbExceptionThrownWhenFetchingNextPage_ShouldThrowExecutionException()
+      throws ExecutionException {
+    // Arrange
+    Map<String, AttributeValue> item = Collections.emptyMap();
+    Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
+    DynamoDbException toThrow =
+        (DynamoDbException) DynamoDbException.builder().message("message").build();
+    when(request.execute(FETCH_SIZE)).thenReturn(response);
+    when(request.execute(lastEvaluatedKey, FETCH_SIZE)).thenThrow(toThrow);
+    when(response.items()).thenReturn(Collections.singletonList(item));
+    when(response.hasLastEvaluatedKey()).thenReturn(true);
+    when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
+    when(resultInterpreter.interpret(item)).thenReturn(result);
+
+    QueryScanner queryScanner = new QueryScanner(request, FETCH_SIZE, 0, resultInterpreter);
+    queryScanner.one();
+
+    // Act Assert
+    assertThatThrownBy(queryScanner::one)
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void all_SdkClientExceptionThrownWhenFetchingNextPage_ShouldThrowExecutionException() {
+    // Arrange
+    Map<String, AttributeValue> item = Collections.emptyMap();
+    Map<String, AttributeValue> lastEvaluatedKey = Collections.emptyMap();
+    SdkClientException toThrow = SdkClientException.create("message");
+    when(request.execute(FETCH_SIZE)).thenReturn(response);
+    when(request.execute(lastEvaluatedKey, FETCH_SIZE)).thenThrow(toThrow);
+    when(response.items()).thenReturn(Collections.singletonList(item));
+    when(response.hasLastEvaluatedKey()).thenReturn(true);
+    when(response.lastEvaluatedKey()).thenReturn(lastEvaluatedKey);
+    when(resultInterpreter.interpret(item)).thenReturn(result);
+
+    QueryScanner queryScanner = new QueryScanner(request, FETCH_SIZE, 0, resultInterpreter);
+
+    // Act Assert
+    assertThatThrownBy(queryScanner::all)
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
   }
 }
