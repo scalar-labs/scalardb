@@ -74,7 +74,7 @@ public abstract class DistributedStorageConditionalMutationIntegrationTestBase {
   private static final int THREAD_NUM = 10;
 
   private DistributedStorageAdmin admin;
-  private DistributedStorage storage;
+  protected DistributedStorage storage;
   private String namespace;
 
   private long seed;

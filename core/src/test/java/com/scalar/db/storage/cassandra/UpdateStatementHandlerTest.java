@@ -13,6 +13,7 @@ import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.common.base.Joiner;
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Put;
@@ -244,24 +245,34 @@ public class UpdateStatementHandlerTest {
                   "AND",
                   ANY_NAME_4 + "!=?",
                   "AND",
+                  ANY_NAME_4 + "!=null",
+                  "AND",
                   ANY_NAME_4 + ">?",
                   "AND",
                   ANY_NAME_4 + ">=?",
                   "AND",
                   ANY_NAME_4 + "<?",
                   "AND",
-                  ANY_NAME_4 + "<=?;"
+                  ANY_NAME_4 + "<=?",
+                  "AND",
+                  ANY_NAME_4 + "=?",
+                  "AND",
+                  ANY_NAME_4 + "!=?;"
                 });
     configureBehavior(expected);
-    put = preparePutWithClusteringKey();
-    put.withCondition(
-        new PutIf(
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.EQ),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.NE),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.GT),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.GTE),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.LT),
-            new ConditionalExpression(ANY_NAME_4, new IntValue(ANY_INT_2), Operator.LTE)));
+    put =
+        Put.newBuilder(preparePutWithClusteringKey())
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isNotEqualToInt(ANY_INT_2))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanInt(ANY_INT_2))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isGreaterThanOrEqualToInt(ANY_INT_2))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isLessThanInt(ANY_INT_2))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isLessThanOrEqualToInt(ANY_INT_2))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isNullInt())
+                    .and(ConditionBuilder.column(ANY_NAME_4).isNotNullInt())
+                    .build())
+            .build();
 
     // Act
     handler.prepare(put);

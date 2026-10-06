@@ -21,6 +21,7 @@ public class DynamoOperation {
   static final String START_CLUSTERING_KEY_ALIAS = ":sck";
   static final String END_CLUSTERING_KEY_ALIAS = ":eck";
   static final String CONDITION_VALUE_ALIAS = ":cval";
+  static final String CONDITION_NULL_VALUE_ALIAS = ":cnull";
   static final String VALUE_ALIAS = ":val";
   static final String COLUMN_NAME_ALIAS = "#col";
   static final String CONDITION_COLUMN_NAME_ALIAS = "#ccol";
