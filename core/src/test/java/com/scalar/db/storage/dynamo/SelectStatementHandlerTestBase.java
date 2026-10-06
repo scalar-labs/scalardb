@@ -38,6 +38,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -2000,5 +2001,31 @@ public abstract class SelectStatementHandlerTestBase {
         .isEqualTo(
             DynamoOperation.COLUMN_NAME_ALIAS + "0," + DynamoOperation.COLUMN_NAME_ALIAS + "1");
     assertThat(actualRequest.tableName()).isEqualTo(getFullTableName());
+  }
+
+  @Test
+  void handle_GetOperationSdkClientExceptionThrown_ShouldThrowExecutionException() {
+    // Arrange
+    SdkClientException toThrow = SdkClientException.create("message");
+    doThrow(toThrow).when(client).getItem(any(GetItemRequest.class));
+    Get get = prepareGet();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(get))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void handle_ScanOperationSdkClientExceptionThrown_ShouldThrowExecutionException() {
+    // Arrange
+    SdkClientException toThrow = SdkClientException.create("message");
+    doThrow(toThrow).when(client).query(any(QueryRequest.class));
+    Scan scan = prepareScan();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(scan))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
   }
 }
