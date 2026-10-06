@@ -2297,6 +2297,92 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void
+      put_withPutIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Put putIf =
+        Put.newBuilder(initialData)
+            .intValue(BALANCE, 2)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(SOME_COLUMN).isNotEqualToInt(1))
+                    .build())
+            .enableImplicitPreRead()
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> put(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void
+      update_withUpdateIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Update updateIf =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 2)
+            .condition(
+                ConditionBuilder.updateIf(ConditionBuilder.column(SOME_COLUMN).isNotEqualToInt(1))
+                    .build())
+            .build();
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.update(updateIf))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+    transaction.rollback();
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void
+      delete_withDeleteIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Delete deleteIf =
+        Delete.newBuilder(prepareDelete(0, 0))
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(SOME_COLUMN).isNotEqualToInt(1))
+                    .build())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> delete(deleteIf)).isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
   public void getAndUpdate_ShouldGetAndUpdateCorrectly() throws TransactionException {
     // Arrange
     populateRecords();

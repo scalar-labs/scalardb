@@ -852,6 +852,50 @@ public abstract class DistributedStorageCrossPartitionScanIntegrationTestBase {
     assertScanResult(actual, getExpectedNullResults(operator), description(column, operator));
   }
 
+  @Test
+  public void scan_WithComparisonConditionOnNullRecords_ShouldReturnOnlyMatchingNonNullRecords()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    prepareNullRecords();
+
+    List<Callable<Void>> testCallables = new ArrayList<>();
+    ImmutableList.of(Operator.NE, Operator.GT, Operator.GTE, Operator.LT, Operator.LTE)
+        .forEach(
+            operator -> {
+              for (Column<?> column : prepareNonKeyColumns(CONDITION_TEST_PREDICATE_VALUE)) {
+                testCallables.add(
+                    () -> {
+                      scan_WithComparisonConditionOnNullRecords_ShouldReturnOnlyMatchingNonNullRecords(
+                          column, operator, CONDITION_TEST_PREDICATE_VALUE);
+                      return null;
+                    });
+              }
+            });
+
+    executeInParallel(testCallables);
+  }
+
+  private void scan_WithComparisonConditionOnNullRecords_ShouldReturnOnlyMatchingNonNullRecords(
+      Column<?> column, Operator operator, int value) throws IOException, ExecutionException {
+    // Arrange
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(getNamespaceName())
+            .table(CONDITION_TEST_TABLE)
+            .all()
+            .where(ConditionBuilder.buildConditionalExpression(column, operator))
+            .build();
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    List<Integer> expected =
+        getExpectedResults(column.getDataType(), operator, value).stream()
+            .filter(i -> i % 2 != 0)
+            .collect(Collectors.toList());
+    assertScanResult(actual, expected, description(column, operator, value));
+  }
+
   @ParameterizedTest(name = "column with conditions: {0}")
   @MethodSource("provideColumnsForCNFConditionsTest")
   public void scan_WithConjunctiveNormalFormConditionsShouldReturnProperResult(
