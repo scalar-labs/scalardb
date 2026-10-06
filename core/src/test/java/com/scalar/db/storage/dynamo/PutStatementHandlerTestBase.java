@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -26,10 +27,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
 
@@ -212,5 +215,112 @@ public abstract class PutStatementHandlerTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
+  }
+
+  @Test
+  void handle_ConditionalCheckFailedExceptionThrownSentOnce_ShouldThrowNoMutationException() {
+    // Arrange
+    ConditionalCheckFailedException toThrow =
+        (ConditionalCheckFailedException)
+            ConditionalCheckFailedException.builder().message("message").numAttempts(1).build();
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(NoMutationException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_ConditionalCheckFailedExceptionThrownWithoutNumAttempts_ShouldThrowNoMutationException() {
+    // Arrange
+    ConditionalCheckFailedException toThrow =
+        (ConditionalCheckFailedException)
+            ConditionalCheckFailedException.builder().message("message").build();
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(NoMutationException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_ConditionalCheckFailedExceptionThrownResent_ShouldThrowExecutionExceptionForUnknownOutcome() {
+    // Arrange
+    ConditionalCheckFailedException toThrow =
+        (ConditionalCheckFailedException)
+            ConditionalCheckFailedException.builder().message("message").numAttempts(2).build();
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void handle_TransactionConflictExceptionThrownSentOnce_ShouldThrowRetriableExecutionException() {
+    // Arrange
+    TransactionConflictException toThrow =
+        (TransactionConflictException)
+            TransactionConflictException.builder().message("message").numAttempts(1).build();
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_TransactionConflictExceptionThrownWithoutNumAttempts_ShouldThrowRetriableExecutionException() {
+    // Arrange
+    TransactionConflictException toThrow =
+        (TransactionConflictException)
+            TransactionConflictException.builder().message("message").build();
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void
+      handle_TransactionConflictExceptionThrownResent_ShouldThrowExecutionExceptionForUnknownOutcome() {
+    // Arrange
+    TransactionConflictException toThrow =
+        (TransactionConflictException)
+            TransactionConflictException.builder().message("message").numAttempts(2).build();
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  void handle_SdkClientExceptionThrown_ShouldThrowExecutionException() {
+    // Arrange
+    SdkClientException toThrow = SdkClientException.create("message");
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
+    Put put = preparePut();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
   }
 }
