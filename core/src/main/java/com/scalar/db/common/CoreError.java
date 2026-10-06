@@ -680,7 +680,7 @@ public enum CoreError implements ScalarDbError {
       ""),
   NAMESPACE_WITH_NON_SCALARDB_TABLES_CANNOT_BE_DROPPED(
       Category.USER_ERROR,
-      "0216",
+      "0249",
       "The namespace has non-ScalarDB tables and cannot be dropped. Namespace: %s; Tables in the namespace: %s",
       "",
       ""),
@@ -850,7 +850,7 @@ public enum CoreError implements ScalarDbError {
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS(
       Category.CONCURRENCY_ERROR,
-      "0030",
+      "0032",
       "A conflict occurred when recovering records. Details: %s",
       "",
       ""),
