@@ -18,6 +18,9 @@ import com.azure.cosmos.models.ExcludedPath;
 import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
+import com.azure.cosmos.models.PartitionKeyDefinition;
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
+import com.azure.cosmos.models.PartitionKind;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.annotations.VisibleForTesting;
@@ -195,9 +198,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   private CosmosContainerProperties computeContainerProperties(
       String table, TableMetadata metadata) {
-    IndexingPolicy indexingPolicy = computeIndexingPolicy(metadata);
-    return new CosmosContainerProperties(table, PARTITION_KEY_PATH)
-        .setIndexingPolicy(indexingPolicy);
+    return containerPropertiesWithV2(table, PARTITION_KEY_PATH)
+        .setIndexingPolicy(computeIndexingPolicy(metadata));
+  }
+
+  private static CosmosContainerProperties containerPropertiesWithV2(
+      String containerId, String partitionKeyPath) {
+    PartitionKeyDefinition partitionKeyDefinition =
+        new PartitionKeyDefinition()
+            .setKind(PartitionKind.HASH)
+            .setPaths(Collections.singletonList(partitionKeyPath))
+            .setVersion(PartitionKeyDefinitionVersion.V2);
+    return new CosmosContainerProperties(containerId, partitionKeyDefinition);
   }
 
   private IndexingPolicy computeIndexingPolicy(TableMetadata metadata) {
@@ -266,9 +278,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     ThroughputProperties manualThroughput =
         ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_REQUEST_UNIT));
     client.createDatabaseIfNotExists(metadataDatabase, manualThroughput);
-    CosmosContainerProperties containerProperties =
-        new CosmosContainerProperties(TABLE_METADATA_CONTAINER, "/id");
-    client.getDatabase(metadataDatabase).createContainerIfNotExists(containerProperties);
+    client
+        .getDatabase(metadataDatabase)
+        .createContainerIfNotExists(containerPropertiesWithV2(TABLE_METADATA_CONTAINER, "/id"));
   }
 
   private CosmosContainer getTableMetadataContainer() {
@@ -477,7 +489,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     try {
       // get the existing container properties
       CosmosContainerResponse response =
-          database.createContainerIfNotExists(containerName, PARTITION_KEY_PATH);
+          database.createContainerIfNotExists(
+              computeContainerProperties(containerName, newTableMetadata));
       CosmosContainerProperties properties = response.getProperties();
 
       IndexingPolicy newIndexingPolicy = computeIndexingPolicy(newTableMetadata);
@@ -837,7 +850,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     ThroughputProperties manualThroughput =
         ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_REQUEST_UNIT));
     client.createDatabaseIfNotExists(metadataDatabase, manualThroughput);
-    client.getDatabase(metadataDatabase).createContainerIfNotExists(NAMESPACES_CONTAINER, "/id");
+    client
+        .getDatabase(metadataDatabase)
+        .createContainerIfNotExists(containerPropertiesWithV2(NAMESPACES_CONTAINER, "/id"));
 
     // Insert the system namespace to the namespaces table
     getNamespacesContainer().createItem(new CosmosNamespace(metadataDatabase));

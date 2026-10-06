@@ -2,18 +2,27 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.proto.v1.WriteSet;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -386,5 +395,180 @@ class CoordinatorCommitHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), new RuntimeException()))
         .isInstanceOf(UnknownTransactionStatusException.class);
+  }
+
+  @Test
+  void handleCommitConflict_WhenSentOnceAndAbortedStatePersisted_ShouldThrowConflict()
+      throws Exception {
+    // Arrange
+    doReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(
+                    anyId(), TransactionState.ABORTED, System.currentTimeMillis())))
+        .when(coordinator)
+        .getState(anyId());
+    CoordinatorConflictException cause = conflictAfterAttempts(1);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), cause))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCause(cause);
+  }
+
+  @Test
+  void handleCommitConflict_WhenSentOnceAndNoStatePersisted_ShouldThrowConflict() throws Exception {
+    // Arrange
+    doReturn(Optional.empty()).when(coordinator).getState(anyId());
+    CoordinatorConflictException cause = conflictAfterAttempts(1);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), cause))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCause(cause);
+  }
+
+  @Test
+  void handleCommitConflict_WhenSentMoreThanOnceAndAbortedStatePersisted_ShouldThrowUnknown()
+      throws Exception {
+    // The ABORTED row may have been written for this transaction after its own COMMITTED row was
+    // removed by finishTransaction, so the records must not be rolled back.
+    // Arrange
+    doReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(
+                    anyId(), TransactionState.ABORTED, System.currentTimeMillis())))
+        .when(coordinator)
+        .getState(anyId());
+    CoordinatorConflictException cause = conflictAfterAttempts(2);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), cause))
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasMessageContaining(
+            CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY
+                .buildCode())
+        .hasCause(cause);
+  }
+
+  @Test
+  void handleCommitConflict_WhenSentMoreThanOnceAndNoStatePersisted_ShouldThrowUnknown()
+      throws Exception {
+    // The conflicting row may have been this transaction's own COMMITTED row, removed by
+    // finishTransaction since, so the records must not be rolled back.
+    // Arrange
+    doReturn(Optional.empty()).when(coordinator).getState(anyId());
+    CoordinatorConflictException cause = conflictAfterAttempts(2);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), cause))
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasMessageContaining(
+            CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY
+                .buildCode())
+        .hasCause(cause);
+  }
+
+  @Test
+  void
+      handleCommitConflict_WhenSentMoreThanOnceAndCommittedStatePersisted_ShouldReturnPersistedCommittedAt()
+          throws Exception {
+    // Arrange
+    doReturn(
+            Optional.of(
+                new CoordinatorStateAccessor.State(anyId(), TransactionState.COMMITTED, 999L)))
+        .when(coordinator)
+        .getState(anyId());
+
+    // Act
+    long committedAt = handler.handleCommitConflict(anyId(), conflictAfterAttempts(2));
+
+    // Assert
+    assertThat(committedAt).isEqualTo(999L);
+  }
+
+  @Test
+  void
+      handleCommitConflict_WhenSentMoreThanOnceAndGetStateThrowsCoordinatorException_ShouldThrowUnknownForUnreadableState()
+          throws Exception {
+    // Arrange
+    doThrow(CoordinatorException.class).when(coordinator).getState(anyId());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handleCommitConflict(anyId(), conflictAfterAttempts(2)))
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasMessageContaining(CoreError.CONSENSUS_COMMIT_CANNOT_GET_COORDINATOR_STATUS.buildCode());
+  }
+
+  @Test
+  void
+      commitState_WhenCoordinatorConflictAfterMoreThanOneAttemptAndNoStatePersisted_ShouldThrowUnknown()
+          throws Exception {
+    // Arrange
+    doThrow(conflictAfterAttempts(2))
+        .when(coordinator)
+        .putState(any(CoordinatorStateAccessor.State.class));
+    doReturn(Optional.empty()).when(coordinator).getState(anyId());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.commitState(anyId(), anyWriteSet()))
+        .isInstanceOf(UnknownTransactionStatusException.class);
+  }
+
+  // ---------- commitState with a real CoordinatorStateAccessor ----------
+  // These pin the hand-off between the accessor, which records how many times the putState was
+  // sent, and the handler, which decides on it.
+
+  @Test
+  void
+      commitState_WithRealAccessor_WhenPutFailsThenConflictsAndNoStatePersisted_ShouldThrowUnknown()
+          throws Exception {
+    // Arrange
+    DistributedStorage storage = mock(DistributedStorage.class);
+    CoordinatorCommitHandler handlerWithRealAccessor =
+        new CoordinatorCommitHandler(
+            new CoordinatorStateAccessor(storage, mock(ConsensusCommitConfig.class)));
+    ExecutionException failure = new ExecutionException("error");
+    doThrow(failure)
+        .doThrow(new NoMutationException("error", Collections.emptyList()))
+        .when(storage)
+        .put(any(Put.class));
+    doReturn(Optional.empty()).when(storage).get(any(Get.class));
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> handlerWithRealAccessor.commitState(anyId(), anyWriteSet()));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(UnknownTransactionStatusException.class)
+        .hasMessageContaining(
+            CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY
+                .buildCode());
+    assertThat(thrown.getCause()).isInstanceOf(CoordinatorConflictException.class);
+    assertThat(thrown.getCause().getSuppressed()).containsExactly(failure);
+  }
+
+  @Test
+  void
+      commitState_WithRealAccessor_WhenConflictsInFirstAttemptAndNoStatePersisted_ShouldThrowConflict()
+          throws Exception {
+    // Arrange
+    DistributedStorage storage = mock(DistributedStorage.class);
+    CoordinatorCommitHandler handlerWithRealAccessor =
+        new CoordinatorCommitHandler(
+            new CoordinatorStateAccessor(storage, mock(ConsensusCommitConfig.class)));
+    doThrow(new NoMutationException("error", Collections.emptyList()))
+        .when(storage)
+        .put(any(Put.class));
+    doReturn(Optional.empty()).when(storage).get(any(Get.class));
+
+    // Act Assert
+    assertThatThrownBy(() -> handlerWithRealAccessor.commitState(anyId(), anyWriteSet()))
+        .isInstanceOf(CommitConflictException.class);
+  }
+
+  private static CoordinatorConflictException conflictAfterAttempts(int numAttempts) {
+    return new CoordinatorConflictException(
+        "conflict", numAttempts, new RuntimeException("no mutation"));
   }
 }

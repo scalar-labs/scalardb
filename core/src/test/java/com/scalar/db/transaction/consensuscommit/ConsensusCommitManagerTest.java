@@ -65,6 +65,7 @@ public class ConsensusCommitManagerTest {
   @Mock private DatabaseConfig databaseConfig;
   @Mock private CoordinatorStateAccessor coordinator;
   @Mock private ParallelExecutor parallelExecutor;
+  @Mock private AsyncExecutor asyncExecutor;
   @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
@@ -83,6 +84,7 @@ public class ConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,
@@ -141,6 +143,7 @@ public class ConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,
@@ -180,6 +183,7 @@ public class ConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,
@@ -227,6 +231,7 @@ public class ConsensusCommitManagerTest {
             databaseConfig,
             coordinator,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,

@@ -127,6 +127,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   protected String namespace1;
   protected String namespace2;
   private ParallelExecutor parallelExecutor;
+  private AsyncExecutor asyncExecutor;
 
   private DistributedStorage storage;
   private CoordinatorStateAccessor coordinator;
@@ -153,6 +154,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     createTables();
     originalStorage = factory.getStorage();
     parallelExecutor = new ParallelExecutor(consensusCommitConfig);
+    asyncExecutor = new AsyncExecutor(consensusCommitConfig);
   }
 
   protected void initialize(String testName) throws Exception {}
@@ -223,10 +225,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @AfterAll
   void afterAll() throws Exception {
+    // Close the executors first so that the work in flight can finish while the storage is still
+    // open, as the transaction managers do
+    asyncExecutor.close();
+    parallelExecutor.close();
+
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
-    parallelExecutor.close();
   }
 
   private void dropTables() throws ExecutionException {
@@ -4807,6 +4813,47 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
     verify(recovery)
         .rollforwardRecord(any(Selection.class), any(TransactionResult.class), anyLong());
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndCommitType")
+  void
+      insert_InsertGivenWithoutReadForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldSucceedOnRetry(
+          Isolation isolation, CommitType commitType)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    long preparedAt = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS - 1;
+    populatePreparedInitialRecord(storage, namespace1, TABLE_1, preparedAt, commitType);
+
+    Insert insert =
+        Insert.newBuilder()
+            .namespace(namespace1)
+            .table(TABLE_1)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, NEW_BALANCE)
+            .build();
+
+    // Act Assert
+
+    // An insert does not read the record, so the first attempt fails with a conflict. The record
+    // left behind by the ongoing transaction is recovered while the failure is handled, which is
+    // what makes the retry below converge.
+    DistributedTransaction transaction1 = manager.begin();
+    transaction1.insert(insert);
+    assertThatThrownBy(transaction1::commit).isInstanceOf(CommitConflictException.class);
+
+    waitForRecoveryCompletion(transaction1);
+
+    DistributedTransaction transaction2 = manager.begin();
+    transaction2.insert(insert);
+    transaction2.commit();
+
+    // In all isolations, the inserted record should be returned
+    Optional<Result> actual = manager.get(prepareGet(0, 0, namespace1, TABLE_1));
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getInt(BALANCE)).isEqualTo(NEW_BALANCE);
   }
 
   @ParameterizedTest
@@ -11632,6 +11679,53 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
   }
 
+  /**
+   * Populates a PREPARED record that has no before image, which is what a transaction that prepared
+   * an insertion but never finished leaves behind. No coordinator state record is created for it.
+   */
+  private String populatePreparedInitialRecord(
+      DistributedStorage storage,
+      String namespace,
+      String table,
+      long preparedAt,
+      CommitType commitType)
+      throws ExecutionException {
+    String ongoingTxId;
+    if (commitType == CommitType.NORMAL_COMMIT) {
+      ongoingTxId = ANY_ID_2;
+    } else {
+      CoordinatorGroupCommitKeyManipulator keyManipulator =
+          new CoordinatorGroupCommitKeyManipulator();
+      ongoingTxId = keyManipulator.fullKey(keyManipulator.generateParentKey(), ANY_ID_2);
+    }
+
+    Put put =
+        Put.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, INITIAL_BALANCE)
+            .textValue(Attribute.ID, ongoingTxId)
+            .intValue(Attribute.STATE, TransactionState.PREPARED.get())
+            .intValue(Attribute.VERSION, 1)
+            .bigIntValue(Attribute.PREPARED_AT, preparedAt)
+            .build();
+
+    // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
+    // retry the put operation in such a case.
+    while (true) {
+      try {
+        storage.put(put);
+        break;
+      } catch (RetriableExecutionException e) {
+        // retry
+      }
+    }
+
+    return ongoingTxId;
+  }
+
   private String populatePreparedRecordAndCoordinatorStateRecord(
       DistributedStorage storage,
       String namespace,
@@ -11885,6 +11979,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         databaseConfig,
         coordinator,
         parallelExecutor,
+        asyncExecutor,
         recoveryExecutor,
         crud,
         commit,
@@ -11900,9 +11995,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           false,
@@ -11910,9 +12007,11 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     } else {
       return new CommitHandler(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           onePhaseCommitEnabled);
