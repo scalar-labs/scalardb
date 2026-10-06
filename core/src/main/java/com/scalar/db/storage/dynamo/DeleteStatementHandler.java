@@ -15,11 +15,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 
 /**
@@ -50,12 +50,22 @@ public class DeleteStatementHandler {
     try {
       delete(delete, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
+      // A resent request can fail because of its own earlier, applied attempt, so the mutation must
+      // not be reported as not applied
+      if (SdkAttempts.earlierAttemptMayHaveBeenApplied(e)) {
+        throw new ExecutionException(
+            CoreError.DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY.buildMessage(e.getMessage()), e);
+      }
       throw new NoMutationException(CoreError.NO_MUTATION_APPLIED.buildMessage(), e);
     } catch (TransactionConflictException e) {
+      if (SdkAttempts.earlierAttemptMayHaveBeenApplied(e)) {
+        throw new ExecutionException(
+            CoreError.DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY.buildMessage(e.getMessage()), e);
+      }
       throw new RetriableExecutionException(
           CoreError.DYNAMO_TRANSACTION_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()),
           e);
-    } catch (DynamoDbException e) {
+    } catch (SdkException e) {
       throw new ExecutionException(
           CoreError.DYNAMO_ERROR_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     }

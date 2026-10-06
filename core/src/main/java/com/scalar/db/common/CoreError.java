@@ -1008,6 +1008,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR, "0057", "Recovering records failed. Details: %s", "", ""),
   CONSENSUS_COMMIT_COMMITTING_RECORDS_FAILED(
       Category.INTERNAL_ERROR, "0058", "Committing records failed. Details: %s", "", ""),
+  DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY(
+      Category.INTERNAL_ERROR,
+      "0070",
+      "The mutation may have been applied because the AWS SDK retried the request, so its outcome is unknown. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
