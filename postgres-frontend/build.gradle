@@ -1,0 +1,93 @@
+plugins {
+    id 'net.ltgt.errorprone' version "${errorpronePluginVersion}"
+    id 'com.github.johnrengelman.shadow' version "${shadowPluginVersion}"
+    id 'com.github.spotbugs' version "${spotbugsPluginVersion}"
+    id 'base'
+}
+
+base {
+    archivesName = "scalardb-postgres-frontend"
+}
+
+// This module targets Java 17, ScalarDB Cluster's baseline, unlike the Java 8 modules around it: it
+// is headed for its own repository, and JSQLParser 5 needs Java 11 or newer. The shared JDK plugin
+// pins source and target to 8, so both are set again here.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+ext {
+    jsqlparserVersion = '5.4'
+    // the root's google-java-format 1.7 cannot parse Java 17 syntax
+    frontendGoogleJavaFormatVersion = '1.17.0'
+}
+
+dependencies {
+    implementation project(':core')
+    implementation "com.github.jsqlparser:jsqlparser:${jsqlparserVersion}"
+    // json and jsonb values in memory (core already brings it, so the fat jar does not grow)
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+    // the PostgreSQL JDBC driver is used as a client in the wire-protocol tests
+    testImplementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.mockito:mockito-inline:${mockitoVersion}"
+
+    // for SpotBugs
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsVersion}"
+
+    // for Error Prone
+    errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
+    errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+javadoc {
+    title = "ScalarDB PostgreSQL Frontend"
+}
+
+// Build a fat jar that runs the wire-protocol server
+shadowJar {
+    archiveClassifier.set("")
+    manifest {
+        attributes 'Main-Class': 'com.scalar.db.frontend.postgres.PostgresServer'
+    }
+    mergeServiceFiles()
+    zip64 = true
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        // Spotless v6 doesn't have forbidWildcardImports (added in v8). As a workaround, use custom step
+        // with the regex from: https://github.com/diffplug/spotless/blob/67f7df71cb29833c2f94789dc31e9ecff18a71c5/lib/src/main/java/com/diffplug/spotless/java/ForbidWildcardImportsStep.java#L31
+        custom 'forbidWildcardImports', { source ->
+            if (source =~ /(?m)^import\s+(?:static\s+)?[^;\n]*\*;\R?/) {
+                throw new AssertionError('Wildcard imports are not allowed')
+            }
+            source
+        }
+        googleJavaFormat(frontendGoogleJavaFormatVersion)
+    }
+}
+
+spotbugsMain.reports {
+    html.enabled = true
+}
+spotbugsMain.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")
+
+spotbugsTest.reports {
+    html.enabled = true
+}
+spotbugsTest.excludeFilter = file("${project.rootDir}/gradle/spotbugs-exclude.xml")

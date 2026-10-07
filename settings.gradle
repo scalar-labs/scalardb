@@ -2,6 +2,7 @@ rootProject.name = 'scalardb'
 include 'core'
 include 'schema-loader'
 include 'integration-test'
+include 'postgres-frontend'
 include 'data-loader:core'
 include 'data-loader:cli'
 
