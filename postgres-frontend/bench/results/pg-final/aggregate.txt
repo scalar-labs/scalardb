@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew))
+transaction type: scripts/aggregate.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 3
+duration: 10 s
+number of transactions actually processed: 530510
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 0.075 ms
+initial connection time = 3.229 ms
+tps = 53039.994201 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set cid random(1, :ncust)
+         0.073           0          0 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders WHERE customer_id = :cid GROUP BY status;

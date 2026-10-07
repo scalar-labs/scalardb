@@ -1,0 +1,19 @@
+pgbench (18.1 (Homebrew))
+transaction type: scripts/insert.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 1
+duration: 5 s
+number of transactions actually processed: 177462
+number of failed transactions: 0 (0.000%)
+latency average = 0.113 ms
+initial connection time = 3.397 ms
+tps = 35456.100045 (without initial connection time)
+statement latencies in milliseconds and failures:
+         0.000           0 \set cid random(1, :ncust)
+         0.000           0 \set oid random(1000000, 2000000000)
+         0.000           0 \set item random(1, :nitems)
+         0.000           0 \set amt random(1, 500)
+         0.110           0 INSERT INTO orders (customer_id, order_id, item_id, amount, status, created) VALUES (:cid, :oid, :item, :amt, 'new', 1700000000

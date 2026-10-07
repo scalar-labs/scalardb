@@ -1,0 +1,24 @@
+# 2026-10-02, whole suite at 1 client, 4 s per script, effective RTT 2.6 ms (one-way delay 1000 us)
+script         PG remote  fe local fe remote  local/PG remote/PG   p50 ms
+aggregate          2.337     8.021     9.882       3.4       4.2
+cte                2.308     5.294     7.466       2.3       3.2
+in_list            2.372     2.627     4.904       1.1       2.1
+index_multi        2.329    16.661    18.269       7.2       7.8
+index_point        2.325    10.717    12.309       4.6       5.3
+insert             2.415     2.759     5.325       1.1       2.2
+join_fanout        2.372    10.501    12.939       4.4       5.5
+join_hash          2.445   161.251   164.959      66.0      67.5
+join_lookup        2.352    10.999    12.983       4.7       5.5
+join_one           2.337     5.439     7.477       2.3       3.2
+point_get          2.337     2.752     4.985       1.2       2.1
+range_scan         2.336     5.117     7.710       2.2       3.3
+scan_filter        2.514    67.634    76.267      26.9      30.3
+set_op             2.387    15.155    17.162       6.3       7.2
+sort_memory        2.362     7.269    10.590       3.1       4.5
+subquery           2.361     8.111    10.538       3.4       4.5
+txn_mix           12.921    11.379    24.467       0.9       1.9
+txn_read           9.839    10.972    22.062       1.1       2.2
+txn_read_ro       10.047    11.489    21.773       1.1       2.2
+update_key         2.395     5.235     7.884       2.2       3.3
+update_scan        2.433    13.767    15.929       5.7       6.5
+upsert             2.394     5.240     8.441       2.2       3.5

@@ -1,0 +1,3 @@
+script	tps	avg_ms	p50_ms	p95_ms	p99_ms	max_ms	count	failed	retried
+txn_read	11951.807306	0.331	0.239	0.570	1.710	158.117	59780	0	0
+txn_read_ro	13664.176546	0.291	0.237	0.471	0.962	29.694	68345	0	0

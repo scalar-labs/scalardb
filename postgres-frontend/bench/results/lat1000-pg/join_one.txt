@@ -1,0 +1,19 @@
+pgbench (18.1 (Homebrew))
+transaction type: scripts/join_one.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 1489
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 2.687 ms
+initial connection time = 6.473 ms
+tps = 372.152403 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.002           0          0 \set cid random(1, :ncust)
+         0.000           0          0 \set oid random(1, :norders)
+         2.674           0          0 SELECT o.order_id, o.amount, c.name, c.tier FROM orders o JOIN customers c ON c.id = o.customer_id WHERE o.customer_id = :cid A

@@ -1,0 +1,41 @@
+                                                                                                      QUERY PLAN                                                                                                      
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Project [c_first, c_middle, c_id] (actual rows=1)
+   -> Sort c_first (actual rows=1)
+     -> Project [c_first, c_middle, c_id] (actual rows=1)
+       -> ScalarDB Scan tpcc.customer partitionKey={c_w_id=1, c_d_id=1} conditions=[c_last = 'BARBARANTI'] projections=[c_w_id, c_d_id, c_last, c_first, c_middle, c_id] AS customer (actual rows=1 ScalarDB reads=1)
+ Execution Time: 1.797 ms
+(5 行)
+
+                                                                                                              QUERY PLAN                                                                                                              
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Project [o_id, o_carrier_id, o_entry_d] (actual rows=1)
+   -> ScalarDB Scan tpcc.oorder partitionKey={o_w_id=1, o_d_id=1} conditions=[o_c_id = 7] ordering=[o_id DESC] limit=1 projections=[o_w_id, o_d_id, o_c_id, o_id, o_carrier_id, o_entry_d] AS oorder (actual rows=1 ScalarDB reads=1)
+ Execution Time: 1.458 ms
+(3 行)
+
+                                                                                                                      QUERY PLAN                                                                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate [stock_count] (actual rows=1)
+   -> Filter order_line.ol_o_id >= 5130 - 20 (actual rows=8)
+     -> Lookup Join (per outer row): ScalarDB Get tpcc.stock partitionKey={s_w_id=1} clusteringKey={s_i_id=order_line.ol_i_id} conditions=[s_quantity < 15] projections=[s_w_id, s_i_id, s_quantity] AS stock (actual rows=2824 ScalarDB reads=51482)
+       -> ScalarDB Scan tpcc.order_line partitionKey={ol_w_id=1, ol_d_id=1} end={ol_o_id=5130} (exclusive) projections=[ol_w_id, ol_d_id, ol_o_id, ol_i_id] AS order_line (actual rows=51482 ScalarDB reads=1)
+ Execution Time: 1404.157 ms
+(5 行)
+
+                                                                                         QUERY PLAN                                                                                         
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Project [no_o_id] (actual rows=1)
+   -> ScalarDB Scan tpcc.new_order partitionKey={no_w_id=1, no_d_id=1} ordering=[no_o_id ASC] limit=1 projections=[no_d_id, no_w_id, no_o_id] AS new_order (actual rows=1 ScalarDB reads=1)
+ Execution Time: 0.540 ms
+(3 行)
+
+                                                                                                                                                  QUERY PLAN                                                                                                                                                   
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Project [ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_delivery_d] (actual rows=15)
+   -> Sort order_line.ol_number (actual rows=15)
+     -> Project [ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_delivery_d] (actual rows=15)
+       -> ScalarDB Scan tpcc.order_line partitionKey={ol_w_id=1, ol_d_id=1} start={ol_o_id=5129} (inclusive) end={ol_o_id=5129} (inclusive) projections=[ol_o_id, ol_d_id, ol_w_id, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_delivery_d, ol_number] AS order_line (actual rows=15 ScalarDB reads=1)
+ Execution Time: 0.566 ms
+(5 行)
+

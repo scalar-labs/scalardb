@@ -1,0 +1,19 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/update_key.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 3
+duration: 5 s
+number of transactions actually processed: 49321
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 4 (0.008%)
+total number of retries: 4
+latency average = 0.406 ms
+initial connection time = 2.433 ms
+tps = 9859.542352 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set id random(1, :ncust)
+         0.000           0          0 \set tier random(0, 4)
+         0.402           0          4 UPDATE customers SET tier = :tier WHERE id = :id;

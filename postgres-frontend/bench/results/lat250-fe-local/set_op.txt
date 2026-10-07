@@ -1,0 +1,19 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/set_op.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 948
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 4.227 ms
+initial connection time = 1.370 ms
+tps = 236.560589 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set a random(1, :ncust)
+         0.000           0          0 \set b random(1, :ncust)
+         4.225           0          0 SELECT item_id FROM orders WHERE customer_id = :a UNION SELECT item_id FROM orders WHERE customer_id = :b;

@@ -1,0 +1,19 @@
+diff --git a/src/main/java/com/oltpbenchmark/benchmarks/tpcc/procedures/Delivery.java b/src/main/java/com/oltpbenchmark/benchmarks/tpcc/procedures/Delivery.java
+index 2cf7ace..6975382 100644
+--- a/src/main/java/com/oltpbenchmark/benchmarks/tpcc/procedures/Delivery.java
++++ b/src/main/java/com/oltpbenchmark/benchmarks/tpcc/procedures/Delivery.java
+@@ -139,10 +139,12 @@ public class Delivery extends TPCCProcedure {
+ 
+       updateCarrierId(conn, w_id, o_carrier_id, d_id, no_o_id);
+ 
+-      updateDeliveryDate(conn, w_id, d_id, no_o_id);
+-
++      // Sum the order lines before updating them: ScalarDB does not scan records the same
++      // transaction has already written (DB-CORE-10106). The sum is the same either way.
+       float orderLineTotal = getOrderLineTotal(conn, w_id, d_id, no_o_id);
+ 
++      updateDeliveryDate(conn, w_id, d_id, no_o_id);
++
+       updateBalanceAndDelivery(conn, w_id, d_id, customerId, orderLineTotal);
+     }
+ 

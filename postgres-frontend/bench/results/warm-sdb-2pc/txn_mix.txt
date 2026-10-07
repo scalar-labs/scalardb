@@ -1,0 +1,25 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/txn_mix.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 3
+duration: 5 s
+number of transactions actually processed: 778
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 25.718 ms
+initial connection time = 3.064 ms
+tps = 155.531970 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.001           0          0 \set id random(1, :ncust)
+         0.000           0          0 \set tier random(0, 4)
+         0.000           0          0 \set oid random(1000000, 2000000000)
+         0.000           0          0 \set item random(1, :nitems)
+         0.800           0          0 BEGIN;
+        10.696           0          0 SELECT name, tier FROM customers WHERE id = :id;
+         2.617           0          0 UPDATE customers SET tier = :tier WHERE id = :id;
+         3.800           0          0 INSERT INTO orders (customer_id, order_id, item_id, amount, status, created) VALUES (:id, :oid, :item, 10, 'new', 1700000000);
+         7.789           0          0 COMMIT;

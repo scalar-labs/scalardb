@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/join_fanout.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 283
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 14.135 ms
+initial connection time = 9.239 ms
+tps = 70.744783 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.003           0          0 \set cid random(1, :ncust)
+        14.118           0          0 SELECT o.order_id, i.name, o.amount FROM orders o JOIN items i ON i.id = o.item_id WHERE o.customer_id = :cid;

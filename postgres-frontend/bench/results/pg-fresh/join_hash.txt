@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew))
+transaction type: scripts/join_hash.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 3
+duration: 5 s
+number of transactions actually processed: 274686
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 0.073 ms
+initial connection time = 4.692 ms
+tps = 54938.342718 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set cid random(1, :ncust)
+         0.070           0          0 SELECT o.order_id, i.name FROM orders o JOIN (SELECT id, name FROM items WHERE category = 'cat3') i ON i.id = o.item_id WHERE o

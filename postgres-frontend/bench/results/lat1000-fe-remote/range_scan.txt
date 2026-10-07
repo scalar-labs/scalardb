@@ -1,0 +1,19 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/range_scan.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 459
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 8.714 ms
+initial connection time = 5.964 ms
+tps = 114.752352 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.005           0          0 \set cid random(1, :ncust)
+         0.000           0          0 \set from random(1, :norders)
+         8.694           0          0 SELECT order_id, amount FROM orders WHERE customer_id = :cid AND order_id >= :from ORDER BY order_id LIMIT 5;

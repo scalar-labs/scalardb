@@ -1,0 +1,49 @@
+# 2026-10-02, frontend next to the app with scalar.db.scan_fetch_size=1000 versus the default 10, p50 ms at 1 client, 4 s per script
+## one-way delay 250 us (effective RTT 0.70 ms)
+script         PG remote  fe local fetch1000  local/PG  fetch/PG
+aggregate          0.661     2.177     1.462       3.3       2.2
+cte                0.650     1.484     1.417       2.3       2.2
+in_list            0.665     0.947     0.892       1.4       1.3
+index_multi        0.667     4.217     2.845       6.3       4.3
+index_point        0.644     2.718     2.805       4.2       4.4
+insert             0.702     0.818     0.809       1.2       1.2
+join_fanout        0.661     3.324     2.623       5.0       4.0
+join_hash          0.664    40.776     5.317      61.4       8.0
+join_lookup        0.656     2.846     2.088       4.3       3.2
+join_one           0.659     1.472     1.408       2.2       2.1
+point_get          0.642     0.786     0.746       1.2       1.2
+range_scan         0.646     1.478     1.404       2.3       2.2
+scan_filter        0.708    20.158     3.291      28.5       4.6
+set_op             0.658     4.151     2.761       6.3       4.2
+sort_memory        0.647     2.169     1.463       3.4       2.3
+subquery           0.649     2.202     2.102       3.4       3.2
+txn_mix            3.139     3.161     2.964       1.0       0.9
+txn_read           2.567     3.169     2.395       1.2       0.9
+txn_read_ro        2.569     3.139     2.412       1.2       0.9
+update_key         0.662     1.440     1.379       2.2       2.1
+update_scan        0.677     3.606     2.900       5.3       4.3
+upsert             0.662     1.451     1.372       2.2       2.1
+## one-way delay 1000 us (effective RTT 2.6 ms)
+script         PG remote  fe local fetch1000  local/PG  fetch/PG
+aggregate          2.337     8.021     4.942       3.4       2.1
+cte                2.308     5.294     5.060       2.3       2.2
+in_list            2.372     2.627     2.536       1.1       1.1
+index_multi        2.329    16.661    10.833       7.2       4.7
+index_point        2.325    10.717    10.485       4.6       4.5
+insert             2.415     2.759     2.650       1.1       1.1
+join_fanout        2.372    10.501     8.136       4.4       3.4
+join_hash          2.445   161.251    17.166      66.0       7.0
+join_lookup        2.352    10.999     7.612       4.7       3.2
+join_one           2.337     5.439     5.048       2.3       2.2
+point_get          2.337     2.752     2.616       1.2       1.1
+range_scan         2.336     5.117     5.087       2.2       2.2
+scan_filter        2.514    67.634    11.474      26.9       4.6
+set_op             2.387    15.155    10.579       6.3       4.4
+sort_memory        2.362     7.269     5.216       3.1       2.2
+subquery           2.361     8.111     7.635       3.4       3.2
+txn_mix           12.921    11.379    11.402       0.9       0.9
+txn_read           9.839    10.972     8.055       1.1       0.8
+txn_read_ro       10.047    11.489     8.413       1.1       0.8
+update_key         2.395     5.235     5.243       2.2       2.2
+update_scan        2.433    13.767    10.824       5.7       4.4
+upsert             2.394     5.240     5.037       2.2       2.1

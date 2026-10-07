@@ -1,0 +1,24 @@
+# 2026-10-02, whole suite at 1 client, 4 s per script, effective RTT 0.70 ms (one-way delay 250 us); PG remote = app->delay->PG, fe local = app->frontend->delay->PG, fe remote = app->delay->frontend->delay->PG
+script         PG remote  fe local fe remote  local/PG remote/PG   p50 ms
+aggregate          0.661     2.177     2.799       3.3       4.2
+cte                0.650     1.484     2.109       2.3       3.2
+in_list            0.665     0.947     1.506       1.4       2.3
+index_multi        0.667     4.217     4.799       6.3       7.2
+index_point        0.644     2.718     3.358       4.2       5.2
+insert             0.702     0.818     1.396       1.2       2.0
+join_fanout        0.661     3.324     4.161       5.0       6.3
+join_hash          0.664    40.776    42.643      61.4      64.2
+join_lookup        0.656     2.846     3.610       4.3       5.5
+join_one           0.659     1.472     2.126       2.2       3.2
+point_get          0.642     0.786     1.442       1.2       2.2
+range_scan         0.646     1.478     2.091       2.3       3.2
+scan_filter        0.708    20.158    21.905      28.5      30.9
+set_op             0.658     4.151     5.254       6.3       8.0
+sort_memory        0.647     2.169     2.924       3.4       4.5
+subquery           0.649     2.202     3.066       3.4       4.7
+txn_mix            3.139     3.161     6.191       1.0       2.0
+txn_read           2.567     3.169     5.772       1.2       2.2
+txn_read_ro        2.569     3.139     5.764       1.2       2.2
+update_key         0.662     1.440     2.111       2.2       3.2
+update_scan        0.677     3.606     4.296       5.3       6.3
+upsert             0.662     1.451     2.032       2.2       3.1

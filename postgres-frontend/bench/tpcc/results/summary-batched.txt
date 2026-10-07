@@ -1,0 +1,28 @@
+                          pg             sdb sdb+index+batch
+tps                   3202.9           569.7           553.5
+goodput               3096.0           553.5           538.4
+avg ms                  1.25            7.01            7.22
+p50 ms                  1.10            5.10            4.22
+p95 ms                  2.33           14.51            8.54
+p99 ms                  3.91           23.81           17.63
+terminals                  4               4               4
+warehouses                 1               1               1
+
+procedure                           pg             sdb sdb+index+batch
+NewOrder    completed            87909           15757           15133
+NewOrder    aborted                843             151             160
+NewOrder    retried               2992             281             274
+NewOrder    errors                   3               0               0
+Payment     completed            77078           13897           13677
+Payment     retried              49168            8933            8525
+OrderStatus completed             7933            1373            1375
+StockLevel  completed             7902            1349            1347
+Delivery    completed             8024            1386            1312
+Delivery    retried               2245             477             422
+
+p50 / p95 ms              pg             sdb sdb+index+batch
+NewOrder         1.64 / 2.37    6.50 / 10.72     5.53 / 8.18
+Payment          0.50 / 1.32     2.80 / 7.56     2.29 / 6.30
+OrderStatus      0.24 / 0.59     2.49 / 3.62     1.69 / 2.92
+Delivery         2.57 / 5.11   12.72 / 51.45   10.35 / 42.16
+StockLevel       0.67 / 0.83   15.43 / 21.62     7.86 / 9.26

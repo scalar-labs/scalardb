@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/cte.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 2573
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 1.555 ms
+initial connection time = 1.987 ms
+tps = 643.075726 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set cid random(1, :ncust)
+         1.553           0          0 WITH recent AS (SELECT order_id, amount FROM orders WHERE customer_id = :cid AND order_id > 5) SELECT COUNT(*) AS n, SUM(amount

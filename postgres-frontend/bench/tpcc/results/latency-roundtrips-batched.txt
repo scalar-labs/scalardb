@@ -1,0 +1,7 @@
+# batched lookups: round trips per transaction = (p50 at RTT 2.394 ms - p50 at RTT 0.651 ms) / 1.743 ms; 'ms at 0' = the localhost run
+procedure         PG remote RT  ms at 0 frontend local RT  ms at 0frontend remote RT  ms at 0
+NewOrder                  26.7     1.64              45.5     5.53              72.7     5.53
+Payment                    7.6     0.50               9.9     2.29              17.9     2.29
+OrderStatus                3.7     0.24               5.5     1.69              10.1     1.69
+Delivery                  45.8     2.57              68.2    10.35             106.8    10.35
+StockLevel                 2.7     0.67              28.5     7.86              33.6     7.86

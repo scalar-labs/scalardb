@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew))
+transaction type: scripts/join_lookup.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 1461
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 2.739 ms
+initial connection time = 10.116 ms
+tps = 365.162817 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.002           0          0 \set id random(1, :ncust)
+         2.726           0          0 SELECT c.name, o.order_id, o.amount FROM customers c JOIN orders o ON o.customer_id = c.id WHERE c.id = :id;

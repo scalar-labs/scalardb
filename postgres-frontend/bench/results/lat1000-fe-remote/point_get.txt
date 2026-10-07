@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/point_get.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 686
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 5.795 ms
+initial connection time = 31.462 ms
+tps = 172.569717 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.002           0          0 \set id random(1, :ncust)
+         5.782           0          0 SELECT name, region, tier FROM customers WHERE id = :id;

@@ -1,0 +1,21 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/txn_read.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 2 s
+number of transactions actually processed: 801
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 2.502 ms
+initial connection time = 1.221 ms
+tps = 399.676467 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set id random(1, :ncust)
+         0.107           0          0 BEGIN;
+         0.788           0          0 SELECT name, tier FROM customers WHERE id = :id;
+         1.493           0          0 SELECT order_id, amount FROM orders WHERE customer_id = :id;
+         0.110           0          0 COMMIT;

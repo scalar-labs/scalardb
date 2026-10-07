@@ -1,0 +1,31 @@
+# 2026-10-02, scale factor 1, 4 terminals, 60 s, REPEATABLE READ, localhost, one-phase commit on
+                          pg             sdb       sdb+index
+tps                   3202.9           569.7           565.5
+goodput               3096.0           553.5           549.5
+avg ms                  1.25            7.01            7.06
+p50 ms                  1.10            5.10            5.21
+p95 ms                  2.33           14.51           16.27
+p99 ms                  3.91           23.81           25.24
+terminals                  4               4               4
+warehouses                 1               1               1
+
+procedure                           pg             sdb       sdb+index
+NewOrder    completed            87909           15757           15305
+NewOrder    aborted                843             151             175
+NewOrder    retried               2992             281             307
+NewOrder    errors                   3               0               0
+Payment     completed            77078           13897           13621
+Payment     retried              49168            8933            7174
+OrderStatus completed             7933            1373            1400
+StockLevel  completed             7902            1349            1332
+Delivery    completed             8024            1386            1314
+Delivery    retried               2245             477             440
+
+# per-procedure latency, ms (p50 / p95), from *.raw.csv
+procedure       p50 pg    p95 pg   p50 sdb   p95 sdb  p50 +idx  p95 +idx
+NewOrder          1.64      2.37      6.50     10.72      7.25     11.62
+Payment           0.50      1.32      2.80      7.56      2.25      6.74
+OrderStatus       0.24      0.59      2.49      3.62      1.95      3.58
+Delivery          2.57      5.11     12.72     51.45     14.37     52.35
+StockLevel        0.67      0.83     15.43     21.62     17.47     24.03
+

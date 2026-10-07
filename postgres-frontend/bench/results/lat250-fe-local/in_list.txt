@@ -1,0 +1,22 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/in_list.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 3781
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 1.058 ms
+initial connection time = 2.450 ms
+tps = 944.878899 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set a random(1, :ncust)
+         0.000           0          0 \set b random(1, :ncust)
+         0.000           0          0 \set c random(1, :ncust)
+         0.000           0          0 \set d random(1, :ncust)
+         0.000           0          0 \set e random(1, :ncust)
+         1.056           0          0 SELECT id, name FROM customers WHERE id IN (:a, :b, :c, :d, :e);

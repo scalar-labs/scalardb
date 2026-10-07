@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/update_scan.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 3
+duration: 5 s
+number of transactions actually processed: 5985
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 1 (0.017%)
+total number of retries: 1
+latency average = 3.344 ms
+initial connection time = 4.922 ms
+tps = 1196.289404 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.001           0          0 \set cid random(1, :ncust)
+         3.313           0          1 UPDATE orders SET status = CASE WHEN status = 'new' THEN 'shipped' ELSE 'new' END WHERE customer_id = :cid;

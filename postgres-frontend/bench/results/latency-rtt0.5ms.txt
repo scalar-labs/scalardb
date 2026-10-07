@@ -1,0 +1,9 @@
+RTT 500 us, 1 client, p50 ms
+script        PG remote ScalarDB API frontend local frontend remote
+point_get         0.652        0.660          0.821          1.383
+join_fanout       0.692            -          3.398          3.934
+RTT 500 us, 8 clients, point_get tps: PG remote 12606, frontend local 9185, frontend remote 5463
+update_key        0.702        1.421          1.556          2.131
+insert            0.682        0.709          0.805          1.354
+txn_mix           3.164            -          3.195          5.961
+RTT 500 us, 8 clients, txn_mix tps: PG remote 2490, frontend local 2018, frontend remote 1275

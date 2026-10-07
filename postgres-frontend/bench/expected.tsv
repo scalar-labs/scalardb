@@ -1,0 +1,23 @@
+# script	expected ScalarDB reads	parameters for the check (pgbench variables)
+point_get	1	id=1
+range_scan	1	cid=1,from=3
+index_point	1	code=1000007
+index_multi	1	region=5
+scan_filter	1	p=500
+in_list	5	a=1,b=2,c=3,d=4,e=5
+join_lookup	2	id=1
+join_fanout	11	cid=1
+join_hash	2	cid=1
+aggregate	1	cid=1
+subquery	2	id=1,amt=100
+sort_memory	1	cid=1
+cte	1	cid=1
+set_op	2	a=1,b=2
+update_key	0	id=1,tier=3
+update_scan	1	cid=1
+insert	0	cid=1,oid=999999999,item=1,amt=5
+upsert	0	id=1,hits=7
+txn_mix	1	id=1,tier=3,oid=999999998,item=1
+txn_read	2	id=1
+txn_read_ro	2	id=1
+join_one	2	cid=1,oid=3

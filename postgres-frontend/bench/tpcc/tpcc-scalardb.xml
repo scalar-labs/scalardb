@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!-- BenchBase TPC-C against the frontend on ScalarDB. Apply ddl-scalardb.sql with psql first and run with --create=false (BenchBase cannot derive its catalog from that DDL). Edit url/username/password/scalefactor/terminals/time. -->
+<parameters>
+    <type>POSTGRES</type>
+    <driver>org.postgresql.Driver</driver>
+    <url>jdbc:postgresql://localhost:15432/tpcc?sslmode=disable&amp;ApplicationName=tpcc&amp;reWriteBatchedInserts=true</url>
+    <username>postgres</username>
+    <password></password>
+    <reconnectOnConnectionFailure>true</reconnectOnConnectionFailure>
+    <!-- snapshot isolation on both sides: ScalarDB's default is SNAPSHOT -->
+    <isolation>TRANSACTION_REPEATABLE_READ</isolation>
+    <batchsize>128</batchsize>
+    <scalefactor>1</scalefactor>
+    <terminals>4</terminals>
+    <works>
+        <work>
+            <time>60</time>
+            <rate>unlimited</rate>
+            <weights>45,43,4,4,4</weights>
+        </work>
+    </works>
+    <transactiontypes>
+        <transactiontype><name>NewOrder</name></transactiontype>
+        <transactiontype><name>Payment</name></transactiontype>
+        <transactiontype><name>OrderStatus</name></transactiontype>
+        <transactiontype><name>Delivery</name></transactiontype>
+        <transactiontype><name>StockLevel</name></transactiontype>
+    </transactiontypes>
+</parameters>

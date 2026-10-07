@@ -1,0 +1,32 @@
+one-way delay 1000 us; effective RTT = 2.506 ms for a native point read through the proxy (0.03 ms direct)
+=== PostgreSQL remote 12:57:55
+=== frontend next to the app, PostgreSQL remote 12:59:14
+=== frontend remote 13:00:50
+--- unexpected errors: 0
+                   PG remote  frontend local frontend remote
+tps                     87.9            41.6            30.6
+goodput                 85.5            41.2            29.9
+avg ms                 45.42           95.60          130.41
+p50 ms                 45.04           72.30          114.80
+p95 ms                 86.16          420.88          300.86
+p99 ms                155.60          507.34          532.45
+terminals                  4               4               4
+warehouses                 1               1               1
+
+procedure                    PG remote  frontend local frontend remote
+NewOrder    completed             2438            1126             818
+NewOrder    aborted                 19              13               9
+NewOrder    retried                 82              15              18
+Payment     completed             2130            1039             778
+Payment     retried               1321             377             412
+OrderStatus completed              202             104              84
+Delivery    completed              214             116              62
+Delivery    retried                 50              27               8
+StockLevel  completed              230             127              54
+
+p50 / p95 ms       PG remote  frontend local frontend remote
+NewOrder       63.88 / 86.68 111.78 / 157.47 172.83 / 240.64
+Payment        18.37 / 54.15   25.87 / 69.27  43.33 / 119.96
+OrderStatus      8.89 / 9.88   14.87 / 19.26   23.57 / 28.73
+Delivery     109.00 / 213.37 158.79 / 450.57 266.20 / 743.34
+StockLevel       7.11 / 7.49 479.23 / 536.98 515.78 / 604.16

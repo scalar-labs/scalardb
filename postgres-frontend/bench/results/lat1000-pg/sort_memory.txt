@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew))
+transaction type: scripts/sort_memory.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 1430
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 2.799 ms
+initial connection time = 8.318 ms
+tps = 357.279023 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.005           0          0 \set cid random(1, :ncust)
+         2.782           0          0 SELECT order_id, amount FROM orders WHERE customer_id = :cid ORDER BY amount DESC LIMIT 3;

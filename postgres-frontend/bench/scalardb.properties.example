@@ -1,0 +1,12 @@
+# ScalarDB on PostgreSQL for the benchmark: point the frontend at this file.
+scalar.db.storage=jdbc
+scalar.db.contact_points=jdbc:postgresql://localhost:5432/scalardb_bench
+scalar.db.username=postgres
+scalar.db.password=postgres
+scalar.db.transaction_manager=consensus-commit
+scalar.db.cross_partition_scan.enabled=true
+scalar.db.cross_partition_scan.filtering.enabled=true
+scalar.db.cross_partition_scan.ordering.enabled=true
+# Transactions whose writes fit one storage mutation (single partition, no validation) commit in
+# one phase: no coordinator write, no separate commit of the records. Default false.
+scalar.db.consensus_commit.one_phase_commit.enabled=true

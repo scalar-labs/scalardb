@@ -1,0 +1,19 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/upsert.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 3
+duration: 10 s
+number of transactions actually processed: 104669
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 186 (0.178%)
+total number of retries: 186
+latency average = 0.382 ms
+initial connection time = 1.753 ms
+tps = 10463.044368 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.000           0          0 \set id random(1, 1000)
+         0.000           0          0 \set hits random(1, 1000000)
+         0.377           0        186 INSERT INTO counters (id, hits) VALUES (:id, :hits) ON CONFLICT (id) DO UPDATE SET hits = EXCLUDED.hits;

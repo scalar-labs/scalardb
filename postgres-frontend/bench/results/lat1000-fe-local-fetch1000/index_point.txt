@@ -1,0 +1,19 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/index_point.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 1
+number of threads: 1
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 343
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 11.696 ms
+initial connection time = 1.119 ms
+tps = 85.500936 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.004           0          0 \set i random(1, :nitems)
+         0.001           0          0 \set code 1000000 + 7 * :i
+        11.671           0          0 SELECT id, name, price FROM items WHERE code = :code;

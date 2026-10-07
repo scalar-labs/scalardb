@@ -1,0 +1,5 @@
+op	layer	threads	ops	tps	p50_ms	p95_ms	p99_ms	client_cpu_us	pg_cpu_us	frontend_cpu_us
+put	tx	1	34993	6999	0.124	0.219	0.330	59.1	58.0	0.0
+put	frontend	1	14261	2852	0.308	0.512	0.722	33.4	66.6	227.9
+put	tx	4	42560	8512	0.141	0.274	0.477	45.9	64.1	0.0
+put	frontend	4	26445	5289	0.447	1.022	2.295	29.1	94.5	270.4

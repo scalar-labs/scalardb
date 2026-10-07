@@ -1,0 +1,18 @@
+pgbench (18.1 (Homebrew), server 16.0)
+transaction type: scripts/scan_filter.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 3
+duration: 4 s
+number of transactions actually processed: 2626
+number of failed transactions: 0 (0.000%)
+number of transactions retried: 0 (0.000%)
+total number of retries: 0
+latency average = 6.096 ms
+initial connection time = 3.558 ms
+tps = 656.158306 (without initial connection time)
+statement latencies in milliseconds, failures and retries:
+         0.001           0          0 \set p random(1, 900)
+         6.092           0          0 SELECT COUNT(*) FROM items WHERE price > :p AND category = 'cat7';

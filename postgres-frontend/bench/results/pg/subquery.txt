@@ -1,0 +1,17 @@
+pgbench (18.1 (Homebrew))
+transaction type: scripts/subquery.sql
+scaling factor: 1
+query mode: prepared
+number of clients: 4
+number of threads: 4
+maximum number of tries: 1
+duration: 5 s
+number of transactions actually processed: 232401
+number of failed transactions: 0 (0.000%)
+latency average = 0.086 ms
+initial connection time = 5.249 ms
+tps = 46426.438185 (without initial connection time)
+statement latencies in milliseconds and failures:
+         0.000           0 \set id random(1, :ncust)
+         0.000           0 \set amt random(1, 400)
+         0.083           0 SELECT name FROM customers c WHERE c.id = :id AND EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id AND o.amount > :amt

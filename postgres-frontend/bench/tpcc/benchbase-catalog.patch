@@ -1,0 +1,16 @@
+diff --git a/src/main/java/com/oltpbenchmark/util/SQLUtil.java b/src/main/java/com/oltpbenchmark/util/SQLUtil.java
+index 6b01f9e..6ee59c9 100644
+--- a/src/main/java/com/oltpbenchmark/util/SQLUtil.java
++++ b/src/main/java/com/oltpbenchmark/util/SQLUtil.java
+@@ -545,6 +545,11 @@ WHERE t.name='%s' AND c.name='%s'
+   public static AbstractCatalog getCatalog(
+       BenchmarkModule benchmarkModule, DatabaseType databaseType, Connection connection)
+       throws SQLException {
++    // -Dbenchbase.catalog.hsqldb=true: take the catalog from the benchmark's own DDL instead of
++    // the database's metadata (for front ends whose pg_catalog is incomplete)
++    if (Boolean.getBoolean("benchbase.catalog.hsqldb")) {
++      return getCatalogHSQLDB(benchmarkModule);
++    }
+     switch (databaseType) {
+       case NOISEPAGE: // fall-through
+       case HSQLDB:
