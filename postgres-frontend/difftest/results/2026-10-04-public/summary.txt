@@ -1,0 +1,4 @@
+Read set + types set, 2026-10-04 (afternoon): the connected namespace is presented as schema `public` (pg_namespace, information_schema, pg_indexes, current_schema[s], search_path); `public.t` and the namespace name both resolve; COMMIT/ROLLBACK outside a transaction are no-ops as in PostgreSQL; information_schema.columns gained udt_name, character_maximum_length, column_default. Frontend built from the live tree, PG 18 on 15440.
+read:  {'OK': 192, 'NUM_FMT': 1, 'BOTH_ERR': 3, 'DIFF': 2, 'PG_ERR': 1}
+types: {'OK': 14}
+Unchanged from 2026-10-03-windows: avg_double (PG's double accumulation error, kept exact here), string_funcs (C-ctype upper of e-acute), text_cmp_case (collation), abs_round (round(double,int) is not a PG function), 3 BOTH_ERR expected.

@@ -1,0 +1,16 @@
+All sets, 2026-10-07: the module built with a Java 17 toolchain and JSQLParser 5.4 (PostgreSQL dialect), plus the
+syntax it unblocked: dollar-quoted strings, # << >> ~ & |, EXCEPT ALL / INTERSECT ALL, WITH ORDINALITY,
+IS [NOT] DISTINCT FROM, SIMILAR TO, BETWEEN SYMMETRIC, row values (=, <, IN), array subscripts and slices,
+FETCH FIRST n ROWS WITH TIES, TABLESAMPLE and ONLY (accepted), uuid/json/jsonb columns as text, gen_random_uuid(),
+INSERT ... DEFAULT VALUES, ANALYZE and VACUUM as no-ops, and (later that day) UPDATE ... FROM and DELETE ... USING as joined,
+key-deduplicated read-driven writes, grouping() with grouping sets, LATERAL subqueries and table functions over earlier
+sources, and json/jsonb: -> ->> #> #>> @> <@ ? ?| ?& || -, casts, build_object/array, to_json(b), typeof, array_length,
+extract_path(_text), array_elements(_text) in select lists and FROM, json(b)_agg and json(b)_object_agg.
+33 new read cases, 6 new autocommit write cases. Cluster rebuilt in the session scratchpad
+(UTF-8, C locale, UTC), PG 18 on 15440, frontend on 15444 run with JDK 17. Both sides reloaded before the read sets.
+read:    {'OK': 226, 'NUM_FMT': 1, 'BOTH_ERR': 3, 'DIFF': 1, 'PG_ERR': 1}
+types:   {'OK': 14}
+write:   {'OK': 16, 'FE_ERR': 11, 'BOTH_ERR': 7}
+write_ac:{'OK': 49, 'FE_ERR': 1, 'BOTH_ERR': 3}
+bind:    {'OK': 16, 'BOTH_ERR': 2, 'FE_ERR': 1}
+Remaining in read: avg_double (exact mean kept), string_funcs (C-ctype upper of e-acute), abs_round (PG-side), 3 BOTH_ERR expected; write/write_ac/bind identical to the Java 8 baseline (DB-CORE-10106 cases and expected errors).

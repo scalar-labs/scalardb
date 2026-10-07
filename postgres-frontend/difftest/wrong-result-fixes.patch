@@ -1,0 +1,395 @@
+diff -ruN a/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Evaluator.java b/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Evaluator.java
+--- a/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Evaluator.java	2026-10-02 15:25:56
++++ b/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Evaluator.java	2026-10-02 15:25:56
+@@ -1,6 +1,7 @@
+ package com.scalar.db.frontend.postgres;
+ 
+ import java.math.BigDecimal;
++import java.math.BigInteger;
+ import java.math.RoundingMode;
+ import java.nio.ByteBuffer;
+ import java.time.Instant;
+@@ -154,13 +155,13 @@
+       return null;
+     }
+     if (e instanceof LongValue) {
+-      return ((LongValue) e).getValue();
++      return integer(((LongValue) e).getBigIntegerValue());
+     }
+     if (e instanceof DoubleValue) {
+       return ((DoubleValue) e).getValue();
+     }
+     if (e instanceof StringValue) {
+-      return ((StringValue) e).getValue();
++      return ((StringValue) e).getNotExcapedValue();
+     }
+     if (e instanceof DateTimeLiteralExpression) {
+       return temporal((DateTimeLiteralExpression) e);
+@@ -169,7 +170,12 @@
+       return now(((TimeKeyExpression) e).getStringValue());
+     }
+     if (e instanceof SignedExpression) {
+-      Object v = eval(((SignedExpression) e).getExpression(), group, ctx);
++      Expression inner = ((SignedExpression) e).getExpression();
++      if (((SignedExpression) e).getSign() == '-' && inner instanceof LongValue) {
++        // -9223372036854775808 is in range although its absolute value is not
++        return integer(((LongValue) inner).getBigIntegerValue().negate());
++      }
++      Object v = eval(inner, group, ctx);
+       return ((SignedExpression) e).getSign() == '-' ? negate(v) : v;
+     }
+     if (e instanceof Column) {
+@@ -277,7 +283,18 @@
+       }
+       String escape =
+           like.getEscape() == null ? "\\" : String.valueOf(eval(like.getEscape(), group, ctx));
+-      boolean matches = likePattern(String.valueOf(p), escape).matcher(String.valueOf(v)).matches();
++      if (like.getLikeKeyWord() != LikeExpression.KeyWord.LIKE
++          && like.getLikeKeyWord() != LikeExpression.KeyWord.ILIKE) {
++        throw new IllegalArgumentException("Unsupported expression: " + e);
++      }
++      Pattern pattern = likePattern(String.valueOf(p), escape);
++      if (like.getLikeKeyWord() == LikeExpression.KeyWord.ILIKE) {
++        pattern =
++            Pattern.compile(
++                pattern.pattern(),
++                pattern.flags() | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
++      }
++      boolean matches = pattern.matcher(String.valueOf(v)).matches();
+       return matches != like.isNot();
+     }
+     if (e instanceof InExpression) {
+@@ -378,14 +395,6 @@
+     throw new IllegalArgumentException("Cannot compare " + a + " with " + b);
+   }
+ 
+-  /** Orders nulls last, as PostgreSQL does for ascending order. */
+-  static int compareNullsLast(@Nullable Object a, @Nullable Object b) {
+-    if (a == null || b == null) {
+-      return a == null ? (b == null ? 0 : 1) : -1;
+-    }
+-    return compare(a, b);
+-  }
+-
+   /** Accepts the boolean spellings PostgreSQL accepts. */
+   static boolean parseBoolean(String s) {
+     switch (s.trim().toLowerCase(Locale.ROOT)) {
+@@ -568,19 +577,35 @@
+     if (!(l instanceof Number) || !(r instanceof Number)) {
+       throw new IllegalArgumentException("Arithmetic on non-numeric values: " + e);
+     }
++    boolean division = e instanceof Division || e instanceof Modulo;
++    if (division && ((Number) r).doubleValue() == 0) {
++      throw new IllegalArgumentException("division by zero");
++    }
+     if (isIntegral(l) && isIntegral(r)) {
+       long a = ((Number) l).longValue();
+       long b = ((Number) r).longValue();
++      long v;
+       if (e instanceof Addition) {
+-        return a + b;
++        v = Math.addExact(a, b);
++      } else if (e instanceof Subtraction) {
++        v = Math.subtractExact(a, b);
++      } else if (e instanceof Multiplication) {
++        v = Math.multiplyExact(a, b);
++      } else if (e instanceof Modulo) {
++        v = a % b;
++      } else if (a == Long.MIN_VALUE && b == -1) {
++        throw new ArithmeticException("bigint out of range");
++      } else {
++        v = a / b;
+       }
+-      if (e instanceof Subtraction) {
+-        return a - b;
++      // integer op integer stays integer in PostgreSQL and fails on overflow
++      if (isInt(l, e.getLeftExpression()) && isInt(r, e.getRightExpression())) {
++        if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {
++          throw new ArithmeticException("integer out of range");
++        }
++        return (int) v;
+       }
+-      if (e instanceof Multiplication) {
+-        return a * b;
+-      }
+-      return e instanceof Modulo ? a % b : a / b;
++      return v;
+     }
+     double a = ((Number) l).doubleValue();
+     double b = ((Number) r).doubleValue();
+@@ -596,6 +621,17 @@
+     return e instanceof Modulo ? a % b : a / b;
+   }
+ 
++  /** An INT value, or an integer literal small enough to be int4 in PostgreSQL. */
++  private static boolean isInt(Object v, Expression e) {
++    return v instanceof Integer
++        || (e instanceof LongValue && ((LongValue) e).getBigIntegerValue().bitLength() < 32);
++  }
++
++  /** An integer literal as a long, or as a double (PostgreSQL's numeric) beyond bigint. */
++  private static Object integer(BigInteger v) {
++    return v.bitLength() < 64 ? (Object) v.longValue() : (Object) v.doubleValue();
++  }
++
+   @Nullable
+   private static Object caseOf(CaseExpression c, List<Map<String, Object>> group, Context ctx) {
+     Object subject =
+@@ -629,10 +665,12 @@
+             : s.matches("\\d+") ? Long.parseLong(s) : v;
+       }
+       if (t.equals("bigint") || t.equals("int8")) {
+-        return v instanceof Number ? ((Number) v).longValue() : new BigDecimal(s).longValueExact();
++        return v instanceof Number ? rounded((Number) v) : new BigDecimal(s).longValueExact();
+       }
+       if (t.contains("int")) {
+-        return v instanceof Number ? ((Number) v).intValue() : new BigDecimal(s).intValueExact();
++        return v instanceof Number
++            ? Math.toIntExact(rounded((Number) v))
++            : new BigDecimal(s).intValueExact();
+       }
+       if (t.contains("float")
+           || t.contains("double")
+@@ -665,6 +703,15 @@
+       throw new IllegalArgumentException("Cannot cast '" + s + "' to " + type, e);
+     }
+     throw new IllegalArgumentException("Unsupported cast type: " + type);
++  }
++
++  /**
++   * A number rounded to an integer the way PostgreSQL casts numeric (half away from zero), failing
++   * when out of range. NUMERIC columns and decimal literals are doubles here, so this also applies
++   * to them; a true float8 .5 rounds to even in PostgreSQL.
++   */
++  private static long rounded(Number n) {
++    return new BigDecimal(n.toString()).setScale(0, RoundingMode.HALF_UP).longValueExact();
+   }
+ 
+   @Nullable
+diff -ruN a/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Operators.java b/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Operators.java
+--- a/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Operators.java	2026-10-02 15:25:56
++++ b/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/Operators.java	2026-10-02 15:25:56
+@@ -410,9 +410,22 @@
+       rows.sort(
+           (x, y) -> {
+             for (int i = 0; i < orderBy.size(); i++) {
+-              int c = Evaluator.compareNullsLast(key(x, i, ctx), key(y, i, ctx));
++              OrderByElement o = orderBy.get(i);
++              Object a = key(x, i, ctx);
++              Object b = key(y, i, ctx);
++              int c;
++              if (a == null || b == null) {
++                // PostgreSQL defaults to NULLS LAST for ASC and NULLS FIRST for DESC
++                boolean nullsFirst =
++                    o.getNullOrdering() == null
++                        ? !o.isAsc()
++                        : o.getNullOrdering() == OrderByElement.NullOrdering.NULLS_FIRST;
++                c = a == b ? 0 : (a == null) == nullsFirst ? -1 : 1;
++              } else {
++                c = o.isAsc() ? Evaluator.compare(a, b) : -Evaluator.compare(a, b);
++              }
+               if (c != 0) {
+-                return orderBy.get(i).isAsc() ? c : -c;
++                return c;
+               }
+             }
+             return 0;
+diff -ruN a/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/QueryParser.java b/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/QueryParser.java
+--- a/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/QueryParser.java	2026-10-02 15:25:56
++++ b/postgres-frontend/src/main/java/com/scalar/db/frontend/postgres/QueryParser.java	2026-10-02 15:25:56
+@@ -25,6 +25,7 @@
+ import com.scalar.db.api.UpsertBuilder;
+ import com.scalar.db.exception.storage.ExecutionException;
+ import com.scalar.db.exception.transaction.TransactionException;
++import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
+ import com.scalar.db.io.BigIntColumn;
+ import com.scalar.db.io.BlobColumn;
+ import com.scalar.db.io.BooleanColumn;
+@@ -306,6 +307,7 @@
+     private final boolean distinct;
+     private List<OrderByElement> orderBy; // in-memory ordering
+     private int limit; // in-memory limit; negative for none
++    private boolean unsatisfied; // the keyed UPDATE/DELETE matched no row
+     private int offset;
+     // A set operation: its two member plans and how they combine
+     private List<Plan> members = Collections.emptyList();
+@@ -791,7 +793,8 @@
+       if (first instanceof Insert || first instanceof Upsert) {
+         return "INSERT 0 " + mutations.size();
+       }
+-      return (first instanceof Update ? "UPDATE " : "DELETE ") + mutations.size();
++      return (first instanceof Update ? "UPDATE " : "DELETE ")
++          + (unsatisfied ? 0 : mutations.size());
+     }
+ 
+     /** Executes the statement and returns every row. */
+@@ -834,7 +837,18 @@
+         throw new IllegalStateException("A read-then-write statement runs with executeWrite");
+       }
+       if (mutations() != null) {
+-        crud.mutate(mutations());
++        unsatisfied = false;
++        try {
++          crud.mutate(mutations());
++        } catch (TransactionException e) {
++          // A keyed UPDATE/DELETE whose row is missing or does not match the WHERE affects 0 rows
++          if (!(e instanceof UnsatisfiedConditionException)
++              || mutations().size() != 1
++              || mutations().get(0) instanceof Insert) {
++            throw e;
++          }
++          unsatisfied = true;
++        }
+         return Cursor.EMPTY;
+       }
+       Reader crudReader = reader(crud);
+@@ -2430,9 +2444,19 @@
+     }
+     if (select.getGroupBy() != null) {
+       plan.groupBy = new ArrayList<>();
+-      for (Object g : select.getGroupBy().getGroupByExpressionList()) {
+-        plan.groupBy.add((Expression) g);
+-        analyze((Expression) g, scope, plan.subplans);
++      for (Object o : select.getGroupBy().getGroupByExpressionList()) {
++        Expression g = (Expression) o;
++        if (g instanceof LongValue) {
++          // GROUP BY n refers to the n-th output column
++          long n = ((LongValue) g).getValue();
++          if (n < 1 || n > plan.outputExpressions.size()) {
++            throw new IllegalArgumentException("GROUP BY position " + n + " is not in select list");
++          }
++          plan.groupBy.add(plan.outputExpressions.get((int) n - 1));
++          continue;
++        }
++        plan.groupBy.add(g);
++        analyze(g, scope, plan.subplans);
+       }
+     }
+     plan.having = select.getHaving();
+@@ -2500,7 +2524,8 @@
+             && clusteringOrder(lp.orderBy, lp.sources.get(0).target.metadata);
+     boolean pushLimit =
+         single
+-            && lp.limit >= 0
++            // ScalarDB reads limit 0 as "no limit", so LIMIT 0 stays in memory
++            && lp.limit > 0
+             && lp.where.isEmpty()
+             && !lp.aggregated
+             && !lp.distinct
+@@ -3019,9 +3044,12 @@
+         b.value(value(t.metadata, columnName(set.getColumn(i)), set.getValue(i), ctx));
+       }
+     }
+-    if (!conditions.isEmpty()) {
+-      b.condition(ConditionBuilder.updateIf(conditions));
+-    }
++    // A condition makes ScalarDB report a missing or non-matching row (as 0 rows) instead of
++    // silently doing nothing
++    b.condition(
++        conditions.isEmpty()
++            ? ConditionBuilder.updateIfExists()
++            : ConditionBuilder.updateIf(conditions));
+     return b.build();
+   }
+ 
+@@ -3036,9 +3064,10 @@
+     if (!t.metadata.getClusteringKeyNames().isEmpty()) {
+       b.clusteringKey(primaryKey(conditions, t.metadata.getClusteringKeyNames(), delete));
+     }
+-    if (!conditions.isEmpty()) {
+-      b.condition(ConditionBuilder.deleteIf(conditions));
+-    }
++    b.condition(
++        conditions.isEmpty()
++            ? ConditionBuilder.deleteIfExists()
++            : ConditionBuilder.deleteIf(conditions));
+     return b.build();
+   }
+ 
+@@ -3459,7 +3488,9 @@
+     }
+     if (e instanceof LikeExpression) {
+       LikeExpression like = (LikeExpression) e;
+-      if (!isColumn(like.getLeftExpression())
++      // ScalarDB's LIKE is case-sensitive, so ILIKE (and RLIKE/REGEXP) stay in memory
++      if (like.getLikeKeyWord() != LikeExpression.KeyWord.LIKE
++          || !isColumn(like.getLeftExpression())
+           || !(like.getRightExpression() instanceof StringValue
+               || like.getRightExpression() instanceof JdbcParameter)
+           || (like.getEscape() != null && !(like.getEscape() instanceof StringValue))) {
+@@ -3755,7 +3786,7 @@
+       return value == null ? null : String.valueOf(value);
+     }
+     if (e instanceof StringValue) {
+-      return ((StringValue) e).getValue();
++      return ((StringValue) e).getNotExcapedValue();
+     }
+     if (e instanceof LongValue || e instanceof DoubleValue) {
+       return e.toString();
+diff -ruN a/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/PostgresServerTest.java b/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/PostgresServerTest.java
+--- a/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/PostgresServerTest.java	2026-10-02 15:25:56
++++ b/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/PostgresServerTest.java	2026-10-02 15:25:56
+@@ -7,6 +7,7 @@
+ import static org.mockito.Mockito.verify;
+ import static org.mockito.Mockito.when;
+ 
++import com.scalar.db.api.ConditionBuilder;
+ import com.scalar.db.api.Delete;
+ import com.scalar.db.api.DistributedTransaction;
+ import com.scalar.db.api.DistributedTransactionAdmin;
+@@ -156,6 +157,7 @@
+                     .namespace("ns")
+                     .table("t")
+                     .partitionKey(Key.ofInt("id", 1))
++                    .condition(ConditionBuilder.deleteIfExists())
+                     .build()));
+     verify(transaction).commit();
+   }
+diff -ruN a/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryParserTest.java b/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryParserTest.java
+--- a/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryParserTest.java	2026-10-02 15:25:56
++++ b/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryParserTest.java	2026-10-02 15:25:56
+@@ -434,6 +434,7 @@
+                 .table("t")
+                 .partitionKey(Key.ofInt("id", 1))
+                 .clusteringKey(Key.ofBigInt("seq", 2))
++                .condition(ConditionBuilder.deleteIfExists())
+                 .build());
+   }
+ 
+@@ -1229,7 +1230,7 @@
+     QueryParser.Plan insert =
+         parser.parse(
+             "INSERT INTO t (id, seq, name) VALUES (7, 7, 'g') RETURNING id * 2 AS d, name");
+-    assertThat(insert.execute(transaction)).containsExactly(row("d", 14L, "name", "g"));
++    assertThat(insert.execute(transaction)).containsExactly(row("d", 14, "name", "g"));
+     assertThat(insert.commandTag(1)).isEqualTo("INSERT 0 1");
+   }
+ 
+diff -ruN a/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryProcessorTest.java b/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryProcessorTest.java
+--- a/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryProcessorTest.java	2026-10-02 15:25:56
++++ b/postgres-frontend/src/test/java/com/scalar/db/frontend/postgres/QueryProcessorTest.java	2026-10-02 15:25:56
+@@ -8,6 +8,7 @@
+ import static org.mockito.Mockito.verify;
+ import static org.mockito.Mockito.when;
+ 
++import com.scalar.db.api.ConditionBuilder;
+ import com.scalar.db.api.Delete;
+ import com.scalar.db.api.DistributedTransaction;
+ import com.scalar.db.api.DistributedTransactionAdmin;
+@@ -78,6 +79,7 @@
+                     .namespace("ns")
+                     .table("t")
+                     .partitionKey(Key.ofInt("id", 1))
++                    .condition(ConditionBuilder.deleteIfExists())
+                     .build()));
+     verify(manager, never()).begin();
+   }
+@@ -190,7 +192,7 @@
+         processor.execute("INSERT INTO t (id) VALUES (7), (8) RETURNING id, id * 2 AS d");
+ 
+     assertThat(rows).hasSize(2);
+-    assertThat(rows.get(0)).containsEntry("id", 7).containsEntry("d", 14L);
++    assertThat(rows.get(0)).containsEntry("id", 7).containsEntry("d", 14);
+     assertThat(processor.lastCommandTag()).isEqualTo("INSERT 0 2");
+     verify(transaction).mutate(any());
+     verify(transaction).commit();

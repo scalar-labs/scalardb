@@ -1,0 +1,6 @@
+Difftest after wrong-result-fixes.patch, 2026-10-03, jar built 10:20 (frontend on 15441, PG 18 on 15440), clean reload before each set.
+read:     {'OK': 126, 'NUM_FMT': 5, 'FE_ERR': 16, 'BOTH_ERR': 3, 'DIFF': 2, 'PG_ERR': 1}
+write:    {'OK': 14, 'FE_ERR': 12, 'BOTH_ERR': 7, 'DIFF': 1}
+bind:     {'OK': 16, 'BOTH_ERR': 2, 'FE_ERR': 1}
+write_ac: {'OK': 43, 'FE_ERR': 1, 'BOTH_ERR': 3}
+leak:     0 leaks

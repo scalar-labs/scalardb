@@ -1,0 +1,32 @@
+{'OK': 16, 'BOTH_ERR': 2, 'FE_ERR': 1}
+=== BOTH_ERR bind_null_param
+SELECT id FROM emp WHERE dept_id = $1 \bind \g
+SELECT count(*) FROM emp WHERE $1::int IS NULL \bind \g
+  pg: ERROR:  bind message supplies 0 parameters, but prepared statement "" requires 1
+ERROR:  bind message supplies 0 parameters, but prepared statement "" requires 1
+  fe: ERROR:  Missing value for parameter $1
+ERROR:  Missing value for parameter $1
+=== FE_ERR bind_date_ts
+SELECT id FROM emp WHERE hired > $1 \bind 2023-06-01 \g
+SELECT proj_id FROM proj WHERE started < $1 \bind "2023-05-01 00:00:00" \g
+  pg: 
+  fe: ERROR:  invalid input syntax for type timestamp: ""2023-05-01 00:00:00""
+=== BOTH_ERR bind_dml_reuse
+BEGIN;
+UPDATE emp SET salary = $1 WHERE id = $2 \bind 111 1 \g
+UPDATE emp SET salary = $1 WHERE id = $2 \bind 222 2 \g
+INSERT INTO dept VALUES ($1, $2, NULL, $3, NULL) \bind 700 "a'b" 1.25 \g
+INSERT INTO dept VALUES ($1, $2, NULL, $3, NULL) \bind 701 \N 2 \g
+COMMIT;
+SELECT id, salary FROM emp WHERE id IN (1, 2);
+SELECT * FROM dept WHERE id >= 700;
+  pg: invalid command \N
+ERROR:  syntax error at or near "COMMIT"
+LINE 2: COMMIT;
+        ^
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  fe: invalid command \N
+ERROR:  Missing value for parameter $3
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block

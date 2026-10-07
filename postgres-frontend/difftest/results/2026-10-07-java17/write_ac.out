@@ -1,0 +1,48 @@
+{'OK': 49, 'FE_ERR': 1, 'BOTH_ERR': 3}
+=== FE_ERR ac_update_pk_column
+UPDATE dept SET id = 50 WHERE id = 1;
+SELECT * FROM emp;
+SELECT * FROM dept;
+SELECT * FROM proj;
+SELECT * FROM assign;
+SELECT * FROM types;
+
+  pg: 
+  fe: ERROR:  DB-CORE-10017: The column value is not properly specified. Column: IntColumn{name=id, value=50, hasNullValue=false}, Operation: Put{namespace=Optional[sdb], table=Optional[dept], partitionKey=Key{IntColumn{name=id, value=1, hasNullValue=false}}, clusteringKey=Optional.empty, consistency=LINEARIZABLE, attributes={}, condition=Optional[PutIf{expressions=[ConditionalExpression{column=TextColumn{name=tx_id, value=e1a1e4bb-5c5c-4f84-b79d-e6510db63f36}, operator=EQ}]}], columns={id=IntColumn{name=id, value=50, hasNullValue=false}, tx_id=TextColumn{name=tx_id, value=53613f2e-fd20-47ff-ae80-7ceafaf39ca2}, tx_state=IntColumn{name=tx_state, value=1, hasNullValue=false}, tx_prepared_at=BigIntColumn{name=tx_prepared_at, value=1791335724944, hasNullValue=false}, before_tx_prepared_at=BigIntColumn{name=before_tx_prepared_at, value=1791335724528, hasNullValue=false}, before_tx_id=TextColumn{name=before_tx_id, value=e1a1e4bb-5c5c-4f84-b79d-e6510db63f36}, before_tx_state=IntColumn{name=before_tx_state, value=3, hasNullValue=false}, before_tx_committed_at=BigIntColumn{name=before_tx_committed_at, value=1791335724530, hasNullValue=false}, before_parent_id=IntColumn{name=before_parent_id, value=0, hasNullValue=true}, before_name=TextColumn{name=before_name, value=dept01}, before_region=TextColumn{name=before_region, value=south}, before_tx_version=IntColumn{name=before_tx_version, value=1, hasNullValue=false}, before_budget=DoubleColumn{name=before_budget, value=1000.5, hasNullValue=false}, tx_version=IntColumn{name=tx_version, value=2, hasNullValue=false}}}; Table metadata: TableMetadata{columnNames=[id, name, region, budget, parent_id, tx_id, tx_state, tx_version, tx_prepared_at, tx_committed_at, before_tx_id, before_tx_state, before_tx_version, before_tx_prepared_at, before_tx_committed_at, before_parent_id, before_name, before_region, before_budget], columnDataTypes={id=INT, name=TEXT, region=TEXT, budget=DOUBLE, parent_id=INT, tx_id=TEXT, tx_state=INT, tx_version=INT, tx_prepared_at=BIGINT, tx_committed_at=BIGINT, before_tx_id=TEXT, before_tx_state=INT, before_tx_version=INT, before_tx_prepared_at=BIGINT, before_tx_committed_at=BIGINT, before_parent_id=INT, before_name=TEXT, before_region=TEXT, before_budget=DOUBLE}, partitionKeyNames=[id], clusteringKeyNames=[], clusteringOrders={}, secondaryIndexNames=[], encryptedColumnNames=[]}
+=== BOTH_ERR ac_insert_multi_dup_within
+INSERT INTO dept VALUES (102, 'a', NULL, NULL, NULL), (102, 'b', NULL, NULL, NULL);
+SELECT * FROM emp;
+SELECT * FROM dept;
+SELECT * FROM proj;
+SELECT * FROM assign;
+SELECT * FROM types;
+
+  pg: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+DETAIL:  Key (id)=(102) already exists.
+  fe: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+=== BOTH_ERR ac_insert_multi_one_dup
+INSERT INTO dept VALUES (103, 'a', NULL, NULL, NULL), (1, 'b', NULL, NULL, NULL);
+SELECT * FROM emp;
+SELECT * FROM dept;
+SELECT * FROM proj;
+SELECT * FROM assign;
+SELECT * FROM types;
+
+  pg: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+DETAIL:  Key (id)=(1) already exists.
+  fe: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+=== BOTH_ERR ac_tx_error_then_commit
+BEGIN;
+UPDATE emp SET salary = 1 WHERE id = 1;
+SELECT nosuchcol FROM emp;
+COMMIT;
+SELECT * FROM emp;
+SELECT * FROM dept;
+SELECT * FROM proj;
+SELECT * FROM assign;
+SELECT * FROM types;
+
+  pg: ERROR:  column "nosuchcol" does not exist
+LINE 1: SELECT nosuchcol FROM emp;
+               ^
+  fe: ERROR:  Unknown column: nosuchcol

@@ -1,0 +1,5 @@
+TRUNCATE dept;
+TRUNCATE emp;
+TRUNCATE proj;
+TRUNCATE assign;
+TRUNCATE types;

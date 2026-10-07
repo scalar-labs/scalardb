@@ -1,0 +1,69 @@
+=== NUM_FMT avg_double
+SELECT avg(bonus), sum(bonus) FROM emp;
+--- pg
++++ fe
+@@ -1,3 +1,3 @@
+ avg|sum
+-41.60833333333332|2246.8499999999995
++41.608333333333334|2246.85
+ (1 row)
+=== BOTH_ERR int_mult_overflow
+SELECT 2147483647 * 2;
+  pg: ERROR:  integerの範囲外です
+  fe: ERROR:  integer out of range
+=== BOTH_ERR division_by_zero
+SELECT 1 / 0;
+  pg: ERROR:  0 による除算が行われました
+  fe: ERROR:  division by zero
+=== DIFF string_funcs
+SELECT id, upper(name), lower(name), length(name), substring(name, 2, 3), name || '-' || id, concat(name, NULL, id) FROM emp WHERE id <= 12;
+--- pg
++++ fe
+@@ -10,3 +10,3 @@
+ 6|ZED|zed|3|ed|Zed-6|Zed6
+-7|éMILE|émile|5|mil|émile-7|émile7
++7|ÉMILE|émile|5|mil|émile-7|émile7
+ 8|BOB|bob|3|ob|bob-8|bob8
+=== PG_ERR abs_round
+SELECT id, abs(salary), round(bonus), round(bonus, 1), ceil(bonus), floor(bonus) FROM emp WHERE id <= 12;
+  pg: ERROR:  関数round(double precision, integer)は存在しません
+LINE 1: SELECT id, abs(salary), round(bonus), round(bonus, 1), ceil(...
+                                              ^
+HINT:  指定した名前と引数型に合致する関数がありません。明示的な型変換が必要かもしれません。
+  fe: 
+=== DIFF text_cmp_case
+SELECT id FROM emp WHERE name < 'a';
+--- pg
++++ fe
+@@ -1,26 +1,2 @@
+ id
+-14
+-16
+-19
+-24
+-26
+-29
+-34
+-36
+-39
+-4
+-44
+-46
+-49
+-54
+-56
+-59
+-6
+-64
+-66
+-69
+-74
+-76
+-79
+-9
+-(24 rows)
++(0 rows)
+=== BOTH_ERR scalar_subquery_multi_row_err
+SELECT id, (SELECT id FROM emp) FROM dept;
+  pg: ERROR:  式として使用された副問い合わせが2行以上の行を返しました
+  fe: ERROR:  Subquery must return one row and one column: (SELECT emp.id FROM emp)

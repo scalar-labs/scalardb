@@ -1,0 +1,146 @@
+=== FE_ERR update_scan
+BEGIN;
+UPDATE emp SET bonus = coalesce(bonus, 0) * 2, note = 'raised' WHERE dept_id = 3 AND salary >= 1000;
+SELECT id, bonus, note FROM emp WHERE dept_id = 3;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=emp, partitionKey=Key{IntColumn{name=id, value=19, hasNullValue=false}}, clusteringKey=Optional.empty}
+=== FE_ERR update_null_where
+BEGIN;
+UPDATE emp SET note = 'nodept' WHERE dept_id IS NULL;
+SELECT id, note FROM emp WHERE note = 'nodept';
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=emp, partitionKey=Key{IntColumn{name=id, value=13, hasNullValue=false}}, clusteringKey=Optional.empty}
+=== FE_ERR update_in_subquery
+BEGIN;
+UPDATE emp SET active = false WHERE dept_id IN (SELECT id FROM dept WHERE region = 'east');
+SELECT count(*) FROM emp WHERE active;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=emp, partitionKey=Key{IntColumn{name=id, value=20, hasNullValue=false}}, clusteringKey=Optional.empty}
+=== FE_ERR delete_scan
+BEGIN;
+DELETE FROM assign WHERE hours IS NULL RETURNING emp_id, proj_id;
+SELECT count(*) FROM assign;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=assign, partitionKey=Key{IntColumn{name=emp_id, value=72, hasNullValue=false}}, clusteringKey=Optional[Key{IntColumn{name=proj_id, value=112, hasNullValue=false}}]}
+=== FE_ERR delete_not_exists
+BEGIN;
+DELETE FROM assign a WHERE NOT EXISTS (SELECT 1 FROM emp e WHERE e.id = a.emp_id);
+SELECT count(*) FROM assign;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=assign, partitionKey=Key{IntColumn{name=emp_id, value=81, hasNullValue=false}}, clusteringKey=Optional[Key{IntColumn{name=proj_id, value=120, hasNullValue=false}}]}
+=== FE_ERR delete_pk
+BEGIN;
+DELETE FROM emp WHERE id = 80;
+DELETE FROM emp WHERE id = 80;
+SELECT count(*) FROM emp;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=emp, partitionKey=Key{IntColumn{name=id, value=80, hasNullValue=false}}, clusteringKey=Optional.empty}
+=== FE_ERR insert_multi_returning
+BEGIN;
+INSERT INTO dept VALUES (100, 'new', 'west', 1.5, NULL), (101, 'n2', NULL, NULL, 100) RETURNING id, name;
+SELECT * FROM dept WHERE id >= 100;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=dept, partitionKey=Key{IntColumn{name=id, value=100, hasNullValue=false}}, clusteringKey=Optional.empty}
+=== BOTH_ERR insert_duplicate
+INSERT INTO dept VALUES (1, 'dup', NULL, NULL, NULL);
+  pg: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+DETAIL:  Key (id)=(1) already exists.
+  fe: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+=== BOTH_ERR insert_duplicate_in_tx
+BEGIN;
+INSERT INTO dept VALUES (200, 'a', NULL, NULL, NULL);
+INSERT INTO dept VALUES (200, 'b', NULL, NULL, NULL);
+COMMIT;
+SELECT * FROM dept WHERE id = 200;
+  pg: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+DETAIL:  Key (id)=(200) already exists.
+  fe: ERROR:  duplicate key value violates unique constraint "dept_pkey"
+=== FE_ERR insert_select
+BEGIN;
+INSERT INTO dept (id, name, budget) SELECT id + 1000, name, salary FROM emp WHERE salary > 3000;
+SELECT id, name, budget FROM dept WHERE id > 1000;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=dept, partitionKey=Key{IntColumn{name=id, value=1036, hasNullValue=false}}, clusteringKey=Optional.empty}
+=== FE_ERR insert_quote
+BEGIN;
+INSERT INTO dept VALUES (400, 'it''s', NULL, NULL, NULL);
+SELECT name, length(name) FROM dept WHERE id = 400;
+SELECT id FROM dept WHERE name = 'it''s';
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=dept, partitionKey=Key{IntColumn{name=id, value=400, hasNullValue=false}}, clusteringKey=Optional.empty}
+=== BOTH_ERR insert_type_mismatch
+INSERT INTO dept VALUES ('abc', 'x', NULL, NULL, NULL);
+  pg: ERROR:  invalid input syntax for type integer: "abc"
+LINE 1: INSERT INTO dept VALUES ('abc', 'x', NULL, NULL, NULL);
+                                 ^
+  fe: ERROR:  invalid input syntax for type integer: "abc"
+=== BOTH_ERR insert_int_out_of_range
+INSERT INTO dept VALUES (3000000000, 'x', NULL, NULL, NULL);
+  pg: ERROR:  integer out of range
+  fe: ERROR:  value "3000000000" is out of range for type integer
+=== BOTH_ERR insert_null_pk
+INSERT INTO dept VALUES (NULL, 'x', NULL, NULL, NULL);
+  pg: ERROR:  null value in column "id" of relation "dept" violates not-null constraint
+DETAIL:  Failing row contains (null, x, null, null, null).
+  fe: ERROR:  null value in column "id" violates not-null constraint
+=== FE_ERR insert_date_ts
+BEGIN;
+INSERT INTO proj VALUES (1, 900, 't', 1, '2024-02-29 13:45:00');
+INSERT INTO emp (id, hired) VALUES (900, '2024-02-29');
+SELECT * FROM proj WHERE proj_id = 900;
+SELECT id, hired FROM emp WHERE id = 900;
+ROLLBACK;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=proj, partitionKey=Key{IntColumn{name=dept_id, value=1, hasNullValue=false}}, clusteringKey=Optional[Key{IntColumn{name=proj_id, value=900, hasNullValue=false}}]}
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+=== BOTH_ERR insert_bad_date
+INSERT INTO emp (id, hired) VALUES (901, '2023-02-30');
+  pg: ERROR:  date/time field value out of range: "2023-02-30"
+LINE 1: INSERT INTO emp (id, hired) VALUES (901, '2023-02-30');
+                                                 ^
+  fe: ERROR:  date/time field value out of range: "2023-02-30"
+=== FE_ERR read_own_writes
+BEGIN;
+UPDATE emp SET salary = 777 WHERE dept_id = 5;
+SELECT count(*) FROM emp WHERE salary = 777;
+SELECT id FROM emp WHERE dept_id = 5 AND salary = 777;
+DELETE FROM emp WHERE dept_id = 5;
+SELECT count(*) FROM emp WHERE dept_id = 5;
+SELECT count(*) FROM emp;
+INSERT INTO emp (id, dept_id, salary) VALUES (700, 5, 1);
+SELECT id FROM emp WHERE dept_id = 5;
+SELECT d.id, count(e.id) FROM dept d LEFT JOIN emp e ON e.dept_id = d.id WHERE d.id = 5 GROUP BY d.id;
+ROLLBACK;
+SELECT count(*) FROM emp WHERE dept_id = 5;
+  pg: 
+  fe: ERROR:  DB-CORE-10106: Scanning data already-written or already-deleted by the same transaction is not allowed. Record: Key{namespace=sdb, table=emp, partitionKey=Key{IntColumn{name=id, value=56, hasNullValue=false}}, clusteringKey=Optional.empty}
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block
+=== BOTH_ERR error_aborts_tx
+BEGIN;
+UPDATE emp SET salary = 1 WHERE id = 1;
+SELECT nosuchcol FROM emp;
+SELECT 1;
+COMMIT;
+SELECT salary FROM emp WHERE id = 1;
+{'OK': 16, 'FE_ERR': 11, 'BOTH_ERR': 7}
+  pg: ERROR:  column "nosuchcol" does not exist
+LINE 1: SELECT nosuchcol FROM emp;
+               ^
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  fe: ERROR:  Unknown column: nosuchcol
+ERROR:  Current transaction is aborted, commands ignored until end of transaction block

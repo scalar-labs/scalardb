@@ -1,0 +1,4 @@
+Read set + types set, 2026-10-04: adds ORM unblockers (SHOW/SET, reg* casts, pg_indexes), INTERVAL and AT TIME ZONE with constant-expression pushdown, and arrays with ANY/ALL, unnest and array literals. Frontend built from the live tree, PG 18 on 15440.
+read:  {'OK': 192, 'NUM_FMT': 1, 'BOTH_ERR': 3, 'DIFF': 2, 'PG_ERR': 1}
+types: {'OK': 14}
+Remaining in read: avg_double (PG's double accumulation error, kept exact here), string_funcs (C-ctype upper of e-acute), text_cmp_case (collation), abs_round (round(double,int) is not a PG function), 3 BOTH_ERR expected.
