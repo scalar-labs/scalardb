@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -1024,6 +1025,165 @@ public abstract class ConsensusCommitAdminTestBase {
   }
 
   @Test
+  public void tableExists_ForTransactionTable_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder().addColumn("col1", DataType.INT).addPartitionKey("col1").build();
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE))
+        .thenReturn(ConsensusCommitUtils.buildTransactionTableMetadata(tableMetadata));
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isTrue();
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForNonTransactionTable_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("col1", DataType.INT)
+            .addColumn("col2", DataType.INT)
+            .addPartitionKey("col1")
+            .build();
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(tableMetadata);
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForNonExistingTable_ShouldReturnFalse() throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(null);
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(anyString());
+  }
+
+  @Test
+  public void tableExists_ForCoordinatorTable_ShouldReturnFalse() throws ExecutionException {
+    // Act
+    boolean actual = admin.tableExists(coordinatorNamespaceName, Coordinator.TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(distributedStorageAdmin, never())
+        .getTableMetadata(coordinatorNamespaceName, Coordinator.TABLE);
+  }
+
+  @Test
+  public void repairTable_ForNonVirtualTable_ShouldNotCheckTableExistenceOrReadTableMetadata()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder().addColumn("col1", DataType.INT).addPartitionKey("col1").build();
+
+    // Act
+    admin.repairTable(NAMESPACE, TABLE, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(distributedStorageAdmin).getVirtualTableInfo(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin, never()).tableExists(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin, never()).getTableMetadata(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin, never()).getNamespaceTableNames(NAMESPACE);
+    verify(distributedStorageAdmin)
+        .repairTable(eq(NAMESPACE), eq(TABLE), any(TableMetadata.class), anyMap());
+  }
+
+  @Test
+  public void repairTable_ForVirtualTable_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    givenVirtualTable(TABLE);
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder().addColumn("col1", DataType.INT).addPartitionKey("col1").build();
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> admin.repairTable(NAMESPACE, TABLE, tableMetadata, Collections.emptyMap()))
+        .isInstanceOf(UnsupportedOperationException.class);
+    verify(distributedStorageAdmin, never()).tableExists(NAMESPACE, TABLE);
+    verify(distributedStorageAdmin, never())
+        .repairTable(anyString(), anyString(), any(TableMetadata.class), anyMap());
+  }
+
+  @Test
+  public void addNewColumnToTable_ForVirtualTable_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    givenVirtualTable(TABLE);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.addNewColumnToTable(NAMESPACE, TABLE, "c2", DataType.TEXT))
+        .isInstanceOf(UnsupportedOperationException.class);
+    verify(distributedStorageAdmin, never())
+        .addNewColumnToTable(anyString(), anyString(), anyString(), any(DataType.class));
+  }
+
+  @Test
+  public void dropColumnFromTable_ForVirtualTable_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    givenVirtualTable(TABLE);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.dropColumnFromTable(NAMESPACE, TABLE, "col2"))
+        .isInstanceOf(UnsupportedOperationException.class);
+    verify(distributedStorageAdmin, never())
+        .dropColumnFromTable(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  public void renameColumn_ForVirtualTable_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    givenVirtualTable(TABLE);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameColumn(NAMESPACE, TABLE, "col2", "col3"))
+        .isInstanceOf(UnsupportedOperationException.class);
+    verify(distributedStorageAdmin, never())
+        .renameColumn(anyString(), anyString(), anyString(), anyString());
+  }
+
+  @Test
+  public void alterColumnType_ForVirtualTable_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    givenVirtualTable(TABLE);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.alterColumnType(NAMESPACE, TABLE, "col2", DataType.BIGINT))
+        .isInstanceOf(UnsupportedOperationException.class);
+    verify(distributedStorageAdmin, never())
+        .alterColumnType(anyString(), anyString(), anyString(), any(DataType.class));
+  }
+
+  @Test
+  public void renameTable_ForVirtualTable_ShouldThrowUnsupportedOperationException()
+      throws ExecutionException {
+    // Arrange
+    givenVirtualTable(TABLE);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.renameTable(NAMESPACE, TABLE, "new_table"))
+        .isInstanceOf(UnsupportedOperationException.class);
+    verify(distributedStorageAdmin, never()).renameTable(anyString(), anyString(), anyString());
+  }
+
+  @Test
   public void importTable_ShouldCallStorageAdminProperly() throws ExecutionException {
     // Arrange
     Map<String, String> options = ImmutableMap.of("foo", "bar");
@@ -1357,6 +1517,20 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin).dropTable(NAMESPACE, importedTableName);
     verify(distributedStorageAdmin).dropTable(NAMESPACE, TABLE);
     verify(distributedStorageAdmin).dropTable(NAMESPACE, TABLE + "_tx_metadata");
+  }
+
+  private void givenVirtualTable(String table) throws ExecutionException {
+    VirtualTableInfo virtualTableInfo =
+        createVirtualTableInfo(
+            NAMESPACE,
+            table,
+            NAMESPACE,
+            table + "_data",
+            NAMESPACE,
+            table + "_tx_metadata",
+            VirtualTableJoinType.INNER);
+    when(distributedStorageAdmin.getVirtualTableInfo(NAMESPACE, table))
+        .thenReturn(Optional.of(virtualTableInfo));
   }
 
   private VirtualTableInfo createVirtualTableInfo(
