@@ -29,6 +29,13 @@ public class ObjectStorageMultipleClusteringKeyScanIntegrationTest
   }
 
   @Override
+  protected int getMutationBatchSize() {
+    // Object Storage stores all the records in a partition as a single object, so we put all the
+    // records with a single mutation to avoid writing the same object repeatedly
+    return Integer.MAX_VALUE;
+  }
+
+  @Override
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     if (dataType == DataType.BIGINT) {
       return BigIntColumn.of(columnName, ObjectStorageTestUtils.BIGINT_MAX_VALUE);

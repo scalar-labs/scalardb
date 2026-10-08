@@ -127,6 +127,10 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     return true;
   }
 
+  protected int getMutationBatchSize() {
+    return 20;
+  }
+
   private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
@@ -1703,7 +1707,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
       List<Put> buffer = new ArrayList<>();
       for (Put put : puts) {
         buffer.add(put);
-        if (buffer.size() == 20) {
+        if (buffer.size() == getMutationBatchSize()) {
           storage.mutate(buffer);
           buffer.clear();
         }
