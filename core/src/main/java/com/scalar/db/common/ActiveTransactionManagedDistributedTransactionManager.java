@@ -30,11 +30,16 @@ import org.slf4j.LoggerFactory;
 /**
  * A decorator that registers every transaction it begins or starts, so that a server continuing a
  * transaction across requests can get it back by its ID with {@link #resume(String)}. A registered
- * transaction is removed when it is committed, rolled back, or aborted, and is disposed of when it
- * expires or is evicted.
+ * transaction is removed when a commit, a rollback, or an abort on it completes, whether it
+ * succeeds or fails, since each of them ends the transaction. A registered transaction is also
+ * disposed of when it expires or is evicted.
  *
  * <p>{@link #resume(String)} returns a transaction exactly as this manager registered it, so wrap
- * this manager outside every decorator whose behavior a resumed transaction must carry.
+ * this manager outside every decorator whose behavior a resumed transaction must carry. The
+ * exception is a decorator that can fail a commit, a rollback, or an abort without passing it on:
+ * place it outside this manager, and have it wrap the transactions that {@code resume} returns
+ * itself. Otherwise, this manager would remove a transaction that the rejected call never reached,
+ * and nothing would end that transaction.
  */
 @ThreadSafe
 public class ActiveTransactionManagedDistributedTransactionManager
@@ -200,8 +205,12 @@ public class ActiveTransactionManagedDistributedTransactionManager
 
     @Override
     public synchronized void commit() throws CommitException, UnknownTransactionStatusException {
-      super.commit();
-      registry.remove(getId());
+      // A commit ends the transaction whatever its outcome
+      try {
+        super.commit();
+      } finally {
+        registry.remove(getId());
+      }
     }
 
     @Override
