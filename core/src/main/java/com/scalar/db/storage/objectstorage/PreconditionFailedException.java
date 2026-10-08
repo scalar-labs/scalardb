@@ -1,11 +1,11 @@
 package com.scalar.db.storage.objectstorage;
 
 /**
- * An exception thrown when an operation is not applied because its precondition, such as the
- * existence or the version of the object, is not satisfied.
+ * An exception thrown when the precondition of an operation, such as the existence or the version
+ * of the object, is not satisfied.
  *
- * <p>When thrown by a write method of {@link ObjectStorageWrapper} that documents it, this
- * exception guarantees that the write has not been applied.
+ * <p>Some write methods of {@link ObjectStorageWrapper} guarantee that the write has not been
+ * applied when they throw this exception. See the documentation of each method.
  */
 public class PreconditionFailedException extends ObjectStorageWrapperException {
 

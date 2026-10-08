@@ -3,8 +3,8 @@ package com.scalar.db.storage.objectstorage;
 /**
  * An exception thrown when an operation fails because of a conflict with a concurrent operation.
  *
- * <p>When thrown by a write method of {@link ObjectStorageWrapper} that documents it, this
- * exception guarantees that the write has not been applied.
+ * <p>Some write methods of {@link ObjectStorageWrapper} guarantee that the write has not been
+ * applied when they throw this exception. See the documentation of each method.
  */
 public class ConflictOccurredException extends ObjectStorageWrapperException {
 
