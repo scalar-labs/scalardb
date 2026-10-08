@@ -664,7 +664,7 @@ public class ConsensusCommitManagerTest {
 
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
-    verify(transaction).rollback();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -689,6 +689,7 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -712,6 +713,7 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -1065,7 +1067,7 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      getScannerAndScannerClose_CommitConflictExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudConflictException()
+      getScannerAndScannerClose_CommitConflictExceptionThrownByTransactionCommit_ShouldThrowCrudConflictExceptionWithoutRollingBack()
           throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1092,7 +1094,7 @@ public class ConsensusCommitManagerTest {
 
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(scanner).close();
-    verify(transaction).rollback();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -1128,7 +1130,7 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      getScannerAndScannerClose_CommitExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudException()
+      getScannerAndScannerClose_CommitExceptionThrownByTransactionCommit_ShouldThrowCrudExceptionWithoutRollingBack()
           throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1155,7 +1157,7 @@ public class ConsensusCommitManagerTest {
 
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(scanner).close();
-    verify(transaction).rollback();
+    verify(transaction, never()).rollback();
   }
 
   @Test
