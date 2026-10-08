@@ -6,7 +6,6 @@ import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
-import com.azure.cosmos.implementation.NotFoundException;
 import com.azure.cosmos.models.CompositePath;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
@@ -512,9 +511,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       return getMetadataContainer()
           .readItem(fullName, new PartitionKey(fullName), CosmosTableMetadata.class)
           .getItem();
-    } catch (NotFoundException e) {
-      // The specified table is not found
-      return null;
+    } catch (CosmosException e) {
+      // The table metadata or the metadata container does not exist
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return null;
+      }
+      throw e;
     }
   }
 
