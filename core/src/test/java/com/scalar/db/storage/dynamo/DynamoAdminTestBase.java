@@ -47,6 +47,7 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsR
 import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsResponse;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexDescription;
@@ -221,6 +222,64 @@ public abstract class DynamoAdminTestBase {
     assertThat(actualRequest.tableName()).isEqualTo(getFullMetadataTableName());
     assertThat(actualRequest.key()).isEqualTo(expectedKey);
     assertThat(actualRequest.consistentRead()).isTrue();
+  }
+
+  @Test
+  public void getTableMetadata_WithNonExistingTableMetadata_ShouldReturnNull()
+      throws ExecutionException {
+    // Arrange
+    GetItemResponse response = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
+    when(response.item()).thenReturn(Collections.emptyMap());
+
+    // Act
+    TableMetadata actual = admin.getTableMetadata(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  public void getTableMetadata_WithNonExistingMetadataTable_ShouldReturnNull()
+      throws ExecutionException {
+    // Arrange
+    when(client.getItem(any(GetItemRequest.class))).thenThrow(ResourceNotFoundException.class);
+
+    // Act
+    TableMetadata actual = admin.getTableMetadata(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isNull();
+    ArgumentCaptor<GetItemRequest> captor = ArgumentCaptor.forClass(GetItemRequest.class);
+    verify(client).getItem(captor.capture());
+    assertThat(captor.getValue().tableName()).isEqualTo(getFullMetadataTableName());
+  }
+
+  @Test
+  public void getTableMetadata_WhenGetItemFails_ShouldThrowExecutionException() {
+    // Arrange
+    when(client.getItem(any(GetItemRequest.class))).thenThrow(DynamoDbException.class);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getTableMetadata(NAMESPACE, TABLE))
+        .isInstanceOf(ExecutionException.class)
+        .hasCauseInstanceOf(DynamoDbException.class);
+  }
+
+  @Test
+  public void tableExists_ShouldReadTableMetadataWithoutListingTables() throws ExecutionException {
+    // Arrange
+    GetItemResponse response = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
+    when(response.item()).thenReturn(Collections.emptyMap());
+
+    // Act
+    boolean actual = admin.tableExists(NAMESPACE, TABLE);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(client).getItem(any(GetItemRequest.class));
+    verify(client, never()).listTables(any(ListTablesRequest.class));
   }
 
   @Test
