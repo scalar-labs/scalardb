@@ -9,7 +9,8 @@ public interface ConsensusCommitScanner extends TransactionCrudOperable.Scanner 
    * Closes this scanner without checking or recording its results. Unlike {@link #close()}, this
    * does not run the before-index check, does not put the results into the scan set or the scanner
    * set, and does not verify the scan against the writes of the transaction. Does nothing if this
-   * scanner is already closed.
+   * scanner is already closed. Never throws an exception: a failure to close the underlying scanner
+   * is logged instead, so that discarding never masks the outcome of the path that discards it.
    *
    * <p>Must only be used when the transaction will not be committed or prepared afterwards, such as
    * on rollback, because the reads of a discarded scanner are never validated.

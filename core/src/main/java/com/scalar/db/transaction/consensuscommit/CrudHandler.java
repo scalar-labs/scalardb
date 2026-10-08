@@ -1116,7 +1116,11 @@ public class CrudHandler {
         return;
       }
 
-      closeScanner();
+      try {
+        closeScanner();
+      } catch (Exception e) {
+        logger.warn("Failed to discard the scanner. Transaction ID: {}", context.transactionId, e);
+      }
     }
 
     @Override
