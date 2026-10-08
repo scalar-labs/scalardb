@@ -254,7 +254,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     createTableInternal(nonPrefixedNamespace, table, metadata, false, options, false);
   }
 
-  private void createTableInternal(
+  /**
+   * Creates the table unless {@code ifNotExists} is true and the table already exists, and then
+   * writes its metadata.
+   *
+   * @return true if this method created the table, false if the table already existed
+   */
+  private boolean createTableInternal(
       String nonPrefixedNamespace,
       String table,
       TableMetadata metadata,
@@ -288,14 +294,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
-    if (!noScaling) {
-      // Enable auto scaling for the secondary indexes only when the table is newly created. For an
-      // existing table being repaired, its indexes already have auto scaling, and any missing index
-      // gets its auto scaling when createIndex creates it. Enabling it here for a missing index
-      // would fail because its scaling target does not exist yet.
-      Set<String> secondaryIndexesToScale =
-          tableCreated ? metadata.getSecondaryIndexNames() : Collections.emptySet();
-      enableAutoScaling(namespace, table, secondaryIndexesToScale, ru);
+    if (tableCreated && !noScaling) {
+      // Auto scaling is enabled here for a table this method creates, together with the secondary
+      // indexes created with it. For an existing table, repairTable() enables only the missing auto
+      // scaling so that the registered scaling ranges are kept.
+      enableAutoScaling(namespace, table, metadata.getSecondaryIndexNames(), ru);
     }
 
     boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
@@ -312,6 +315,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     } else {
       upsertTableMetadata(namespace, table, metadata);
     }
+    return tableCreated;
   }
 
   /**
@@ -626,6 +630,64 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     registerScalableTarget(registerScalableTargetRequestList);
     putScalingPolicy(putScalingPolicyRequestList);
+  }
+
+  /**
+   * Enables the auto scaling of an existing table and its existing secondary indexes where it is
+   * missing, for example because the DDL that created them failed before enabling it. The scaling
+   * policy of each scalable target is put first, and only the scalable targets found to be
+   * unregistered are registered with the given request unit, so the scaling ranges of the
+   * registered ones are kept. As in enableAutoScaling(), all the missing scalable targets are
+   * registered before their scaling policies are put.
+   */
+  private void enableMissingAutoScaling(
+      Namespace namespace, String table, List<String> secondaryIndexes, long ru)
+      throws ExecutionException {
+    List<RegisterScalableTargetRequest> registerScalableTargetRequestList = new ArrayList<>();
+    List<PutScalingPolicyRequest> putScalingPolicyRequestList = new ArrayList<>();
+
+    // write, read scaling of table
+    for (String scalingType : TABLE_SCALING_TYPE_SET) {
+      String resourceID = getTableResourceID(namespace, table);
+      if (!putScalingPolicyIfScalableTargetRegistered(resourceID, scalingType)) {
+        registerScalableTargetRequestList.add(
+            buildRegisterScalableTargetRequest(resourceID, scalingType, (int) ru));
+        putScalingPolicyRequestList.add(buildPutScalingPolicyRequest(resourceID, scalingType));
+      }
+    }
+
+    // write, read scaling of global indexes (secondary indexes)
+    for (String secondaryIndex : secondaryIndexes) {
+      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
+        String resourceID = getGlobalIndexResourceID(namespace, table, secondaryIndex);
+        if (!putScalingPolicyIfScalableTargetRegistered(resourceID, scalingType)) {
+          registerScalableTargetRequestList.add(
+              buildRegisterScalableTargetRequest(resourceID, scalingType, (int) ru));
+          putScalingPolicyRequestList.add(buildPutScalingPolicyRequest(resourceID, scalingType));
+        }
+      }
+    }
+
+    registerScalableTarget(registerScalableTargetRequestList);
+    putScalingPolicy(putScalingPolicyRequestList);
+  }
+
+  /**
+   * Puts the scaling policy of the scalable target.
+   *
+   * @return true if the scaling policy is put, false if the scalable target is not registered
+   */
+  private boolean putScalingPolicyIfScalableTargetRegistered(String resourceID, String type)
+      throws ExecutionException {
+    try {
+      applicationAutoScalingClient.putScalingPolicy(buildPutScalingPolicyRequest(resourceID, type));
+      return true;
+    } catch (ObjectNotFoundException e) {
+      // Thrown when the scalable target is not registered
+      return false;
+    } catch (Exception e) {
+      throw new ExecutionException("Unable to put scaling policy request for " + resourceID, e);
+    }
   }
 
   private RegisterScalableTargetRequest buildRegisterScalableTargetRequest(
@@ -1316,11 +1378,32 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       Map<String, String> options)
       throws ExecutionException {
     try {
-      createTableInternal(nonPrefixedNamespace, table, metadata, true, options, true);
+      boolean tableCreated =
+          createTableInternal(nonPrefixedNamespace, table, metadata, true, options, true);
+
+      List<String> existingIndexes = new ArrayList<>();
+      List<String> missingIndexes = new ArrayList<>();
       for (String indexColumnName : metadata.getSecondaryIndexNames()) {
-        if (!rawIndexExists(nonPrefixedNamespace, table, indexColumnName)) {
-          createIndex(nonPrefixedNamespace, table, indexColumnName, options);
+        if (rawIndexExists(nonPrefixedNamespace, table, indexColumnName)) {
+          existingIndexes.add(indexColumnName);
+        } else {
+          missingIndexes.add(indexColumnName);
         }
+      }
+
+      boolean noScaling =
+          Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
+      if (!tableCreated && !noScaling) {
+        // The DDL that created the existing table or its secondary indexes may have failed before
+        // enabling their auto scaling
+        long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
+        enableMissingAutoScaling(
+            Namespace.of(namespacePrefix, nonPrefixedNamespace), table, existingIndexes, ru);
+      }
+
+      // createIndex() also enables the auto scaling of the index it creates
+      for (String indexColumnName : missingIndexes) {
+        createIndex(nonPrefixedNamespace, table, indexColumnName, options);
       }
     } catch (IllegalArgumentException e) {
       throw e;
