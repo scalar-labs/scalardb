@@ -359,7 +359,7 @@ public interface Admin {
    * @throws ExecutionException if the operation fails
    */
   default boolean tableExists(String namespace, String table) throws ExecutionException {
-    return getNamespaceTableNames(namespace).contains(table);
+    return getTableMetadata(namespace, table) != null;
   }
 
   /**
