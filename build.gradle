@@ -84,7 +84,7 @@ subprojects {
 
     ext {
         guiceVersion = '7.0.0'
-        guavaVersion = '33.7.1-jre'
+        guavaVersion = '33.7.2-jre'
         slf4jVersion = '1.7.36'
         cassandraDriverVersion = '3.12.1'
         azureCosmosVersion = '4.83.0'
@@ -103,15 +103,15 @@ subprojects {
         // version, and only defines one for v3.
         mariadDbDriverVersion = '3.5.10'
         alloyDbJdbcConnectorVersion = '1.3.3'
-        googleCloudStorageVersion = '2.74.0'
-        spannerDriverVersion = '2.45.0'
+        googleCloudStorageVersion = '2.75.0'
+        spannerDriverVersion = '2.46.0'
         awsAdvancedJdbcWrapperVersion = '4.4.0'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
         protobufVersion = '4.36.2'
         junitVersion = '5.14.4'
-        commonsLangVersion = '3.20.0'
+        commonsLangVersion = '3.21.0'
         jacksonVersion = '2.22.3'
         nettyVersion = '4.1.138.Final'
         assertjVersion = '3.27.7'

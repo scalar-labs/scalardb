@@ -389,17 +389,19 @@ public final class ScalarDbUtils {
       case EQ:
       case IS_NULL:
         return column.equals(condition.getColumn());
-      case NE:
       case IS_NOT_NULL:
         return !column.equals(condition.getColumn());
+        // A NULL column satisfies no comparison, as when the storage evaluates the condition in SQL
+      case NE:
+        return !column.hasNullValue() && !column.equals(condition.getColumn());
       case GT:
-        return column.compareTo((Column<T>) condition.getColumn()) > 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) > 0;
       case GTE:
-        return column.compareTo((Column<T>) condition.getColumn()) >= 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) >= 0;
       case LT:
-        return column.compareTo((Column<T>) condition.getColumn()) < 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) < 0;
       case LTE:
-        return column.compareTo((Column<T>) condition.getColumn()) <= 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) <= 0;
       case LIKE:
       case NOT_LIKE:
         // assert condition instanceof LikeExpression;
