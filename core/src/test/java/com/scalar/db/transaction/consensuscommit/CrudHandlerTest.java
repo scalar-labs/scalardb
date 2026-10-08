@@ -4,6 +4,7 @@ import static com.scalar.db.api.ConditionBuilder.column;
 import static com.scalar.db.api.ConditionBuilder.deleteIfExists;
 import static com.scalar.db.api.ConditionBuilder.putIfExists;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -3867,6 +3868,27 @@ public class CrudHandlerTest {
     assertThat(actualScanner.isClosed()).isTrue();
     verifyNoInteractions(snapshot);
     verify(storage, never()).scan(any());
+  }
+
+  @Test
+  void getScanner_StorageScannerCloseFailsWhileDiscarding_ShouldNotThrowAndMarkClosed()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    doThrow(RuntimeException.class).when(scanner).close();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+
+    // Act Assert
+    assertThatCode(actualScanner::discard).doesNotThrowAnyException();
+    assertThat(actualScanner.isClosed()).isTrue();
   }
 
   @Test
