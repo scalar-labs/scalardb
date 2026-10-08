@@ -11,6 +11,8 @@ public interface ObjectStorageWrapper {
    * Get the object from the storage.
    *
    * @param key the key of the object
+   * @throws ConflictOccurredException if the object keeps being updated by concurrent writes while
+   *     it is read
    * @throws ObjectStorageWrapperException if an error occurs
    * @return the object and its version wrapped in an Optional if found, otherwise an empty Optional
    */
@@ -30,8 +32,12 @@ public interface ObjectStorageWrapper {
    *
    * @param key the key of the object
    * @param object the object to insert
-   * @throws PreconditionFailedException if the object already exists
-   * @throws ObjectStorageWrapperException if an error occurs
+   * @throws PreconditionFailedException if the object already exists, in which case the object has
+   *     not been inserted
+   * @throws ConflictOccurredException if the insertion conflicts with a concurrent write, in which
+   *     case the object has not been inserted
+   * @throws ObjectStorageWrapperException if an error occurs, including when the object may have
+   *     been inserted, for example because the client resent the request after a lost response
    */
   void insert(String key, String object) throws ObjectStorageWrapperException;
 
@@ -41,8 +47,12 @@ public interface ObjectStorageWrapper {
    * @param key the key of the object
    * @param object the updated object
    * @param version the expected version of the object
-   * @throws PreconditionFailedException if the version does not match or the object does not exist
-   * @throws ObjectStorageWrapperException if an error occurs
+   * @throws PreconditionFailedException if the version does not match or the object does not exist,
+   *     in which case the object has not been updated
+   * @throws ConflictOccurredException if the update conflicts with a concurrent write, in which
+   *     case the object has not been updated
+   * @throws ObjectStorageWrapperException if an error occurs, including when the object may have
+   *     been updated, for example because the client resent the request after a lost response
    */
   void update(String key, String object, String version) throws ObjectStorageWrapperException;
 
@@ -60,8 +70,12 @@ public interface ObjectStorageWrapper {
    *
    * @param key the key of the object
    * @param version the expected version of the object
-   * @throws PreconditionFailedException if the version does not match or the object does not exist
-   * @throws ObjectStorageWrapperException if an error occurs
+   * @throws PreconditionFailedException if the version does not match or the object does not exist,
+   *     in which case the object has not been deleted
+   * @throws ConflictOccurredException if the deletion conflicts with a concurrent write, in which
+   *     case the object has not been deleted
+   * @throws ObjectStorageWrapperException if an error occurs, including when the object may have
+   *     been deleted, for example because the client resent the request after a lost response
    */
   void delete(String key, String version) throws ObjectStorageWrapperException;
 
