@@ -81,6 +81,7 @@ public class MutateStatementHandler extends StatementHandler {
         }
       }
     } catch (PreconditionFailedException | ConflictOccurredException e) {
+      // The wrapper throws these exceptions only when the write has not been applied
       throw new RetriableExecutionException(
           CoreError.OBJECT_STORAGE_CONFLICT_OCCURRED_IN_MUTATION.buildMessage(e.getMessage()), e);
     } catch (ObjectStorageWrapperException e) {
