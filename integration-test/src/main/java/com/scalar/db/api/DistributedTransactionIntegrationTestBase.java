@@ -1201,6 +1201,44 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void rollback_AfterCommit_ShouldDoNothing() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0));
+    transaction.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
+    transaction.commit();
+
+    // Act Assert
+    assertThatCode(transaction::rollback).doesNotThrowAnyException();
+
+    // The commit stays in effect
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0));
+    another.commit();
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(1);
+  }
+
+  @Test
+  public void abort_AfterCommit_ShouldDoNothing() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0));
+    transaction.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
+    transaction.commit();
+
+    // Act Assert
+    assertThatCode(transaction::abort).doesNotThrowAnyException();
+
+    // The commit stays in effect
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0));
+    another.commit();
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(1);
+  }
+
+  @Test
   public void
       get_GetWithProjectionOnNonPrimaryKeyColumnsForGivenForCommittedRecord_ShouldReturnOnlyProjectedColumns()
           throws TransactionException {
