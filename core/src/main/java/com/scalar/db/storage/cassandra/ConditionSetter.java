@@ -24,8 +24,8 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -57,9 +57,9 @@ public class ConditionSetter implements MutationConditionVisitor {
     Update.Where update = (Update.Where) statement;
 
     List<ConditionalExpression> expressions = condition.getExpressions();
-    Update.Conditions cond = update.onlyIf(createClauseWith(expressions.get(0)));
-    IntStream.range(1, expressions.size())
-        .forEach(i -> cond.and(createClauseWith(expressions.get(i))));
+    List<Clause> clauses = createClausesWith(expressions);
+    Update.Conditions cond = update.onlyIf(clauses.get(0));
+    clauses.subList(1, clauses.size()).forEach(cond::and);
   }
 
   /**
@@ -94,9 +94,9 @@ public class ConditionSetter implements MutationConditionVisitor {
     Delete.Where delete = (Delete.Where) statement;
 
     List<ConditionalExpression> expressions = condition.getExpressions();
-    Delete.Conditions cond = delete.onlyIf(createClauseWith(expressions.get(0)));
-    IntStream.range(1, expressions.size())
-        .forEach(i -> cond.and(createClauseWith(expressions.get(i))));
+    List<Clause> clauses = createClausesWith(expressions);
+    Delete.Conditions cond = delete.onlyIf(clauses.get(0));
+    clauses.subList(1, clauses.size()).forEach(cond::and);
   }
 
   /**
@@ -110,23 +110,41 @@ public class ConditionSetter implements MutationConditionVisitor {
     delete.ifExists();
   }
 
-  private Clause createClauseWith(ConditionalExpression e) {
+  private List<Clause> createClausesWith(List<ConditionalExpression> expressions) {
+    List<Clause> clauses = new ArrayList<>();
+    for (ConditionalExpression e : expressions) {
+      addClauses(clauses, e);
+    }
+    return clauses;
+  }
+
+  private void addClauses(List<Clause> clauses, ConditionalExpression e) {
     String name = quoteIfNecessary(e.getColumn().getName());
     switch (e.getOperator()) {
       case EQ:
       case IS_NULL:
-        return eq(name, bindMarker());
+        clauses.add(eq(name, bindMarker()));
+        break;
       case NE:
+        clauses.add(ne(name, bindMarker()));
+        // Cassandra's != is true for a null cell, so exclude it explicitly
+        clauses.add(ne(name, null));
+        break;
       case IS_NOT_NULL:
-        return ne(name, bindMarker());
+        clauses.add(ne(name, bindMarker()));
+        break;
       case GT:
-        return gt(name, bindMarker());
+        clauses.add(gt(name, bindMarker()));
+        break;
       case GTE:
-        return gte(name, bindMarker());
+        clauses.add(gte(name, bindMarker()));
+        break;
       case LT:
-        return lt(name, bindMarker());
+        clauses.add(lt(name, bindMarker()));
+        break;
       case LTE:
-        return lte(name, bindMarker());
+        clauses.add(lte(name, bindMarker()));
+        break;
       default:
         throw new AssertionError();
     }
