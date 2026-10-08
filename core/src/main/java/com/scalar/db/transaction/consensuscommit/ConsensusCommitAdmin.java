@@ -624,8 +624,9 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
 
   private void throwIfTransactionMetadataDecouplingApplied(
       String namespace, String table, String method) throws ExecutionException {
-    if (admin.tableExists(namespace, table)
-        && admin.getVirtualTableInfo(namespace, table).isPresent()) {
+    // This reads only the virtual table information, not the table metadata, so that
+    // repairTable() works even when the stored table metadata cannot be read
+    if (admin.getVirtualTableInfo(namespace, table).isPresent()) {
       throw new UnsupportedOperationException(
           "Currently, "
               + method

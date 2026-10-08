@@ -639,11 +639,6 @@ public class CommonDistributedStorageAdmin implements DistributedStorageAdmin {
   @Override
   public Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table)
       throws ExecutionException {
-    if (!tableExists(namespace, table)) {
-      throw new IllegalArgumentException(
-          CoreError.TABLE_NOT_FOUND.buildMessage(ScalarDbUtils.getFullTableName(namespace, table)));
-    }
-
     try {
       return admin.getVirtualTableInfo(namespace, table);
     } catch (ExecutionException e) {
