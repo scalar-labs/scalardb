@@ -97,6 +97,10 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     return Collections.emptyMap();
   }
 
+  protected int getMutationBatchSize() {
+    return 20;
+  }
+
   private void createTable(
       DataType clusteringKeyType, Order clusteringOrder, Map<String, String> options)
       throws ExecutionException {
@@ -791,7 +795,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       List<Put> buffer = new ArrayList<>();
       for (Put put : puts) {
         buffer.add(put);
-        if (buffer.size() == 20) {
+        if (buffer.size() == getMutationBatchSize()) {
           storage.mutate(buffer);
           buffer.clear();
         }
