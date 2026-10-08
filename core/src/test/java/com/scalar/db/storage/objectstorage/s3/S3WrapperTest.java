@@ -236,7 +236,7 @@ public class S3WrapperTest {
   public void insert_S3ExceptionWith412Thrown_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(412).build());
+    failedFuture.completeExceptionally(s3Exception(412, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -249,7 +249,7 @@ public class S3WrapperTest {
   public void insert_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    failedFuture.completeExceptionally(s3Exception(409, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -295,7 +295,7 @@ public class S3WrapperTest {
   public void update_S3ExceptionWith412Thrown_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(412).build());
+    failedFuture.completeExceptionally(s3Exception(412, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -308,7 +308,7 @@ public class S3WrapperTest {
   public void update_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    failedFuture.completeExceptionally(s3Exception(409, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -351,7 +351,7 @@ public class S3WrapperTest {
   public void delete_NonExistingObjectKeyGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(404).build());
+    failedFuture.completeExceptionally(s3Exception(404, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -394,7 +394,7 @@ public class S3WrapperTest {
       delete_WithVersion_NonExistingObjectKeyGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(404).build());
+    failedFuture.completeExceptionally(s3Exception(404, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -406,7 +406,7 @@ public class S3WrapperTest {
   public void delete_WithVersion_S3ExceptionWith412Thrown_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(412).build());
+    failedFuture.completeExceptionally(s3Exception(412, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -418,7 +418,7 @@ public class S3WrapperTest {
   public void delete_WithVersion_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    failedFuture.completeExceptionally(s3Exception(409, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -436,6 +436,156 @@ public class S3WrapperTest {
     // Act & Assert
     assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
         .isInstanceOf(ObjectStorageWrapperException.class);
+  }
+
+  @Test
+  public void
+      insert_S3ExceptionWith412ThrownWithoutNumAttempts_ShouldThrowPreconditionFailedException() {
+    // Arrange
+    S3Exception toThrow =
+        (S3Exception) S3Exception.builder().message("message").statusCode(412).build();
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isInstanceOf(PreconditionFailedException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      insert_S3ExceptionWith412ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(412, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      insert_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      update_S3ExceptionWith412ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(412, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      update_S3ExceptionWith404ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(404, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      update_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_S3ExceptionWith404ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(404, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_S3ExceptionWith404ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(404, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_S3ExceptionWith412ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(412, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
   }
 
   @Test
@@ -560,5 +710,20 @@ public class S3WrapperTest {
 
     // Assert
     verify(client).close();
+  }
+
+  private static S3Exception s3Exception(int statusCode, int numAttempts) {
+    return (S3Exception)
+        S3Exception.builder()
+            .message("message")
+            .statusCode(statusCode)
+            .numAttempts(numAttempts)
+            .build();
+  }
+
+  private static <T> CompletableFuture<T> failedFuture(Throwable throwable) {
+    CompletableFuture<T> future = new CompletableFuture<>();
+    future.completeExceptionally(throwable);
+    return future;
   }
 }
