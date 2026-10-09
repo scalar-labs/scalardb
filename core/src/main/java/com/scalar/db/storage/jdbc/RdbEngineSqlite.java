@@ -48,12 +48,8 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
   @Override
   public boolean isDuplicateTableError(SQLException e) {
-    // Error code: SQLITE_ERROR (1)
-    // Message: SQL error or missing database (table XXX already exists)
-
-    return e.getErrorCode() == 1
-        && e.getMessage().contains("(table")
-        && e.getMessage().endsWith("already exists)");
+    // Since the "IF NOT EXISTS" syntax is used to create a table, we always return false
+    return false;
   }
 
   @SuppressFBWarnings("BC_UNCONFIRMED_CAST")
