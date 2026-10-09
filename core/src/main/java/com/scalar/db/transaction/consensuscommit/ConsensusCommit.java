@@ -186,6 +186,17 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
+    try {
+      commitInternal();
+    } catch (Exception e) {
+      // A commit ends the transaction whatever its outcome, so a failed commit releases what the
+      // transaction holds, as a rollback does
+      releaseResources();
+      throw e;
+    }
+  }
+
+  private void commitInternal() throws CommitException, UnknownTransactionStatusException {
     if (!context.areAllScannersClosed()) {
       throw new IllegalStateException(CoreError.CONSENSUS_COMMIT_SCANNER_NOT_CLOSED.buildMessage());
     }
@@ -220,12 +231,16 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public void rollback() {
-    context.closeScanners();
+    releaseResources();
+  }
 
-    // Release the reserved group commit slot if this transaction holds one.
+  private void releaseResources() {
+    // Release the reserved group commit slot first if this transaction holds one. Unlike the
+    // scanners, the slot is shared: until it is released, the other transactions in its group wait
+    // for this one. A slot already handed to its group is left to the group.
     if (groupCommitter != null && context.groupCommitSlotReserved) {
-      // This is best-effort cleanup; never let a failure here mask the rollback or propagate out of
-      // this cleanup path.
+      // This is best-effort cleanup; never let a failure here mask the outcome of the commit or the
+      // rollback, or propagate out of this cleanup path.
       try {
         groupCommitter.remove(getId());
       } catch (Exception e) {
@@ -235,6 +250,8 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
             e);
       }
     }
+
+    context.closeScanners();
   }
 
   @VisibleForTesting

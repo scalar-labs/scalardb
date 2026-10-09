@@ -222,12 +222,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0042", "Invalid ID specified. ID: %d", "", ""),
   TRANSACTION_NOT_ACTIVE(
       Category.USER_ERROR, "0043", "The transaction is not active. Status: %s", "", ""),
-  TRANSACTION_ALREADY_COMMITTED(
-      Category.USER_ERROR,
-      "0044",
-      "The transaction has already been committed. Status: %s",
-      "",
-      ""),
   TRANSACTION_NOT_PREPARED(
       Category.USER_ERROR, "0045", "The transaction has not been prepared. Status: %s", "", ""),
   TRANSACTION_NOT_PREPARED_OR_VALIDATED(

@@ -184,7 +184,8 @@ public class DistributedTransactionBackedBranchTransaction implements BranchTran
       // original failure. An already-ended branch is a no-op, and an open scanner is left as-is:
       // closing it here would write into the snapshot's scan/scanner sets, which are re-validated
       // at commit, so one branch's cleanup could abort the whole transaction. A scanner left open
-      // is closed by the owning transaction's rollback (or reclaimed by idle expiry).
+      // is closed when the owning transaction ends, by a rollback or a failed commit (or reclaimed
+      // by idle expiry).
       ended = true;
       return;
     }

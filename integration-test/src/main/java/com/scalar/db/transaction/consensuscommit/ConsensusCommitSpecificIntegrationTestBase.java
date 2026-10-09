@@ -5589,6 +5589,54 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
+  @Test
+  void rollbackAndAbort_AfterCommitConflicted_ShouldNotThrowAnyException()
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction =
+        prepareTransfer(manager, 0, namespace1, TABLE_1, NUM_TYPES, namespace1, TABLE_1, 100);
+    prepareTransfer(
+            manager, NUM_TYPES, namespace1, TABLE_1, NUM_TYPES * 2, namespace1, TABLE_1, 200)
+        .commit();
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // Act Assert
+    // The failed commit has already ended the transaction
+    assertThatCode(transaction::rollback).doesNotThrowAnyException();
+    assertThatCode(transaction::abort).doesNotThrowAnyException();
+  }
+
+  @Test
+  void begin_AfterCommitConflictedWithoutRollback_ShouldCommitNewTransaction()
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction =
+        prepareTransfer(manager, 0, namespace1, TABLE_1, NUM_TYPES, namespace1, TABLE_1, 100);
+    prepareTransfer(
+            manager, NUM_TYPES, namespace1, TABLE_1, NUM_TYPES * 2, namespace1, TABLE_1, 200)
+        .commit();
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // Act
+    // Retry the same transfer in a new transaction without rolling back the failed one
+    prepareTransfer(manager, 0, namespace1, TABLE_1, NUM_TYPES, namespace1, TABLE_1, 100).commit();
+
+    // Assert
+    List<Get> gets = prepareGets(namespace1, TABLE_1);
+    DistributedTransaction another = manager.beginReadOnly();
+    Optional<Result> fromResult = another.get(gets.get(0));
+    Optional<Result> toResult = another.get(gets.get(NUM_TYPES));
+    another.commit();
+    assertThat(fromResult).isPresent();
+    assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE - 100);
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(INITIAL_BALANCE - 200 + 100);
+  }
+
   private void commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth(
       Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
