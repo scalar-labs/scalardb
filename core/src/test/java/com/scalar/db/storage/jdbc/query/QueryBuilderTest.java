@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -1917,6 +1919,20 @@ public class QueryBuilderTest {
   }
 
   private String encloseSql(String sql, RdbEngineStrategy rdbEngine) {
+    int orderByIndex = sql.indexOf(" ORDER BY ");
+    if (orderByIndex != -1) {
+      Matcher matcher =
+          Pattern.compile("\\b(p1|p2|c1|c2|v1|v2|v3|v4|v5)\\b")
+              .matcher(sql.substring(orderByIndex));
+      StringBuffer orderBy = new StringBuffer();
+      while (matcher.find()) {
+        matcher.appendReplacement(
+            orderBy,
+            Matcher.quoteReplacement(rdbEngine.getOrderingColumnSql("n1", "t1", matcher.group())));
+      }
+      matcher.appendTail(orderBy);
+      return encloseSql(sql.substring(0, orderByIndex), rdbEngine) + orderBy;
+    }
     return sql.replace("n1.t1", rdbEngine.encloseFullTableName("n1", "t1"))
         .replace("p1", rdbEngine.enclose("p1"))
         .replace("p2", rdbEngine.enclose("p2"))

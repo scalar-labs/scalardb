@@ -5,20 +5,25 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -436,9 +441,57 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
-  public RdbEngineTimeTypeStrategy<String, LocalTime, String, DateTimeOffset>
-      getTimeTypeStrategy() {
+  public RdbEngineTimeTypeStrategy<String, LocalTime, String, String> getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public String getProjectionsSqlForSelectQuery(
+      TableMetadata metadata, List<String> originalProjections) {
+    // When selecting a TIMESTAMPTZ column, special handling is required. See
+    // RdbEngineSqlServer#getProjection().
+    if (originalProjections.isEmpty()
+        && !metadata.getColumnDataTypes().containsValue(DataType.TIMESTAMPTZ)) {
+      return "*";
+    }
+    Collection<String> projections =
+        originalProjections.isEmpty() ? metadata.getColumnNames() : originalProjections;
+
+    return projections.stream()
+        .map(columnName -> getProjection(columnName, metadata.getColumnDataType(columnName)))
+        .collect(Collectors.joining(","));
+  }
+
+  private String getProjection(String columnName, DataType dataType) {
+    if (dataType == DataType.TIMESTAMPTZ) {
+      // The driver decodes DATETIMEOFFSET values with a Julian-Gregorian hybrid calendar, which
+      // shifts the dates between October 5, 1582, and October 14, 1582, by 10 days. DATETIME2
+      // values are decoded with the proleptic Gregorian calendar, so we read the value as a UTC
+      // DATETIME2.
+      return "CAST(SWITCHOFFSET("
+          + enclose(columnName)
+          + ", '+00:00') AS DATETIME2(3)) AS "
+          + enclose(columnName);
+    }
+    return enclose(columnName);
+  }
+
+  @Override
+  public String getOrderingColumnSql(String schema, String table, String columnName) {
+    // ORDER BY resolves an unqualified name to the select list alias, which is a cast expression
+    // for TIMESTAMPTZ columns (see getProjection()). Ordering by the expression prevents using the
+    // index order, so qualify the name to bind it to the table column.
+    return enclose(table) + "." + enclose(columnName);
+  }
+
+  @Override
+  public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    LocalDateTime utcDateTime = resultSet.getObject(columnName, LocalDateTime.class);
+    if (utcDateTime == null) {
+      return TimestampTZColumn.ofNull(columnName);
+    }
+    return TimestampTZColumn.ofStrict(columnName, utcDateTime.toInstant(ZoneOffset.UTC));
   }
 
   @Override

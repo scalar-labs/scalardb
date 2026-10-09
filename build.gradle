@@ -94,7 +94,7 @@ subprojects {
         hikariCpVersion = '4.0.3'
         postgresqlDriverVersion = '42.7.13'
         oracleDriverVersion = '23.26.3.0.0'
-        sqlserverDriverVersion = '12.8.2.jre8'
+        sqlserverDriverVersion = '13.6.0.jre8'
         sqliteDriverVersion = '3.53.4.0'
         yugabyteDriverVersion = '42.7.3-yb-4'
         db2DriverVersion = '12.1.5.0'
