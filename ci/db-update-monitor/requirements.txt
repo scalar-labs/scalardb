@@ -1,0 +1,7 @@
+requests>=2.31.0
+feedparser>=6.0.11
+pyyaml>=6.0.1
+packaging>=24.0
+click>=8.1.7
+pytest>=8.0.0
+responses>=0.25.0
