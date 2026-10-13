@@ -235,20 +235,15 @@ jdbc:
     display_name: SQL Server %VERSION%
     setup: |
       docker run -d --name sqlserver -e MSSQL_PID=Express -e SA_PASSWORD=SqlServer1 -e ACCEPT_EULA=Y -p 1433:1433 mcr.microsoft.com/mssql/server:%VERSION%-latest
-      if [ "%VERSION%" != "2017" ]; then
-        # SQL 2017 contains mssql-tools in /opt/mssql-tools already, but later versions have it in /opt/mssql-tools18
-        # so we create a symlink for later versions
-        docker exec -u root sqlserver ln -s /opt/mssql-tools18 /opt/mssql-tools
-      fi
     versions:
-      - 2017
       - 2019
       - 2022
-    db_healthcheck: docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1;" > /dev/null 2>&1
+      - 2025
+    db_healthcheck: docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       # Create the database here, not in setup, because setup runs before db_healthcheck
-      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
-      docker exec sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
+      docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+      docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
         CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
         CREATE USER test FOR LOGIN test;
         GRANT CREATE SCHEMA TO test;
