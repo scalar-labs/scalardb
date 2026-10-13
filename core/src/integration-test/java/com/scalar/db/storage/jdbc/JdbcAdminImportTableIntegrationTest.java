@@ -6,7 +6,9 @@ import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -93,6 +95,11 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @SuppressWarnings("unused")
+  private boolean isMysql() {
+    return JdbcEnv.isMysql();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isTidb() {
     return testUtils.isTidb();
   }
@@ -140,6 +147,29 @@ public class JdbcAdminImportTableIntegrationTest
           throws Exception {
     super
         .alterColumnType_AlterColumnTypeFromEachExistingDataTypeToText_ForImportedTable_ShouldAlterColumnTypesCorrectly();
+  }
+
+  @Test
+  @EnabledIf("isMysql")
+  public void put_ForImportedMysqlTimestampColumn_ShouldStoreSameInstantAsTimestampTZValue()
+      throws Exception {
+    // Arrange
+    Instant instant = Instant.parse("2024-01-15T12:00:00.123Z");
+    TestData testData =
+        testUtils.createExistingMysqlTimestampTable(getNamespace(), "timestamp_table", instant);
+    testDataList.add(testData);
+    admin.importTable(
+        getNamespace(),
+        testData.getTableName(),
+        Collections.emptyMap(),
+        testData.getOverrideColumnsType());
+
+    // Act
+    storage.put(testData.getPut(getNamespace(), testData.getTableName()));
+
+    // Assert
+    assertThat(testUtils.selectMysqlUnixTimestamp(getNamespace(), testData.getTableName(), "col"))
+        .isEqualByComparingTo(new BigDecimal("1705320000.123"));
   }
 
   @Test
