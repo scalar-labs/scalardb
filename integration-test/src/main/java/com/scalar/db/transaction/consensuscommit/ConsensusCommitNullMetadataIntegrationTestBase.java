@@ -72,6 +72,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
   protected String namespace1;
   protected String namespace2;
   private ParallelExecutor parallelExecutor;
+  private AsyncExecutor asyncExecutor;
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
@@ -98,6 +99,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     createTables();
     originalStorage = factory.getStorage();
     parallelExecutor = new ParallelExecutor(consensusCommitConfig);
+    asyncExecutor = new AsyncExecutor(consensusCommitConfig);
   }
 
   protected void initialize(String testName) throws Exception {}
@@ -161,6 +163,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             databaseConfig,
             coordinator,
             parallelExecutor,
+            asyncExecutor,
             recoveryExecutor,
             crud,
             commit,
@@ -175,9 +178,11 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           false,
@@ -185,9 +190,11 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     } else {
       return new CommitHandler(
           storage,
+          recoveryExecutor,
           coordinator,
           tableMetadataManager,
           parallelExecutor,
+          asyncExecutor,
           mutationsGrouper,
           true,
           false);
@@ -217,11 +224,15 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
 
   @AfterAll
   public void afterAll() throws Exception {
+    // Close the executors first so that the work in flight can finish while the storage is still
+    // open, as the transaction managers do
+    asyncExecutor.close();
+    parallelExecutor.close();
+    recoveryExecutor.close();
+
     dropTables();
     consensusCommitAdmin.close();
     originalStorage.close();
-    parallelExecutor.close();
-    recoveryExecutor.close();
   }
 
   private void dropTables() throws ExecutionException {

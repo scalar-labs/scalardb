@@ -25,6 +25,8 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.IntColumn;
 import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter.CoordinatorGroupCommitKeyManipulator;
@@ -191,10 +193,88 @@ public class CoordinatorStateAccessorTest {
     doThrow(toThrow).when(storage).put(any(Put.class));
 
     // Act
-    assertThatThrownBy(() -> coordinator.putState(state)).isInstanceOf(CoordinatorException.class);
+    assertThatThrownBy(() -> coordinator.putState(state))
+        .isInstanceOf(CoordinatorException.class)
+        .isNotInstanceOf(CoordinatorConflictException.class);
 
     // Assert
     verify(coordinator).createPutWith(state);
+    verify(storage, times(5)).put(any(Put.class));
+  }
+
+  @Test
+  public void putState_NoMutationExceptionThrownInFirstAttempt_ShouldThrowConflictWithOneAttempt()
+      throws ExecutionException {
+    // Arrange
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, ANY_TIME_1);
+    NoMutationException noMutation = new NoMutationException("error", Collections.emptyList());
+    doThrow(noMutation).when(storage).put(any(Put.class));
+
+    // Act
+    Throwable thrown = Assertions.catchThrowable(() -> coordinator.putState(state));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(CoordinatorConflictException.class).hasCause(noMutation);
+    assertThat(((CoordinatorConflictException) thrown).getNumAttempts()).isEqualTo(1);
+    assertThat(thrown.getSuppressed()).isEmpty();
+    verify(storage).put(any(Put.class));
+  }
+
+  @Test
+  public void
+      putState_ExecutionExceptionThenNoMutationExceptionThrown_ShouldThrowConflictWithTwoAttemptsAndEarlierFailure()
+          throws ExecutionException {
+    // Arrange
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, ANY_TIME_1);
+    ExecutionException failure = new ExecutionException("error");
+    NoMutationException noMutation = new NoMutationException("error", Collections.emptyList());
+    doThrow(failure).doThrow(noMutation).when(storage).put(any(Put.class));
+
+    // Act
+    Throwable thrown = Assertions.catchThrowable(() -> coordinator.putState(state));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(CoordinatorConflictException.class).hasCause(noMutation);
+    assertThat(((CoordinatorConflictException) thrown).getNumAttempts()).isEqualTo(2);
+    assertThat(thrown.getSuppressed()).containsExactly(failure);
+    verify(storage, times(2)).put(any(Put.class));
+  }
+
+  @Test
+  public void
+      putState_RetriableExecutionExceptionThenNoMutationExceptionThrown_ShouldThrowConflictWithTwoAttempts()
+          throws ExecutionException {
+    // Arrange
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, ANY_TIME_1);
+    RetriableExecutionException failure = new RetriableExecutionException("error");
+    NoMutationException noMutation = new NoMutationException("error", Collections.emptyList());
+    doThrow(failure).doThrow(noMutation).when(storage).put(any(Put.class));
+
+    // Act
+    Throwable thrown = Assertions.catchThrowable(() -> coordinator.putState(state));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(CoordinatorConflictException.class).hasCause(noMutation);
+    assertThat(((CoordinatorConflictException) thrown).getNumAttempts()).isEqualTo(2);
+    assertThat(thrown.getSuppressed()).containsExactly(failure);
+  }
+
+  @Test
+  public void putState_ExecutionExceptionThenSuccess_ShouldPutAgainWithoutException()
+      throws ExecutionException {
+    // Arrange
+    CoordinatorStateAccessor.State state =
+        new CoordinatorStateAccessor.State(ANY_ID_1, TransactionState.COMMITTED, ANY_TIME_1);
+    doThrow(new ExecutionException("error")).doNothing().when(storage).put(any(Put.class));
+
+    // Act
+    Assertions.assertThatCode(() -> coordinator.putState(state)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage, times(2)).put(any(Put.class));
   }
 
   @Test

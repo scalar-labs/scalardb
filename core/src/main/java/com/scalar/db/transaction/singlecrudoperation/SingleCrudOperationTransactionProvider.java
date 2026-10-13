@@ -6,10 +6,8 @@ import com.scalar.db.api.DistributedTransactionProvider;
 import com.scalar.db.api.GlobalTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
-import javax.annotation.Nullable;
 
 public class SingleCrudOperationTransactionProvider implements DistributedTransactionProvider {
 
@@ -26,16 +24,6 @@ public class SingleCrudOperationTransactionProvider implements DistributedTransa
   @Override
   public DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config) {
     return new SingleCrudOperationTransactionAdmin(config);
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Nullable
-  @Override
-  public TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(
-      DatabaseConfig config) {
-    return null;
   }
 
   @Override

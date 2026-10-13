@@ -250,29 +250,7 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
       scanOrGetScanner_ScanAllWithProjectionsGivenOnNonPrimaryKeyColumnsForCommittedRecord_ShouldReturnOnlyProjectedColumns(
           ScanType scanType) {}
 
-  @Disabled("Single CRUD operation transactions don't support resuming a transaction")
-  @Override
-  @Test
-  public void resume_WithBeginningTransaction_ShouldReturnBegunTransaction() {}
-
-  @Disabled("Single CRUD operation transactions don't support resuming a transaction")
-  @Override
-  @Test
-  public void resume_WithoutBeginningTransaction_ShouldThrowTransactionNotFoundException() {}
-
-  @Disabled("Single CRUD operation transactions don't support resuming a transaction")
-  @Override
-  @Test
-  public void
-      resume_WithBeginningAndCommittingTransaction_ShouldThrowTransactionNotFoundException() {}
-
-  @Disabled("Single CRUD operation transactions don't support resuming a transaction")
-  @Override
-  @Test
-  public void
-      resume_WithBeginningAndRollingBackTransaction_ShouldThrowTransactionNotFoundException() {}
-
-  @Disabled("Single CRUD operation transactions don't support resuming a transaction")
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
   public void get_DefaultNamespaceGiven_ShouldWorkProperly() {}
@@ -286,6 +264,16 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Override
   @Test
   public void getScanner_DefaultNamespaceGiven_ShouldWorkProperly() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void getScanner_WhenUpdatingEachReturnedRecord_ShouldUpdateAllOfThem() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void getScanner_WhenDeletingEachReturnedRecord_ShouldDeleteAllOfThem() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
@@ -438,6 +426,24 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Test
   public void
       update_withUpdateIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      put_withPutIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      update_withUpdateIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      delete_withDeleteIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
 
   @Disabled("Single CRUD operation transactions don't support getState()")
   @Override

@@ -4,6 +4,7 @@ import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.ServerSideTimestampGenerator;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
@@ -24,7 +25,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class ClusterManager {
   private static final Logger logger = LoggerFactory.getLogger(ClusterManager.class);
-  private static final int DEFAULT_CASSANDRA_PORT = 9042;
+  @VisibleForTesting static final int DEFAULT_CASSANDRA_PORT = 9042;
   private Cluster cluster;
   private Session session;
 
@@ -78,7 +79,8 @@ public class ClusterManager {
     logger.info("Session to the cluster is created");
   }
 
-  private Cluster getCluster(DatabaseConfig config) {
+  @VisibleForTesting
+  Cluster getCluster(DatabaseConfig config) {
     Cluster.Builder builder =
         Cluster.builder()
             .withClusterName("Scalar Cluster")
@@ -86,11 +88,25 @@ public class ClusterManager {
             .withPort(
                 config.getContactPort() == 0 ? DEFAULT_CASSANDRA_PORT : config.getContactPort())
             .withoutJMXReporting()
+            // Take write timestamps from the server so that non-conditional writes and lightweight
+            // transactions share one monotonic source, which Cassandra keeps per node; the load
+            // balancing policy below keeps each partition on one coordinator. With the driver's
+            // default client-side timestamps, a lightweight transaction running in the same
+            // millisecond as a preceding non-conditional write gets an older timestamp and its
+            // update is silently discarded.
+            .withTimestampGenerator(ServerSideTimestampGenerator.INSTANCE)
             // .withCompression ?
             // .withPoolingOptions ?
             .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
+            // Send every request for a partition to the same replica, the first live local one in
+            // token-ring order. Server-side write timestamps are monotonic only per coordinator, so
+            // with the default random replica order two successive writes to a record could be
+            // coordinated by different nodes, and the later one could get an older timestamp and be
+            // silently discarded.
             .withLoadBalancingPolicy(
-                new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().build()));
+                new TokenAwarePolicy(
+                    DCAwareRoundRobinPolicy.builder().build(),
+                    TokenAwarePolicy.ReplicaOrdering.TOPOLOGICAL));
     if (config.getUsername().isPresent() && config.getPassword().isPresent()) {
       builder.withCredentials(config.getUsername().get(), config.getPassword().get());
     }

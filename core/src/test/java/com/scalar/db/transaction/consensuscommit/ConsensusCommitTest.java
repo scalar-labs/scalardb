@@ -847,7 +847,6 @@ public class ConsensusCommitTest {
     // Assert
     verify(context).closeScanners();
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }
 
   @Test
@@ -875,7 +874,6 @@ public class ConsensusCommitTest {
     verify(context).closeScanners();
     verify(groupCommitter).remove(ANY_ID);
     verify(commit, never()).rollbackRecords(context);
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }
 
   @Test
@@ -898,7 +896,6 @@ public class ConsensusCommitTest {
     verify(context).closeScanners();
     verify(groupCommitter, never()).remove(anyString());
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
   }
 
   @Test
@@ -934,6 +931,40 @@ public class ConsensusCommitTest {
     verify(context).closeScanners();
     verify(groupCommitter).remove(fullKey);
     verify(commit, never()).rollbackRecords(any(TransactionContext.class));
-    verify(commit, never()).abortStateWithoutWriteSet(anyString());
+  }
+
+  @Test
+  public void
+      rollback_WithOpenScannerWhoseCloseWouldThrow_ShouldDiscardScannerAndRemoveTxFromGroupCommitter()
+          throws CrudException, UnknownTransactionStatusException {
+    // Arrange
+    CoordinatorGroupCommitKeyManipulator keyManipulator =
+        new CoordinatorGroupCommitKeyManipulator();
+    String fullKey = keyManipulator.fullKey(keyManipulator.generateParentKey(), ANY_ID);
+    context =
+        spy(
+            new TransactionContext(
+                fullKey,
+                snapshot,
+                Isolation.SNAPSHOT,
+                false,
+                false,
+                /* groupCommitSlotReserved= */ true));
+    ConsensusCommitScanner scanner = mock(ConsensusCommitScanner.class);
+    when(scanner.isClosed()).thenReturn(false);
+    // The user-facing close() would reject the scan for overlapping a write of this transaction
+    doThrow(IllegalArgumentException.class).when(scanner).close();
+    context.scanners.add(scanner);
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
+
+    // Act
+    consensusWithGroupCommit.rollback();
+
+    // Assert
+    verify(scanner).discard();
+    verify(scanner, never()).close();
+    verify(groupCommitter).remove(fullKey);
   }
 }

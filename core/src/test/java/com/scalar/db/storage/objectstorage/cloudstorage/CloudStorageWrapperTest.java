@@ -6,13 +6,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.api.gax.paging.Page;
 import com.google.cloud.PageImpl;
+import com.google.cloud.ServiceOptions;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -21,6 +24,8 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageBatch;
 import com.google.cloud.storage.StorageBatchResult;
 import com.google.cloud.storage.StorageException;
+import com.google.cloud.storage.StorageOptions;
+import com.scalar.db.storage.objectstorage.ConflictOccurredException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
@@ -43,9 +48,12 @@ public class CloudStorageWrapperTest {
   private static final String ANY_PREFIX = "any_prefix/";
   private static final String ANY_DATA = "any_data";
   private static final long ANY_GENERATION = 12345L;
+  private static final long ANY_UPDATED_GENERATION = 12346L;
+  private static final String ANY_UPDATED_DATA = "any_updated_data";
 
   @Mock private CloudStorageConfig config;
   @Mock private Storage storage;
+  @Mock private Storage nonRetryingStorage;
   private CloudStorageWrapper wrapper;
 
   @BeforeEach
@@ -56,7 +64,7 @@ public class CloudStorageWrapperTest {
     when(config.getProjectId()).thenReturn(PROJECT_ID);
     when(config.getBucket()).thenReturn(BUCKET);
     when(config.getUploadChunkSizeBytes()).thenReturn(Optional.empty());
-    wrapper = new CloudStorageWrapper(config, storage);
+    wrapper = new CloudStorageWrapper(config, storage, nonRetryingStorage);
   }
 
   @Test
@@ -65,14 +73,16 @@ public class CloudStorageWrapperTest {
     BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
     Blob blob = mock(Blob.class);
     when(storage.get(blobId)).thenReturn(blob);
-    when(blob.getContent()).thenReturn(ANY_DATA.getBytes(StandardCharsets.UTF_8));
     when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenReturn(ANY_DATA.getBytes(StandardCharsets.UTF_8));
 
     // Act
     Optional<ObjectStorageWrapperResponse> result = wrapper.get(ANY_OBJECT_KEY);
 
     // Assert
     verify(storage).get(blobId);
+    verify(storage).readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION));
     assertThat(result).isPresent();
     assertThat(result.get().getPayload()).isEqualTo(ANY_DATA);
     assertThat(result.get().getVersion()).isEqualTo(String.valueOf(ANY_GENERATION));
@@ -100,6 +110,84 @@ public class CloudStorageWrapperTest {
     // Act Assert
     assertThatCode(() -> wrapper.get(ANY_OBJECT_KEY))
         .isInstanceOf(ObjectStorageWrapperException.class);
+  }
+
+  @Test
+  public void get_WhenObjectDeletedAfterMetadataRetrieved_ShouldReturnEmptyOptional()
+      throws Exception {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(new StorageException(CloudStorageErrorCode.NOT_FOUND.get(), "Not Found"));
+
+    // Act
+    Optional<ObjectStorageWrapperResponse> result = wrapper.get(ANY_OBJECT_KEY);
+
+    // Assert
+    assertThat(result).isNotPresent();
+  }
+
+  @Test
+  public void get_WhenObjectUpdatedAfterMetadataRetrieved_ShouldRetryAndReturnUpdatedObjectData()
+      throws Exception {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION, ANY_UPDATED_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(
+            new StorageException(
+                CloudStorageErrorCode.PRECONDITION_FAILED.get(), "Precondition Failed"));
+    when(storage.readAllBytes(
+            blobId, Storage.BlobSourceOption.generationMatch(ANY_UPDATED_GENERATION)))
+        .thenReturn(ANY_UPDATED_DATA.getBytes(StandardCharsets.UTF_8));
+
+    // Act
+    Optional<ObjectStorageWrapperResponse> result = wrapper.get(ANY_OBJECT_KEY);
+
+    // Assert
+    verify(storage, times(2)).get(blobId);
+    assertThat(result).isPresent();
+    assertThat(result.get().getPayload()).isEqualTo(ANY_UPDATED_DATA);
+    assertThat(result.get().getVersion()).isEqualTo(String.valueOf(ANY_UPDATED_GENERATION));
+  }
+
+  @Test
+  public void get_WhenObjectUpdatedRepeatedly_ShouldThrowConflictOccurredException() {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(
+            new StorageException(
+                CloudStorageErrorCode.PRECONDITION_FAILED.get(), "Precondition Failed"));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.get(ANY_OBJECT_KEY)).isInstanceOf(ConflictOccurredException.class);
+    verify(storage, times(CloudStorageWrapper.GET_MAX_RETRY_COUNT + 1)).get(blobId);
+  }
+
+  @Test
+  public void
+      get_WhenStorageExceptionThrownWhileDownloadingPayload_ShouldThrowObjectStorageWrapperException() {
+    // Arrange
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    Blob blob = mock(Blob.class);
+    when(storage.get(blobId)).thenReturn(blob);
+    when(blob.getGeneration()).thenReturn(ANY_GENERATION);
+    when(storage.readAllBytes(blobId, Storage.BlobSourceOption.generationMatch(ANY_GENERATION)))
+        .thenThrow(new StorageException(500, "Any Error"));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.get(ANY_OBJECT_KEY))
+        .isInstanceOf(ObjectStorageWrapperException.class);
+    verify(storage).get(blobId);
   }
 
   @Test
@@ -276,16 +364,49 @@ public class CloudStorageWrapperTest {
   }
 
   @Test
+  public void
+      constructor_StorageOptionsGiven_ShouldUseStorageWithoutRetriesOnlyForDeleteWithVersion()
+          throws Exception {
+    // Arrange
+    StorageOptions options = mock(StorageOptions.class);
+    StorageOptions.Builder builder = mock(StorageOptions.Builder.class);
+    StorageOptions nonRetryingOptions = mock(StorageOptions.class);
+    when(options.getService()).thenReturn(storage);
+    when(options.toBuilder()).thenReturn(builder);
+    when(builder.setRetrySettings(any())).thenReturn(builder);
+    when(builder.build()).thenReturn(nonRetryingOptions);
+    when(nonRetryingOptions.getService()).thenReturn(nonRetryingStorage);
+
+    BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
+    when(storage.delete(blobId)).thenReturn(true);
+    when(nonRetryingStorage.delete(eq(blobId), any(Storage.BlobSourceOption.class)))
+        .thenReturn(true);
+
+    // Act
+    CloudStorageWrapper wrapperWithOptions = new CloudStorageWrapper(config, options);
+    wrapperWithOptions.delete(ANY_OBJECT_KEY);
+    wrapperWithOptions.delete(ANY_OBJECT_KEY, String.valueOf(ANY_GENERATION));
+
+    // Assert
+    verify(builder).setRetrySettings(ServiceOptions.getNoRetrySettings());
+    verify(storage).delete(blobId);
+    verify(storage, never()).delete(any(BlobId.class), any(Storage.BlobSourceOption.class));
+    verify(nonRetryingStorage).delete(eq(blobId), any(Storage.BlobSourceOption.class));
+  }
+
+  @Test
   public void delete_WithVersion_ExistingObjectKeyGiven_ShouldDeleteObject() throws Exception {
     // Arrange
     BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
-    when(storage.delete(eq(blobId), any(Storage.BlobSourceOption.class))).thenReturn(true);
+    when(nonRetryingStorage.delete(eq(blobId), any(Storage.BlobSourceOption.class)))
+        .thenReturn(true);
 
     // Act
     wrapper.delete(ANY_OBJECT_KEY, String.valueOf(ANY_GENERATION));
 
     // Assert
-    verify(storage).delete(eq(blobId), any(Storage.BlobSourceOption.class));
+    verify(nonRetryingStorage).delete(eq(blobId), any(Storage.BlobSourceOption.class));
+    verify(storage, never()).delete(any(BlobId.class), any(Storage.BlobSourceOption.class));
   }
 
   @Test
@@ -293,7 +414,8 @@ public class CloudStorageWrapperTest {
       delete_WithVersion_NonExistingObjectKeyGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
     BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
-    when(storage.delete(eq(blobId), any(Storage.BlobSourceOption.class))).thenReturn(false);
+    when(nonRetryingStorage.delete(eq(blobId), any(Storage.BlobSourceOption.class)))
+        .thenReturn(false);
 
     // Act Assert
     assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, String.valueOf(ANY_GENERATION)))
@@ -304,7 +426,7 @@ public class CloudStorageWrapperTest {
   public void delete_WithVersion_PreconditionFailed_ShouldThrowPreconditionFailedException() {
     // Arrange
     BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
-    when(storage.delete(eq(blobId), any(Storage.BlobSourceOption.class)))
+    when(nonRetryingStorage.delete(eq(blobId), any(Storage.BlobSourceOption.class)))
         .thenThrow(new StorageException(412, "Any Error"));
 
     // Act Assert
@@ -317,7 +439,7 @@ public class CloudStorageWrapperTest {
       delete_WithVersion_OtherStorageExceptionThrown_ShouldThrowObjectStorageWrapperException() {
     // Arrange
     BlobId blobId = BlobId.of(BUCKET, ANY_OBJECT_KEY);
-    when(storage.delete(eq(blobId), any(Storage.BlobSourceOption.class)))
+    when(nonRetryingStorage.delete(eq(blobId), any(Storage.BlobSourceOption.class)))
         .thenThrow(new StorageException(500, "Any Error"));
 
     // Act Assert
@@ -429,6 +551,20 @@ public class CloudStorageWrapperTest {
 
     // Assert
     verify(storage).close();
+    verify(nonRetryingStorage).close();
+  }
+
+  @Test
+  public void close_WhenClosingStorageFails_ShouldStillCloseNonRetryingStorage() throws Exception {
+    // Arrange
+    Exception exception = new Exception("Any Error");
+    doThrow(exception).when(storage).close();
+
+    // Act Assert
+    assertThatCode(() -> wrapper.close())
+        .isInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(exception);
+    verify(nonRetryingStorage).close();
   }
 
   /**

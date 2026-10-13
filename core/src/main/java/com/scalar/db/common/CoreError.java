@@ -452,14 +452,8 @@ public enum CoreError implements ScalarDbError {
   CONSENSUS_COMMIT_SCANNING_ALREADY_WRITTEN_OR_DELETED_DATA_NOT_ALLOWED(
       Category.USER_ERROR,
       "0106",
-      "Scanning data already-written or already-deleted by the same transaction is not allowed",
-      "",
-      ""),
-  CONSENSUS_COMMIT_TRANSACTION_NOT_VALIDATED_IN_SERIALIZABLE(
-      Category.USER_ERROR,
-      "0107",
-      "The transaction is not validated. When using the SERIALIZABLE isolation level,"
-          + " you need to call validate() before calling commit()",
+      "Scanning data already-written or already-deleted by the same transaction is not allowed."
+          + " Record: %s",
       "",
       ""),
   DYNAMO_BATCH_SIZE_EXCEEDED(
@@ -516,18 +510,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0139",
       "Beginning a transaction is not allowed in single CRUD operation transactions",
-      "",
-      ""),
-  SINGLE_CRUD_OPERATION_TRANSACTION_RESUMING_TRANSACTION_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0140",
-      "Resuming a transaction is not allowed in single CRUD operation transactions",
-      "",
-      ""),
-  CONSENSUS_COMMIT_GROUP_COMMIT_WITH_TWO_PHASE_COMMIT_INTERFACE_NOT_ALLOWED(
-      Category.USER_ERROR,
-      "0141",
-      "Using the group commit feature on the Coordinator table with a two-phase commit interface is not allowed",
       "",
       ""),
   GET_BUILD_ERROR_OPERATION_SUPPORTED_ONLY_WHEN_NO_CONDITIONS_ARE_SPECIFIED(
@@ -631,12 +613,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR,
       "0205",
       "Some scanners were not closed. All scanners must be closed before committing the transaction",
-      "",
-      ""),
-  TWO_PHASE_CONSENSUS_COMMIT_SCANNER_NOT_CLOSED(
-      Category.USER_ERROR,
-      "0206",
-      "Some scanners were not closed. All scanners must be closed before preparing the transaction",
       "",
       ""),
   MUTATION_NOT_ALLOWED_IN_READ_ONLY_TRANSACTION(
@@ -1157,29 +1133,35 @@ public enum CoreError implements ScalarDbError {
       "The HikariCP exceptionOverrideClassName setting is not supported. ScalarDB determines whether a failed commit left the transaction in an unknown state by checking whether the connection survived, which relies on HikariCP discarding a connection that reports a connection exception. An override that keeps such a connection alive would make an unknown outcome be reported as a definite failure, which the caller is told is safe to retry. Configured class: %s",
       "",
       ""),
-  COLLATION_INVALID_RULES(
+  CONSENSUS_COMMIT_CONDITION_NOT_PROPERLY_SPECIFIED(
       Category.USER_ERROR,
       "0304",
+      "The condition is not properly specified. Table: %s; Expressions: %s",
+      "",
+      ""),
+  COLLATION_INVALID_RULES(
+      Category.USER_ERROR,
+      "0305",
       "Failed to build an ICU collator from the specified custom collation rules. Rules: %s",
       "",
       "Specify a valid ICU tailoring-rule string for the property scalar.db.collation.icu.rules"),
   COLLATION_UNRECOGNIZED_LOCALE(
       Category.USER_ERROR,
-      "0305",
+      "0306",
       "The specified collation locale is not recognized by ICU. Locale: %s",
       "",
       "Specify a locale that ICU has collation data for (for example en, en-US, or ja) for the "
           + "property scalar.db.collation.icu.locale"),
   COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE(
       Category.USER_ERROR,
-      "0306",
+      "0307",
       "The ICU collation is not supported for this storage because the storage supports only "
           + "binary UTF-8 byte order for text. Storage: %s",
       "",
       "Remove the property scalar.db.collation or set it to BINARY"),
   COLLATION_MULTI_STORAGE_PER_STORAGE_OVERRIDE_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0307",
+      "0308",
       "The collation configuration cannot be overridden per storage in multi-storage. "
           + "Property: %s",
       "",
@@ -1187,7 +1169,7 @@ public enum CoreError implements ScalarDbError {
           + "scalar.db.collation.icu.* apply to all storages"),
   COLLATION_ICU_LIKE_CONDITION_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0308",
+      "0309",
       "The %s condition is not supported in a transaction when scalar.db.collation is set to ICU "
           + "because the collation does not define pattern-matching semantics. Table: %s; "
           + "Column: %s",
@@ -1195,14 +1177,14 @@ public enum CoreError implements ScalarDbError {
       "Remove the LIKE or NOT_LIKE condition, or set scalar.db.collation to BINARY"),
   COLLATION_INVALID_LOCALE_TAG(
       Category.USER_ERROR,
-      "0309",
+      "0310",
       "The specified collation locale is not a valid BCP 47 language tag. Locale: %s; Details: %s",
       "",
       "Specify a BCP 47 language tag (for example en, en-US, ja, or ja-u-co-unihan) for the "
           + "property scalar.db.collation.icu.locale"),
   COLLATION_UNSUPPORTED_LOCALE_COLLATION(
       Category.USER_ERROR,
-      "0310",
+      "0311",
       "ICU has no collation of the specified type for the specified collation locale, so text "
           + "would be ordered by the locale's standard collation. Locale: %s; Collation type: %s; "
           + "Available collation types: %s",
@@ -1211,7 +1193,7 @@ public enum CoreError implements ScalarDbError {
           + "property scalar.db.collation.icu.locale"),
   COLLATION_ICU_LOCALE_SETTING_WITH_RULES_NOT_SUPPORTED(
       Category.USER_ERROR,
-      "0311",
+      "0312",
       "The specified collation locale sets collation attributes, which a custom tailoring-rule "
           + "string cannot carry, so combining them would silently discard the settings. "
           + "Locale: %s; Setting keywords: %s",
@@ -1268,10 +1250,10 @@ public enum CoreError implements ScalarDbError {
       "The %s condition of the %s operation is not satisfied. Targeting column(s): %s",
       "",
       ""),
-  CONSENSUS_COMMIT_PREPARING_RECORD_EXISTS(
+  CONSENSUS_COMMIT_CONDITIONAL_MUTATION_NOT_APPLIED(
       Category.CONCURRENCY_ERROR,
       "0013",
-      "The record being prepared already exists. Details: %s",
+      "A conflict occurred. Either a record being inserted already exists or is being written by another transaction, or a record being updated or deleted has been modified by another transaction. Details: %s",
       "",
       ""),
   CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_PREPARING_RECORDS(
@@ -1375,6 +1357,12 @@ public enum CoreError implements ScalarDbError {
       "0031",
       "A transaction associated with the specified transaction ID is not found. "
           + "The transaction might have expired",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS(
+      Category.CONCURRENCY_ERROR,
+      "0032",
+      "A conflict occurred when recovering records. Details: %s",
       "",
       ""),
 
@@ -1499,13 +1487,6 @@ public enum CoreError implements ScalarDbError {
       "Scanning records from the underlying storage failed. Details: %s",
       "",
       ""),
-  CONSENSUS_COMMIT_ROLLBACK_FAILED_BECAUSE_TRANSACTION_ALREADY_COMMITTED(
-      Category.INTERNAL_ERROR,
-      "0041",
-      "Rollback failed because the transaction has already been committed",
-      "",
-      ""),
-  CONSENSUS_COMMIT_ROLLBACK_FAILED(Category.INTERNAL_ERROR, "0042", "Rollback failed", "", ""),
   JDBC_TRANSACTION_INSERT_OPERATION_FAILED(
       Category.INTERNAL_ERROR, "0043", "The Insert operation failed. Details: %s", "", ""),
   JDBC_TRANSACTION_UPSERT_OPERATION_FAILED(
@@ -1590,6 +1571,12 @@ public enum CoreError implements ScalarDbError {
       "Recovering the record failed. Table: %s; Partition Key: %s; Clustering Key: %s; Details: %s",
       "",
       ""),
+  DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY(
+      Category.INTERNAL_ERROR,
+      "0070",
+      "The mutation may have been applied because the AWS SDK retried the request, so its outcome is unknown. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
@@ -1622,6 +1609,12 @@ public enum CoreError implements ScalarDbError {
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0005",
       "One-phase committing records failed. Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0006",
+      "The committing state in the coordinator conflicted after the write was retried. An earlier attempt may have been applied, so the transaction may have been committed. Details: %s",
       "",
       ""),
   ;

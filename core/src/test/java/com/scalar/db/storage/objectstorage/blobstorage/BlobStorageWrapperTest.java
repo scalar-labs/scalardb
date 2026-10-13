@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,6 +15,7 @@ import com.azure.core.http.HttpHeaders;
 import com.azure.core.http.HttpResponse;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.BinaryData;
+import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobDownloadContentResponse;
@@ -28,12 +30,14 @@ import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 
 @ExtendWith(MockitoExtension.class)
 public class BlobStorageWrapperTest {
@@ -58,8 +62,24 @@ public class BlobStorageWrapperTest {
   private BlobStorageException createBlobStorageException(BlobErrorCode errorCode) {
     HttpResponse httpResponse = mock(HttpResponse.class);
     HttpHeaders headers = new HttpHeaders().set("x-ms-error-code", errorCode.toString());
-    when(httpResponse.getHeaders()).thenReturn(headers);
+    // The error code is not read when the request was resent
+    lenient().when(httpResponse.getHeaders()).thenReturn(headers);
     return new BlobStorageException("test error", httpResponse, null);
+  }
+
+  /**
+   * Returns an answer that adds the given number of attempts to the counter in the context passed
+   * as the last argument, as {@link ConditionalRequestAttemptCounter} does, and then throws the
+   * given exception.
+   */
+  private static Answer<Object> throwAfterAttempts(int attempts, BlobStorageException exception) {
+    return invocation -> {
+      Context context = invocation.getArgument(invocation.getArguments().length - 1);
+      AtomicInteger counter =
+          (AtomicInteger) context.getData(ConditionalRequestAttemptCounter.CONTEXT_KEY).get();
+      counter.addAndGet(attempts);
+      throw exception;
+    };
   }
 
   // get tests
@@ -191,7 +211,7 @@ public class BlobStorageWrapperTest {
 
     BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_ALREADY_EXISTS);
     when(blobClient.uploadWithResponse(any(BlobParallelUploadOptions.class), any(), any()))
-        .thenThrow(exception);
+        .thenAnswer(throwAfterAttempts(1, exception));
 
     // Act & Assert
     assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
@@ -211,6 +231,40 @@ public class BlobStorageWrapperTest {
     // Act & Assert
     assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
         .isInstanceOf(ObjectStorageWrapperException.class);
+  }
+
+  @Test
+  public void
+      insert_BlobAlreadyExistsWithoutAttemptsCounted_ShouldThrowPreconditionFailedException() {
+    // Arrange
+    BlobClient blobClient = mock(BlobClient.class);
+    when(client.getBlobClient(ANY_OBJECT_KEY)).thenReturn(blobClient);
+
+    BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_ALREADY_EXISTS);
+    when(blobClient.uploadWithResponse(any(BlobParallelUploadOptions.class), any(), any()))
+        .thenThrow(exception);
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isInstanceOf(PreconditionFailedException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      insert_BlobAlreadyExistsAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    BlobClient blobClient = mock(BlobClient.class);
+    when(client.getBlobClient(ANY_OBJECT_KEY)).thenReturn(blobClient);
+
+    BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_ALREADY_EXISTS);
+    when(blobClient.uploadWithResponse(any(BlobParallelUploadOptions.class), any(), any()))
+        .thenAnswer(throwAfterAttempts(2, exception));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(exception);
   }
 
   // update tests
@@ -237,7 +291,7 @@ public class BlobStorageWrapperTest {
 
     BlobStorageException exception = createBlobStorageException(BlobErrorCode.CONDITION_NOT_MET);
     when(blobClient.uploadWithResponse(any(BlobParallelUploadOptions.class), any(), any()))
-        .thenThrow(exception);
+        .thenAnswer(throwAfterAttempts(1, exception));
 
     // Act & Assert
     assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
@@ -252,7 +306,7 @@ public class BlobStorageWrapperTest {
 
     BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_NOT_FOUND);
     when(blobClient.uploadWithResponse(any(BlobParallelUploadOptions.class), any(), any()))
-        .thenThrow(exception);
+        .thenAnswer(throwAfterAttempts(1, exception));
 
     // Act & Assert
     assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
@@ -272,6 +326,40 @@ public class BlobStorageWrapperTest {
     // Act & Assert
     assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
         .isInstanceOf(ObjectStorageWrapperException.class);
+  }
+
+  @Test
+  public void
+      update_ConditionNotMetAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    BlobClient blobClient = mock(BlobClient.class);
+    when(client.getBlobClient(ANY_OBJECT_KEY)).thenReturn(blobClient);
+
+    BlobStorageException exception = createBlobStorageException(BlobErrorCode.CONDITION_NOT_MET);
+    when(blobClient.uploadWithResponse(any(BlobParallelUploadOptions.class), any(), any()))
+        .thenAnswer(throwAfterAttempts(2, exception));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      update_BlobNotFoundAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    BlobClient blobClient = mock(BlobClient.class);
+    when(client.getBlobClient(ANY_OBJECT_KEY)).thenReturn(blobClient);
+
+    BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_NOT_FOUND);
+    when(blobClient.uploadWithResponse(any(BlobParallelUploadOptions.class), any(), any()))
+        .thenAnswer(throwAfterAttempts(2, exception));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(exception);
   }
 
   // delete (without version) tests
@@ -341,7 +429,7 @@ public class BlobStorageWrapperTest {
 
     BlobStorageException exception = createBlobStorageException(BlobErrorCode.CONDITION_NOT_MET);
     when(blobClient.deleteWithResponse(any(), any(BlobRequestConditions.class), any(), any()))
-        .thenThrow(exception);
+        .thenAnswer(throwAfterAttempts(1, exception));
 
     // Act & Assert
     assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
@@ -356,7 +444,7 @@ public class BlobStorageWrapperTest {
 
     BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_NOT_FOUND);
     when(blobClient.deleteWithResponse(any(), any(BlobRequestConditions.class), any(), any()))
-        .thenThrow(exception);
+        .thenAnswer(throwAfterAttempts(1, exception));
 
     // Act & Assert
     assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
@@ -377,6 +465,40 @@ public class BlobStorageWrapperTest {
     // Act & Assert
     assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
         .isInstanceOf(ObjectStorageWrapperException.class);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_ConditionNotMetAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    BlobClient blobClient = mock(BlobClient.class);
+    when(client.getBlobClient(ANY_OBJECT_KEY)).thenReturn(blobClient);
+
+    BlobStorageException exception = createBlobStorageException(BlobErrorCode.CONDITION_NOT_MET);
+    when(blobClient.deleteWithResponse(any(), any(BlobRequestConditions.class), any(), any()))
+        .thenAnswer(throwAfterAttempts(2, exception));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_BlobNotFoundAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    BlobClient blobClient = mock(BlobClient.class);
+    when(client.getBlobClient(ANY_OBJECT_KEY)).thenReturn(blobClient);
+
+    BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_NOT_FOUND);
+    when(blobClient.deleteWithResponse(any(), any(BlobRequestConditions.class), any(), any()))
+        .thenAnswer(throwAfterAttempts(2, exception));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(exception);
   }
 
   // deleteByPrefix tests

@@ -1,7 +1,6 @@
 package com.scalar.db.common;
 
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
@@ -11,7 +10,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
@@ -61,20 +59,6 @@ public abstract class AbstractDistributedTransactionManager
   @Override
   public Optional<String> getTable() {
     return tableName;
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public DistributedTransaction join(String txId) throws TransactionNotFoundException {
-    throw new UnsupportedOperationException("join is not supported in this implementation");
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
-    throw new UnsupportedOperationException("resume is not supported in this implementation");
   }
 
   protected <T extends Operation> List<T> copyAndSetTargetToIfNot(List<T> operations) {

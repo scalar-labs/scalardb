@@ -483,19 +483,55 @@ public final class ConsensusCommitUtils {
     return result.map(TransactionResult::new);
   }
 
+  /**
+   * Creates a {@link Get} that reads the record identified by the specified snapshot key. All
+   * columns are read (no projections) with linearizable consistency so the before image and the
+   * transaction metadata are available.
+   *
+   * @param key the snapshot key identifying the record
+   * @return a {@code Get} for the record
+   */
+  static Get createGet(Snapshot.Key key) {
+    return createGet(
+        key.getNamespace(),
+        key.getTable(),
+        key.getPartitionKey(),
+        key.getClusteringKey().orElse(null));
+  }
+
+  /**
+   * Creates a {@link Get} that reads the record the specified keys identify. All columns are read
+   * (no projections) with linearizable consistency so the before image and the transaction metadata
+   * are available.
+   *
+   * @param namespace the namespace of the record
+   * @param table the table of the record
+   * @param partitionKey the partition key of the record
+   * @param clusteringKey the clustering key of the record, or {@code null} if the table has none
+   * @return a {@code Get} for the record
+   */
+  static Get createGet(
+      String namespace, String table, Key partitionKey, @Nullable Key clusteringKey) {
+    GetBuilder.BuildableGetWithPartitionKey buildableGet =
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(partitionKey)
+            .consistency(Consistency.LINEARIZABLE);
+    if (clusteringKey != null) {
+      buildableGet.clusteringKey(clusteringKey);
+    }
+    return buildableGet.build();
+  }
+
   private static Get buildReReadGet(
       Selection selection, Key partitionKey, Optional<Key> clusteringKey) {
     assert selection.forNamespace().isPresent() && selection.forTable().isPresent();
-    // Read all columns (no projections) with linearizable consistency so the before-image and the
-    // transaction metadata are available.
-    GetBuilder.BuildableGetWithPartitionKey builder =
-        Get.newBuilder()
-            .namespace(selection.forNamespace().get())
-            .table(selection.forTable().get())
-            .partitionKey(partitionKey)
-            .consistency(Consistency.LINEARIZABLE);
-    clusteringKey.ifPresent(builder::clusteringKey);
-    return builder.build();
+    return createGet(
+        selection.forNamespace().get(),
+        selection.forTable().get(),
+        partitionKey,
+        clusteringKey.orElse(null));
   }
 
   static Get prepareGetForStorage(Get get, TableMetadata metadata) {

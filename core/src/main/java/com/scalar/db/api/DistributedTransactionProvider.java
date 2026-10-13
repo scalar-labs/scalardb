@@ -1,14 +1,13 @@
 package com.scalar.db.api;
 
 import com.scalar.db.config.DatabaseConfig;
-import javax.annotation.Nullable;
 
 /**
- * A class that creates {@link DistributedTransactionManager}, {@link DistributedTransactionAdmin},
- * and {@link TwoPhaseCommitTransactionManager} instances. Each transaction manager should implement
- * this class to instantiate its implementations of {@link DistributedTransactionManager}, {@link
- * DistributedTransactionAdmin}, and {@link TwoPhaseCommitTransactionManager}. The implementations
- * are assumed to be loaded by {@link java.util.ServiceLoader}.
+ * A class that creates {@link DistributedTransactionManager} and {@link
+ * DistributedTransactionAdmin} instances. Each transaction manager should implement this class to
+ * instantiate its implementations of {@link DistributedTransactionManager} and {@link
+ * DistributedTransactionAdmin}. The implementations are assumed to be loaded by {@link
+ * java.util.ServiceLoader}.
  */
 public interface DistributedTransactionProvider {
 
@@ -35,19 +34,6 @@ public interface DistributedTransactionProvider {
    * @return an instance of {@link DistributedTransactionAdmin} for the transaction manager
    */
   DistributedTransactionAdmin createDistributedTransactionAdmin(DatabaseConfig config);
-
-  /**
-   * Creates an instance of {@link TwoPhaseCommitTransactionManager} for the transaction manager.
-   *
-   * @param config a database config
-   * @return an instance of {@link TwoPhaseCommitTransactionManager} for the transaction manager. If
-   *     the transaction manager does not support the two-phase commit interface, returns {@code
-   *     null}.
-   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
-   */
-  @Deprecated
-  @Nullable
-  TwoPhaseCommitTransactionManager createTwoPhaseCommitTransactionManager(DatabaseConfig config);
 
   /**
    * Creates an instance of {@link TwoPhaseCommitCoordinator} for the new multi-participant

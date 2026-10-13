@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
@@ -47,6 +48,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @SuppressWarnings("ReferenceEquality")
 public class ScalarDbUtilsTest {
@@ -853,5 +857,48 @@ public class ScalarDbUtilsTest {
     // Act Assert
     assertThat(ScalarDbUtils.columnsMatchAnyOfConjunctions(columns, conjunctions, comparator))
         .isTrue();
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Operator.class,
+      names = {"NE", "GT", "GTE", "LT", "LTE"})
+  public void columnsMatchAnyOfConjunctions_NullColumnWithComparisonOperatorGiven_ShouldReturnFalse(
+      Operator operator) {
+    // Arrange
+    Map<String, Column<?>> columns = ImmutableMap.of("col", IntColumn.ofNull("col"));
+    Set<Conjunction> conjunctions =
+        ImmutableSet.of(
+            Conjunction.of(
+                ConditionBuilder.buildConditionalExpression(IntColumn.of("col", 1), operator)));
+
+    // Act
+    boolean actual =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(
+            columns, conjunctions, CollationComparators.BINARY);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @ParameterizedTest
+  @CsvSource({"NE, true", "GT, true", "GTE, true", "LT, false", "LTE, false"})
+  public void
+      columnsMatchAnyOfConjunctions_NonNullColumnWithComparisonOperatorGiven_ShouldCompareValues(
+          Operator operator, boolean expected) {
+    // Arrange
+    Map<String, Column<?>> columns = ImmutableMap.of("col", IntColumn.of("col", 2));
+    Set<Conjunction> conjunctions =
+        ImmutableSet.of(
+            Conjunction.of(
+                ConditionBuilder.buildConditionalExpression(IntColumn.of("col", 1), operator)));
+
+    // Act
+    boolean actual =
+        ScalarDbUtils.columnsMatchAnyOfConjunctions(
+            columns, conjunctions, CollationComparators.BINARY);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
   }
 }

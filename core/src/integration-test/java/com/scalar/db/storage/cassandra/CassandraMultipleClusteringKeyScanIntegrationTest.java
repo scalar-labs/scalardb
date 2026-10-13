@@ -27,4 +27,11 @@ public class CassandraMultipleClusteringKeyScanIntegrationTest
         .filter(type -> type != DataType.TIMESTAMP)
         .collect(Collectors.toList());
   }
+
+  // Parallel DDL does not make schema changes faster on Cassandra, and the queued requests can
+  // exceed the driver's request timeout on a slow node.
+  @Override
+  protected boolean isParallelDdlSupported() {
+    return false;
+  }
 }

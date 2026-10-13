@@ -7,16 +7,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
@@ -33,8 +37,10 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.CollationComparators;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -966,7 +972,11 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(expected));
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, expected));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, expected)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -998,7 +1008,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -1030,7 +1040,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScanSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -1063,7 +1073,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, expected)));
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA, false));
@@ -1117,7 +1127,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, recoveredResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1171,7 +1185,11 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot, never()).putIntoScanSet(any(), any());
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, recoveredResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1225,7 +1243,7 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScanSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
 
     assertThat(results)
         .containsExactly(
@@ -1488,7 +1506,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(transactionResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, transactionResult)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, transactionResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, transactionResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0))
         .isEqualTo(
@@ -1551,7 +1573,11 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
     verify(snapshot)
         .putIntoScanSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key, recoveredResult)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, recoveredResult));
+    verify(snapshot)
+        .verifyNoOverlap(
+            eq(scan),
+            eq(ImmutableMap.of(key, recoveredResult)),
+            eq(scanType == ScanType.SCAN ? ImmutableSet.<Snapshot.Key>of() : ImmutableSet.of(key)));
 
     assertThat(results)
         .containsExactly(
@@ -1613,7 +1639,7 @@ public class CrudHandlerTest {
     verify(scanner).close();
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoScanSet(scan, Maps.newLinkedHashMap());
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of());
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(), ImmutableSet.of());
 
     assertThat(results).isEmpty();
   }
@@ -1808,7 +1834,12 @@ public class CrudHandlerTest {
             Maps.newLinkedHashMap(ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2)));
     verify(snapshot)
         .verifyNoOverlap(
-            scanWithLimit, ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2));
+            eq(scanWithLimit),
+            eq(ImmutableMap.of(key2, recoveredResult1, key3, recoveredResult2)),
+            eq(
+                scanType == ScanType.SCAN
+                    ? ImmutableSet.<Snapshot.Key>of()
+                    : ImmutableSet.of(key2, key3)));
 
     assertThat(results)
         .containsExactly(
@@ -1941,10 +1972,139 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoReadSet(key1, Optional.of(txResult1));
     verify(snapshot)
         .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
-    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key1, txResult1));
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key1, txResult1), ImmutableSet.of(key1));
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
+  }
+
+  @Test
+  public void getScanner_ScannerProducedKeyAlreadyInWriteSet_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
+    TransactionResult txResult = new TransactionResult(result);
+    when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    // The transaction wrote the record before the scanner produced it
+    when(snapshot.containsKeyInWriteSet(key)).thenReturn(true);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    // The key must not be exempt, so the overlap check still rejects it
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of());
+  }
+
+  @Test
+  public void getScanner_ScannerProducedKeyAlreadyInDeleteSet_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
+    TransactionResult txResult = new TransactionResult(result);
+    when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    when(snapshot.containsKeyInDeleteSet(key)).thenReturn(true);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of());
+  }
+
+  @Test
+  public void getScanner_ScannerProducedRowFilteredOutByConjunction_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange: the storage row is committed but its current ANY_NAME_4 value (ANY_INT_1) does not
+    // satisfy the scan conjunction (ANY_NAME_4 = ANY_INT_2), so the conjunction filter drops it and
+    // the caller never sees it.
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .all()
+            .where(column(ANY_NAME_4).isEqualToInt(ANY_INT_2))
+            .build();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    Result result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    // A row that is never delivered must not become exempt. Otherwise a later write to that key
+    // would skip the range and conjunction checks even though the scan did not return the record.
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(), ImmutableSet.of());
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+  }
+
+  @Test
+  public void getScanner_SnapshotScannerProducedKeyAlreadyInWriteSet_ShouldNotExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange: the scan is already in the scan set, so the cached snapshot scanner serves it
+    Scan scan = prepareScan();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
+    TransactionResult txResult = new TransactionResult(result);
+    when(snapshot.getResults(scan))
+        .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, txResult))));
+    when(snapshot.containsKeyInWriteSet(key)).thenReturn(true);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    // A repeated identical scan after a write must stay rejected
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of());
+    verify(storage, never()).scan(any());
+  }
+
+  @Test
+  public void getScanner_SnapshotScannerProducedCleanKey_ShouldExemptTheKey()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
+    TransactionResult txResult = new TransactionResult(result);
+    when(snapshot.getResults(scan))
+        .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, txResult))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    try (TransactionCrudOperable.Scanner actualScanner = handler.getScanner(scan, context)) {
+      actualScanner.one();
+    }
+
+    // Assert
+    verify(snapshot).verifyNoOverlap(scan, ImmutableMap.of(key, txResult), ImmutableSet.of(key));
   }
 
   @Test
@@ -1974,7 +2134,7 @@ public class CrudHandlerTest {
     verify(storage).scan(scanForStorage);
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot, never()).putIntoScannerSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
@@ -2010,7 +2170,7 @@ public class CrudHandlerTest {
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot)
         .putIntoScannerSet(scan, Maps.newLinkedHashMap(ImmutableMap.of(key1, txResult1)));
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
 
     assertThat(actualResult)
         .hasValue(new FilteredResult(txResult1, Collections.emptyList(), TABLE_METADATA, false));
@@ -3805,6 +3965,221 @@ public class CrudHandlerTest {
   }
 
   @Test
+  void getScanner_StorageScannerDiscarded_ShouldCloseWithoutTouchingSnapshot()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    clearInvocations(snapshot, storage);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verify(scanner).close();
+    assertThat(actualScanner.isClosed()).isTrue();
+    verifyNoInteractions(snapshot);
+    verify(storage, never()).scan(any());
+  }
+
+  @Test
+  void getScanner_StorageScannerRequiringBeforeIndexCheckDiscarded_ShouldNotRunBeforeIndexCheck()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scanWithIndex = prepareScanWithIndex();
+    Scan scanForStorage =
+        Scan.newBuilder(scanWithIndex)
+            .clearProjections()
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    Scanner storageScanner = mock(Scanner.class);
+    when(storageScanner.one()).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(storageScanner);
+
+    // The before-index scan would find a prepared record if it ran
+    Scanner beforeIndexScanner = mock(Scanner.class);
+    when(beforeIndexScanner.iterator())
+        .thenReturn(
+            Collections.<Result>singletonList(prepareResult(TransactionState.PREPARED)).iterator());
+    when(storage.scan(prepareExpectedBeforeIndexScan())).thenReturn(beforeIndexScanner);
+
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scanWithIndex, context);
+    assertThat(actualScanner.one()).isEmpty();
+    clearInvocations(snapshot, storage, recoveryExecutor);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verify(storageScanner).close();
+    assertThat(actualScanner.isClosed()).isTrue();
+    verify(storage, never()).scan(any());
+    verifyNoInteractions(recoveryExecutor, snapshot);
+  }
+
+  @Test
+  void getScanner_SnapshotScannerDiscarded_ShouldCloseWithoutTouchingSnapshot()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
+    when(snapshot.getResults(scan))
+        .thenReturn(
+            Optional.of(
+                Maps.newLinkedHashMap(ImmutableMap.of(key, new TransactionResult(result)))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    clearInvocations(snapshot);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    assertThat(actualScanner.isClosed()).isTrue();
+    verifyNoInteractions(snapshot);
+  }
+
+  @Test
+  void getScanner_StorageScannerDiscardedAfterClose_ShouldDoNothing()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    when(scanner.one()).thenReturn(Optional.empty());
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    actualScanner.close();
+    clearInvocations(snapshot, storage, scanner);
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verifyNoInteractions(snapshot, storage, scanner);
+  }
+
+  @Test
+  void getScanner_StorageScannerClosedAfterDiscard_ShouldDoNothing()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    actualScanner.discard();
+    clearInvocations(snapshot, storage, scanner);
+
+    // Act
+    actualScanner.close();
+
+    // Assert
+    verifyNoInteractions(snapshot, storage, scanner);
+  }
+
+  @Test
+  void getScanner_SnapshotScannerClosedAfterDiscard_ShouldDoNothing() throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
+    when(snapshot.getResults(scan))
+        .thenReturn(
+            Optional.of(
+                Maps.newLinkedHashMap(ImmutableMap.of(key, new TransactionResult(result)))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    actualScanner.discard();
+    clearInvocations(snapshot);
+
+    // Act
+    actualScanner.close();
+
+    // Assert
+    verifyNoInteractions(snapshot);
+  }
+
+  @Test
+  void getScanner_SnapshotScannerClosedTwice_ShouldTouchSnapshotOnlyOnFirstClose()
+      throws CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(TransactionState.COMMITTED);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
+    when(snapshot.getResults(scan))
+        .thenReturn(
+            Optional.of(
+                Maps.newLinkedHashMap(ImmutableMap.of(key, new TransactionResult(result)))));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+    clearInvocations(snapshot);
+    actualScanner.close();
+    // The first close verifies the scan against the snapshot
+    assertThat(mockingDetails(snapshot).getInvocations()).isNotEmpty();
+    clearInvocations(snapshot);
+
+    // Act
+    actualScanner.close();
+
+    // Assert
+    verifyNoInteractions(snapshot);
+  }
+
+  @Test
+  void getScanner_StorageScannerDiscardedAndUnderlyingCloseFails_ShouldNotThrow()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    when(scanner.one()).thenReturn(Optional.empty());
+    doThrow(IOException.class).when(scanner).close();
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+
+    // Act
+    actualScanner.discard();
+
+    // Assert
+    verify(scanner).close();
+    assertThat(actualScanner.isClosed()).isTrue();
+  }
+
+  @Test
   void read_GetWithIndexAndRolledBackRecordWithNonMatchingIndexKey_ShouldFilterOutResult()
       throws Exception {
     // Arrange
@@ -4044,7 +4419,7 @@ public class CrudHandlerTest {
     // The old record rolled forward to deleted (empty), so it must not be cached as a result.
     verify(snapshot, never()).putIntoReadSet(eq(keyOld), any());
     // An index Get is resolved like read() (not scan()), so it must never run overlap verification.
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
   }
 
   @Test
@@ -4070,7 +4445,7 @@ public class CrudHandlerTest {
         .hasMessageContaining("Please use scan() for non-exact match selection");
     verify(recoveryExecutor, never()).execute(any(), any(), any(), any(), any());
     verify(snapshot, never()).putIntoReadSet(any(), any());
-    verify(snapshot, never()).verifyNoOverlap(any(), any());
+    verify(snapshot, never()).verifyNoOverlap(any(), any(), any());
   }
 
   @Test
@@ -4385,5 +4760,52 @@ public class CrudHandlerTest {
     SCAN,
     SCANNER_ONE,
     SCANNER_ALL
+  }
+
+  @Test
+  public void
+      waitForRecoveryCompletion_RecoveryFailedWithRetriableExecutionException_ShouldThrowCrudConflictException()
+          throws Exception {
+    // Arrange
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), CollationComparators.BINARY);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    RetriableExecutionException cause = new RetriableExecutionException("conflict");
+    when(recoveryFuture.get()).thenThrow(new java.util.concurrent.ExecutionException(cause));
+
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    context.recoveryResults.add(
+        new RecoveryExecutor.Result(key, Optional.empty(), recoveryFuture, true));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.waitForRecoveryCompletion(context))
+        .isInstanceOf(CrudConflictException.class)
+        .hasMessageStartingWith(
+            CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS.buildCode())
+        .hasCause(cause);
+  }
+
+  @Test
+  public void
+      waitForRecoveryCompletion_RecoveryFailedWithNonConflictExecutionException_ShouldThrowCrudException()
+          throws Exception {
+    // Arrange
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), CollationComparators.BINARY);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    ExecutionException cause = new ExecutionException("error");
+    when(recoveryFuture.get()).thenThrow(new java.util.concurrent.ExecutionException(cause));
+
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    context.recoveryResults.add(
+        new RecoveryExecutor.Result(key, Optional.empty(), recoveryFuture, true));
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.waitForRecoveryCompletion(context))
+        .isInstanceOf(CrudException.class)
+        .isNotInstanceOf(CrudConflictException.class)
+        .hasCause(cause);
   }
 }

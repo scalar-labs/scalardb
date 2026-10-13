@@ -18,7 +18,6 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -205,13 +204,6 @@ public class TransactionService implements DistributedTransactionManager {
   public DistributedTransaction start(
       String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {
     return manager.start(txId, isolation, strategy);
-  }
-
-  /** @deprecated As of release 3.19.0. Will be removed in release 3.20.0 */
-  @Deprecated
-  @Override
-  public DistributedTransaction resume(String txId) throws TransactionNotFoundException {
-    return manager.resume(txId);
   }
 
   @Override

@@ -409,32 +409,6 @@ public interface DistributedTransactionManager
       throws TransactionException;
 
   /**
-   * Joins an ongoing transaction associated with the specified transaction ID.
-   *
-   * @param txId the transaction ID
-   * @return {@link DistributedTransaction}
-   * @throws TransactionNotFoundException if the transaction associated with the specified
-   *     transaction ID is not found. You can retry the transaction from the beginning
-   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
-   */
-  @Deprecated
-  default DistributedTransaction join(String txId) throws TransactionNotFoundException {
-    return resume(txId);
-  }
-
-  /**
-   * Resumes an ongoing transaction associated with the specified transaction ID.
-   *
-   * @param txId the transaction ID
-   * @return {@link DistributedTransaction}
-   * @throws TransactionNotFoundException if the transaction associated with the specified
-   *     transaction ID is not found. You can retry the transaction from the beginning
-   * @deprecated As of release 3.19.0. Will be removed in release 3.20.0
-   */
-  @Deprecated
-  DistributedTransaction resume(String txId) throws TransactionNotFoundException;
-
-  /**
    * Returns the state of a given transaction.
    *
    * <p><b>Note:</b> This is a low-level operational API specific to the Consensus Commit

@@ -2,14 +2,13 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
+import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createGet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.GetBuilder;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -23,6 +22,7 @@ import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
 import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Column;
@@ -30,11 +30,14 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -413,7 +416,9 @@ public class CrudHandler {
     TableMetadata metadata = txMetadata.getTableMetadata();
     LinkedHashMap<Snapshot.Key, TransactionResult> results =
         scanInternal(scan, context, txMetadata);
-    verifyNoOverlap(scan, results, context);
+    // The batch scan path exempts nothing: no write can be interleaved with it, so a key found in
+    // the write set here was necessarily written before the scan ran.
+    verifyNoOverlap(scan, results, Collections.emptySet(), context);
     return results.values().stream()
         .map(r -> new FilteredResult(r, scan.getProjections(), metadata, isIncludeMetadataEnabled))
         .collect(Collectors.toList());
@@ -567,10 +572,35 @@ public class CrudHandler {
   }
 
   private void verifyNoOverlap(
-      Scan scan, Map<Snapshot.Key, TransactionResult> results, TransactionContext context) {
+      Scan scan,
+      Map<Snapshot.Key, TransactionResult> results,
+      @Nullable Set<Snapshot.Key> exemptKeys,
+      TransactionContext context) {
     if (isOverlapVerificationRequired(context)) {
-      context.snapshot.verifyNoOverlap(scan, results);
+      // Reaching here guarantees exemptKeys was allocated: both scanners allocate it under exactly
+      // this condition, and the flags it reads are final on the context, so the condition cannot
+      // have differed at construction time. A scanner that skips the allocation therefore never
+      // gets here. The batch scan path passes an empty set explicitly.
+      assert exemptKeys != null;
+
+      context.snapshot.verifyNoOverlap(scan, results, exemptKeys);
     }
+  }
+
+  /**
+   * Returns whether this transaction has not yet written or deleted the given key.
+   *
+   * <p>A scanner calls this at the moment it produces a record. If the key is still absent from
+   * both the write set and the delete set, any later write to it necessarily happened after the
+   * caller had already seen the record, which is safe and makes the key exempt from the overlap
+   * check at close time. A key that is already written or deleted here is never exempt, so the scan
+   * is still rejected for it. Union membership is monotonic (see {@link Snapshot#putIntoWriteSet}),
+   * which is what makes this membership test equivalent to comparing the order of the two
+   * operations.
+   */
+  private boolean isNotYetWrittenOrDeleted(Snapshot.Key key, TransactionContext context) {
+    return !context.snapshot.containsKeyInWriteSet(key)
+        && !context.snapshot.containsKeyInDeleteSet(key);
   }
 
   private boolean isOverlapVerificationRequired(TransactionContext context) {
@@ -635,7 +665,9 @@ public class CrudHandler {
       }
     }
 
-    // For each delete in the write set, if the record is not read yet, read the record
+    // For each delete in the write set, if the record is not read yet, read the record. This is
+    // unconditional, unlike the puts above, and ParticipantCommitHandler relies on it to leave the
+    // deletes out of the recovery of the records blocking the writes of a transaction
     for (Map.Entry<Snapshot.Key, Delete> entry : context.snapshot.getDeleteSet()) {
       Snapshot.Key key = entry.getKey();
       if (!context.snapshot.containsKeyInReadSet(key)) {
@@ -649,16 +681,6 @@ public class CrudHandler {
     if (!tasks.isEmpty()) {
       parallelExecutor.executeImplicitPreRead(tasks, context.transactionId);
     }
-  }
-
-  private Get createGet(Snapshot.Key key) {
-    GetBuilder.BuildableGet buildableGet =
-        Get.newBuilder()
-            .namespace(key.getNamespace())
-            .table(key.getTable())
-            .partitionKey(key.getPartitionKey());
-    key.getClusteringKey().ifPresent(buildableGet::clusteringKey);
-    return buildableGet.consistency(Consistency.LINEARIZABLE).build();
   }
 
   /**
@@ -717,6 +739,16 @@ public class CrudHandler {
       Throwable cause = e.getCause();
       if (cause instanceof CrudException) {
         throw (CrudException) cause;
+      }
+      if (cause instanceof RetriableExecutionException) {
+        // The recovery mutation faced a conflict that outlived the retries in RecoveryHandler. The
+        // record is left unrecovered, and a subsequent read recovers it, so the caller can resolve
+        // this by retrying the transaction. Report it as a conflict to say so.
+        throw new CrudConflictException(
+            CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_RECOVERING_RECORDS.buildMessage(
+                cause.getMessage()),
+            cause,
+            transactionId);
       }
 
       throw new CrudException(
@@ -945,6 +977,12 @@ public class CrudHandler {
     private final Scanner scanner;
 
     @Nullable private final LinkedHashMap<Snapshot.Key, TransactionResult> results;
+
+    // The keys this scanner produced while they were still absent from the write set and the
+    // delete set. Writes to them happened after the caller saw the record, so they are exempt from
+    // the overlap check at close time.
+    @Nullable private final Set<Snapshot.Key> exemptKeys;
+
     private final AtomicInteger scanCount = new AtomicInteger();
     private final AtomicBoolean fullyScanned = new AtomicBoolean();
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -966,6 +1004,11 @@ public class CrudHandler {
         // into the scan set
         results = null;
       }
+
+      // This gate is narrower than the one for `results` above, which also fires for validation and
+      // snapshot reads. Read-only and one-operation transactions never verify overlap, so they
+      // track nothing here.
+      exemptKeys = isOverlapVerificationRequired(context) ? new HashSet<>() : null;
     }
 
     @Override
@@ -990,6 +1033,13 @@ public class CrudHandler {
               processScanResult(key, scan, result, context, metadata);
           if (!processedScanResult.isPresent()) {
             continue;
+          }
+
+          // Recorded only for rows that are actually delivered. Rows dropped by the conjunction
+          // filter or by lazy recovery above never reach the caller, so exempting them would let a
+          // later write to such a key escape the overlap check.
+          if (exemptKeys != null && isNotYetWrittenOrDeleted(key, context)) {
+            exemptKeys.add(key);
           }
 
           if (results != null) {
@@ -1066,7 +1116,16 @@ public class CrudHandler {
         putIntoScannerSetInSnapshot(scan, results, context);
       }
 
-      verifyNoOverlap(scan, results, context);
+      verifyNoOverlap(scan, results, exemptKeys, context);
+    }
+
+    @Override
+    public void discard() {
+      if (closed.get()) {
+        return;
+      }
+
+      closeScanner();
     }
 
     @Override
@@ -1094,6 +1153,10 @@ public class CrudHandler {
     private final Iterator<Map.Entry<Snapshot.Key, TransactionResult>> resultsIterator;
 
     private final LinkedHashMap<Snapshot.Key, TransactionResult> results = new LinkedHashMap<>();
+
+    // See ConsensusCommitStorageScanner#exemptKeys
+    @Nullable private final Set<Snapshot.Key> exemptKeys;
+
     private boolean closed;
 
     public ConsensusCommitSnapshotScanner(
@@ -1105,6 +1168,7 @@ public class CrudHandler {
       this.context = context;
       this.metadata = metadata;
       resultsIterator = resultsInSnapshot.entrySet().iterator();
+      exemptKeys = isOverlapVerificationRequired(context) ? new HashSet<>() : null;
     }
 
     @Override
@@ -1114,6 +1178,11 @@ public class CrudHandler {
       }
 
       Map.Entry<Snapshot.Key, TransactionResult> entry = resultsIterator.next();
+
+      if (exemptKeys != null && isNotYetWrittenOrDeleted(entry.getKey(), context)) {
+        exemptKeys.add(entry.getKey());
+      }
+
       results.put(entry.getKey(), entry.getValue());
 
       return Optional.of(
@@ -1138,8 +1207,17 @@ public class CrudHandler {
 
     @Override
     public void close() {
+      if (closed) {
+        return;
+      }
+
       closed = true;
-      verifyNoOverlap(scan, results, context);
+      verifyNoOverlap(scan, results, exemptKeys, context);
+    }
+
+    @Override
+    public void discard() {
+      closed = true;
     }
 
     @Override

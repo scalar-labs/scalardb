@@ -1,8 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.GlobalTransactionTestBase;
+import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.DistributedTransactionBackedGlobalTransactionManager;
+import com.scalar.db.common.ResumableDistributedTransactionManager;
 import com.scalar.db.service.TransactionFactory;
 import java.util.Properties;
 
@@ -12,8 +13,9 @@ import java.util.Properties;
  *
  * <p>This is the fully-shared deployment: every branch is served by one underlying distributed
  * transaction on a single manager. {@link #manager1} and {@link #manager2} are therefore the same
- * instance, and a branch begun on either joins (by ID) the one transaction begun on it. Contrast
- * with {@link TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestBase}, where two managers
+ * instance, and a branch begun on either resumes (by ID) the one transaction begun on it, through
+ * the {@link ActiveTransactionManagedDistributedTransactionManager} that begins it. Contrast with
+ * {@link TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestBase}, where two managers
  * coordinate across two participants via a shared coordinator.
  */
 public abstract class DistributedTransactionBackedConsensusCommitGlobalTransactionTestBase
@@ -33,8 +35,9 @@ public abstract class DistributedTransactionBackedConsensusCommitGlobalTransacti
 
   @Override
   protected void setUpManagers() {
-    DistributedTransactionManager transactionManager =
-        TransactionFactory.create(getProps(getTestName())).getTransactionManager();
+    ResumableDistributedTransactionManager transactionManager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            TransactionFactory.create(getProps(getTestName())).getTransactionManager(), -1, -1);
     // The fully-shared backing serves every branch from one underlying distributed transaction on a
     // single manager, so both handles are the same manager instance.
     manager1 = new DistributedTransactionBackedGlobalTransactionManager(transactionManager);

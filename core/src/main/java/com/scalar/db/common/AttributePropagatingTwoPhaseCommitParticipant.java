@@ -51,11 +51,13 @@ import javax.annotation.concurrent.ThreadSafe;
  *
  * <p>The captured attributes are released only on a step driven through this decorator, so a
  * transaction abandoned beforehand (e.g. a crashed client that never prepares, rolls back, or is
- * released) leaks its entry until the JVM exits. Idle expiry clears it only when {@link
- * ActiveTransactionManagedTwoPhaseCommitParticipant} wraps this decorator and a positive {@code
- * scalar.db.active_transaction_management.expiration_time_millis} is set (a non-positive value, the
- * default, disables the reaper). Enable active transaction management with a positive expiration
- * time whenever this decorator is used.
+ * released) leaks its entry until idle expiry clears it, and until the JVM exits if nothing does.
+ * Idle expiry requires that {@link ActiveTransactionManagedTwoPhaseCommitParticipant} wrap this
+ * decorator and that {@code scalar.db.active_transaction_management.expiration_time_millis} be
+ * positive. Both hold by default, so the entry leaks only with a non-positive expiration time or
+ * with {@code scalar.db.two_phase_commit.active_transaction_management.enabled} set to false. Keep
+ * active transaction management enabled with a positive expiration time whenever this decorator is
+ * used.
  */
 @ThreadSafe
 public class AttributePropagatingTwoPhaseCommitParticipant

@@ -139,11 +139,12 @@ public class MutationConditionsValidator {
         return !existingRecordColumn.hasNullValue();
       case EQ:
         return equalsForCondition(existingRecordColumn, conditionalExpressionColumn);
+        // For 'not equal', 'greater than' and 'less than' types of conditions and when the
+        // existing record is null, we consider the condition to be unsatisfied. This mimics the
+        // behavior as if the condition was executed by the underlying storage
       case NE:
-        return !equalsForCondition(existingRecordColumn, conditionalExpressionColumn);
-        // For 'greater than' and 'less than' types of conditions and when the existing record is
-        // null, we consider the condition to be unsatisfied. This mimics the behavior as if
-        // the condition was executed by the underlying storage
+        return !existingRecordColumn.hasNullValue()
+            && !equalsForCondition(existingRecordColumn, conditionalExpressionColumn);
       case GT:
         return !existingRecordColumn.hasNullValue()
             && rangeCompare(existingRecordColumn, conditionalExpressionColumn) > 0;

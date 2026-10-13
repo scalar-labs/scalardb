@@ -7,7 +7,6 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
@@ -21,7 +20,6 @@ import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
-import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionAdmin;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 
@@ -69,17 +67,14 @@ public class TransactionModule extends AbstractModule {
 
     Class<? extends DistributedTransactionManager> transactionManagerClass;
     Class<? extends DistributedTransactionAdmin> transactionAdminClass;
-    Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
     switch (config.getTransactionManager().toLowerCase()) {
       case "consensus-commit":
         transactionManagerClass = ConsensusCommitManager.class;
         transactionAdminClass = ConsensusCommitAdmin.class;
-        twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
         break;
       case "jdbc":
         transactionManagerClass = JdbcTransactionManager.class;
         transactionAdminClass = JdbcTransactionAdmin.class;
-        twoPhaseCommitTransactionManagerClass = null;
         break;
       default:
         throw new IllegalArgumentException(
@@ -88,9 +83,6 @@ public class TransactionModule extends AbstractModule {
 
     bind(DistributedTransactionManager.class).to(transactionManagerClass);
     bind(DistributedTransactionAdmin.class).to(transactionAdminClass);
-    if (twoPhaseCommitTransactionManagerClass != null) {
-      bind(TwoPhaseCommitTransactionManager.class).to(twoPhaseCommitTransactionManagerClass);
-    }
   }
 
   @Singleton

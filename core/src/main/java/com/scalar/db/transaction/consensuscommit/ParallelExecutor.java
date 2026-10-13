@@ -74,7 +74,6 @@ public class ParallelExecutor {
       executeTasks(
           tasks,
           config.isParallelPreparationEnabled(),
-          false,
           stopOnError,
           "prepareRecords",
           transactionId);
@@ -89,12 +88,7 @@ public class ParallelExecutor {
       throws ExecutionException, ValidationConflictException {
     try {
       executeTasks(
-          tasks,
-          config.isParallelValidationEnabled(),
-          false,
-          true,
-          "validateRecords",
-          transactionId);
+          tasks, config.isParallelValidationEnabled(), true, "validateRecords", transactionId);
     } catch (CrudException e) {
       throw new AssertionError(
           "Tasks for validating a transaction should not throw CrudException", e);
@@ -104,13 +98,7 @@ public class ParallelExecutor {
   public void commitRecords(List<ParallelExecutorTask> tasks, String transactionId)
       throws ExecutionException {
     try {
-      executeTasks(
-          tasks,
-          config.isParallelCommitEnabled(),
-          config.isAsyncCommitEnabled(),
-          false,
-          "commitRecords",
-          transactionId);
+      executeTasks(tasks, config.isParallelCommitEnabled(), false, "commitRecords", transactionId);
     } catch (ValidationConflictException | CrudException e) {
       throw new AssertionError(
           "Tasks for committing a transaction should not throw ValidationConflictException and CrudException",
@@ -122,15 +110,27 @@ public class ParallelExecutor {
       throws ExecutionException {
     try {
       executeTasks(
-          tasks,
-          config.isParallelRollbackEnabled(),
-          config.isAsyncRollbackEnabled(),
-          false,
-          "rollbackRecords",
-          transactionId);
+          tasks, config.isParallelRollbackEnabled(), false, "rollbackRecords", transactionId);
     } catch (ValidationConflictException | CrudException e) {
       throw new AssertionError(
           "Tasks for rolling back a transaction should not throw ValidationConflictException and CrudException",
+          e);
+    }
+  }
+
+  public void readRecordsForRollback(List<ParallelExecutorTask> tasks, String transactionId)
+      throws ExecutionException {
+    try {
+      executeTasks(
+          tasks,
+          config.isParallelRollbackEnabled(),
+          // A failed read abandons the rollback anyway, so this stops at the first one
+          true,
+          "readRecordsForRollback",
+          transactionId);
+    } catch (ValidationConflictException | CrudException e) {
+      throw new AssertionError(
+          "Tasks for reading records for a rollback should not throw ValidationConflictException and CrudException",
           e);
     }
   }
@@ -141,7 +141,6 @@ public class ParallelExecutor {
       executeTasks(
           tasks,
           config.isParallelImplicitPreReadEnabled(),
-          false,
           true,
           "executeImplicitPreRead",
           transactionId);
@@ -156,31 +155,25 @@ public class ParallelExecutor {
   void executeTasks(
       List<ParallelExecutorTask> tasks,
       boolean parallel,
-      boolean noWait,
       boolean stopOnError,
       String taskName,
       String transactionId)
       throws ExecutionException, ValidationConflictException, CrudException {
-    if (tasks.size() == 1 && !noWait) {
-      // If there is only one task and noWait is false, we can run it directly without parallel
-      // execution.
+    if (tasks.size() == 1) {
+      // If there is only one task, we can run it directly without parallel execution.
       tasks.get(0).run();
       return;
     }
 
     if (parallel) {
-      executeTasksInParallel(tasks, noWait, stopOnError, taskName, transactionId);
+      executeTasksInParallel(tasks, stopOnError, taskName, transactionId);
     } else {
       executeTasksSerially(tasks, stopOnError);
     }
   }
 
   private void executeTasksInParallel(
-      List<ParallelExecutorTask> tasks,
-      boolean noWait,
-      boolean stopOnError,
-      String taskName,
-      String transactionId)
+      List<ParallelExecutorTask> tasks, boolean stopOnError, String taskName, String transactionId)
       throws ExecutionException, ValidationConflictException, CrudException {
     assert parallelExecutorService != null;
 
@@ -200,11 +193,6 @@ public class ParallelExecutor {
             }
             return null;
           });
-    }
-
-    // Optionally wait for completion
-    if (noWait) {
-      return;
     }
 
     Throwable throwable = null;
