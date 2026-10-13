@@ -1,0 +1,410 @@
+package com.scalar.db.common;
+
+import com.google.common.collect.Ordering;
+import com.ibm.icu.text.Collator;
+import com.ibm.icu.text.RuleBasedCollator;
+import com.ibm.icu.util.IllformedLocaleException;
+import com.ibm.icu.util.ULocale;
+import com.ibm.icu.util.VersionInfo;
+import com.scalar.db.config.Collation;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
+import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * A thread-safe, immutable comparator that orders text according to the configured {@link
+ * Collation}, together with the text equality and canonical-form operations that follow from that
+ * order.
+ */
+@Immutable
+@ThreadSafe
+public final class CollationComparator {
+  private static final Logger logger = LoggerFactory.getLogger(CollationComparator.class);
+
+  private static final String VERIFIED_ICU_VERSION_RESOURCE = "scalardb-collation.properties";
+
+  private static final AtomicBoolean ICU_VERSION_CHECKED = new AtomicBoolean();
+
+  private final Collation collation;
+  private final Comparator<String> textComparator;
+  private final Comparator<Column<?>> columnComparator;
+  private final Comparator<Key> keyComparator;
+
+  /**
+   * Per-thread collator, present only for {@link Collation#ICU}. A frozen collator guards its one
+   * collation buffer with a lock of its own, and both comparison and collation-key generation take
+   * that lock, so every call on a shared frozen instance serializes against every other.
+   */
+  @Nullable private final ThreadLocal<Collator> collator;
+
+  private CollationComparator(
+      Collation collation,
+      Comparator<String> textComparator,
+      @Nullable ThreadLocal<Collator> collator) {
+    this.collation = collation;
+    this.textComparator = textComparator;
+    Comparator<String> nullsFirstText = Comparator.nullsFirst(textComparator);
+    this.columnComparator = buildColumnComparator(nullsFirstText);
+    this.keyComparator = buildKeyComparator(this.columnComparator);
+    this.collator = collator;
+  }
+
+  /**
+   * Creates a {@code CollationComparator} from the given configuration.
+   *
+   * @param config the database configuration
+   * @return the comparator for the configured collation ({@link Collation#BINARY} when {@code
+   *     scalar.db.collation} is unset)
+   * @throws IllegalArgumentException if an ICU custom tailoring-rule string is malformed or the
+   *     configured ICU locale is not recognized
+   */
+  public static CollationComparator from(DatabaseConfig config) {
+    Collation collation = config.getCollation();
+    switch (collation) {
+      case BINARY:
+        return new CollationComparator(collation, TextColumn::compareByCodePoint, null);
+      case ICU:
+        {
+          warnOnIcuVersionMismatch();
+          Collator prototype = buildFrozenIcuCollator(config);
+          ThreadLocal<Collator> collator = ThreadLocal.withInitial(prototype::cloneAsThawed);
+          return new CollationComparator(
+              collation, (a, b) -> collator.get().compare(a, b), collator);
+        }
+      default:
+        throw new AssertionError("Unknown collation: " + collation);
+    }
+  }
+
+  /**
+   * Warns once per JVM when the ICU4J library loaded at runtime differs from the version this build
+   * was verified against. ICU4J is a plain transitive dependency, so an embedding application's
+   * dependency resolution can substitute another version, and ICU collation behavior (root sort
+   * order, CLDR data) shifts between versions — ordering and equality results would silently differ
+   * from the verified behavior. The check never fails collation setup: it cannot tell a harmless
+   * substitution from a harmful one, only make it diagnosable.
+   */
+  private static void warnOnIcuVersionMismatch() {
+    if (!ICU_VERSION_CHECKED.compareAndSet(false, true)) {
+      return;
+    }
+    String verifiedVersion = null;
+    try (InputStream stream =
+        CollationComparator.class
+            .getClassLoader()
+            .getResourceAsStream(VERIFIED_ICU_VERSION_RESOURCE)) {
+      if (stream != null) {
+        Properties properties = new Properties();
+        properties.load(stream);
+        verifiedVersion = properties.getProperty("icu4j.version");
+      }
+    } catch (IOException e) {
+      logger.debug("Failed to read {}", VERIFIED_ICU_VERSION_RESOURCE, e);
+    }
+    if (verifiedVersion == null) {
+      logger.debug(
+          "The verified ICU4J version is unavailable from {}; skipping the ICU4J version check",
+          VERIFIED_ICU_VERSION_RESOURCE);
+      return;
+    }
+    try {
+      if (loadedIcuVersionDiffersFrom(verifiedVersion)) {
+        logger.warn(
+            "The ICU4J library loaded at runtime (version {}) differs from the version this "
+                + "ScalarDB build was verified against ({}). ICU collation behavior shifts "
+                + "between ICU4J versions, so ICU-mode text ordering and equality may differ "
+                + "from the verified behavior. Align the application's icu4j dependency with "
+                + "ScalarDB's",
+            VersionInfo.ICU_VERSION,
+            verifiedVersion);
+      }
+    } catch (IllegalArgumentException e) {
+      logger.debug("Failed to compare the ICU4J versions", e);
+    }
+  }
+
+  /**
+   * Returns whether the ICU4J library on the classpath differs from the given version. Package-
+   * private and pure so it can be unit-tested without manipulating the classpath.
+   */
+  static boolean loadedIcuVersionDiffersFrom(String version) {
+    return !VersionInfo.getInstance(version).equals(VersionInfo.ICU_VERSION);
+  }
+
+  /**
+   * Builds the frozen collator the per-thread clones are taken from. An unfrozen ICU {@code
+   * Collator} is mutable and not thread-safe, and cloning one concurrently is unsafe, so the
+   * prototype is frozen even though no comparison runs on it.
+   */
+  private static Collator buildFrozenIcuCollator(DatabaseConfig config) {
+    Collator collator = buildIcuCollator(config);
+    logResolvedIcuCollator(config, collator);
+    return collator.freeze();
+  }
+
+  private static Collator buildIcuCollator(DatabaseConfig config) {
+    Optional<String> localeName = config.getCollationIcuLocale();
+    Collator base =
+        localeName.isPresent()
+            ? buildValidatedLocaleCollator(config, localeName.get())
+            : Collator.getInstance(ULocale.ROOT);
+
+    Optional<String> rules = config.getCollationIcuRules();
+    if (!rules.isPresent()) {
+      return base;
+    }
+
+    // Prepend the base collation's rules so the custom tailoring extends the locale rather than
+    // replacing it. For the root base this is empty, leaving rules-only ordering untailored.
+    String baseRules =
+        base instanceof RuleBasedCollator ? ((RuleBasedCollator) base).getRules() : "";
+    RuleBasedCollator composed;
+    try {
+      composed = new RuleBasedCollator(baseRules + rules.get());
+    } catch (Exception e) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_INVALID_RULES.buildMessage(rules.get()), e);
+    }
+
+    return composed;
+  }
+
+  private static Collator buildValidatedLocaleCollator(DatabaseConfig config, String localeName) {
+    ULocale locale = parseBcp47LanguageTag(localeName);
+    rejectLocaleSettingsCombinedWithRules(config, localeName, locale);
+    Collator collator = Collator.getInstance(locale);
+    rejectLocaleWithoutCollationData(localeName, locale);
+    validateCollationType(localeName, locale);
+    return collator;
+  }
+
+  /**
+   * Rejects a locale ICU has no collation data for. ICU silently falls back to the root collation
+   * for such a locale, which would order text differently from the intended locale with no error,
+   * so a misconfiguration fails at startup instead of producing wrong ordering. Only the language
+   * is checked; a narrower subtag ICU has no collation data for narrows away instead, as the
+   * resolved-collator log reports. An empty language is a root-rooted tag such as {@code und} or
+   * {@code und-Cyrl}, which asks for the root collation itself, the collation used when no locale
+   * is configured at all.
+   */
+  private static void rejectLocaleWithoutCollationData(String localeName, ULocale locale) {
+    String language = locale.getLanguage();
+    if (!language.isEmpty()
+        && Arrays.stream(Collator.getAvailableULocales())
+            .noneMatch(l -> l.getLanguage().equals(language))) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_UNRECOGNIZED_LOCALE.buildMessage(localeName));
+    }
+  }
+
+  private static void rejectLocaleSettingsCombinedWithRules(
+      DatabaseConfig config, String localeName, ULocale locale) {
+    if (!config.getCollationIcuRules().isPresent()) {
+      return;
+    }
+    List<String> settingKeywords = collationSettingKeywords(locale);
+    if (settingKeywords.isEmpty()) {
+      return;
+    }
+
+    throw new IllegalArgumentException(
+        CoreError.COLLATION_ICU_LOCALE_SETTING_WITH_RULES_NOT_SUPPORTED.buildMessage(
+            localeName, String.join(", ", settingKeywords)));
+  }
+
+  /**
+   * Returns the locale's collation settings, such as the numeric ordering of {@code -u-kn-true}.
+   * ICU applies a setting to the collator object it builds, leaving that collator's rule string
+   * unchanged, so a collator rebuilt from those rules loses the setting. A {@code -u-co-} type is
+   * excluded because it selects a tailoring, which the rule string does carry. The names are ICU's
+   * legacy keyword spellings ({@code colnumeric}), not the BCP 47 ones ({@code kn}).
+   */
+  private static List<String> collationSettingKeywords(ULocale locale) {
+    List<String> settingKeywords = new ArrayList<>();
+    for (Iterator<String> keywords = locale.getKeywords();
+        keywords != null && keywords.hasNext(); ) {
+      String keyword = keywords.next();
+      if (("kv".equals(keyword) || keyword.startsWith("col")) && !"collation".equals(keyword)) {
+        settingKeywords.add(keyword);
+      }
+    }
+    return settingKeywords;
+  }
+
+  /**
+   * Parses the configured locale as a BCP 47 language tag.
+   *
+   * <p>{@code ULocale.Builder} is the parser rather than {@link ULocale#forLanguageTag(String)}
+   * because only the builder rejects an ill-formed tag: {@code forLanguageTag} applies BCP 47's
+   * rule of discarding ill-formed subtags, so a mistyped collation keyword such as {@code
+   * de-u-co-phonebook} would parse as plain {@code de}. It also rejects a libc collation name such
+   * as {@code en_US.UTF-8}, which must not resolve to an ICU locale: no ICU collation reproduces a
+   * libc one, so accepting it would order text differently from the storage it was copied from.
+   */
+  private static ULocale parseBcp47LanguageTag(String localeName) {
+    try {
+      return new ULocale.Builder().setLanguageTag(localeName).build();
+    } catch (IllformedLocaleException e) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_INVALID_LOCALE_TAG.buildMessage(localeName, e.getMessage()), e);
+    }
+  }
+
+  /**
+   * Rejects a {@code -u-co-} collation type the locale has no tailoring for. ICU discards such a
+   * type and keeps the base locale, so text would be ordered by the locale's standard collation
+   * with no error, and the unrecognized-locale guard cannot see it because the base locale still
+   * resolves. A type ICU treats as redundant is still supported and must pass: {@code
+   * th-u-co-standard} resolves to plain {@code th}, and {@code standard} is in the locale's list.
+   */
+  private static void validateCollationType(String localeName, ULocale locale) {
+    String requestedType = locale.getKeywordValue("collation");
+    if (requestedType == null) {
+      return;
+    }
+    String[] availableTypes = Collator.getKeywordValuesForLocale("collation", locale, false);
+    if (!Arrays.asList(availableTypes).contains(requestedType)) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_UNSUPPORTED_LOCALE_COLLATION.buildMessage(
+              localeName, requestedType, String.join(", ", availableTypes)));
+    }
+  }
+
+  /**
+   * Reports the collation ICU resolved, so a locale that resolves to something other than what was
+   * configured is diagnosable: {@code ja-u-kn-true} turns on numeric ordering while the resolved
+   * locale still reads {@code ja}, and a script, region, or variant subtag ICU has no collation
+   * data for narrows to the language. Logged at {@code INFO} because an operator has no other way
+   * to observe either.
+   */
+  private static void logResolvedIcuCollator(DatabaseConfig config, Collator collator) {
+    // A custom tailoring-rule string builds the collator from rules rather than from a locale, so
+    // ICU reports no valid locale for it at all.
+    ULocale resolvedLocale = collator.getLocale(ULocale.VALID_LOCALE);
+    logger.info(
+        "Using the ICU collation. Configured locale: {}; resolved locale: {}",
+        config.getCollationIcuLocale().orElse("(none, using the ICU root collation)"),
+        resolvedLocale == null ? "(none, built from custom rules)" : resolvedLocale);
+  }
+
+  private static Comparator<Column<?>> buildColumnComparator(Comparator<String> nullsFirstText) {
+    return (left, right) -> {
+      if (left.getDataType() == DataType.TEXT && right.getDataType() == DataType.TEXT) {
+        // Column names are equal at every call site, so only the values are compared.
+        return nullsFirstText.compare(left.getTextValue(), right.getTextValue());
+      }
+      return Ordering.natural().compare(left, right);
+    };
+  }
+
+  private static Comparator<Key> buildKeyComparator(Comparator<Column<?>> columnComparator) {
+    Ordering<Iterable<Column<?>>> lexicographical =
+        Ordering.from(columnComparator).lexicographical();
+    return (left, right) -> lexicographical.compare(left.getColumns(), right.getColumns());
+  }
+
+  /**
+   * Returns the collation this comparator orders text by.
+   *
+   * @return the collation
+   */
+  public Collation collation() {
+    return collation;
+  }
+
+  /**
+   * Returns the collation-aware comparator over non-null text values.
+   *
+   * @return the text comparator
+   */
+  public Comparator<String> textComparator() {
+    return textComparator;
+  }
+
+  /**
+   * Returns the shared per-column comparator. Two {@code TEXT} columns are ordered by value using
+   * {@link #textComparator()} with null-first semantics; any other column type delegates to natural
+   * ordering.
+   *
+   * @return the column comparator
+   */
+  public Comparator<Column<?>> columnComparator() {
+    return columnComparator;
+  }
+
+  /**
+   * Returns a lexicographical (always-ascending) comparator over a {@link Key}'s columns, built on
+   * {@link #columnComparator()}.
+   *
+   * @return the key comparator
+   */
+  public Comparator<Key> keyComparator() {
+    return keyComparator;
+  }
+
+  /**
+   * Returns whether the two text values are equal under the configured collation. Agrees with
+   * {@code textComparator().compare(a, b) == 0} and is cheaper for {@link Collation#BINARY}, so
+   * prefer it whenever only equality is needed. Both arguments must be non-null.
+   *
+   * @param a the first text value (non-null)
+   * @param b the second text value (non-null)
+   * @return {@code true} when the values are equal under the collation
+   */
+  public boolean textEquals(String a, String b) {
+    if (collation == Collation.BINARY) {
+      // Code-point order returns 0 exactly when String#equals is true.
+      return a.equals(b);
+    }
+    return textComparator.compare(a, b) == 0;
+  }
+
+  /**
+   * Returns whether this collation materializes a canonical text form. {@code true} for {@link
+   * Collation#ICU}: two text values have equal canonical forms exactly when they collate-equal.
+   * {@code false} for {@link Collation#BINARY}: identity is the value itself (byte-exact), so no
+   * canonical form is materialized.
+   *
+   * @return {@code true} when {@link #canonicalTextFormOf(String)} is usable
+   */
+  public boolean hasCanonicalTextForm() {
+    return collator != null;
+  }
+
+  /**
+   * Returns the canonical byte form of the given non-null text value under the configured {@link
+   * Collation#ICU} collation — the collation key bytes, satisfying: {@code
+   * Arrays.equals(canonicalTextFormOf(a), canonicalTextFormOf(b))} iff {@code
+   * textComparator().compare(a, b) == 0}. Generation uses a per-thread collator, so this is safe
+   * for concurrent use and does not contend on a shared lock.
+   *
+   * @param text the text value (non-null)
+   * @return the canonical collation-key bytes
+   * @throws IllegalStateException if this collation has no canonical text form ({@link
+   *     Collation#BINARY}; check {@link #hasCanonicalTextForm()} first)
+   */
+  public byte[] canonicalTextFormOf(String text) {
+    if (collator == null) {
+      throw new IllegalStateException(
+          "The BINARY collation has no canonical text form; identity is the value itself");
+    }
+    return collator.get().getCollationKey(text).toByteArray();
+  }
+}

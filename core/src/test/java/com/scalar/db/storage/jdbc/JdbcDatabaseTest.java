@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -81,6 +82,35 @@ public class JdbcDatabaseTest {
             virtualTableInfoManager,
             jdbcCrudService,
             false);
+  }
+
+  @Test
+  public void constructor_WithIcuCollationAndSqliteEngine_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "jdbc:sqlite:test.db");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(DatabaseConfig.COLLATION, "ICU");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcDatabase(new DatabaseConfig(properties)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
+  }
+
+  @Test
+  public void constructor_WithIcuCollationAndSpannerEngine_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(
+        DatabaseConfig.CONTACT_POINTS, "jdbc:cloudspanner:/projects/p/instances/i/databases/d");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(DatabaseConfig.COLLATION, "ICU");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcDatabase(new DatabaseConfig(properties)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ICU collation is not supported");
   }
 
   @Test

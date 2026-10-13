@@ -68,6 +68,7 @@ public class JdbcTransactionManager extends AbstractDistributedTransactionManage
     JdbcConfig config = new JdbcConfig(databaseConfig);
 
     rdbEngine = RdbEngineFactory.create(config);
+    rdbEngine.throwIfCollationNotSupported(databaseConfig.getCollation());
     dataSource = JdbcUtils.initDataSource(config, rdbEngine, true);
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config, rdbEngine);
