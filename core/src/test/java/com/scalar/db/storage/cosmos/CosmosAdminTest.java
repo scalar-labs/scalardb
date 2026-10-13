@@ -158,6 +158,46 @@ public class CosmosAdminTest {
   }
 
   @Test
+  public void getTableMetadata_WithNonExistingMetadataContainer_ShouldReturnNull()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String fullName = getFullTableName(namespace, table);
+
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(database);
+    when(database.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)).thenReturn(container);
+    when(container.readItem(fullName, new PartitionKey(fullName), CosmosTableMetadata.class))
+        .thenThrow(notFoundException);
+
+    // Act
+    TableMetadata actual = admin.getTableMetadata(namespace, table);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  public void getTableMetadata_WhenReadingTableMetadataFails_ShouldThrowExecutionException() {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String fullName = getFullTableName(namespace, table);
+
+    CosmosException cosmosException = mock(CosmosException.class);
+    when(cosmosException.getStatusCode()).thenReturn(503);
+    when(client.getDatabase(METADATA_DATABASE)).thenReturn(database);
+    when(database.getContainer(CosmosAdmin.TABLE_METADATA_CONTAINER)).thenReturn(container);
+    when(container.readItem(fullName, new PartitionKey(fullName), CosmosTableMetadata.class))
+        .thenThrow(cosmosException);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getTableMetadata(namespace, table))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(cosmosException);
+  }
+
+  @Test
   public void createNamespace_WithCustomRuBelow4000_ShouldCreateDatabaseWithManualThroughput()
       throws ExecutionException {
     // Arrange

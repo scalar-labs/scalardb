@@ -31,9 +31,9 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
@@ -94,7 +94,7 @@ public class SelectStatementHandler {
       } else {
         return executeScan((Scan) selection, tableMetadata);
       }
-    } catch (DynamoDbException e) {
+    } catch (SdkException e) {
       throw new ExecutionException(
           CoreError.DYNAMO_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
     }

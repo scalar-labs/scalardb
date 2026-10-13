@@ -44,6 +44,15 @@ import org.slf4j.LoggerFactory;
  * so two writers targeting the same key race and exactly one wins with a {@link
  * CoordinatorConflictException}; the loser then reads the persisted state and follows it.
  *
+ * <p>A writer can also conflict with itself. {@link #putState} sends the write again after a
+ * failure, and a failure can be reported although the write was applied, so the row that a resent
+ * write conflicts with can be the writer's own earlier attempt. The {@link
+ * CoordinatorConflictException} carries the number of attempts so that the caller can tell. On the
+ * commit path, a conflict after more than one attempt is therefore reported as an unknown
+ * transaction status when the persisted state is ABORTED or absent, instead of being followed: the
+ * writer's own COMMITTED row may have been removed by {@code finishTransaction}, and an ABORTED row
+ * may have been written for the same transaction after that.
+ *
  * <h3>Key scheme</h3>
  *
  * The {@code tx_id} partition key is either a plain transaction ID or, when coordinator group
@@ -396,7 +405,15 @@ public class CoordinatorStateAccessor {
         storage.put(put);
         break;
       } catch (NoMutationException e) {
-        throw new CoordinatorConflictException("Mutation seems applied already", e);
+        // An earlier attempt may have been applied although it was reported as failed, in which
+        // case this attempt conflicted with this writer's own row. Record the number of attempts so
+        // that the caller can tell, and keep the earlier failures for diagnosis.
+        CoordinatorConflictException conflict =
+            new CoordinatorConflictException("Mutation seems applied already", counter + 1, e);
+        if (exception != null) {
+          conflict.addSuppressed(exception);
+        }
+        throw conflict;
       } catch (Exception e) {
         if (exception == null) {
           exception = e;
