@@ -116,7 +116,7 @@ public class JdbcAdminImportTestUtils {
           "xml",
           "geometry",
           "geography");
-  static final List<String> UNSUPPORTED_DATA_TYPES_MSSQL_V17_OR_LATER =
+  static final List<String> UNSUPPORTED_DATA_TYPES_MSSQL_2025_OR_LATER =
       Arrays.asList("json", "vector(3)");
   static final List<String> UNSUPPORTED_DATA_TYPES_DB2 =
       Arrays.asList("DECIMAL", "DECFLOAT", "XML");
@@ -884,10 +884,10 @@ public class JdbcAdminImportTestUtils {
     data.addAll(
         prepareCreateNonImportableTableSql(
             namespace,
-            majorVersion >= 17
+            majorVersion >= 17 // SQL Server 2025
                 ? Stream.concat(
                         UNSUPPORTED_DATA_TYPES_MSSQL.stream(),
-                        UNSUPPORTED_DATA_TYPES_MSSQL_V17_OR_LATER.stream())
+                        UNSUPPORTED_DATA_TYPES_MSSQL_2025_OR_LATER.stream())
                     .collect(Collectors.toList())
                 : UNSUPPORTED_DATA_TYPES_MSSQL));
 
