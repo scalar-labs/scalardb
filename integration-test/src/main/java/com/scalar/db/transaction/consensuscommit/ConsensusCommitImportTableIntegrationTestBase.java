@@ -22,6 +22,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -137,7 +138,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparator.from(databaseConfig));
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =
         new ConsensusCommitManager(
