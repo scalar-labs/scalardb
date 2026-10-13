@@ -136,6 +136,15 @@ public class S3Wrapper implements ObjectStorageWrapper {
       if (cause instanceof S3Exception) {
         Optional<S3Exception> s3Exception = findS3Exception(e);
         if (s3Exception.isPresent()) {
+          // A resent request can fail because of its own earlier, applied attempt, so the write
+          // must not be reported as not applied
+          if (earlierAttemptMayHaveBeenApplied(s3Exception.get())) {
+            throw new ObjectStorageWrapperException(
+                String.format(
+                    "The object with key '%s' may have been inserted because the AWS SDK retried the request, so the outcome is unknown",
+                    key),
+                s3Exception.get());
+          }
           if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
             throw new ConflictOccurredException(
                 String.format("Failed to insert the object with key '%s' due to conflict", key),
@@ -168,6 +177,13 @@ public class S3Wrapper implements ObjectStorageWrapper {
       if (cause instanceof S3Exception) {
         Optional<S3Exception> s3Exception = findS3Exception(e);
         if (s3Exception.isPresent()) {
+          if (earlierAttemptMayHaveBeenApplied(s3Exception.get())) {
+            throw new ObjectStorageWrapperException(
+                String.format(
+                    "The object with key '%s' may have been updated because the AWS SDK retried the request, so the outcome is unknown",
+                    key),
+                s3Exception.get());
+          }
           if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
             throw new ConflictOccurredException(
                 String.format("Failed to update the object with key '%s' due to conflict", key),
@@ -198,6 +214,13 @@ public class S3Wrapper implements ObjectStorageWrapper {
       if (cause instanceof S3Exception) {
         Optional<S3Exception> s3Exception = findS3Exception(e);
         if (s3Exception.isPresent()) {
+          if (earlierAttemptMayHaveBeenApplied(s3Exception.get())) {
+            throw new ObjectStorageWrapperException(
+                String.format(
+                    "The object with key '%s' may have been deleted because the AWS SDK retried the request, so the outcome is unknown",
+                    key),
+                s3Exception.get());
+          }
           if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
             throw new ConflictOccurredException(
                 String.format("Failed to delete the object with key '%s' due to conflict", key),
@@ -228,6 +251,13 @@ public class S3Wrapper implements ObjectStorageWrapper {
       if (cause instanceof S3Exception) {
         Optional<S3Exception> s3Exception = findS3Exception(e);
         if (s3Exception.isPresent()) {
+          if (earlierAttemptMayHaveBeenApplied(s3Exception.get())) {
+            throw new ObjectStorageWrapperException(
+                String.format(
+                    "The object with key '%s' may have been deleted because the AWS SDK retried the request, so the outcome is unknown",
+                    key),
+                s3Exception.get());
+          }
           if (s3Exception.get().statusCode() == S3ErrorCode.CONFLICT.get()) {
             throw new ConflictOccurredException(
                 String.format("Failed to delete the object with key '%s' due to conflict", key),
@@ -292,6 +322,20 @@ public class S3Wrapper implements ObjectStorageWrapper {
     } catch (Exception e) {
       throw new ObjectStorageWrapperException("Failed to close the storage wrapper", e);
     }
+  }
+
+  /**
+   * Returns whether an earlier attempt of the failed request may have been applied. The AWS SDK
+   * resends a request after a lost response or a server error, and a conditional write request
+   * carries no idempotency token, so a resent conditional write can fail because of its own
+   * earlier, applied attempt.
+   *
+   * @param e the exception thrown by the AWS SDK
+   * @return whether an earlier attempt of the request may have been applied
+   */
+  private static boolean earlierAttemptMayHaveBeenApplied(S3Exception e) {
+    Integer numAttempts = e.numAttempts();
+    return numAttempts != null && numAttempts > 1;
   }
 
   private Optional<S3Exception> findS3Exception(Throwable throwable) {

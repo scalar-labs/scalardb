@@ -23,7 +23,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>When {@code commitState} loses a putState race and the persisted state turns out to be ABORTED
  * (or absent), this handler reports a {@link CommitConflictException} and leaves the rollback of
- * the transaction's prepared records to the caller.
+ * the transaction's prepared records to the caller. If the putState was sent more than once, the
+ * row it lost to may be this transaction's own earlier attempt, so such a state is reported as an
+ * {@link UnknownTransactionStatusException} instead, and the records must not be rolled back.
  */
 @ThreadSafe
 class CoordinatorCommitHandler {
@@ -66,16 +68,38 @@ class CoordinatorCommitHandler {
 
   /**
    * Resolves a putState conflict. Returns the {@code committedAt} of the already-persisted
-   * COMMITTED state when this transaction turns out to be already committed; otherwise reports the
-   * conflict (the caller rolls the records back) by throwing {@link CommitConflictException}.
+   * COMMITTED state when this transaction turns out to be already committed. Otherwise, reports the
+   * conflict (the caller rolls the records back) by throwing {@link CommitConflictException}, or,
+   * when the putState was sent more than once, reports an unknown status (the caller must not roll
+   * the records back) by throwing {@link UnknownTransactionStatusException}.
    */
   long handleCommitConflict(String id, Exception cause)
       throws CommitConflictException, UnknownTransactionStatusException {
+    // An earlier attempt of a putState that was sent more than once may have been applied although
+    // it was reported as failed, so the row the putState lost to may be this transaction's own.
+    boolean mayHaveConflictedWithOwnWrite =
+        cause instanceof CoordinatorConflictException
+            && ((CoordinatorConflictException) cause).getNumAttempts() > 1;
     try {
       Optional<CoordinatorStateAccessor.State> s = coordinator.getState(id);
       if (s.isPresent()) {
         CoordinatorStateAccessor.State persisted = s.get();
         if (persisted.getState() == TransactionState.ABORTED) {
+          if (mayHaveConflictedWithOwnWrite) {
+            // This ABORTED row may not reflect this transaction's outcome. An earlier attempt may
+            // have written this transaction's COMMITTED row, finishTransaction may then have rolled
+            // the records forward and removed that row, and an ABORTED row may have been written
+            // for the same transaction after that -- by a lazy recovery that had observed a record
+            // still PREPARED, or by an abort by ID. Rolling the records back would then destroy
+            // committed records, so report the status as unknown and leave the records to lazy
+            // recovery: if the ABORTED is genuine, they are still PREPARED and are rolled back
+            // according to this row; otherwise, they are already committed and nobody touches them.
+            throw new UnknownTransactionStatusException(
+                CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY
+                    .buildMessage(cause.getMessage()),
+                cause,
+                id);
+          }
           throw new CommitConflictException(
               CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(
                   cause.getMessage()),
@@ -93,16 +117,27 @@ class CoordinatorCommitHandler {
         return persisted.getCreatedAt();
       } else {
         // The coordinator state is absent: a row existed when our putIfNotExists lost the race, but
-        // it is gone now. This means the conflicting row was an ABORTED written by a lazy recovery
-        // (which also rolled the records back) and later removed by the Coordinator state cleanup
-        // process, so the transaction is definitively aborted. Report a conflict (the orchestrator
-        // rolls the records back) -- the same outcome as the present-ABORTED case above.
+        // it is gone now.
         //
-        // A COMMITTED row can be ruled out here. The only COMMITTED row this conflict can have
-        // been against is this commit's own, and a COMMITTED coordinator row is only ever removed
-        // by finishTransaction (the periodic cleanup removes only ABORTED rows), which runs after
-        // the transaction has terminated. Had the conflict been against it, it would still be
-        // present and handled by the present-COMMITTED branch above.
+        // If the putState was sent more than once, the row may have been this transaction's own
+        // COMMITTED row: an earlier attempt may have been applied although it was reported as
+        // failed, and finishTransaction, which rolls the records forward before it removes the row,
+        // may have removed it since. The transaction may therefore have committed, so report the
+        // status as unknown instead of a conflict, and leave the records as they are -- committed,
+        // or still PREPARED for lazy recovery to resolve.
+        if (mayHaveConflictedWithOwnWrite) {
+          throw new UnknownTransactionStatusException(
+              CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY
+                  .buildMessage(cause.getMessage()),
+              cause,
+              id);
+        }
+
+        // Otherwise, this commit's putIfNotExists was never applied, so the conflicting row was
+        // written by someone else: an ABORTED written by a lazy recovery (which also rolled the
+        // records back) and later removed by the Coordinator state cleanup process. The transaction
+        // is definitively aborted. Report a conflict (the orchestrator rolls the records back) --
+        // the same outcome as the present-ABORTED case above.
         //
         // Group commit reaches an absent state by a second, more common route, and the outcome is
         // still correct. There the conflicting putIfNotExists is keyed on the parent ID (the group
@@ -113,6 +148,9 @@ class CoordinatorCommitHandler {
         // this child was never committed (a committed child would either be listed in the parent
         // row or have its own full-ID COMMITTED row, and getState would return it). Rolling back
         // and reporting a retryable conflict is the correct outcome for such an uncommitted child.
+        // (When the emitter's putState was sent more than once, the parent row may have been
+        // written after this child's own COMMITTED parent row was removed, so that case is reported
+        // as unknown above.)
 
         throw new CommitConflictException(
             CoreError.CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE.buildMessage(

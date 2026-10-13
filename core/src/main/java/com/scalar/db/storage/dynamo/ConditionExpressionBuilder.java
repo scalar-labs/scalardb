@@ -99,7 +99,21 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
         elements = Arrays.asList(columnName, "=", value);
         break;
       case NE:
-        elements = Arrays.asList("NOT", columnName, "=", value);
+        // NOT ... = matches a NULL column, which is stored as a missing attribute, or as a
+        // NULL-type attribute by versions before #3326
+        elements =
+            Arrays.asList(
+                "(attribute_exists(" + columnName + ")",
+                "AND",
+                "NOT",
+                columnName,
+                "=",
+                DynamoOperation.CONDITION_NULL_VALUE_ALIAS,
+                "AND",
+                "NOT",
+                columnName,
+                "=",
+                value + ")");
         break;
       case GT:
         elements = Arrays.asList(columnName, ">", value);

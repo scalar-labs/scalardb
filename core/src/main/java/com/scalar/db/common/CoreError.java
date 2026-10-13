@@ -1509,6 +1509,12 @@ public enum CoreError implements ScalarDbError {
       "Recovering the record failed. Table: %s; Partition Key: %s; Clustering Key: %s; Details: %s",
       "",
       ""),
+  DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY(
+      Category.INTERNAL_ERROR,
+      "0070",
+      "The mutation may have been applied because the AWS SDK retried the request, so its outcome is unknown. Details: %s",
+      "",
+      ""),
 
   //
   // Errors for the unknown transaction status error category
@@ -1541,6 +1547,12 @@ public enum CoreError implements ScalarDbError {
       Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
       "0005",
       "One-phase committing records failed. Details: %s",
+      "",
+      ""),
+  CONSENSUS_COMMIT_CONFLICT_OCCURRED_WHEN_COMMITTING_STATE_AFTER_RETRY(
+      Category.UNKNOWN_TRANSACTION_STATUS_ERROR,
+      "0006",
+      "The committing state in the coordinator conflicted after the write was retried. An earlier attempt may have been applied, so the transaction may have been committed. Details: %s",
       "",
       ""),
   ;
