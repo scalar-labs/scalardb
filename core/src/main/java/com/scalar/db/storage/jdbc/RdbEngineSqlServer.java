@@ -467,10 +467,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
       // The driver decodes DATETIMEOFFSET values with a Julian-Gregorian hybrid calendar, which
       // shifts the dates between October 5, 1582, and October 14, 1582, by 10 days. DATETIME2
       // values are decoded with the proleptic Gregorian calendar, so we read the value as a UTC
-      // DATETIME2.
+      // DATETIME2. An imported DATETIMEOFFSET column can have up to 7 fractional digits, and a
+      // narrower DATETIME2 would round them.
       return "CAST(SWITCHOFFSET("
           + enclose(columnName)
-          + ", '+00:00') AS DATETIME2(3)) AS "
+          + ", '+00:00') AS DATETIME2(7)) AS "
           + enclose(columnName);
     }
     return enclose(columnName);
