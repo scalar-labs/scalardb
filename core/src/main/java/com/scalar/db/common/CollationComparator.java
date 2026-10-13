@@ -79,7 +79,7 @@ public final class CollationComparator {
     Collation collation = config.getCollation();
     switch (collation) {
       case BINARY:
-        return new CollationComparator(collation, TextColumn::compareByCodePoint, null);
+        return binary();
       case ICU:
         {
           warnOnIcuVersionMismatch();
@@ -91,6 +91,15 @@ public final class CollationComparator {
       default:
         throw new AssertionError("Unknown collation: " + collation);
     }
+  }
+
+  /**
+   * Returns a comparator for the {@link Collation#BINARY} collation, which needs no configuration.
+   *
+   * @return the {@link Collation#BINARY} comparator
+   */
+  public static CollationComparator binary() {
+    return new CollationComparator(Collation.BINARY, TextColumn::compareByCodePoint, null);
   }
 
   /**
