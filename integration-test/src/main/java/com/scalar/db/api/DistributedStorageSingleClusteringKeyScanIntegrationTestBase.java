@@ -97,10 +97,6 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     return Collections.emptyMap();
   }
 
-  protected int getMutationBatchSize() {
-    return 20;
-  }
-
   private void createTable(
       DataType clusteringKeyType, Order clusteringOrder, Map<String, String> options)
       throws ExecutionException {
@@ -792,17 +788,7 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
               });
     }
     try {
-      List<Put> buffer = new ArrayList<>();
-      for (Put put : puts) {
-        buffer.add(put);
-        if (buffer.size() == getMutationBatchSize()) {
-          storage.mutate(buffer);
-          buffer.clear();
-        }
-      }
-      if (!buffer.isEmpty()) {
-        storage.mutate(buffer);
-      }
+      storage.mutate(puts);
     } catch (ExecutionException e) {
       throw new ExecutionException("Put data to database failed", e);
     }

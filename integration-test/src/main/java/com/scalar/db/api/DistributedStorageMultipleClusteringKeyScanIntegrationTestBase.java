@@ -127,10 +127,6 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     return true;
   }
 
-  protected int getMutationBatchSize() {
-    return 20;
-  }
-
   private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
 
@@ -1704,17 +1700,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
               });
     }
     try {
-      List<Put> buffer = new ArrayList<>();
-      for (Put put : puts) {
-        buffer.add(put);
-        if (buffer.size() == getMutationBatchSize()) {
-          storage.mutate(buffer);
-          buffer.clear();
-        }
-      }
-      if (!buffer.isEmpty()) {
-        storage.mutate(buffer);
-      }
+      storage.mutate(puts);
     } catch (ExecutionException e) {
       throw new ExecutionException("Put data to database failed", e);
     }
