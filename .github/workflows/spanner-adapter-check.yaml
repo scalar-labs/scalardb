@@ -356,7 +356,7 @@ jobs:
               - type: "section"
                 text:
                   type: "mrkdwn"
-                  text: ":large_green_circle:【ScalarDB Core on Spanner】The weekly Spanner CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|passed>"
+                  text: ":large_green_circle:【ScalarDB Core on Spanner】The weekly CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|passed>"
 
       - name: Report the failure on Slack
         uses: slackapi/slack-github-action@v4.0.0
@@ -369,4 +369,4 @@ jobs:
               - type: "section"
                 text:
                   type: "mrkdwn"
-                  text: ":red_circle:【ScalarDB Core on Spanner】The weekly Spanner CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|failed>"
+                  text: ":red_circle:【ScalarDB Core on Spanner】The weekly CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|failed>"
