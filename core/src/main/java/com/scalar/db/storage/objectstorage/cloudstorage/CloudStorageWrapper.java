@@ -1,5 +1,6 @@
 package com.scalar.db.storage.objectstorage.cloudstorage;
 
+import com.google.cloud.ServiceOptions;
 import com.google.cloud.WriteChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
@@ -35,24 +36,38 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   @VisibleForTesting static final int GET_MAX_RETRY_COUNT = 3;
 
   private final Storage storage;
+  // A client that sends each request only once. See delete(String, String) for why it is needed
+  private final Storage nonRetryingStorage;
   private final String bucket;
   private final Integer uploadChunkSizeBytes;
 
   public CloudStorageWrapper(CloudStorageConfig config) {
-    storage =
+    this(
+        config,
         StorageOptions.newBuilder()
             .setProjectId(config.getProjectId())
             .setCredentials(config.getCredentials())
+            .build());
+  }
+
+  @VisibleForTesting
+  CloudStorageWrapper(CloudStorageConfig config, StorageOptions options) {
+    this(
+        config,
+        options.getService(),
+        options
+            .toBuilder()
+            .setRetrySettings(ServiceOptions.getNoRetrySettings())
             .build()
-            .getService();
-    bucket = config.getBucket();
-    uploadChunkSizeBytes = config.getUploadChunkSizeBytes().orElse(null);
+            .getService());
   }
 
   @VisibleForTesting
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public CloudStorageWrapper(CloudStorageConfig config, Storage storage) {
+  public CloudStorageWrapper(
+      CloudStorageConfig config, Storage storage, Storage nonRetryingStorage) {
     this.storage = storage;
+    this.nonRetryingStorage = nonRetryingStorage;
     this.bucket = config.getBucket();
     uploadChunkSizeBytes = config.getUploadChunkSizeBytes().orElse(null);
   }
@@ -179,7 +194,11 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   @Override
   public void delete(String key, String version) throws ObjectStorageWrapperException {
     try {
-      if (!storage.delete(
+      // The request is sent only once. The Cloud Storage client resends a deletion with a
+      // precondition after a lost response or a server error, and a resent request can fail
+      // because of its own earlier, applied attempt, which would report the applied deletion as
+      // not applied
+      if (!nonRetryingStorage.delete(
           BlobId.of(bucket, key),
           Storage.BlobSourceOption.generationMatch(Long.parseLong(version)))) {
         throw new PreconditionFailedException(
@@ -231,8 +250,10 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
 
   @Override
   public void close() throws ObjectStorageWrapperException {
-    try {
-      storage.close();
+    // Closes both clients, even if closing one of them fails
+    try (Storage ignored = storage;
+        Storage ignoredNonRetrying = nonRetryingStorage) {
+      // Nothing to do other than closing the clients
     } catch (Exception e) {
       throw new ObjectStorageWrapperException("Failed to close the storage wrapper", e);
     }
@@ -243,6 +264,11 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
     byte[] data = object.getBytes(StandardCharsets.UTF_8);
     BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key)).build();
 
+    // Unlike a deletion with a precondition, this write can use the client that resends requests.
+    // The write is a resumable upload, whose precondition is sent when the upload session starts.
+    // When the response to the request that finalizes the upload is lost, the client queries the
+    // state of the same session, which returns the finalized object, instead of starting a new
+    // session and evaluating the precondition again
     try (WriteChannel writer = storage.writer(blobInfo, precondition)) {
       if (uploadChunkSizeBytes != null) {
         writer.setChunkSize(uploadChunkSizeBytes);

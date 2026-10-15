@@ -115,6 +115,28 @@ public class ObjectStorageAdminTest {
   }
 
   @Test
+  public void tableExists_ShouldReadOnlyTableMetadataObject() throws Exception {
+    // Arrange
+    String namespace = "ns";
+    String table = "table";
+    String tableMetadataObjectKey =
+        ObjectStorageUtils.getObjectKey(
+            METADATA_NAMESPACE, ObjectStorageAdmin.TABLE_METADATA_TABLE);
+    when(wrapper.get(tableMetadataObjectKey)).thenReturn(Optional.empty());
+
+    // Act
+    boolean actual = admin.tableExists(namespace, table);
+
+    // Assert
+    assertThat(actual).isFalse();
+    verify(wrapper).get(tableMetadataObjectKey);
+    verify(wrapper, never())
+        .get(
+            ObjectStorageUtils.getObjectKey(
+                METADATA_NAMESPACE, ObjectStorageAdmin.NAMESPACE_METADATA_TABLE));
+  }
+
+  @Test
   public void unsupportedOperations_ShouldThrowUnsupportedException() {
     // Arrange
     String namespace = "sample_ns";
