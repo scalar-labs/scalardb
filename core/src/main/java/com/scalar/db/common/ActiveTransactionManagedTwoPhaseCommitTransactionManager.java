@@ -8,6 +8,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.api.Update;
@@ -21,9 +22,11 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.util.ActiveExpiringMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +35,20 @@ import org.slf4j.LoggerFactory;
 public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
     extends DecoratedTwoPhaseCommitTransactionManager {
 
+  private static final long SCANNER_EXPIRATION_INTERVAL_MILLIS = 1000;
+
   private static final Logger logger =
       LoggerFactory.getLogger(ActiveTransactionManagedTwoPhaseCommitTransactionManager.class);
 
   private final ActiveTransactionRegistry<TwoPhaseCommitTransaction> registry;
+  private final ActiveExpiringMap<String, ActiveScanner> activeScanners;
 
   public ActiveTransactionManagedTwoPhaseCommitTransactionManager(
       TwoPhaseCommitTransactionManager transactionManager, long expirationTimeMillis) {
     super(transactionManager);
     registry =
         new ActiveTransactionRegistry<>(expirationTimeMillis, TwoPhaseCommitTransaction::rollback);
+    activeScanners = newActiveScanners(expirationTimeMillis);
   }
 
   public ActiveTransactionManagedTwoPhaseCommitTransactionManager(
@@ -50,12 +57,40 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
       ActiveTransactionRegistry.TransactionRollback<TwoPhaseCommitTransaction> rollbackFunction) {
     super(transactionManager);
     registry = new ActiveTransactionRegistry<>(expirationTimeMillis, rollbackFunction);
+    activeScanners = newActiveScanners(expirationTimeMillis);
+  }
+
+  @VisibleForTesting
+  ActiveTransactionManagedTwoPhaseCommitTransactionManager(
+      TwoPhaseCommitTransactionManager transactionManager,
+      ActiveTransactionRegistry<TwoPhaseCommitTransaction> registry,
+      ActiveExpiringMap<String, ActiveScanner> activeScanners) {
+    super(transactionManager);
+    this.registry = registry;
+    this.activeScanners = activeScanners;
+  }
+
+  // A scanner opened in a transaction is part of that transaction and is not tracked here
+  private static ActiveExpiringMap<String, ActiveScanner> newActiveScanners(
+      long expirationTimeMillis) {
+    return new ActiveExpiringMap<>(
+        expirationTimeMillis,
+        SCANNER_EXPIRATION_INTERVAL_MILLIS,
+        (id, scanner) -> {
+          logger.warn("The scanner is expired");
+          scanner.dispose();
+        });
   }
 
   @Override
   protected TwoPhaseCommitTransaction decorateTransactionOnBeginOrStart(
       TwoPhaseCommitTransaction transaction) throws TransactionException {
     return new ActiveTransaction(transaction);
+  }
+
+  @Override
+  public Scanner getScanner(Scan scan) throws CrudException {
+    return new ActiveScanner(super.getScanner(scan));
   }
 
   @Override
@@ -194,6 +229,55 @@ public class ActiveTransactionManagedTwoPhaseCommitTransactionManager
         super.abort();
       } finally {
         registry.remove(getId());
+      }
+    }
+  }
+
+  /**
+   * A scanner opened outside a transaction. Its methods are synchronized because the expiration
+   * handler may close it in a different thread while another method is being executed.
+   */
+  @VisibleForTesting
+  class ActiveScanner extends AbstractTransactionManagerCrudOperableScanner {
+
+    private final String id = UUID.randomUUID().toString();
+    private final TransactionManagerCrudOperable.Scanner scanner;
+
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
+    private ActiveScanner(TransactionManagerCrudOperable.Scanner scanner) {
+      this.scanner = scanner;
+      activeScanners.put(id, this);
+    }
+
+    @Override
+    public synchronized Optional<Result> one() throws CrudException {
+      activeScanners.updateExpirationTime(id);
+      return scanner.one();
+    }
+
+    @Override
+    public synchronized List<Result> all() throws CrudException {
+      activeScanners.updateExpirationTime(id);
+      return scanner.all();
+    }
+
+    @Override
+    public synchronized void close() throws CrudException, UnknownTransactionStatusException {
+      // Closing the scanner ends its transaction whatever the outcome
+      try {
+        scanner.close();
+      } finally {
+        activeScanners.remove(id);
+      }
+    }
+
+    // Catches every exception, so that a failed close does not escape the expiration handler and
+    // end the expiration thread of the map
+    synchronized void dispose() {
+      try {
+        scanner.close();
+      } catch (Exception e) {
+        logger.warn("Failed to close the expired scanner", e);
       }
     }
   }
