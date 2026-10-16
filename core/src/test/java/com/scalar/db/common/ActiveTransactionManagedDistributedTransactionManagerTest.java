@@ -23,10 +23,19 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.consensuscommit.CommitHandler;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommit;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationChecker;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter;
+import com.scalar.db.transaction.consensuscommit.CrudHandler;
+import com.scalar.db.transaction.consensuscommit.Snapshot;
+import com.scalar.db.transaction.consensuscommit.TransactionContext;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -322,22 +331,89 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
   }
 
   @Test
-  public void resume_CommitFailed_ShouldReturnTransaction() throws TransactionException {
+  public void resume_CommitConflicted_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(new CommitConflictException("conflict", "txId1"));
+  }
+
+  @Test
+  public void resume_CommitFailed_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(new CommitException("commit failed", "txId1"));
+  }
+
+  @Test
+  public void resume_CommitStatusUnknown_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(
+        new UnknownTransactionStatusException("status unknown", "txId1"));
+  }
+
+  @Test
+  public void resume_CommitThrewIllegalStateException_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(new IllegalStateException("illegal state"));
+  }
+
+  private void assertCommitFailureRemovesTransaction(Exception commitFailure)
+      throws TransactionException {
     // Arrange
     String txId = "txId1";
     DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
     when(wrappedTransaction.getId()).thenReturn(txId);
-    doThrow(new CommitException("commit failed", txId)).when(wrappedTransaction).commit();
+    doThrow(commitFailure).when(wrappedTransaction).commit();
     when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
     DistributedTransaction transaction = transactionManager.begin(txId);
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
-    // Act
-    DistributedTransaction actual = transactionManager.resume(txId);
+    // Act Assert
+    // A commit ends the transaction whatever its outcome
+    assertThatThrownBy(transaction::commit).isSameAs(commitFailure);
+    assertThatThrownBy(() -> transactionManager.resume(txId))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
 
-    // Assert
-    // The transaction stays active so that it can still be rolled back
-    assertThat(actual).isSameAs(transaction);
+  @Test
+  public void
+      commit_FailedOnConsensusCommitWithReservedGroupCommitSlot_ShouldLeaveNothingAndMakeRollbackNoOp()
+          throws Exception {
+    // Arrange
+    String txId = "txId1";
+    TransactionContext context =
+        new TransactionContext(
+            txId,
+            mock(Snapshot.class),
+            com.scalar.db.transaction.consensuscommit.Isolation.SNAPSHOT,
+            false,
+            false,
+            /* groupCommitSlotReserved= */ true);
+    CommitHandler commitHandler = mock(CommitHandler.class);
+    doThrow(new CommitConflictException("conflict", txId)).when(commitHandler).commit(context);
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusCommit =
+        new ConsensusCommit(
+            context,
+            mock(CrudHandler.class),
+            commitHandler,
+            mock(ConsensusCommitOperationChecker.class),
+            groupCommitter);
+    DistributedTransactionManager consensusCommitManager =
+        mock(DistributedTransactionManager.class);
+    when(consensusCommitManager.begin(txId)).thenReturn(consensusCommit);
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            new StateManagedDistributedTransactionManager(consensusCommitManager), -1, -1);
+    DistributedTransaction transaction = manager.begin(txId);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // The failed commit alone leaves nothing registered or reserved
+    assertThatThrownBy(() -> manager.resume(txId)).isInstanceOf(TransactionNotFoundException.class);
+    verify(groupCommitter).remove(txId);
+
+    // A rollback after it does nothing
+    transaction.rollback();
+    verify(groupCommitter, times(1)).remove(txId);
   }
 
   @Test

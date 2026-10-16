@@ -468,6 +468,16 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
+  public void rollback_AfterCommit_ShouldDoNothing() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void abort_AfterCommit_ShouldDoNothing() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
   public void getAndUpdate_ShouldGetAndUpdateCorrectly() {}
 
   @Disabled(
