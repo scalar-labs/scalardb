@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Scan;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -61,6 +63,10 @@ public class QueryBuilderTest {
           .addPartitionKey("p1")
           .addPartitionKey("p2")
           .build();
+
+  private static final String ORDER_BY = " ORDER BY ";
+  private static final ImmutableList<String> COLUMN_NAMES =
+      ImmutableList.of("p1", "p2", "c1", "c2", "v1", "v2", "v3", "v4", "v5");
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
@@ -1917,6 +1923,17 @@ public class QueryBuilderTest {
   }
 
   private String encloseSql(String sql, RdbEngineStrategy rdbEngine) {
+    int orderByIndex = sql.indexOf(ORDER_BY);
+    if (orderByIndex >= 0) {
+      String orderByTail = sql.substring(orderByIndex + ORDER_BY.length());
+      for (String name : COLUMN_NAMES) {
+        orderByTail =
+            orderByTail.replaceAll(
+                "\\b" + name + "\\b",
+                Matcher.quoteReplacement(rdbEngine.getOrderingColumnSql("n1", "t1", name)));
+      }
+      return encloseSql(sql.substring(0, orderByIndex), rdbEngine) + ORDER_BY + orderByTail;
+    }
     return sql.replace("n1.t1", rdbEngine.encloseFullTableName("n1", "t1"))
         .replace("p1", rdbEngine.enclose("p1"))
         .replace("p2", rdbEngine.enclose("p2"))

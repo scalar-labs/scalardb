@@ -387,6 +387,15 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  public String getOrderingColumnSql(String schema, String table, String columnName) {
+    // Db2 resolves an unqualified ORDER BY name to the select-list alias, which for a DATE column
+    // is the CHAR() expression of getProjection(), so the sort cannot follow index order. The
+    // qualifier includes the schema because Db2 resolves a bare table qualifier against CURRENT
+    // SCHEMA.
+    return encloseFullTableName(schema, table) + "." + enclose(columnName);
+  }
+
+  @Override
   public String getDataTypeForKey(DataType dataType) {
     // Primary key columns must be constrained with NOT NULL
     switch (dataType) {
@@ -564,7 +573,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       // to CHAR and the value will be needed to be parsed as a string.
       // This is required to read correctly DATE values between the period of October 5,
       // 1582, through October 14, 1582 because of the Julian to Gregorian calendar transition
-      return "CHAR(" + enclose(columnName) + ") AS " + enclose(columnName);
+      return "CHAR(" + enclose(columnName) + ", ISO) AS " + enclose(columnName);
     }
     return enclose(columnName);
   }

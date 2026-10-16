@@ -194,6 +194,10 @@ public interface RdbEngineStrategy {
     return enclose(schema) + "." + enclose(table);
   }
 
+  default String getOrderingColumnSql(String schema, String table, String columnName) {
+    return enclose(columnName);
+  }
+
   SelectQuery buildSelectWithLimitQuery(SelectQuery.Builder builder, int limit);
 
   UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder);
