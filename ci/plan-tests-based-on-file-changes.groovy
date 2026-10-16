@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
-// This script sets environment variables indicating which tests to run based on which storage
-// adapter package have changed files.
+// This script sets the TESTS environment variable indicating which tests to run based on which
+// storage adapter packages have changed files.
 
 import groovy.transform.Field
 
@@ -38,7 +38,7 @@ def getChangedAdapterPackageDirectories() {
     return changedDirectories
 }
 
-// Initialize environment variables based on changed directories
+// Write the TESTS environment variable based on the changed adapter directories
 def initializeEnvVar(changedDirectories) {
     def githubEnvFile = System.getenv("GITHUB_ENV")
 
@@ -47,23 +47,25 @@ def initializeEnvVar(changedDirectories) {
         System.exit(1)
     }
 
-    // Create environment variables by writing to GITHUB_ENV file
-    new File(githubEnvFile).withWriterAppend { writer ->
-        def envVarToDirectory = [
-                'BLOB_STORAGE': 'objectstorage',
-                'CASSANDRA'   : 'cassandra',
-                'COSMOS'      : 'cosmos',
-                'DYNAMO'      : 'dynamo',
-                'JDBC'        : 'jdbc'
-        ]
-        writer.writeLine("ALL=false")
-        //Basic tests set are always run
-        writer.writeLine("BASIC=true")
-        //Multi-storage tests are already contained in the basic tests set
-        writer.writeLine("MULTI_STORAGE=false")
-        envVarToDirectory.each { envVar, dir ->
-            writer.writeLine("${envVar}=${changedDirectories.contains(dir)}")
+    def directoryToCategory = [
+            'objectstorage': 'blob-storage',
+            'cassandra'    : 'cassandra',
+            'cosmos'       : 'cosmos',
+            'dynamo'       : 'dynamo',
+            'jdbc'         : 'jdbc'
+    ]
+
+    // The basic tests set always runs. It already covers multi-storage, so that category is never
+    // added explicitly.
+    def tests = ['basic']
+    directoryToCategory.each { directory, category ->
+        if (changedDirectories.contains(directory)) {
+            tests.add(category)
         }
+    }
+
+    new File(githubEnvFile).withWriterAppend { writer ->
+        writer.writeLine("TESTS=${tests.join(',')}")
     }
 }
 
