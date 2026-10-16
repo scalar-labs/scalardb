@@ -315,6 +315,10 @@ public interface RdbEngineStrategy {
     return projections.stream().map(this::enclose).collect(Collectors.joining(","));
   }
 
+  default String getOrderingColumnSql(String schema, String table, String columnName) {
+    return enclose(columnName);
+  }
+
   /**
    * Throws an exception if the given SQLWarning is a duplicate index warning.
    *
