@@ -22,3 +22,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run ci-all-java-temurin-versions.yaml --field REPORT_ON_SLACK=true --repo ${{ github.repository }} --ref ${{ matrix.branch }}
+
+  trigger-spanner-ci:
+    name: Trigger the Spanner CI for branch ${{ matrix.branch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ['master', '3', '3.19', '3.18']
+    permissions:
+      actions: write
+    steps:
+      - name: Trigger the Spanner CI for branch ${{ matrix.branch }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run spanner-adapter-check.yaml --field REPORT_ON_SLACK=true --repo ${{ github.repository }} --ref ${{ matrix.branch }}
