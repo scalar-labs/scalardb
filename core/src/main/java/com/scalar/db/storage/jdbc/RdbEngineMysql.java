@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -487,6 +489,15 @@ class RdbEngineMysql extends AbstractRdbEngine {
   public RdbEngineTimeTypeStrategy<LocalDate, LocalTime, LocalDateTime, LocalDateTime>
       getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public Map<String, String> getConnectionProperties(JdbcConfig config) {
+    // TIMESTAMPTZ values are bound and read as UTC wall-clock values, which a MySQL TIMESTAMP
+    // column converts from and to the session time zone. Pinning the session to UTC makes the
+    // stored instant match. With the driver's default pureLocalDateTime=true, the connection time
+    // zone does not alter the LocalDate, LocalTime and LocalDateTime values ScalarDB binds.
+    return ImmutableMap.of("connectionTimeZone", "UTC", "forceConnectionTimeZoneToSession", "true");
   }
 
   @Override

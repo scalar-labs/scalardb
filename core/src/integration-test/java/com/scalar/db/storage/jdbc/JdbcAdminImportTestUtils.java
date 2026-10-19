@@ -27,9 +27,13 @@ import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.zaxxer.hikari.HikariDataSource;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -183,6 +187,46 @@ public class JdbcAdminImportTestUtils {
       return getFloatCompatibleColumnNamesOnExistingDb2Database(table);
     } else {
       throw new AssertionError("Unsupported database engine: " + rdbEngine);
+    }
+  }
+
+  public JdbcTestData createExistingMysqlTimestampTable(
+      String namespace, String table, Instant value) throws SQLException {
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("col", DataType.TIMESTAMPTZ)
+            .addPartitionKey("pk")
+            .build();
+    LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+    columns.put("pk", "INT");
+    columns.put("col", "TIMESTAMP(3) NULL");
+    String sql =
+        prepareCreateTableSql(namespace, table, columns, tableMetadata.getPartitionKeyNames());
+    execute(rdbEngine.createSchemaSqls(namespace));
+    execute(sql);
+    return JdbcTestData.createImportableTable(
+        table,
+        sql,
+        tableMetadata,
+        Collections.emptyMap(),
+        ImmutableMap.of("pk", IntColumn.of("pk", 1), "col", TimestampTZColumn.of("col", value)));
+  }
+
+  public BigDecimal selectMysqlUnixTimestamp(String namespace, String table, String column)
+      throws SQLException {
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet resultSet =
+            statement.executeQuery(
+                "SELECT UNIX_TIMESTAMP("
+                    + rdbEngine.enclose(column)
+                    + ") FROM "
+                    + rdbEngine.encloseFullTableName(namespace, table))) {
+      if (!resultSet.next()) {
+        throw new AssertionError("No row in " + table);
+      }
+      return resultSet.getBigDecimal(1);
     }
   }
 

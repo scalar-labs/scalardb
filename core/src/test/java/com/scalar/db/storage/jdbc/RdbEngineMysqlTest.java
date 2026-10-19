@@ -41,6 +41,13 @@ class RdbEngineMysqlTest {
   }
 
   @Test
+  void getConnectionProperties_ShouldForceUtcSessionTimeZone() {
+    assertThat(rdbEngineMysql.getConnectionProperties(mock(JdbcConfig.class)))
+        .containsEntry("connectionTimeZone", "UTC")
+        .containsEntry("forceConnectionTimeZoneToSession", "true");
+  }
+
+  @Test
   void setConnectionToReadOnly_ShouldDoNothing() throws SQLException {
     // MariaDB Connector/J 3.5.10 and later issue SET SESSION TRANSACTION READ ONLY / READ WRITE
     // from Connection#setReadOnly(), which adds two round trips per read and which TiDB rejects.
