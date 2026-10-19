@@ -31,6 +31,7 @@ import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -417,17 +418,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           throw e;
         }
 
-        try {
-          transaction.commit();
-        } catch (CommitConflictException e) {
-          rollbackTransaction(transaction);
-          throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
-        } catch (UnknownTransactionStatusException e) {
-          throw e;
-        } catch (TransactionException e) {
-          rollbackTransaction(transaction);
-          throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
-        }
+        commitTransaction(transaction);
       }
     };
   }
@@ -544,20 +535,30 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       throws CrudException, UnknownTransactionStatusException {
     DistributedTransaction transaction = beginOneOperation(readOnly, attributes);
 
+    R result;
     try {
-      R result = throwableFunction.apply(transaction);
-      transaction.commit();
-      return result;
+      result = throwableFunction.apply(transaction);
     } catch (CrudException e) {
       rollbackTransaction(transaction);
       throw e;
-    } catch (CommitConflictException e) {
-      rollbackTransaction(transaction);
-      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    } catch (UnknownTransactionStatusException e) {
-      throw e;
     } catch (TransactionException e) {
       rollbackTransaction(transaction);
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    }
+
+    commitTransaction(transaction);
+    return result;
+  }
+
+  private void commitTransaction(DistributedTransaction transaction)
+      throws CrudException, UnknownTransactionStatusException {
+    // A commit ends the transaction whatever its outcome, so a failed commit leaves nothing to
+    // roll back
+    try {
+      transaction.commit();
+    } catch (CommitConflictException e) {
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (CommitException e) {
       throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
   }

@@ -1,11 +1,20 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.scalar.db.api.BranchTransaction;
+import com.scalar.db.api.GlobalTransaction;
 import com.scalar.db.api.GlobalTransactionTestBase;
 import com.scalar.db.common.ActiveTransactionManagedDistributedTransactionManager;
 import com.scalar.db.common.DistributedTransactionBackedGlobalTransactionManager;
 import com.scalar.db.common.ResumableDistributedTransactionManager;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.TransactionNotFoundException;
 import com.scalar.db.service.TransactionFactory;
 import java.util.Properties;
+import org.junit.jupiter.api.Test;
 
 /**
  * Runs the {@link GlobalTransactionTestBase} corpus against the consensus-commit implementation
@@ -42,6 +51,33 @@ public abstract class DistributedTransactionBackedConsensusCommitGlobalTransacti
     // single manager, so both handles are the same manager instance.
     manager1 = new DistributedTransactionBackedGlobalTransactionManager(transactionManager);
     manager2 = manager1;
+  }
+
+  @Test
+  public void beginBranchAndRollback_AfterCommitConflicted_ShouldThrowNotFoundAndDoNothing()
+      throws TransactionException {
+    // Arrange
+    putThenCommit(0, 0, INITIAL_BALANCE);
+    GlobalTransaction global = manager1.begin();
+    BranchTransaction branch = manager1.beginBranch(global.getId());
+    int balance = branch.get(prepareGet(0, 0)).get().getInt(BALANCE);
+    branch.put(preparePut(0, 0, balance + 100));
+    branch.end(BranchTransaction.Status.SUCCESS);
+
+    GlobalTransaction interfering = manager1.begin();
+    BranchTransaction interferingBranch = manager1.beginBranch(interfering.getId());
+    int interferingBalance = interferingBranch.get(prepareGet(0, 0)).get().getInt(BALANCE);
+    interferingBranch.put(preparePut(0, 0, interferingBalance + 1));
+    interferingBranch.end(BranchTransaction.Status.SUCCESS);
+    interfering.commit();
+
+    assertThatThrownBy(global::commit).isInstanceOf(CommitConflictException.class);
+
+    // Act Assert
+    // The failed commit has already ended the global transaction
+    assertThatThrownBy(() -> manager1.beginBranch(global.getId()))
+        .isInstanceOf(TransactionNotFoundException.class);
+    assertThatCode(global::rollback).doesNotThrowAnyException();
   }
 
   @Override
