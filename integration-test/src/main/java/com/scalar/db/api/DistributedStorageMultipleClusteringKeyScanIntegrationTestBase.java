@@ -1700,17 +1700,7 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
               });
     }
     try {
-      List<Put> buffer = new ArrayList<>();
-      for (Put put : puts) {
-        buffer.add(put);
-        if (buffer.size() == 20) {
-          storage.mutate(buffer);
-          buffer.clear();
-        }
-      }
-      if (!buffer.isEmpty()) {
-        storage.mutate(buffer);
-      }
+      storage.mutate(puts);
     } catch (ExecutionException e) {
       throw new ExecutionException("Put data to database failed", e);
     }
