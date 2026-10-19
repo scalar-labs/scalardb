@@ -198,7 +198,11 @@ public class SimpleSelectQuery implements SelectQuery {
 
     return " ORDER BY "
         + orderingList.stream()
-            .map(o -> rdbEngine.enclose(o.getColumnName()) + " " + o.getOrder())
+            .map(
+                o ->
+                    rdbEngine.getOrderingColumnSql(schema, table, o.getColumnName())
+                        + " "
+                        + o.getOrder())
             .collect(Collectors.joining(","));
   }
 
@@ -209,7 +213,11 @@ public class SimpleSelectQuery implements SelectQuery {
 
     return " ORDER BY "
         + orderings.stream()
-            .map(o -> rdbEngine.enclose(o.getColumnName()) + " " + o.getOrder())
+            .map(
+                o ->
+                    rdbEngine.getOrderingColumnSql(schema, table, o.getColumnName())
+                        + " "
+                        + o.getOrder())
             .collect(Collectors.joining(","));
   }
 
