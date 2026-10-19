@@ -34,17 +34,23 @@ public interface GlobalTransaction {
    * the commit proceeds with the writes staged so far, and a straggling operation is rejected
    * without stopping a commit already in flight.
    *
+   * <p>A commit ends the global transaction whatever its outcome, including when it throws an
+   * exception. You do not need to roll it back after a failed commit, and a {@link #rollback()} or
+   * {@link #abort()} after a commit does nothing.
+   *
    * @throws CommitConflictException if the commit fails due to transient faults (e.g., a conflict).
    *     You can retry the transaction from the beginning
    * @throws CommitException if the commit fails due to transient or nontransient faults
    * @throws UnknownTransactionStatusException if the commit status cannot be determined. The
    *     outcome is indeterminate — the transaction may or may not have been committed. Do not
-   *     blindly retry or roll back; determine the outcome before deciding how to proceed
+   *     blindly retry; determine the outcome before deciding how to proceed
    */
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
 
   /**
-   * Rolls back this global transaction, discarding the writes of all its branches.
+   * Rolls back this global transaction, discarding the writes of all its branches. Rolling back a
+   * global transaction that has already ended, by a commit whether or not it succeeded, or by a
+   * rollback, does nothing.
    *
    * <p>This does not end the branches. Each branch is still ended by the process running it, with
    * {@link BranchTransaction.Status#FAILURE} — see {@link
