@@ -1,5 +1,5 @@
 name: CI
-run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run CI with JDK {0} ({1})', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) || '' }}"
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Dispatch : Run CI with JDK {0} ({1}) - TESTS={2} FLAVOR={3}', inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR, inputs.TESTS, inputs.FLAVOR) || '' }}"
 
 on:
   # When triggered by a pull request, basic integration tests will run in addition to the tests related
@@ -9,38 +9,18 @@ on:
   # When triggered by a dispatch, selected tests will run with the given integration tests JDK runtime.
   workflow_dispatch:
     inputs:
-      ALL:
-        description: Run all integration tests
-        type: boolean
-        default: true
-      BASIC:
-        description: Run basic integration tests covering DynamoDB, PostgreSQL 17, and multi-storage
-        type: boolean
-        default: false
-      BLOB_STORAGE:
-        description: Run Blob Storage integration tests
-        type: boolean
-        default: false
-      CASSANDRA:
-        description: Run Cassandra integration tests
-        type: boolean
-        default: false
-      COSMOS:
-        description: Run Cosmos DB integration tests
-        type: boolean
-        default: false
-      DYNAMO:
-        description: Run DynamoDB integration tests
-        type: boolean
-        default: false
-      JDBC:
-        description: Run JDBC storages integration tests
-        type: boolean
-        default: false
-      MULTI_STORAGE:
-        description: Run multi-storage integration tests
-        type: boolean
-        default: false
+      TESTS:
+        description: 'What to run: `all`, `basic`, a category (`jdbc`), or a storage (`mysql`, `mysql:8.0`). Comma-separated.'
+        type: string
+        default: 'all'
+      FLAVOR:
+        description: Test flavor to run
+        type: choice
+        default: 'all'
+        options:
+          - 'all'
+          - 'group-commit'
+          - 'normal'
       INTEGRATION_TEST_ONLY:
         description: Run only integration tests. Unit tests and static analysis will be skipped.
         type: boolean
@@ -67,10 +47,10 @@ on:
   # When triggered by another action, all tests will run with the given integration test JDK runtime.
   workflow_call:
     inputs:
-      ALL:
-        description: Run all integration tests
-        type: boolean
-        default: true
+      TESTS:
+        description: 'What to run: `all`, `basic`, a category, or a storage. Comma-separated.'
+        type: string
+        default: 'all'
       INT_TEST_JAVA_RUNTIME_VERSION:
         description: JDK version used to run the integration test
         type: string
@@ -177,14 +157,8 @@ jobs:
     name: Plan integration test jobs
     runs-on: ubuntu-latest
     env:
-      ALL: ${{ inputs.ALL }}
-      BASIC: ${{ inputs.BASIC }}
-      BLOB_STORAGE: ${{ inputs.BLOB_STORAGE }}
-      CASSANDRA: ${{ inputs.CASSANDRA }}
-      COSMOS: ${{ inputs.COSMOS }}
-      DYNAMO: ${{ inputs.DYNAMO }}
-      JDBC: ${{ inputs.JDBC }}
-      MULTI_STORAGE: ${{ inputs.MULTI_STORAGE }}
+      TESTS: ${{ inputs.TESTS }}
+      FLAVOR: ${{ inputs.FLAVOR }}
       TRIGGERED_BY_WF_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
       EXPANDED_TESTS_CONFIG_FILE: expanded-tests-config.json
     outputs:
@@ -193,11 +167,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install Groovy
+        env:
+          GROOVY_VERSION: '5.0.6'
         run: |
-          curl -s "https://get.sdkman.io?ci=true" | bash
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sdk install groovy
-          echo "$HOME/.sdkman/candidates/groovy/current/bin" >> $GITHUB_PATH
+          curl -fsSL --retry 3 --retry-all-errors -o "$RUNNER_TEMP/groovy.zip" "https://repo1.maven.org/maven2/org/apache/groovy/groovy-binary/${GROOVY_VERSION}/groovy-binary-${GROOVY_VERSION}.zip"
+          unzip -q "$RUNNER_TEMP/groovy.zip" -d "$RUNNER_TEMP"
+          echo "GROOVY_HOME=$RUNNER_TEMP/groovy-${GROOVY_VERSION}" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/groovy-${GROOVY_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Check file changes and init environment variables indicating which tests to run
         id: generate-matrix-by-changes
@@ -205,24 +181,6 @@ jobs:
         env:
           PR_BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
         run: groovy ci/plan-tests-based-on-file-changes.groovy
-
-      - name: Validate workflow dispatch inputs
-        if: env.TRIGGERED_BY_WF_DISPATCH
-        run: |
-          if [ "$ALL" != "true" ]; then
-            # Check if at least one specific test category is enabled
-            if [ "$BASIC" != "true" ] && \
-               [ "$BLOB_STORAGE" != "true" ] && \
-               [ "$CASSANDRA" != "true" ] && \
-               [ "$COSMOS" != "true" ] && \
-               [ "$DYNAMO" != "true" ] && \
-               [ "$JDBC" != "true" ] && \
-               [ "$MULTI_STORAGE" != "true" ]; then
-              echo "Error: When the ALL workflow input is false, at least one specific test category must be enabled."
-              echo "Please enable at least one of: BASIC, BLOB_STORAGE, CASSANDRA, COSMOS, DYNAMO, JDBC, MULTI_STORAGE."
-              exit 1
-            fi
-          fi
 
       - name: Generate the integration tests matrix
         id: generate-matrix-for-wf-dispatch
