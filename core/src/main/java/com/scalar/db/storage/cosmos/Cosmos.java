@@ -15,11 +15,13 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.config.Collation;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.util.ScalarDbUtils;
@@ -46,6 +48,7 @@ public class Cosmos extends AbstractDistributedStorage {
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
   private final OperationChecker operationChecker;
+  private final CollationComparator collationComparator;
 
   @Inject
   public Cosmos(DatabaseConfig databaseConfig) {
@@ -54,6 +57,13 @@ public class Cosmos extends AbstractDistributedStorage {
     if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
           CoreError.COSMOS_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
+    }
+
+    // Cosmos DB orders text only by binary UTF-8 bytes
+    if (databaseConfig.getCollation() == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(
+              databaseConfig.getStorage()));
     }
 
     CosmosConfig config = new CosmosConfig(databaseConfig);
@@ -72,6 +82,7 @@ public class Cosmos extends AbstractDistributedStorage {
     putStatementHandler = new PutStatementHandler(client, metadataManager);
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
     batchHandler = new BatchHandler(client, metadataManager);
+    collationComparator = CollationComparator.from(databaseConfig);
 
     logger.info("Cosmos DB object is created properly");
   }
@@ -92,6 +103,7 @@ public class Cosmos extends AbstractDistributedStorage {
     this.deleteStatementHandler = delete;
     this.batchHandler = batch;
     this.operationChecker = operationChecker;
+    this.collationComparator = CollationComparator.from(databaseConfig);
   }
 
   @Override
@@ -108,8 +120,8 @@ public class Cosmos extends AbstractDistributedStorage {
         scanner =
             new FilterableScanner(
                 get,
-                selectStatementHandler.handle(
-                    ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)));
+                selectStatementHandler.handle(ScalarDbUtils.copyAndPrepareForDynamicFiltering(get)),
+                collationComparator);
       }
       Optional<Result> ret = scanner.one();
       if (scanner.one().isPresent()) {
@@ -143,7 +155,8 @@ public class Cosmos extends AbstractDistributedStorage {
     } else {
       return new FilterableScanner(
           scan,
-          selectStatementHandler.handle(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)));
+          selectStatementHandler.handle(ScalarDbUtils.copyAndPrepareForDynamicFiltering(scan)),
+          collationComparator);
     }
   }
 

@@ -1,10 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.config.Collation;
 import com.scalar.db.config.DatabaseConfig;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -25,6 +27,12 @@ class RdbEngineTidbTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     rdbEngineTidb = new RdbEngineTidb(new JdbcConfig(new DatabaseConfig(props)));
+  }
+
+  @Test
+  void throwIfCollationNotSupported_GivenIcu_ShouldNotThrowAnyException() {
+    assertThatCode(() -> rdbEngineTidb.throwIfCollationNotSupported(Collation.ICU))
+        .doesNotThrowAnyException();
   }
 
   @Test

@@ -4,8 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,18 +25,43 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionCrudOperable;
+import com.scalar.db.api.TransactionManagerCrudOperable;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.TransactionNotFoundException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.consensuscommit.CommitHandler;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommit;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationChecker;
+import com.scalar.db.transaction.consensuscommit.CoordinatorGroupCommitter;
+import com.scalar.db.transaction.consensuscommit.CrudHandler;
+import com.scalar.db.transaction.consensuscommit.Snapshot;
+import com.scalar.db.transaction.consensuscommit.TransactionContext;
+import com.scalar.db.util.ActiveExpiringMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -41,6 +70,7 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
   @Mock private DistributedTransactionManager wrappedTransactionManager;
 
   private ActiveTransactionManagedDistributedTransactionManager transactionManager;
+  private final ExecutorService executor = Executors.newCachedThreadPool();
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -50,6 +80,11 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
     transactionManager =
         new ActiveTransactionManagedDistributedTransactionManager(
             wrappedTransactionManager, -1, -1);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    executor.shutdownNow();
   }
 
   @Test
@@ -322,22 +357,89 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
   }
 
   @Test
-  public void resume_CommitFailed_ShouldReturnTransaction() throws TransactionException {
+  public void resume_CommitConflicted_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(new CommitConflictException("conflict", "txId1"));
+  }
+
+  @Test
+  public void resume_CommitFailed_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(new CommitException("commit failed", "txId1"));
+  }
+
+  @Test
+  public void resume_CommitStatusUnknown_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(
+        new UnknownTransactionStatusException("status unknown", "txId1"));
+  }
+
+  @Test
+  public void resume_CommitThrewIllegalStateException_ShouldThrowTransactionNotFoundException()
+      throws TransactionException {
+    assertCommitFailureRemovesTransaction(new IllegalStateException("illegal state"));
+  }
+
+  private void assertCommitFailureRemovesTransaction(Exception commitFailure)
+      throws TransactionException {
     // Arrange
     String txId = "txId1";
     DistributedTransaction wrappedTransaction = mock(DistributedTransaction.class);
     when(wrappedTransaction.getId()).thenReturn(txId);
-    doThrow(new CommitException("commit failed", txId)).when(wrappedTransaction).commit();
+    doThrow(commitFailure).when(wrappedTransaction).commit();
     when(wrappedTransactionManager.begin(txId)).thenReturn(wrappedTransaction);
     DistributedTransaction transaction = transactionManager.begin(txId);
-    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
-    // Act
-    DistributedTransaction actual = transactionManager.resume(txId);
+    // Act Assert
+    // A commit ends the transaction whatever its outcome
+    assertThatThrownBy(transaction::commit).isSameAs(commitFailure);
+    assertThatThrownBy(() -> transactionManager.resume(txId))
+        .isInstanceOf(TransactionNotFoundException.class);
+  }
 
-    // Assert
-    // The transaction stays active so that it can still be rolled back
-    assertThat(actual).isSameAs(transaction);
+  @Test
+  public void
+      commit_FailedOnConsensusCommitWithReservedGroupCommitSlot_ShouldLeaveNothingAndMakeRollbackNoOp()
+          throws Exception {
+    // Arrange
+    String txId = "txId1";
+    TransactionContext context =
+        new TransactionContext(
+            txId,
+            mock(Snapshot.class),
+            com.scalar.db.transaction.consensuscommit.Isolation.SNAPSHOT,
+            false,
+            false,
+            /* groupCommitSlotReserved= */ true);
+    CommitHandler commitHandler = mock(CommitHandler.class);
+    doThrow(new CommitConflictException("conflict", txId)).when(commitHandler).commit(context);
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusCommit =
+        new ConsensusCommit(
+            context,
+            mock(CrudHandler.class),
+            commitHandler,
+            mock(ConsensusCommitOperationChecker.class),
+            groupCommitter);
+    DistributedTransactionManager consensusCommitManager =
+        mock(DistributedTransactionManager.class);
+    when(consensusCommitManager.begin(txId)).thenReturn(consensusCommit);
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            new StateManagedDistributedTransactionManager(consensusCommitManager), -1, -1);
+    DistributedTransaction transaction = manager.begin(txId);
+
+    // Act Assert
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // The failed commit alone leaves nothing registered or reserved
+    assertThatThrownBy(() -> manager.resume(txId)).isInstanceOf(TransactionNotFoundException.class);
+    verify(groupCommitter).remove(txId);
+
+    // A rollback after it does nothing
+    transaction.rollback();
+    verify(groupCommitter, times(1)).remove(txId);
   }
 
   @Test
@@ -371,5 +473,256 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
     // Act Assert
     assertThatThrownBy(() -> transactionManager.resume(txId))
         .isInstanceOf(TransactionNotFoundException.class);
+  }
+
+  @Test
+  public void getScanner_ShouldReturnActiveScannerThatReadsUnderlyingScanner() throws Exception {
+    // Arrange
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    TransactionManagerCrudOperable.Scanner underlyingScanner = prepareUnderlyingScanner();
+    when(underlyingScanner.one()).thenReturn(Optional.of(result1)).thenReturn(Optional.empty());
+    when(underlyingScanner.all()).thenReturn(Collections.singletonList(result2));
+
+    // Act
+    TransactionManagerCrudOperable.Scanner scanner = transactionManager.getScanner(scan());
+
+    // Assert
+    assertThat(scanner)
+        .isInstanceOf(ActiveTransactionManagedDistributedTransactionManager.ActiveScanner.class);
+    List<Result> results = new ArrayList<>();
+    scanner.iterator().forEachRemaining(results::add);
+    assertThat(results).containsExactly(result1);
+    assertThat(scanner.all()).containsExactly(result2);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void getScanner_ShouldRegisterScannerAndRefreshItOnEachRead() throws Exception {
+    // Arrange
+    ActiveExpiringMap<String, ActiveTransactionManagedDistributedTransactionManager.ActiveScanner>
+        activeScanners = mock(ActiveExpiringMap.class);
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            wrappedTransactionManager, mock(ActiveTransactionRegistry.class), activeScanners);
+    prepareUnderlyingScanner();
+
+    // Act
+    ActiveTransactionManagedDistributedTransactionManager.ActiveScanner scanner =
+        (ActiveTransactionManagedDistributedTransactionManager.ActiveScanner)
+            manager.getScanner(scan());
+    scanner.one();
+    scanner.all();
+
+    // Assert
+    ArgumentCaptor<String> id = ArgumentCaptor.forClass(String.class);
+    verify(activeScanners).put(id.capture(), same(scanner));
+    verify(activeScanners, times(2)).updateExpirationTime(id.getValue());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void close_ShouldCloseUnderlyingScannerAndUnregisterIt() throws Exception {
+    // Arrange
+    ActiveExpiringMap<String, ActiveTransactionManagedDistributedTransactionManager.ActiveScanner>
+        activeScanners = mock(ActiveExpiringMap.class);
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            wrappedTransactionManager, mock(ActiveTransactionRegistry.class), activeScanners);
+    TransactionManagerCrudOperable.Scanner underlyingScanner = prepareUnderlyingScanner();
+    ActiveTransactionManagedDistributedTransactionManager.ActiveScanner scanner =
+        (ActiveTransactionManagedDistributedTransactionManager.ActiveScanner)
+            manager.getScanner(scan());
+
+    // Act
+    scanner.close();
+
+    // Assert
+    verify(underlyingScanner).close();
+    ArgumentCaptor<String> id = ArgumentCaptor.forClass(String.class);
+    verify(activeScanners).put(id.capture(), same(scanner));
+    verify(activeScanners).remove(id.getValue());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void close_WhenUnderlyingCloseFails_ShouldUnregisterScannerAndThrow() throws Exception {
+    // Arrange
+    ActiveExpiringMap<String, ActiveTransactionManagedDistributedTransactionManager.ActiveScanner>
+        activeScanners = mock(ActiveExpiringMap.class);
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            wrappedTransactionManager, mock(ActiveTransactionRegistry.class), activeScanners);
+    TransactionManagerCrudOperable.Scanner underlyingScanner = prepareUnderlyingScanner();
+    CrudException failure = new CrudException("close failed", null);
+    doThrow(failure).when(underlyingScanner).close();
+    ActiveTransactionManagedDistributedTransactionManager.ActiveScanner scanner =
+        (ActiveTransactionManagedDistributedTransactionManager.ActiveScanner)
+            manager.getScanner(scan());
+
+    // Act Assert
+    assertThatThrownBy(scanner::close).isSameAs(failure);
+    ArgumentCaptor<String> id = ArgumentCaptor.forClass(String.class);
+    verify(activeScanners).put(id.capture(), same(scanner));
+    verify(activeScanners).remove(id.getValue());
+  }
+
+  @Test
+  public void dispose_ShouldCloseUnderlyingScanner() throws Exception {
+    // Arrange
+    TransactionManagerCrudOperable.Scanner underlyingScanner = prepareUnderlyingScanner();
+    ActiveTransactionManagedDistributedTransactionManager.ActiveScanner scanner =
+        (ActiveTransactionManagedDistributedTransactionManager.ActiveScanner)
+            transactionManager.getScanner(scan());
+
+    // Act
+    scanner.dispose();
+
+    // Assert
+    verify(underlyingScanner).close();
+  }
+
+  @ParameterizedTest
+  @MethodSource("closeFailures")
+  public void dispose_WhenUnderlyingCloseFails_ShouldNotThrow(Exception failure) throws Exception {
+    // Arrange
+    TransactionManagerCrudOperable.Scanner underlyingScanner = prepareUnderlyingScanner();
+    doThrow(failure).when(underlyingScanner).close();
+    ActiveTransactionManagedDistributedTransactionManager.ActiveScanner scanner =
+        (ActiveTransactionManagedDistributedTransactionManager.ActiveScanner)
+            transactionManager.getScanner(scan());
+
+    // Act
+    scanner.dispose();
+
+    // Assert
+    verify(underlyingScanner).close();
+  }
+
+  @Test
+  public void dispose_WhileReading_ShouldCloseUnderlyingScannerAfterReadReturns() throws Exception {
+    // Arrange
+    CountDownLatch readStarted = new CountDownLatch(1);
+    CountDownLatch finishRead = new CountDownLatch(1);
+    Result result = mock(Result.class);
+    TransactionManagerCrudOperable.Scanner underlyingScanner = prepareUnderlyingScanner();
+    doAnswer(
+            invocation -> {
+              readStarted.countDown();
+              if (!finishRead.await(10, TimeUnit.SECONDS)) {
+                throw new AssertionError("The read was not released");
+              }
+              return Optional.of(result);
+            })
+        .when(underlyingScanner)
+        .one();
+    ActiveTransactionManagedDistributedTransactionManager.ActiveScanner scanner =
+        (ActiveTransactionManagedDistributedTransactionManager.ActiveScanner)
+            transactionManager.getScanner(scan());
+    Future<Optional<Result>> read = executor.submit(scanner::one);
+    assertThat(readStarted.await(10, TimeUnit.SECONDS)).isTrue();
+
+    // Act
+    AtomicReference<Thread> expirationThread = new AtomicReference<>();
+    Future<?> expiration =
+        executor.submit(
+            () -> {
+              expirationThread.set(Thread.currentThread());
+              scanner.dispose();
+            });
+    waitUntilBlocked(expirationThread);
+    verify(underlyingScanner, never()).close();
+    finishRead.countDown();
+
+    // Assert
+    assertThat(read.get(10, TimeUnit.SECONDS)).hasValue(result);
+    expiration.get(10, TimeUnit.SECONDS);
+    InOrder inOrder = inOrder(underlyingScanner);
+    inOrder.verify(underlyingScanner).one();
+    inOrder.verify(underlyingScanner).close();
+  }
+
+  @Test
+  public void getScanner_ScannerNotUsedForExpirationTime_ShouldCloseUnderlyingScanner()
+      throws Exception {
+    // Arrange
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(
+            wrappedTransactionManager, 200, -1);
+    CountDownLatch closed = new CountDownLatch(1);
+    TransactionManagerCrudOperable.Scanner underlyingScanner = prepareUnderlyingScanner();
+    doAnswer(
+            invocation -> {
+              closed.countDown();
+              return null;
+            })
+        .when(underlyingScanner)
+        .close();
+
+    // Act
+    manager.getScanner(scan());
+
+    // Assert
+    assertThat(closed.await(10, TimeUnit.SECONDS)).isTrue();
+  }
+
+  @Test
+  public void getScanner_MoreScannersThanMaximum_ShouldCloseEvictedScanner() throws Exception {
+    // Arrange
+    ActiveTransactionManagedDistributedTransactionManager manager =
+        new ActiveTransactionManagedDistributedTransactionManager(wrappedTransactionManager, -1, 1);
+    CountDownLatch closed = new CountDownLatch(1);
+    TransactionManagerCrudOperable.Scanner underlyingScanner1 =
+        mock(TransactionManagerCrudOperable.Scanner.class);
+    TransactionManagerCrudOperable.Scanner underlyingScanner2 =
+        mock(TransactionManagerCrudOperable.Scanner.class);
+    for (TransactionManagerCrudOperable.Scanner underlyingScanner :
+        Arrays.asList(underlyingScanner1, underlyingScanner2)) {
+      doAnswer(
+              invocation -> {
+                closed.countDown();
+                return null;
+              })
+          .when(underlyingScanner)
+          .close();
+    }
+    when(wrappedTransactionManager.getScanner(scan()))
+        .thenReturn(underlyingScanner1)
+        .thenReturn(underlyingScanner2);
+
+    // Act
+    manager.getScanner(scan());
+    manager.getScanner(scan());
+
+    // Assert
+    assertThat(closed.await(10, TimeUnit.SECONDS)).isTrue();
+  }
+
+  private static Stream<Exception> closeFailures() {
+    return Stream.of(
+        new CrudException("close failed", null),
+        new UnknownTransactionStatusException("close failed", null),
+        new RuntimeException("close failed"));
+  }
+
+  private TransactionManagerCrudOperable.Scanner prepareUnderlyingScanner() throws CrudException {
+    TransactionManagerCrudOperable.Scanner underlyingScanner =
+        mock(TransactionManagerCrudOperable.Scanner.class);
+    when(wrappedTransactionManager.getScanner(scan())).thenReturn(underlyingScanner);
+    return underlyingScanner;
+  }
+
+  private static Scan scan() {
+    return Scan.newBuilder().namespace("ns").table("tbl").all().build();
+  }
+
+  private static void waitUntilBlocked(AtomicReference<Thread> thread) throws InterruptedException {
+    long deadline = System.currentTimeMillis() + 10000;
+    while (thread.get() == null || thread.get().getState() != Thread.State.BLOCKED) {
+      if (System.currentTimeMillis() >= deadline) {
+        throw new AssertionError("The thread did not block");
+      }
+      TimeUnit.MILLISECONDS.sleep(10);
+    }
   }
 }
