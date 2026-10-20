@@ -46,10 +46,16 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   public String sql() {
     return "INSERT INTO "
         + rdbEngine.encloseFullTableName(schema, table)
+        + targetAlias()
         + " "
         + makeValuesSqlString()
         + " "
         + makeOnConflictDoUpdateSqlString();
+  }
+
+  // A target table named excluded makes excluded.col ambiguous, and an alias hides the table name.
+  private String targetAlias() {
+    return table.equalsIgnoreCase("excluded") ? " AS t1" : "";
   }
 
   private String makeValuesSqlString() {

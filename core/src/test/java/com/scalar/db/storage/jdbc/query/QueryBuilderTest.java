@@ -1545,6 +1545,32 @@ public class QueryBuilderTest {
   }
 
   @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"POSTGRESQL", "YUGABYTE", "SPANNER"})
+  public void upsertQuery_ForTableNamedExcluded_ShouldAliasTargetTable(RdbEngine rdbEngineType) {
+    // Arrange
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+
+    // Act
+    String sql =
+        new QueryBuilder(rdbEngine)
+            .upsertInto(NAMESPACE, "excluded", TABLE_METADATA)
+            .values(
+                Key.ofText("p1", "p1Value"),
+                Optional.empty(),
+                Collections.singletonMap("v1", TextColumn.of("v1", "v1Value")))
+            .build()
+            .sql();
+
+    // Assert
+    assertThat(sql)
+        .isEqualTo(
+            "INSERT INTO \"n1\".\"excluded\" AS t1 (\"p1\",\"v1\") VALUES (?,?) "
+                + "ON CONFLICT (\"p1\") DO UPDATE SET \"v1\"=excluded.\"v1\"");
+  }
+
+  @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void upsertQueryWithoutValuesTest(RdbEngine rdbEngineType) throws SQLException {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
