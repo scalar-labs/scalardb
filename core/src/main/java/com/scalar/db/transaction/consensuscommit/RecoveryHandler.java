@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.getTransactionTableMetadata;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Selection;
@@ -196,9 +195,8 @@ public class RecoveryHandler {
   @VisibleForTesting
   RollbackMutationComposer createRollbackMutationComposer(
       Selection selection, TransactionResult result) throws ExecutionException {
-    // The record to roll back is passed to add() below, so no latest records are needed here
     RollbackMutationComposer composer =
-        new RollbackMutationComposer(result.getId(), tableMetadataManager, ImmutableMap.of());
+        new RollbackMutationComposer(result.getId(), tableMetadataManager);
     composer.add(selection, result);
     return composer;
   }

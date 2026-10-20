@@ -204,6 +204,7 @@ dependencies {
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
+    implementation "com.ibm.icu:icu4j:${icu4jVersion}"
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -235,6 +236,16 @@ tasks.withType(JavaCompile).configureEach {
 
 javadoc {
     title = "ScalarDB"
+}
+
+processResources {
+    // Records the Gradle-declared ICU4J version in the artifact so CollationComparator can warn
+    // when dependency resolution in an embedding application substitutes a different ICU4J at
+    // runtime
+    inputs.property('icu4jVersion', icu4jVersion)
+    filesMatching('scalardb-collation.properties') {
+        expand(icu4jVersion: icu4jVersion)
+    }
 }
 
 task integrationTestCassandra(type: Test) {

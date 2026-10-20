@@ -158,7 +158,11 @@ class ParticipantCommitHandler {
           toReadTasks(getKeysOfWritesAndDeletes(context), latestRecords), context.transactionId);
 
       RollbackMutationComposer composer =
-          new RollbackMutationComposer(context.transactionId, tableMetadataManager, latestRecords);
+          new RollbackMutationComposer(
+              context.transactionId,
+              tableMetadataManager,
+              latestRecords,
+              context.snapshot.getCollationComparator());
       context.snapshot.to(composer);
       List<List<Mutation>> groupedMutations = mutationsGrouper.groupMutations(composer.get());
 
