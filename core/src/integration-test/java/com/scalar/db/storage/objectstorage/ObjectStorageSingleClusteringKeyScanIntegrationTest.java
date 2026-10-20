@@ -1,6 +1,8 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -16,6 +18,13 @@ public class ObjectStorageSingleClusteringKeyScanIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected void truncateTable(DataType clusteringKeyType, Order clusteringOrder)
+      throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnTransientError(
+        () -> super.truncateTable(clusteringKeyType, clusteringOrder));
   }
 
   @Override

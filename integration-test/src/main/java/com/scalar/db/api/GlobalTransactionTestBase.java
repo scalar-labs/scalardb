@@ -155,8 +155,16 @@ public abstract class GlobalTransactionTestBase {
   }
 
   private void dropTables() throws ExecutionException {
-    admin.dropTable(namespace, TABLE);
+    dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
+    dropCoordinatorTables();
+  }
+
+  protected void dropTable(String namespace, String table) throws ExecutionException {
+    admin.dropTable(namespace, table);
+  }
+
+  protected void dropCoordinatorTables() throws ExecutionException {
     admin.dropCoordinatorTables();
   }
 

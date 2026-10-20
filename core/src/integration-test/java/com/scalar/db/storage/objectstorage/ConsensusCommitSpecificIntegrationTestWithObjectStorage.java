@@ -1,37 +1,37 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitSpecificIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.Isolation;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitSpecificIntegrationTestWithObjectStorage
     extends ConsensusCommitSpecificIntegrationTestBase {
 
   @Override
-  @BeforeEach
-  protected void setUp() throws Exception {
-    super.setUp();
-    if (ObjectStorageEnv.isCloudStorage()) {
-      // Sleep to mitigate rate limit errors
-      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
-    }
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnTransientError(
+        () -> super.truncateTable(namespace, table));
   }
 
   @Override
-  @AfterEach
-  public void tearDown() {
-    super.tearDown();
-    if (ObjectStorageEnv.isCloudStorage()) {
-      // Sleep to mitigate rate limit errors
-      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
-    }
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnTransientError(super::truncateCoordinatorTables);
+  }
+
+  @Override
+  protected void dropTable(String namespace, String table) throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnTransientError(
+        () -> super.dropTable(namespace, table));
+  }
+
+  @Override
+  protected void dropCoordinatorTables() throws ExecutionException {
+    ObjectStorageTestUtils.dropCoordinatorTablesWithRetryOnTransientError(
+        getProperties(getTestName()));
   }
 
   @Override

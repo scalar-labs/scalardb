@@ -1,6 +1,7 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.DistributedStorageCrossPartitionScanIntegrationTestBase;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -15,6 +16,18 @@ public class ObjectStorageCrossPartitionScanIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected void truncateTable() throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnTransientError(super::truncateTable);
+  }
+
+  @Override
+  protected void truncateTable(DataType firstColumnType, DataType secondColumnType)
+      throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnTransientError(
+        () -> super.truncateTable(firstColumnType, secondColumnType));
   }
 
   @Override
