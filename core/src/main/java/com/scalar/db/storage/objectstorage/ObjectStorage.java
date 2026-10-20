@@ -12,11 +12,13 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.common.AbstractDistributedStorage;
+import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.FilterableScanner;
 import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.common.checker.OperationChecker;
+import com.scalar.db.config.Collation;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.io.IOException;
@@ -32,12 +34,22 @@ public class ObjectStorage extends AbstractDistributedStorage {
   private final SelectStatementHandler selectStatementHandler;
   private final MutateStatementHandler mutateStatementHandler;
   private final OperationChecker operationChecker;
+  private final CollationComparator collationComparator;
 
   public ObjectStorage(DatabaseConfig databaseConfig) {
     super(databaseConfig);
     if (databaseConfig.isCrossPartitionScanOrderingEnabled()) {
       throw new IllegalArgumentException(
           CoreError.OBJECT_STORAGE_CROSS_PARTITION_SCAN_WITH_ORDERING_NOT_SUPPORTED.buildMessage());
+    }
+    // Object storage record identity is byte-exact (partition objects are named by the raw
+    // partition-key text and records are keyed by the raw concatenated key text), so an ICU
+    // non-deterministic collation (e.g. case insensitive) would need the on-disk record key to be
+    // collation aware, and rebuilt on configuration changes
+    if (databaseConfig.getCollation() == Collation.ICU) {
+      throw new IllegalArgumentException(
+          CoreError.COLLATION_ICU_NOT_SUPPORTED_BY_STORAGE.buildMessage(
+              databaseConfig.getStorage()));
     }
     ObjectStorageConfig objectStorageConfig =
         ObjectStorageUtils.getObjectStorageConfig(databaseConfig);
@@ -48,8 +60,11 @@ public class ObjectStorage extends AbstractDistributedStorage {
     operationChecker =
         new ObjectStorageOperationChecker(
             databaseConfig, metadataManager, new StorageInfoProvider(admin));
-    selectStatementHandler = new SelectStatementHandler(wrapper, metadataManager);
-    mutateStatementHandler = new MutateStatementHandler(wrapper, metadataManager);
+    this.collationComparator = CollationComparator.from(databaseConfig);
+    selectStatementHandler =
+        new SelectStatementHandler(wrapper, metadataManager, collationComparator);
+    mutateStatementHandler =
+        new MutateStatementHandler(wrapper, metadataManager, collationComparator);
     logger.info("ObjectStorage object is created properly");
   }
 
@@ -65,6 +80,7 @@ public class ObjectStorage extends AbstractDistributedStorage {
     this.selectStatementHandler = selectStatementHandler;
     this.mutateStatementHandler = mutateStatementHandler;
     this.operationChecker = operationChecker;
+    this.collationComparator = CollationComparator.from(databaseConfig);
   }
 
   @Override
@@ -78,7 +94,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
       } else {
         scanner =
             new FilterableScanner(
-                get, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)));
+                get,
+                selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(get)),
+                collationComparator);
       }
       Optional<Result> result = scanner.one();
       if (!result.isPresent()) {
@@ -114,7 +132,9 @@ public class ObjectStorage extends AbstractDistributedStorage {
       return selectStatementHandler.handle(scan);
     } else {
       return new FilterableScanner(
-          scan, selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)));
+          scan,
+          selectStatementHandler.handle(copyAndPrepareForDynamicFiltering(scan)),
+          collationComparator);
     }
   }
 
