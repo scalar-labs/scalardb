@@ -33,6 +33,11 @@ public class ObjectStorageCaseSensitivityIntegrationTest
   }
 
   @Override
+  protected void truncateTable() throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnRateLimit(super::truncateTable);
+  }
+
+  @Override
   protected Map<String, String> getCreationOptions() {
     return ObjectStorageEnv.getCreationOptions();
   }

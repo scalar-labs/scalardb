@@ -27,7 +27,7 @@ public class TwoPhaseCommitBackedConsensusCommitIntegrationTestWithObjectStorage
 
   @Override
   protected void dropCoordinatorTables() throws ExecutionException {
-    ObjectStorageTestUtils.executeWithRetryOnRateLimit(super::dropCoordinatorTables);
+    ObjectStorageTestUtils.dropCoordinatorTablesWithRetryOnRateLimit(getProperties(getTestName()));
   }
 
   @Override
