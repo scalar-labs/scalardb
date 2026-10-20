@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -1701,6 +1702,29 @@ public class QueryBuilderTest {
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
     }
+  }
+
+  @Test
+  public void upsertQuery_ForSpannerTableNamedExcluded_ShouldAliasTargetTable() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(RdbEngine.SPANNER);
+
+    // Act
+    String sql =
+        new QueryBuilder(rdbEngine)
+            .upsertInto(NAMESPACE, "excluded", TABLE_METADATA)
+            .values(
+                Key.ofText("p1", "p1Value"),
+                Optional.empty(),
+                Collections.singletonMap("v1", TextColumn.of("v1", "v1Value")))
+            .build()
+            .sql();
+
+    // Assert
+    assertThat(sql)
+        .isEqualTo(
+            "INSERT INTO \"n1\".\"excluded\" AS t1 (\"p1\",\"v1\") VALUES (?,?) "
+                + "ON CONFLICT (\"p1\") DO UPDATE SET \"v1\"=excluded.\"v1\"");
   }
 
   @ParameterizedTest
