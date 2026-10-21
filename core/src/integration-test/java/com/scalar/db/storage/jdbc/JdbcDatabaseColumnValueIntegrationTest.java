@@ -134,16 +134,14 @@ public class JdbcDatabaseColumnValueIntegrationTest
       // TiDB default row max size is 6MB
       args.add(Arguments.of(6_000_000, "6 MB"));
     } else if (JdbcTestUtils.isMariaDB(rdbEngine)) {
-      // MariaDB default maximum packet size is 16MB, but the Put operation is translated to an
-      // INSERT ... ON DUPLICATE KEY UPDATE SQL statement, which contains the non-key columns twice.
-      // So the maximum size of a BLOB value is around half the maximum packet size, about 8MB.
-      args.add(Arguments.of(8_000_000, "8 MB"));
+      // MariaDB default maximum packet size is 16MB. The driver sends the BLOB value escaped in the
+      // statement text, which leaves a little less than 16MB for the value.
+      args.add(Arguments.of(16_000_000, "16 MB"));
     } else if (JdbcTestUtils.isMysql(rdbEngine)) {
-      // MySQL default maximum packet size is 4MB for Mysql 5.7 (64 MB for newer versions), but the
-      // Put operation is translated to an INSERT ... ON DUPLICATE KEY UPDATE SQL statement, which
-      // contains the non-key columns twice. So the maximum size of a BLOB value is around half
-      // the maximum packet size, about 2MB.
-      args.add(Arguments.of(2_000_000, "2 MB"));
+      // MySQL default maximum packet size is 4MB for MySQL 5.7 (64MB for newer versions). The
+      // driver sends the BLOB value escaped in the statement text, which leaves a little less than
+      // 4MB for the value.
+      args.add(Arguments.of(4_000_000, "4 MB"));
     } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       // A BLOB column is mapped to SQLServer `varbinary(8000)` which accepts a maximum size of
       // 8,000 bytes.

@@ -14,8 +14,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
-import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
-import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import com.zaxxer.hikari.HikariConfig;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -230,11 +228,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
             CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
                 typeName, columnDescription));
     }
-  }
-
-  @Override
-  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new InsertOnConflictDoUpdateQuery(builder, true);
   }
 
   @Override
