@@ -152,14 +152,19 @@ public class ParallelExecutor {
     }
   }
 
-  public void executeBatchGets(List<ParallelExecutorTask> tasks, String transactionId)
-      throws CrudException {
+  public boolean isParallelBatchGetEnabled() {
+    return config.isParallelBatchGetEnabled();
+  }
+
+  public void executeBatchGets(List<ParallelExecutorTask> tasks, String transactionId) {
     try {
+      // Wait for all the tasks even if some of them fail, so that none of them is left running on
+      // the transaction after this returns
       executeTasks(
-          tasks, config.isParallelBatchGetEnabled(), true, "executeBatchGets", transactionId);
-    } catch (ExecutionException | ValidationConflictException e) {
+          tasks, config.isParallelBatchGetEnabled(), false, "executeBatchGets", transactionId);
+    } catch (ExecutionException | ValidationConflictException | CrudException e) {
       throw new AssertionError(
-          "Tasks for batch gets should not throw ExecutionException and ValidationConflictException",
+          "Tasks for batch gets should not throw ExecutionException, ValidationConflictException, and CrudException",
           e);
     }
   }

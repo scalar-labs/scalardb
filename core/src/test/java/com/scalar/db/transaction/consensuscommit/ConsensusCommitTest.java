@@ -681,7 +681,8 @@ public class ConsensusCommitTest {
     TransactionResult result2 = mock(TransactionResult.class);
     TransactionResult result3 = mock(TransactionResult.class);
 
-    when(crud.get(get, context)).thenReturn(Optional.of(result1));
+    when(crud.batchGet(Collections.singletonList(get), context))
+        .thenReturn(Collections.singletonList(Optional.of(result1)));
     when(crud.scan(scan, context)).thenReturn(Arrays.asList(result2, result3));
 
     // Act
@@ -715,7 +716,7 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    verify(crud).get(get, context);
+    verify(crud).batchGet(Collections.singletonList(get), context);
     verify(crud).scan(scan, context);
     verify(crud).put(put, context);
     verify(crud).put(expectedPutFromInsert, context);
@@ -755,7 +756,8 @@ public class ConsensusCommitTest {
     when(crud.batchGet(Arrays.asList(get1, get2), context))
         .thenReturn(Arrays.asList(Optional.of(result1), Optional.empty()));
     when(crud.scan(scan, context)).thenReturn(Collections.singletonList(result2));
-    when(crud.get(get3, context)).thenReturn(Optional.of(result3));
+    when(crud.batchGet(Collections.singletonList(get3), context))
+        .thenReturn(Collections.singletonList(Optional.of(result3)));
 
     // Act
     List<CrudOperable.BatchResult> results = consensus.batch(Arrays.asList(get1, get2, scan, get3));
@@ -763,7 +765,7 @@ public class ConsensusCommitTest {
     // Assert
     verify(crud).batchGet(Arrays.asList(get1, get2), context);
     verify(crud).scan(scan, context);
-    verify(crud).get(get3, context);
+    verify(crud).batchGet(Collections.singletonList(get3), context);
     verify(operationChecker).check(get1, context);
     verify(operationChecker).check(get2, context);
     verify(operationChecker).check(get3, context);

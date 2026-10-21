@@ -93,8 +93,9 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   /**
-   * Executes the operations in order, as the default implementation does, except that consecutive
-   * Gets run in parallel through {@link CrudHandler#batchGet(List, TransactionContext)}.
+   * Executes the operations in order, as the default implementation does, except that each run of
+   * consecutive Gets goes through {@link CrudHandler#batchGet(List, TransactionContext)}, which
+   * runs them in parallel.
    */
   @Override
   public List<BatchResult> batch(List<? extends Operation> operations) throws CrudException {
@@ -102,23 +103,22 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
     List<BatchResult> ret = new ArrayList<>(operations.size());
     int i = 0;
     while (i < operations.size()) {
-      int end = i;
-      while (end < operations.size() && operations.get(end) instanceof Get) {
+      boolean gets = operations.get(i) instanceof Get;
+      int end = i + 1;
+      while (end < operations.size() && operations.get(end) instanceof Get == gets) {
         end++;
       }
 
-      if (end - i < 2) {
-        ret.addAll(super.batch(operations.subList(i, i + 1)));
-        i++;
-        continue;
-      }
-
-      List<Get> gets = new ArrayList<>(end - i);
-      for (Operation operation : operations.subList(i, end)) {
-        gets.add(checkedGet((Get) operation));
-      }
-      for (Optional<Result> result : crud.batchGet(gets, context)) {
-        ret.add(new BatchResultImpl(result));
+      if (gets) {
+        List<Get> run = new ArrayList<>(end - i);
+        for (Operation operation : operations.subList(i, end)) {
+          run.add(checkedGet((Get) operation));
+        }
+        for (Optional<Result> result : crud.batchGet(run, context)) {
+          ret.add(new BatchResultImpl(result));
+        }
+      } else {
+        ret.addAll(super.batch(operations.subList(i, end)));
       }
       i = end;
     }
