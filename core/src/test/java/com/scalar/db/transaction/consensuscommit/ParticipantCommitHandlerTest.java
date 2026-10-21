@@ -28,6 +28,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.CollationComparators;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.StorageInfoProvider;
@@ -163,15 +164,16 @@ class ParticipantCommitHandlerTest {
   }
 
   private Snapshot prepareSnapshot() {
-    return new Snapshot(ANY_ID, tableMetadataManager, new ParallelExecutor(config));
+    return new Snapshot(
+        ANY_ID, tableMetadataManager, new ParallelExecutor(config), CollationComparators.BINARY);
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
     Put put1 = preparePut1();
     Put put2 = preparePut2();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put1), put1);
-    snapshot.putIntoWriteSet(new Snapshot.Key(put2), put2);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put1, CollationComparators.BINARY), put1);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put2, CollationComparators.BINARY), put2);
     snapshot.putIntoGetSet(prepareGet(), Optional.empty());
     return snapshot;
   }
@@ -188,7 +190,7 @@ class ParticipantCommitHandlerTest {
   private Snapshot prepareSnapshotWithPut1() throws CrudException {
     Snapshot snapshot = prepareSnapshot();
     Put put = preparePut1();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
     return snapshot;
   }
 
@@ -196,8 +198,8 @@ class ParticipantCommitHandlerTest {
     Snapshot snapshot = prepareSnapshot();
     Put put = preparePut1();
     Delete delete = prepareDelete2();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, CollationComparators.BINARY), delete);
     return snapshot;
   }
 
@@ -252,12 +254,16 @@ class ParticipantCommitHandlerTest {
   // inserted a new record, which has no before image, and the delete removed an existing one,
   // which has a before image
   private void stubLatestRecordsPreparedByThisTransaction() throws ExecutionException {
-    when(storage.get(ConsensusCommitUtils.createGet(new Snapshot.Key(preparePut1()))))
+    when(storage.get(
+            ConsensusCommitUtils.createGet(
+                new Snapshot.Key(preparePut1(), CollationComparators.BINARY))))
         .thenReturn(
             Optional.of(
                 prepareRecordPreparedByThisTransaction(
                     ANY_TEXT_1, ANY_TEXT_2, TransactionState.PREPARED, false)));
-    when(storage.get(ConsensusCommitUtils.createGet(new Snapshot.Key(prepareDelete2()))))
+    when(storage.get(
+            ConsensusCommitUtils.createGet(
+                new Snapshot.Key(prepareDelete2(), CollationComparators.BINARY))))
         .thenReturn(
             Optional.of(
                 prepareRecordPreparedByThisTransaction(
@@ -685,7 +691,7 @@ class ParticipantCommitHandlerTest {
 
   private RecoveryExecutor.Result prepareRecoveryResult() {
     return new RecoveryExecutor.Result(
-        new Snapshot.Key(preparePut1()),
+        new Snapshot.Key(preparePut1(), CollationComparators.BINARY),
         Optional.empty(),
         CompletableFuture.completedFuture(null),
         true);
@@ -709,7 +715,7 @@ class ParticipantCommitHandlerTest {
     ArgumentCaptor<TransactionResult> captor = ArgumentCaptor.forClass(TransactionResult.class);
     verify(recoveryExecutor)
         .execute(
-            eq(new Snapshot.Key(preparePut1())),
+            eq(new Snapshot.Key(preparePut1(), CollationComparators.BINARY)),
             any(Get.class),
             captor.capture(),
             eq(ANY_ID),
@@ -811,7 +817,7 @@ class ParticipantCommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithPut1();
     snapshot.putIntoReadSet(
-        new Snapshot.Key(preparePut1()),
+        new Snapshot.Key(preparePut1(), CollationComparators.BINARY),
         Optional.of(
             new TransactionResult(
                 prepareRecordPreparedBy(
@@ -836,7 +842,7 @@ class ParticipantCommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshot();
     Delete delete = prepareDelete2();
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, CollationComparators.BINARY), delete);
     when(storage.get(any(Get.class)))
         .thenReturn(
             Optional.of(
@@ -859,7 +865,8 @@ class ParticipantCommitHandlerTest {
 
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    snapshot.putIntoReadSet(new Snapshot.Key(preparePut2()), Optional.empty());
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(preparePut2(), CollationComparators.BINARY), Optional.empty());
     when(storage.get(any(Get.class)))
         .thenReturn(Optional.of(prepareRecordBlockingWrite(TransactionState.PREPARED)));
     when(recoveryExecutor.execute(any(), any(), any(), any(), any()))
@@ -872,7 +879,7 @@ class ParticipantCommitHandlerTest {
     // Assert
     verify(recoveryExecutor)
         .execute(
-            eq(new Snapshot.Key(preparePut1())),
+            eq(new Snapshot.Key(preparePut1(), CollationComparators.BINARY)),
             any(Get.class),
             any(TransactionResult.class),
             eq(ANY_ID),
@@ -938,7 +945,7 @@ class ParticipantCommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     snapshot.putIntoReadSet(
-        new Snapshot.Key(preparePut2()),
+        new Snapshot.Key(preparePut2(), CollationComparators.BINARY),
         Optional.of(
             new TransactionResult(
                 prepareRecordPreparedBy(
@@ -956,11 +963,14 @@ class ParticipantCommitHandlerTest {
     assertThatThrownBy(() -> handler.onePhaseCommitRecords(context))
         .isInstanceOf(CommitConflictException.class);
 
-    verify(storage).get(ConsensusCommitUtils.createGet(new Snapshot.Key(preparePut1())));
+    verify(storage)
+        .get(
+            ConsensusCommitUtils.createGet(
+                new Snapshot.Key(preparePut1(), CollationComparators.BINARY)));
     verify(storage).get(any(Get.class));
     verify(recoveryExecutor)
         .execute(
-            eq(new Snapshot.Key(preparePut1())),
+            eq(new Snapshot.Key(preparePut1(), CollationComparators.BINARY)),
             any(Get.class),
             any(TransactionResult.class),
             eq(ANY_ID),
@@ -973,7 +983,7 @@ class ParticipantCommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithPut1();
     snapshot.putIntoReadSet(
-        new Snapshot.Key(preparePut1()),
+        new Snapshot.Key(preparePut1(), CollationComparators.BINARY),
         Optional.of(
             new TransactionResult(
                 prepareRecordPreparedBy(
@@ -1059,8 +1069,9 @@ class ParticipantCommitHandlerTest {
             .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
             .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2))
             .build();
-    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
-    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.empty());
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete, CollationComparators.BINARY), delete);
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(delete, CollationComparators.BINARY), Optional.empty());
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert
