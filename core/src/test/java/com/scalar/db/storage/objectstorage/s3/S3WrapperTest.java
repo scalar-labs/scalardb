@@ -39,6 +39,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
@@ -682,6 +683,50 @@ public class S3WrapperTest {
 
     // Assert
     verify(client, org.mockito.Mockito.never()).deleteObjects(any(DeleteObjectsRequest.class));
+  }
+
+  @Test
+  public void
+      deleteByPrefix_DeletionFailedForSomeObjects_ShouldThrowObjectStorageWrapperException() {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+
+    S3Object s3Object1 = mock(S3Object.class);
+    S3Object s3Object2 = mock(S3Object.class);
+    when(s3Object1.key()).thenReturn(objectKey1);
+    when(s3Object2.key()).thenReturn(objectKey2);
+
+    ListObjectsV2Response response = mock(ListObjectsV2Response.class);
+    when(response.contents()).thenReturn(Arrays.asList(s3Object1, s3Object2));
+
+    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
+    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
+
+    @SuppressWarnings("unchecked")
+    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
+    when(paginator.subscribe(consumer))
+        .thenAnswer(
+            invocation -> {
+              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
+              actualConsumer.accept(response);
+              return CompletableFuture.completedFuture(null);
+            });
+
+    // The request succeeds, but the deletion of object2 fails
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(deleteObjectsResponse.hasErrors()).thenReturn(true);
+    when(deleteObjectsResponse.errors())
+        .thenReturn(
+            Collections.singletonList(
+                S3Error.builder().key(objectKey2).code("SlowDown").message("Any Error").build()));
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasMessageContaining(objectKey2);
   }
 
   @Test
