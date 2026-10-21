@@ -127,6 +127,13 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       case CHAR:
       case VARCHAR:
       case CLOB:
+        // GRAPHIC and VARGRAPHIC are ordered by UTF-16 code unit, which breaks the code point order
+        // of TEXT
+        if (typeName.equalsIgnoreCase("GRAPHIC") || typeName.equalsIgnoreCase("VARGRAPHIC")) {
+          throw new IllegalArgumentException(
+              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                  typeName, columnDescription));
+        }
         return DataType.TEXT;
       case BINARY:
       case VARBINARY:

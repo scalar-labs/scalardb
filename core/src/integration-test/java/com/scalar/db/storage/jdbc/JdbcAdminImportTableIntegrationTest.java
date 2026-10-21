@@ -166,7 +166,7 @@ public class JdbcAdminImportTableIntegrationTest
         for (String column : metadata.getColumnNames()) {
           if (!metadata.getPartitionKeyNames().contains(column)
               && !metadata.getClusteringKeyNames().contains(column)) {
-            if (Objects.equals(column, "col16")) {
+            if (Objects.equals(column, "col14")) {
               // Conversion from IMAGE to VARCHAR(8000) is not supported in SQL Server engine
               continue;
             }
@@ -180,7 +180,7 @@ public class JdbcAdminImportTableIntegrationTest
         for (String column : metadata.getColumnNames()) {
           if (!metadata.getPartitionKeyNames().contains(column)
               && !metadata.getClusteringKeyNames().contains(column)) {
-            if (Objects.equals(column, "col16")) {
+            if (Objects.equals(column, "col14")) {
               continue;
             }
             assertThat(newMetadata.getColumnDataType(column)).isEqualTo(DataType.TEXT);
