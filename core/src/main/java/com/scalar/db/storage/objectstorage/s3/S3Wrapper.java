@@ -12,6 +12,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -25,11 +27,13 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 
@@ -280,6 +284,11 @@ public class S3Wrapper implements ObjectStorageWrapper {
   @Override
   public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
     try {
+      // The DeleteObjects API reports the failure of each object in the response instead of
+      // failing the request, so the errors are counted to check them after the deletion. Only the
+      // first error is kept so as not to hold all the errors in memory
+      AtomicInteger errorCount = new AtomicInteger();
+      AtomicReference<S3Error> firstError = new AtomicReference<>();
       client
           .listObjectsV2Paginator(
               ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).build())
@@ -298,17 +307,30 @@ public class S3Wrapper implements ObjectStorageWrapper {
                   for (int i = 0; i < pageObjects.size(); i += BATCH_DELETE_SIZE_LIMIT) {
                     int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, pageObjects.size());
                     List<ObjectIdentifier> batch = pageObjects.subList(i, endIndex);
-                    client
-                        .deleteObjects(
-                            DeleteObjectsRequest.builder()
-                                .bucket(bucket)
-                                .delete(Delete.builder().objects(batch).build())
-                                .build())
-                        .join();
+                    DeleteObjectsResponse deleteResponse =
+                        client
+                            .deleteObjects(
+                                DeleteObjectsRequest.builder()
+                                    .bucket(bucket)
+                                    .delete(Delete.builder().objects(batch).build())
+                                    .build())
+                            .join();
+                    if (deleteResponse.hasErrors() && !deleteResponse.errors().isEmpty()) {
+                      errorCount.addAndGet(deleteResponse.errors().size());
+                      firstError.compareAndSet(null, deleteResponse.errors().get(0));
+                    }
                   }
                 }
               })
           .join();
+      if (errorCount.get() > 0) {
+        throw new ObjectStorageWrapperException(
+            String.format(
+                "Failed to delete the objects with prefix '%s' (%d failed). First error: %s",
+                prefix, errorCount.get(), firstError.get()));
+      }
+    } catch (ObjectStorageWrapperException e) {
+      throw e;
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(
           String.format("Failed to delete the objects with prefix '%s'", prefix), e);

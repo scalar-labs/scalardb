@@ -519,6 +519,39 @@ public class CloudStorageWrapperTest {
   }
 
   @Test
+  public void deleteByPrefix_DeletionInBatchFailed_ShouldThrowObjectStorageWrapperException() {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+
+    Blob blob1 = mock(Blob.class);
+    Blob blob2 = mock(Blob.class);
+    when(blob1.getName()).thenReturn(objectKey1);
+    when(blob2.getName()).thenReturn(objectKey2);
+
+    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2));
+    when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+
+    StorageBatch batch = mock(StorageBatch.class);
+    when(storage.batch()).thenReturn(batch);
+    @SuppressWarnings("unchecked")
+    StorageBatchResult<Boolean> batchResult1 = mock(StorageBatchResult.class);
+    @SuppressWarnings("unchecked")
+    StorageBatchResult<Boolean> batchResult2 = mock(StorageBatchResult.class);
+    // The deletion of object1 succeeds, but the deletion of object2 fails
+    when(batchResult1.get()).thenReturn(true);
+    StorageException toThrow = new StorageException(429, "Rate limit exceeded");
+    when(batchResult2.get()).thenThrow(toThrow);
+    doReturn(batchResult1).when(batch).delete(BlobId.of(BUCKET, objectKey1));
+    doReturn(batchResult2).when(batch).delete(BlobId.of(BUCKET, objectKey2));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
   public void deleteByPrefix_NoObjectsWithPrefix_ShouldDoNothing() throws Exception {
     // Arrange
     @SuppressWarnings("unchecked")
