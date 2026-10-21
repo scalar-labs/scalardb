@@ -237,10 +237,18 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   private void dropTables() throws ExecutionException {
-    consensusCommitAdmin.dropTable(namespace1, TABLE_1);
+    dropTable(namespace1, TABLE_1);
     consensusCommitAdmin.dropNamespace(namespace1);
-    consensusCommitAdmin.dropTable(namespace2, TABLE_2);
+    dropTable(namespace2, TABLE_2);
     consensusCommitAdmin.dropNamespace(namespace2);
+    dropCoordinatorTables();
+  }
+
+  protected void dropTable(String namespace, String table) throws ExecutionException {
+    consensusCommitAdmin.dropTable(namespace, table);
+  }
+
+  protected void dropCoordinatorTables() throws ExecutionException {
     consensusCommitAdmin.dropCoordinatorTables();
   }
 

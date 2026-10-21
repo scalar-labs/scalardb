@@ -1,34 +1,33 @@
 package com.scalar.db.storage.objectstorage;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 
 public class ConsensusCommitIntegrationTestWithObjectStorage
     extends ConsensusCommitIntegrationTestBase {
 
   @Override
-  @BeforeEach
-  public void setUp() throws Exception {
-    super.setUp();
-    if (ObjectStorageEnv.isCloudStorage()) {
-      // Sleep to mitigate rate limit errors
-      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
-    }
+  protected void truncateTable(String namespace, String table) throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnRateLimit(() -> super.truncateTable(namespace, table));
   }
 
-  @AfterEach
-  void tearDown() {
-    if (ObjectStorageEnv.isCloudStorage()) {
-      // Sleep to mitigate rate limit errors
-      Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
-    }
+  @Override
+  protected void truncateCoordinatorTables() throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnRateLimit(super::truncateCoordinatorTables);
+  }
+
+  @Override
+  protected void dropTable(String namespace, String table) throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnRateLimit(() -> super.dropTable(namespace, table));
+  }
+
+  @Override
+  protected void dropCoordinatorTables() throws ExecutionException {
+    ObjectStorageTestUtils.dropCoordinatorTablesWithRetryOnRateLimit(getProperties(getTestName()));
   }
 
   @Override

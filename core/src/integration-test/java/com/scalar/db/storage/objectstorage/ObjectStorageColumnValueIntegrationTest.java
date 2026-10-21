@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.DistributedStorageColumnValueIntegrationTestBase;
 import com.scalar.db.api.Put;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
@@ -18,6 +19,11 @@ public class ObjectStorageColumnValueIntegrationTest
   @Override
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);
+  }
+
+  @Override
+  protected void truncateTable() throws ExecutionException {
+    ObjectStorageTestUtils.executeWithRetryOnRateLimit(super::truncateTable);
   }
 
   @Override
