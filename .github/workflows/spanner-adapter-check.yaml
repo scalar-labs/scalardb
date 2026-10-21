@@ -162,27 +162,12 @@ jobs:
       - uses: actions/checkout@v7
         if: steps.should-run.outputs.skip == 'false'
 
-      # Use the binary emulator instead of Docker image for a slight performance gain
-      - name: Install Spanner emulator
-        if: steps.should-run.outputs.skip == 'false'
-        run: |
-          echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main" \
-            | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
-          curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-            | sudo tee /usr/share/keyrings/cloud.google.asc > /dev/null
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq google-cloud-cli-spanner-emulator
-
+      # Emulator versions before 1.5.59 slow down every read the longer the process runs
+      # (GoogleCloudPlatform/cloud-spanner-emulator#389), which pushes the long test groups past the
+      # group commit abort timeout
       - name: Start Spanner emulator
         if: steps.should-run.outputs.skip == 'false'
-        run: |
-          EMULATOR_DIR=/usr/lib/google-cloud-sdk/bin/cloud_spanner_emulator
-          ${EMULATOR_DIR}/gateway_main \
-            --hostname 0.0.0.0 \
-            --grpc_port 9010 \
-            --http_port 9020 \
-            --grpc_binary ${EMULATOR_DIR}/emulator_main \
-            &
+        run: docker run -d -p 9010:9010 -p 9020:9020 gcr.io/cloud-spanner-emulator/emulator:1.5.59
 
       - name: Wait for Spanner emulator to be ready
         if: steps.should-run.outputs.skip == 'false'
