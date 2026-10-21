@@ -185,7 +185,7 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "CLOB", 1048576, 0), DataType.TEXT);
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CHAR, "GRAPHIC", 3, 0), null);
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.VARCHAR, "VARGRAPHIC", 512, 0), null);
-    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "DCLOB", 512, 10), DataType.TEXT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "DBCLOB", 512, 10), null);
     // Spanner JDBC reports text columns as NVARCHAR; jsonb is rejected.
     DATA_TYPE_MAP.get(SPANNER).put(new Column(JDBCType.NVARCHAR, "text"), DataType.TEXT);
 
