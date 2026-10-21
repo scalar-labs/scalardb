@@ -201,19 +201,48 @@ public class ParallelExecutor {
       int workerCount =
           Math.min(tasks.size(), Math.max(1, config.getParallelBatchGetMaxConcurrencyPerBatch()));
       AtomicInteger next = new AtomicInteger();
-      List<ParallelExecutorTask> workers = new ArrayList<>(workerCount);
-      for (int i = 0; i < workerCount; i++) {
-        workers.add(
-            () -> {
-              for (int j = next.getAndIncrement(); j < tasks.size(); j = next.getAndIncrement()) {
-                tasks.get(j).run();
-              }
-            });
+      ParallelExecutorTask worker =
+          () -> {
+            for (int j = next.getAndIncrement(); j < tasks.size(); j = next.getAndIncrement()) {
+              tasks.get(j).run();
+            }
+          };
+
+      // The calling thread runs one of the workers, so that a batch hands one worker fewer to the
+      // pool
+      assert batchGetExecutorService != null;
+      List<Future<Void>> futures = new ArrayList<>(workerCount - 1);
+      for (int i = 1; i < workerCount; i++) {
+        futures.add(
+            batchGetExecutorService.submit(
+                () -> {
+                  worker.run();
+                  return null;
+                }));
       }
 
-      assert batchGetExecutorService != null;
-      executeTasksInParallel(
-          batchGetExecutorService, workers, false, "executeBatchGets", transactionId);
+      Throwable throwable = null;
+      try {
+        worker.run();
+      } catch (Throwable t) {
+        throwable = t;
+      }
+
+      // Wait for the other workers even on failure, since they use the transaction context too
+      for (Future<Void> future : futures) {
+        try {
+          Uninterruptibles.getUninterruptibly(future);
+        } catch (java.util.concurrent.ExecutionException e) {
+          if (throwable == null) {
+            throwable = e.getCause();
+          }
+        }
+      }
+
+      if (throwable != null) {
+        logger.warn("Failed to run executeBatchGets tasks. Transaction ID: {}", transactionId);
+        rethrow(throwable);
+      }
     } catch (ExecutionException | ValidationConflictException | CrudException e) {
       throw new AssertionError(
           "Tasks for batch gets should not throw ExecutionException, ValidationConflictException, and CrudException",

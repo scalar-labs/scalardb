@@ -530,7 +530,7 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      executeBatchGets_ParallelBatchGetEnabled_ShouldRunAllTasksOnBatchGetExecutorWithinConcurrencyCap()
+      executeBatchGets_ParallelBatchGetEnabled_ShouldRunAllTasksOnCallerAndBatchGetExecutorWithinConcurrencyCap()
           throws Exception {
     // Arrange
     when(config.isParallelBatchGetEnabled()).thenReturn(true);
@@ -556,7 +556,7 @@ public class ParallelExecutorTest {
       // Assert
       assertThat(completed.get()).isEqualTo(6);
       assertThat(maxRunning.get()).isEqualTo(2);
-      verify(batchGetExecutorService, times(2)).execute(any());
+      verify(batchGetExecutorService, times(1)).execute(any());
       verify(parallelExecutorService, never()).execute(any());
     } finally {
       batchGetExecutorService.shutdown();
