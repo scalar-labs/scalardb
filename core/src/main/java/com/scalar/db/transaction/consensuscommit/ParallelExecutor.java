@@ -36,7 +36,8 @@ public class ParallelExecutor {
         || config.isParallelValidationEnabled()
         || config.isParallelCommitEnabled()
         || config.isParallelRollbackEnabled()
-        || config.isParallelImplicitPreReadEnabled()) {
+        || config.isParallelImplicitPreReadEnabled()
+        || config.isParallelBatchGetEnabled()) {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
@@ -147,6 +148,18 @@ public class ParallelExecutor {
     } catch (ExecutionException | ValidationConflictException e) {
       throw new AssertionError(
           "Tasks for implicit pre-read should not throw ExecutionException and ValidationConflictException",
+          e);
+    }
+  }
+
+  public void executeBatchGets(List<ParallelExecutorTask> tasks, String transactionId)
+      throws CrudException {
+    try {
+      executeTasks(
+          tasks, config.isParallelBatchGetEnabled(), true, "executeBatchGets", transactionId);
+    } catch (ExecutionException | ValidationConflictException e) {
+      throw new AssertionError(
+          "Tasks for batch gets should not throw ExecutionException and ValidationConflictException",
           e);
     }
   }

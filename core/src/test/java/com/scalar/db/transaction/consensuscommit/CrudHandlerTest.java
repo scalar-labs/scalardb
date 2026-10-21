@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -808,6 +809,51 @@ public class CrudHandlerTest {
     assertThat(results1).isEqualTo(results2);
     verify(storage, never()).get(get);
     verify(storage).get(getForStorage);
+  }
+
+  @Test
+  public void batchGet_GetsGiven_ShouldReadDistinctRecordsInParallelAndTheOthersOneByOne()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    Get get3 = prepareGet(); // The same record as get1
+    Get get4 = prepareGetWithIndex();
+    when(storage.get(toGetForStorageFrom(get1)))
+        .thenReturn(Optional.of(prepareResult(TransactionState.COMMITTED)));
+    when(storage.get(toGetForStorageFrom(get2)))
+        .thenReturn(Optional.of(prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED)));
+    snapshot =
+        new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor, CollationComparators.BINARY);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
+              parallelTasks.addAll(tasks);
+              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
+                task.run();
+              }
+              return null;
+            })
+        .when(parallelExecutor)
+        .executeBatchGets(any(), eq(ANY_ID_1));
+
+    // Act
+    List<Optional<Result>> results =
+        handler.batchGet(Arrays.asList(get1, get2, get3, get4), context);
+
+    // Assert
+    assertThat(parallelTasks).hasSize(2);
+    assertThat(results).hasSize(4);
+    assertThat(results.get(0)).isPresent();
+    assertThat(results.get(1)).isPresent();
+    assertThat(results.get(0)).isNotEqualTo(results.get(1));
+    assertThat(results.get(2)).isEqualTo(results.get(0));
+    assertThat(results.get(3)).isEmpty();
+    verify(storage).get(toGetForStorageFrom(get1));
+    verify(storage).get(toGetForStorageFrom(get2));
   }
 
   @Test

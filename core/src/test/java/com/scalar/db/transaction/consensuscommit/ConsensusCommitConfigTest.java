@@ -31,6 +31,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isCoordinatorWriteOmissionOnReadOnlyEnabled()).isTrue();
     assertThat(config.isOnePhaseCommitEnabled()).isFalse();
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
+    assertThat(config.isParallelBatchGetEnabled()).isTrue();
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
     assertThat(config.isIndexEventuallyConsistentReadEnabled()).isFalse();
   }
@@ -197,6 +198,19 @@ public class ConsensusCommitConfigTest {
 
     // Assert
     assertThat(config.isOnePhaseCommitEnabled()).isTrue();
+  }
+
+  @Test
+  public void constructor_PropertiesWithParallelBatchGetEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(ConsensusCommitConfig.PARALLEL_BATCH_GET, "false");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isParallelBatchGetEnabled()).isFalse();
   }
 
   @Test

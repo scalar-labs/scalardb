@@ -30,6 +30,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -126,6 +127,49 @@ public class CrudHandler {
           .map(
               r -> new FilteredResult(r, get.getProjections(), metadata, isIncludeMetadataEnabled));
     }
+  }
+
+  /**
+   * Executes the Gets as {@link #get(Get, TransactionContext)} would one by one, but runs the Gets
+   * on distinct records in parallel. Gets of the same transaction can run concurrently because they
+   * only add to the read set and the get set, which are concurrent maps, and to the recovery
+   * results, a concurrent list, while the write set and the delete set stay unchanged. Two Gets on
+   * the same record, however, would race on the read set, so a Get on a record that another Get of
+   * the list already reads, and a Get with index, whose record is unknown until it is read, run one
+   * by one after the others.
+   *
+   * @param gets the Gets
+   * @param context the transaction context
+   * @return the results of the Gets, in the order of the Gets
+   * @throws CrudException if any of the Gets fails
+   */
+  public List<Optional<Result>> batchGet(List<Get> gets, TransactionContext context)
+      throws CrudException {
+    @SuppressWarnings("unchecked")
+    Optional<Result>[] results = new Optional[gets.size()];
+    List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
+    List<Integer> serial = new ArrayList<>();
+    Set<Snapshot.Key> keys = new HashSet<>();
+    for (int i = 0; i < gets.size(); i++) {
+      Get get = gets.get(i);
+      TableMetadata metadata =
+          getTransactionTableMetadata(get, context.transactionId).getTableMetadata();
+      if (!ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)
+          && keys.add(new Snapshot.Key(get, collationComparator))) {
+        int index = i;
+        tasks.add(() -> results[index] = get(get, context));
+      } else {
+        serial.add(i);
+      }
+    }
+
+    if (!tasks.isEmpty()) {
+      parallelExecutor.executeBatchGets(tasks, context.transactionId);
+    }
+    for (int i : serial) {
+      results[i] = get(gets.get(i), context);
+    }
+    return Arrays.asList(results);
   }
 
   // Only for a Get with index, the argument `key` is null
