@@ -14,6 +14,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -524,6 +526,41 @@ public class ParallelExecutorTest {
     // Act Assert
     assertThatThrownBy(() -> parallelExecutor.executeImplicitPreRead(tasks, TX_ID))
         .isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void
+      executeBatchGets_ParallelBatchGetEnabled_ShouldRunAllTasksOnBatchGetExecutorWithinConcurrencyCap()
+          throws Exception {
+    // Arrange
+    when(config.isParallelBatchGetEnabled()).thenReturn(true);
+    when(config.getParallelBatchGetMaxConcurrencyPerBatch()).thenReturn(2);
+    ExecutorService batchGetExecutorService = spy(Executors.newFixedThreadPool(4));
+    parallelExecutor =
+        new ParallelExecutor(config, parallelExecutorService, batchGetExecutorService);
+    AtomicInteger running = new AtomicInteger();
+    AtomicInteger maxRunning = new AtomicInteger();
+    AtomicInteger completed = new AtomicInteger();
+    ParallelExecutorTask sleepingTask =
+        () -> {
+          maxRunning.accumulateAndGet(running.incrementAndGet(), Math::max);
+          Uninterruptibles.sleepUninterruptibly(50, TimeUnit.MILLISECONDS);
+          running.decrementAndGet();
+          completed.incrementAndGet();
+        };
+
+    try {
+      // Act
+      parallelExecutor.executeBatchGets(Collections.nCopies(6, sleepingTask), TX_ID);
+
+      // Assert
+      assertThat(completed.get()).isEqualTo(6);
+      assertThat(maxRunning.get()).isEqualTo(2);
+      verify(batchGetExecutorService, times(2)).execute(any());
+      verify(parallelExecutorService, never()).execute(any());
+    } finally {
+      batchGetExecutorService.shutdown();
+    }
   }
 
   @Test

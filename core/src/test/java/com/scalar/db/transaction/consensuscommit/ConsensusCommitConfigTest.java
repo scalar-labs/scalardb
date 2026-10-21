@@ -32,6 +32,10 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isOnePhaseCommitEnabled()).isFalse();
     assertThat(config.isParallelImplicitPreReadEnabled()).isTrue();
     assertThat(config.isParallelBatchGetEnabled()).isTrue();
+    assertThat(config.getParallelBatchGetExecutorCount())
+        .isEqualTo(ConsensusCommitConfig.DEFAULT_PARALLEL_EXECUTOR_COUNT);
+    assertThat(config.getParallelBatchGetMaxConcurrencyPerBatch())
+        .isEqualTo(ConsensusCommitConfig.DEFAULT_PARALLEL_BATCH_GET_MAX_CONCURRENCY_PER_BATCH);
     assertThat(config.isIncludeMetadataEnabled()).isFalse();
     assertThat(config.isIndexEventuallyConsistentReadEnabled()).isFalse();
   }
@@ -201,16 +205,20 @@ public class ConsensusCommitConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithParallelBatchGetEnabledGiven_ShouldLoadProperly() {
+  public void constructor_PropertiesWithParallelBatchGetGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ConsensusCommitConfig.PARALLEL_BATCH_GET, "false");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_BATCH_GET_EXECUTOR_COUNT, "32");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_BATCH_GET_MAX_CONCURRENCY_PER_BATCH, "4");
 
     // Act
     ConsensusCommitConfig config = new ConsensusCommitConfig(new DatabaseConfig(props));
 
     // Assert
     assertThat(config.isParallelBatchGetEnabled()).isFalse();
+    assertThat(config.getParallelBatchGetExecutorCount()).isEqualTo(32);
+    assertThat(config.getParallelBatchGetMaxConcurrencyPerBatch()).isEqualTo(4);
   }
 
   @Test
