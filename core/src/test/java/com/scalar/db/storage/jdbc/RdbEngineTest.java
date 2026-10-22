@@ -177,8 +177,8 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.VARCHAR, "varchar"), DataType.TEXT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NCHAR, "nchar"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NVARCHAR, "nvarchar"), null);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGVARCHAR, "text"), DataType.TEXT);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "ntext"), DataType.TEXT);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGVARCHAR, "text"), null);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "ntext"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "xml"), null);
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CHAR, "CHAR", 3, 0), DataType.TEXT);
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.VARCHAR, "VARCHAR", 512, 0), DataType.TEXT);
