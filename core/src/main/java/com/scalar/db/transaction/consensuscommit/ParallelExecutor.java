@@ -7,12 +7,14 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.util.ScalarDbUtils;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -36,7 +38,8 @@ public class ParallelExecutor {
         || config.isParallelValidationEnabled()
         || config.isParallelCommitEnabled()
         || config.isParallelRollbackEnabled()
-        || config.isParallelImplicitPreReadEnabled()) {
+        || config.isParallelImplicitPreReadEnabled()
+        || config.isParallelBatchGetEnabled()) {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
@@ -147,6 +150,76 @@ public class ParallelExecutor {
     } catch (ExecutionException | ValidationConflictException e) {
       throw new AssertionError(
           "Tasks for implicit pre-read should not throw ExecutionException and ValidationConflictException",
+          e);
+    }
+  }
+
+  public boolean isParallelBatchGetEnabled() {
+    return config.isParallelBatchGetEnabled();
+  }
+
+  /**
+   * Runs the tasks of a batch Get on at most {@link
+   * ConsensusCommitConfig#getParallelBatchGetMaxConcurrencyPerBatch()} threads, the calling thread
+   * and threads of the parallel executor, each of which runs the next task not started yet until
+   * none is left. This waits for all the tasks even if some of them fail, so that none of them is
+   * left running on the transaction after this returns.
+   */
+  public void executeBatchGets(List<ParallelExecutorTask> tasks, String transactionId) {
+    try {
+      if (tasks.size() == 1 || !config.isParallelBatchGetEnabled()) {
+        executeTasksSerially(tasks, false);
+        return;
+      }
+
+      int workerCount =
+          Math.min(tasks.size(), Math.max(1, config.getParallelBatchGetMaxConcurrencyPerBatch()));
+      AtomicInteger next = new AtomicInteger();
+      ParallelExecutorTask worker =
+          () -> {
+            for (int j = next.getAndIncrement(); j < tasks.size(); j = next.getAndIncrement()) {
+              tasks.get(j).run();
+            }
+          };
+
+      // The calling thread runs one of the workers, so that a batch hands one worker fewer to the
+      // pool
+      assert parallelExecutorService != null;
+      List<Future<Void>> futures = new ArrayList<>(workerCount - 1);
+      for (int i = 1; i < workerCount; i++) {
+        futures.add(
+            parallelExecutorService.submit(
+                () -> {
+                  worker.run();
+                  return null;
+                }));
+      }
+
+      Throwable throwable = null;
+      try {
+        worker.run();
+      } catch (Throwable t) {
+        throwable = t;
+      }
+
+      // Wait for the other workers even on failure, since they use the transaction context too
+      for (Future<Void> future : futures) {
+        try {
+          Uninterruptibles.getUninterruptibly(future);
+        } catch (java.util.concurrent.ExecutionException e) {
+          if (throwable == null) {
+            throwable = e.getCause();
+          }
+        }
+      }
+
+      if (throwable != null) {
+        logger.warn("Failed to run executeBatchGets tasks. Transaction ID: {}", transactionId);
+        rethrow(throwable);
+      }
+    } catch (ExecutionException | ValidationConflictException | CrudException e) {
+      throw new AssertionError(
+          "Tasks for batch gets should not throw ExecutionException, ValidationConflictException, and CrudException",
           e);
     }
   }
