@@ -111,6 +111,11 @@ jobs:
                 JdbcAdminCaseSensitivityIntegrationTest
                 JdbcSchemaLoaderIntegrationTest
                 JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
+                RdbEngineStrategyExceptionIntegrationTest
+                TwoPhaseCommitBackedConsensusCommitIntegrationTestWithJdbcDatabase
+                TwoPhaseCommitBackedConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
+                DistributedTransactionBackedConsensusCommitGlobalTransactionTestWithJdbcDatabase
+                TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestWithJdbcDatabase
 
           - group_commit_enabled: 'true'
             test_group:
