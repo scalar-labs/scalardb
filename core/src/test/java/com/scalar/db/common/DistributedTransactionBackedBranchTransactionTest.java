@@ -68,6 +68,14 @@ class DistributedTransactionBackedBranchTransactionTest {
   }
 
   @Test
+  void getGlobalTransactionId_ShouldReturnIdOfTransaction() {
+    when(transaction.getId()).thenReturn("tx-1");
+
+    assertThat(branch.getGlobalTransactionId()).isEqualTo("tx-1");
+    verify(transaction).getId();
+  }
+
+  @Test
   void get_ShouldDelegateToTransaction() throws Exception {
     Get get = get();
     when(transaction.get(get)).thenReturn(Optional.of(result));
