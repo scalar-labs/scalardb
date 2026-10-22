@@ -529,8 +529,10 @@ public class CloudStorageWrapperTest {
     when(blob1.getName()).thenReturn(objectKey1);
     when(blob2.getName()).thenReturn(objectKey2);
 
-    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2));
+    @SuppressWarnings("unchecked")
+    Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
