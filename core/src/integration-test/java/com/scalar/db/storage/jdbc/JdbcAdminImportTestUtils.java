@@ -111,12 +111,14 @@ public class JdbcAdminImportTestUtils {
           "hierarchyid",
           "money",
           "nchar(3)",
+          "ntext",
           "numeric(8,2)",
           "nvarchar(512)",
           "nvarchar(max)",
           "rowversion",
           "smallmoney",
           "sql_variant",
+          "text",
           "uniqueidentifier",
           "xml",
           "geometry",
@@ -461,17 +463,15 @@ public class JdbcAdminImportTestUtils {
     columns.put("col07", "float");
     columns.put("col08", "char(3)");
     columns.put("col09", "varchar(512)");
-    columns.put("col10", "text");
-    columns.put("col11", "ntext");
-    columns.put("col12", "binary(5)");
-    columns.put("col13", "varbinary(5)");
-    columns.put("col14", "image");
-    columns.put("col15", "date");
-    columns.put("col16", "time");
-    columns.put("col17", "datetime");
-    columns.put("col18", "datetime2");
-    columns.put("col19", "smalldatetime");
-    columns.put("col20", "datetimeoffset");
+    columns.put("col10", "binary(5)");
+    columns.put("col11", "varbinary(5)");
+    columns.put("col12", "image");
+    columns.put("col13", "date");
+    columns.put("col14", "time");
+    columns.put("col15", "datetime");
+    columns.put("col16", "datetime2");
+    columns.put("col17", "smalldatetime");
+    columns.put("col18", "datetimeoffset");
 
     return columns;
   }
@@ -489,17 +489,15 @@ public class JdbcAdminImportTestUtils {
         .addColumn("col07", DataType.DOUBLE)
         .addColumn("col08", DataType.TEXT)
         .addColumn("col09", DataType.TEXT)
-        .addColumn("col10", DataType.TEXT)
-        .addColumn("col11", DataType.TEXT)
+        .addColumn("col10", DataType.BLOB)
+        .addColumn("col11", DataType.BLOB)
         .addColumn("col12", DataType.BLOB)
-        .addColumn("col13", DataType.BLOB)
-        .addColumn("col14", DataType.BLOB)
-        .addColumn("col15", DataType.DATE)
-        .addColumn("col16", DataType.TIME)
+        .addColumn("col13", DataType.DATE)
+        .addColumn("col14", DataType.TIME)
+        .addColumn("col15", DataType.TIMESTAMP)
+        .addColumn("col16", DataType.TIMESTAMP)
         .addColumn("col17", DataType.TIMESTAMP)
-        .addColumn("col18", DataType.TIMESTAMP)
-        .addColumn("col19", DataType.TIMESTAMP)
-        .addColumn("col20", DataType.TIMESTAMPTZ)
+        .addColumn("col18", DataType.TIMESTAMPTZ)
         .addPartitionKey("pk1")
         .addPartitionKey("pk2")
         .build();
@@ -508,8 +506,8 @@ public class JdbcAdminImportTestUtils {
   private Map<String, Column<?>> prepareInsertColumnsForSqlServer(TableMetadata metadata) {
     List<Column<?>> customColumns =
         ImmutableList.of(
-            TimestampColumn.of("col17", LocalDateTime.of(1905, 10, 11, 8, 35, 14, 123_000_000)),
-            TimestampColumn.of("col19", LocalDateTime.of(1905, 10, 11, 8, 35)));
+            TimestampColumn.of("col15", LocalDateTime.of(1905, 10, 11, 8, 35, 14, 123_000_000)),
+            TimestampColumn.of("col17", LocalDateTime.of(1905, 10, 11, 8, 35)));
     return prepareInsertColumnsWithGenericAndCustomValues(metadata, customColumns);
   }
 
