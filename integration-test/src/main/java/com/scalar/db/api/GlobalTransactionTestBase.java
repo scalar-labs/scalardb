@@ -348,8 +348,8 @@ public abstract class GlobalTransactionTestBase {
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
 
     // Assert: every branch is keyed by the global transaction ID.
-    assertThat(branch1.getId()).isEqualTo(global.getId());
-    assertThat(branch2.getId()).isEqualTo(global.getId());
+    assertThat(branch1.getGlobalTransactionId()).isEqualTo(global.getId());
+    assertThat(branch2.getGlobalTransactionId()).isEqualTo(global.getId());
     branch1.end(BranchTransaction.Status.FAILURE);
     branch2.end(BranchTransaction.Status.FAILURE);
     global.rollback();
