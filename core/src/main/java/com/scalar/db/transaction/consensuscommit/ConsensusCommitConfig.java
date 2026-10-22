@@ -40,8 +40,6 @@ public class ConsensusCommitConfig {
   public static final String PARALLEL_IMPLICIT_PRE_READ =
       PREFIX + "parallel_implicit_pre_read.enabled";
   public static final String PARALLEL_BATCH_GET = PREFIX + "parallel_batch_get.enabled";
-  public static final String PARALLEL_BATCH_GET_EXECUTOR_COUNT =
-      PREFIX + "parallel_batch_get.executor_count";
   public static final String PARALLEL_BATCH_GET_MAX_CONCURRENCY_PER_BATCH =
       PREFIX + "parallel_batch_get.max_concurrency_per_batch";
   public static final String INCLUDE_METADATA_ENABLED = PREFIX + "include_metadata.enabled";
@@ -89,7 +87,6 @@ public class ConsensusCommitConfig {
   private final boolean onePhaseCommitEnabled;
   private final boolean parallelImplicitPreReadEnabled;
   private final boolean parallelBatchGetEnabled;
-  private final int parallelBatchGetExecutorCount;
   private final int parallelBatchGetMaxConcurrencyPerBatch;
   private final boolean includeMetadataEnabled;
   private final boolean indexEventuallyConsistentReadEnabled;
@@ -167,9 +164,6 @@ public class ConsensusCommitConfig {
     parallelImplicitPreReadEnabled = getBoolean(properties, PARALLEL_IMPLICIT_PRE_READ, true);
 
     parallelBatchGetEnabled = getBoolean(properties, PARALLEL_BATCH_GET, true);
-    // Use the thread count of the parallel executor for the batch Gets as default value
-    parallelBatchGetExecutorCount =
-        getInt(properties, PARALLEL_BATCH_GET_EXECUTOR_COUNT, parallelExecutorCount);
     parallelBatchGetMaxConcurrencyPerBatch =
         getInt(
             properties,
@@ -273,10 +267,6 @@ public class ConsensusCommitConfig {
 
   public boolean isParallelBatchGetEnabled() {
     return parallelBatchGetEnabled;
-  }
-
-  public int getParallelBatchGetExecutorCount() {
-    return parallelBatchGetExecutorCount;
   }
 
   public int getParallelBatchGetMaxConcurrencyPerBatch() {

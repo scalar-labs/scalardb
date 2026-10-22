@@ -530,14 +530,11 @@ public class ParallelExecutorTest {
 
   @Test
   public void
-      executeBatchGets_ParallelBatchGetEnabled_ShouldRunAllTasksOnCallerAndBatchGetExecutorWithinConcurrencyCap()
+      executeBatchGets_ParallelBatchGetEnabled_ShouldRunAllTasksOnCallerAndParallelExecutorWithinConcurrencyCap()
           throws Exception {
     // Arrange
     when(config.isParallelBatchGetEnabled()).thenReturn(true);
     when(config.getParallelBatchGetMaxConcurrencyPerBatch()).thenReturn(2);
-    ExecutorService batchGetExecutorService = spy(Executors.newFixedThreadPool(4));
-    parallelExecutor =
-        new ParallelExecutor(config, parallelExecutorService, batchGetExecutorService);
     AtomicInteger running = new AtomicInteger();
     AtomicInteger maxRunning = new AtomicInteger();
     AtomicInteger completed = new AtomicInteger();
@@ -549,18 +546,13 @@ public class ParallelExecutorTest {
           completed.incrementAndGet();
         };
 
-    try {
-      // Act
-      parallelExecutor.executeBatchGets(Collections.nCopies(6, sleepingTask), TX_ID);
+    // Act
+    parallelExecutor.executeBatchGets(Collections.nCopies(6, sleepingTask), TX_ID);
 
-      // Assert
-      assertThat(completed.get()).isEqualTo(6);
-      assertThat(maxRunning.get()).isEqualTo(2);
-      verify(batchGetExecutorService, times(1)).execute(any());
-      verify(parallelExecutorService, never()).execute(any());
-    } finally {
-      batchGetExecutorService.shutdown();
-    }
+    // Assert
+    assertThat(completed.get()).isEqualTo(6);
+    assertThat(maxRunning.get()).isEqualTo(2);
+    verify(parallelExecutorService, times(1)).execute(any());
   }
 
   @Test

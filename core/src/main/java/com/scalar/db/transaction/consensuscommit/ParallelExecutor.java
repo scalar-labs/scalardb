@@ -8,7 +8,6 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -33,17 +32,14 @@ public class ParallelExecutor {
   private final ConsensusCommitConfig config;
   @Nullable private final ExecutorService parallelExecutorService;
 
-  // The batch Gets run on their own threads, so that the tasks of a large batch do not queue up in
-  // front of the tasks of the transactions committing in the meantime
-  @Nullable private final ExecutorService batchGetExecutorService;
-
   public ParallelExecutor(ConsensusCommitConfig config) {
     this.config = config;
     if (config.isParallelPreparationEnabled()
         || config.isParallelValidationEnabled()
         || config.isParallelCommitEnabled()
         || config.isParallelRollbackEnabled()
-        || config.isParallelImplicitPreReadEnabled()) {
+        || config.isParallelImplicitPreReadEnabled()
+        || config.isParallelBatchGetEnabled()) {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
@@ -58,35 +54,13 @@ public class ParallelExecutor {
     } else {
       parallelExecutorService = null;
     }
-
-    if (config.isParallelBatchGetEnabled()) {
-      batchGetExecutorService =
-          Executors.newFixedThreadPool(
-              config.getParallelBatchGetExecutorCount(),
-              // Daemon threads for the same reason as the ones of the parallel executor above
-              new ThreadFactoryBuilder()
-                  .setNameFormat("parallel-batch-get-executor-%d")
-                  .setDaemon(true)
-                  .build());
-    } else {
-      batchGetExecutorService = null;
-    }
   }
 
   @VisibleForTesting
   ParallelExecutor(
       ConsensusCommitConfig config, @Nullable ExecutorService parallelExecutorService) {
-    this(config, parallelExecutorService, parallelExecutorService);
-  }
-
-  @VisibleForTesting
-  ParallelExecutor(
-      ConsensusCommitConfig config,
-      @Nullable ExecutorService parallelExecutorService,
-      @Nullable ExecutorService batchGetExecutorService) {
     this.config = config;
     this.parallelExecutorService = parallelExecutorService;
-    this.batchGetExecutorService = batchGetExecutorService;
   }
 
   public void prepareRecords(List<ParallelExecutorTask> tasks, String transactionId)
@@ -186,10 +160,10 @@ public class ParallelExecutor {
 
   /**
    * Runs the tasks of a batch Get on at most {@link
-   * ConsensusCommitConfig#getParallelBatchGetMaxConcurrencyPerBatch()} threads of the batch Get
-   * executor, each of which runs the next task not started yet until none is left. This waits for
-   * all the tasks even if some of them fail, so that none of them is left running on the
-   * transaction after this returns.
+   * ConsensusCommitConfig#getParallelBatchGetMaxConcurrencyPerBatch()} threads, the calling thread
+   * and threads of the parallel executor, each of which runs the next task not started yet until
+   * none is left. This waits for all the tasks even if some of them fail, so that none of them is
+   * left running on the transaction after this returns.
    */
   public void executeBatchGets(List<ParallelExecutorTask> tasks, String transactionId) {
     try {
@@ -210,11 +184,11 @@ public class ParallelExecutor {
 
       // The calling thread runs one of the workers, so that a batch hands one worker fewer to the
       // pool
-      assert batchGetExecutorService != null;
+      assert parallelExecutorService != null;
       List<Future<Void>> futures = new ArrayList<>(workerCount - 1);
       for (int i = 1; i < workerCount; i++) {
         futures.add(
-            batchGetExecutorService.submit(
+            parallelExecutorService.submit(
                 () -> {
                   worker.run();
                   return null;
@@ -265,21 +239,19 @@ public class ParallelExecutor {
     }
 
     if (parallel) {
-      assert parallelExecutorService != null;
-      executeTasksInParallel(parallelExecutorService, tasks, stopOnError, taskName, transactionId);
+      executeTasksInParallel(tasks, stopOnError, taskName, transactionId);
     } else {
       executeTasksSerially(tasks, stopOnError);
     }
   }
 
   private void executeTasksInParallel(
-      ExecutorService executorService,
-      List<ParallelExecutorTask> tasks,
-      boolean stopOnError,
-      String taskName,
-      String transactionId)
+      List<ParallelExecutorTask> tasks, boolean stopOnError, String taskName, String transactionId)
       throws ExecutionException, ValidationConflictException, CrudException {
-    CompletionService<Void> completionService = new ExecutorCompletionService<>(executorService);
+    assert parallelExecutorService != null;
+
+    CompletionService<Void> completionService =
+        new ExecutorCompletionService<>(parallelExecutorService);
 
     // Submit tasks
     for (ParallelExecutorTask task : tasks) {
@@ -365,12 +337,9 @@ public class ParallelExecutor {
   }
 
   public void close() {
-    for (ExecutorService executorService :
-        Arrays.asList(parallelExecutorService, batchGetExecutorService)) {
-      if (executorService != null) {
-        executorService.shutdown();
-        Uninterruptibles.awaitTerminationUninterruptibly(executorService);
-      }
+    if (parallelExecutorService != null) {
+      parallelExecutorService.shutdown();
+      Uninterruptibles.awaitTerminationUninterruptibly(parallelExecutorService);
     }
   }
 }
