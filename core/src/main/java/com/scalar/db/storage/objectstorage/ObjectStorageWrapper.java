@@ -86,7 +86,8 @@ public interface ObjectStorageWrapper {
    * where concurrent operations do not occur.
    *
    * @param prefix the prefix of the objects to delete
-   * @throws ObjectStorageWrapperException if an error occurs
+   * @throws ObjectStorageWrapperException if an error occurs, including when some of the objects
+   *     have not been deleted
    */
   void deleteByPrefix(String prefix) throws ObjectStorageWrapperException;
 
