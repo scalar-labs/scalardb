@@ -322,12 +322,10 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
         return DataType.TEXT;
       case LONGVARCHAR:
       case LONGNVARCHAR:
-        if (typeName.equalsIgnoreCase("xml")) {
-          throw new IllegalArgumentException(
-              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
-                  typeName, columnDescription));
-        }
-        return DataType.TEXT;
+        // text and ntext cannot use a UTF-8 collation, and xml is not a text type
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
       case BINARY:
       case VARBINARY:
         if (!typeName.equalsIgnoreCase("binary") && !typeName.equalsIgnoreCase("varbinary")) {
