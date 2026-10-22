@@ -758,18 +758,18 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     } else {
       Set<Column<?>> valueSet = new HashSet<>();
 
-      // Add min and max clustering key values
-      Arrays.asList(
-              getColumnWithMinValue(CLUSTERING_KEY, clusteringKeyType),
-              getColumnWithMaxValue(CLUSTERING_KEY, clusteringKeyType))
-          .forEach(
-              clusteringKeyValue -> {
-                valueSet.add(clusteringKeyValue);
-                ret.add(clusteringKeyValue);
-                puts.add(preparePut(clusteringKeyType, clusteringOrder, clusteringKeyValue));
-              });
+      List<Column<?>> fixedValues = new ArrayList<>();
+      fixedValues.add(getColumnWithMinValue(CLUSTERING_KEY, clusteringKeyType));
+      fixedValues.add(getColumnWithMaxValue(CLUSTERING_KEY, clusteringKeyType));
+      fixedValues.addAll(getColumnsDistinguishingCodePointOrder(CLUSTERING_KEY, clusteringKeyType));
+      fixedValues.forEach(
+          clusteringKeyValue -> {
+            valueSet.add(clusteringKeyValue);
+            ret.add(clusteringKeyValue);
+            puts.add(preparePut(clusteringKeyType, clusteringOrder, clusteringKeyValue));
+          });
 
-      IntStream.range(0, CLUSTERING_KEY_NUM - 2)
+      IntStream.range(0, CLUSTERING_KEY_NUM - fixedValues.size())
           .forEach(
               i -> {
                 Column<?> clusteringKeyValue;
@@ -826,6 +826,11 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
 
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     return TestUtils.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  protected List<Column<?>> getColumnsDistinguishingCodePointOrder(
+      String columnName, DataType dataType) {
+    return TestUtils.getColumnsDistinguishingCodePointOrder(columnName, dataType);
   }
 
   private String description(
