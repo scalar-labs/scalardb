@@ -33,144 +33,116 @@ env:
   ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
   INT_TEST_JAVA_RUNTIME_VERSION: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}
   INT_TEST_JAVA_RUNTIME_VENDOR: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
-  SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
 
-# Group commit only applies to **.ConsensusCommit** tests.
-# Groups without ConsensusCommit tests have group_commit_tests are skipped in the group_commit
-# flavor via the job-level `if` condition.
+# Group commit only applies to **.ConsensusCommit** tests, so the group_commit jobs list only
+# ConsensusCommit test classes. MultipleClusteringKeyScan, the longest test class, runs alone and
+# the other groups are sized to finish within its duration.
 
 jobs:
   spanner-integration-test:
     name: "${{ matrix.test_group.name }} (${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }})"
     runs-on: ubuntu-latest
+    services:
+      spanner-emulator:
+        image: gcr.io/cloud-spanner-emulator/emulator:latest
+        ports:
+          - 9010:9010
+          - 9020:9020
     strategy:
       fail-fast: false
       matrix:
-        group_commit_enabled:
-          - 'false'
-          - 'true'
-        test_group:
-          - name: ConsensusCommitSpecific
-            label: spanner_cc_specific
-            tests: "ConsensusCommitSpecificIntegrationTestWithJdbcDatabase"
+        include:
+          - group_commit_enabled: 'false'
+            test_group:
+              name: "MultipleClusteringKeyScan"
+              label: spanner_default_1
+              tests: >-
+                JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
 
-          - name: ConsensusCommitSpecific (highest isolation)
-            label: spanner_cc_specific_highest
-            tests: "ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation"
+          - group_commit_enabled: 'false'
+            test_group:
+              name: "ConditionalMutation & CC specific (metadata decoupling)"
+              label: spanner_default_2
+              tests: >-
+                JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
+                ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
 
-          - name: ConsensusCommitSpecific (metadata decoupling)
-            label: spanner_cc_specific_md
-            tests: "ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase"
+          - group_commit_enabled: 'false'
+            test_group:
+              name: "CC specific & other tests"
+              label: spanner_default_3
+              tests: >-
+                ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
+                ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+                JdbcDatabaseIntegrationTest
+                JdbcDatabaseColumnValueIntegrationTest
+                JdbcDatabaseCrossPartitionScanIntegrationTest
+                JdbcDatabaseSingleClusteringKeyScanIntegrationTest
+                JdbcDatabaseSinglePartitionKeyIntegrationTest
+                JdbcDatabaseMultiplePartitionKeyIntegrationTest
+                JdbcDatabaseSecondaryIndexIntegrationTest
+                ConsensusCommitAdminIntegrationTestWithJdbcDatabase
+                ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
+                ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
+                ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+                ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
+                ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+                JdbcAdminImportTableIntegrationTest
+                JdbcAdminRepairIntegrationTest
+                JdbcSchemaLoaderImportIntegrationTest
+                JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
+                JdbcAdminIntegrationTest
+                JdbcTransactionAdminIntegrationTest
+                ConsensusCommitIntegrationTestWithJdbcDatabase
+                ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
+                ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
+                ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
+                ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
+                ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+                SingleCrudOperationTransactionIntegrationTestWithJdbcDatabase
+                SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
+                JdbcTransactionCrossPartitionScanIntegrationTest
+                JdbcTransactionIntegrationTest
+                JdbcDatabaseJapaneseIntegrationTest
+                JdbcDatabaseCaseSensitivityIntegrationTest
+                JdbcDatabaseWithReservedKeywordIntegrationTest
+                JdbcDatabaseVirtualTablesIntegrationTest
+                JdbcDatabaseMutationAtomicityUnitIntegrationTest
+                JdbcAdminCaseSensitivityIntegrationTest
+                JdbcSchemaLoaderIntegrationTest
+                JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
 
-          - name: MultipleClusteringKeyScan
-            label: spanner_multi_ck_scan
-            tests: "JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner"
-
-          - name: ConditionalMutation
-            label: spanner_cond_mutation
-            tests: "JdbcDatabaseConditionalMutationIntegrationTestWithSpanner"
-
-          - name: "Admin & Import"
-            label: spanner_group1
-            tests: >-
-              ConsensusCommitAdminIntegrationTestWithJdbcDatabase
-              ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
-              ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
-              ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-              ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
-              ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-              JdbcAdminImportTableIntegrationTest
-              JdbcAdminRepairIntegrationTest
-              JdbcSchemaLoaderImportIntegrationTest
-              JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
-              JdbcAdminIntegrationTest
-              JdbcTransactionAdminIntegrationTest
-
-          - name: "Core JDBC"
-            label: spanner_group2
-            tests: >-
-              JdbcDatabaseIntegrationTest
-              JdbcDatabaseColumnValueIntegrationTest
-              JdbcDatabaseCrossPartitionScanIntegrationTest
-              JdbcDatabaseSingleClusteringKeyScanIntegrationTest
-              JdbcDatabaseSinglePartitionKeyIntegrationTest
-              JdbcDatabaseMultiplePartitionKeyIntegrationTest
-              JdbcDatabaseSecondaryIndexIntegrationTest
-
-          - name: "Schema & i18n"
-            label: spanner_group3
-            tests: >-
-              JdbcDatabaseJapaneseIntegrationTest
-              JdbcDatabaseCaseSensitivityIntegrationTest
-              JdbcDatabaseWithReservedKeywordIntegrationTest
-              JdbcDatabaseVirtualTablesIntegrationTest
-              JdbcDatabaseMutationAtomicityUnitIntegrationTest
-              JdbcAdminCaseSensitivityIntegrationTest
-              JdbcSchemaLoaderIntegrationTest
-              JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
-
-          - name: "CC base & SingleCrud & JDBC transaction"
-            label: spanner_group4
-            tests: >-
-              ConsensusCommitIntegrationTestWithJdbcDatabase
-              ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
-              ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
-              ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
-              ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
-              ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-              SingleCrudOperationTransactionIntegrationTestWithJdbcDatabase
-              SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
-              JdbcTransactionCrossPartitionScanIntegrationTest
-              JdbcTransactionIntegrationTest
-
-        # Skip the group_commit flavor for test groups that contain no group commit tests —
-        exclude:
           - group_commit_enabled: 'true'
             test_group:
-              label: spanner_multi_ck_scan
+              name: "CC specific (metadata decoupling, highest isolation)"
+              label: spanner_group_commit_1
+              tests: >-
+                ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+                ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+
           - group_commit_enabled: 'true'
             test_group:
-              label: spanner_cond_mutation
-          - group_commit_enabled: 'true'
-            test_group:
-              label: spanner_group2
-          - group_commit_enabled: 'true'
-            test_group:
-              label: spanner_group3
+              name: "CC specific & other tests"
+              label: spanner_group_commit_2
+              tests: >-
+                ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
+                ConsensusCommitIntegrationTestWithJdbcDatabase
+                ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
+                ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
+                ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
+                ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
+                ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+                ConsensusCommitAdminIntegrationTestWithJdbcDatabase
+                ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
+                ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
+                ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+                ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
+                ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
 
     steps:
-      - name: Check if job should run
-        id: should-run
-        run: |
-          # For group_commit flavor, filter tests to only ConsensusCommit* classes
-          # Skip entirely if no ConsensusCommit tests exist in this group
-          if [ "${{ matrix.group_commit_enabled }}" = "true" ]; then
-            CC_TESTS=""
-            for test_class in ${{ matrix.test_group.tests }}; do
-              case "${test_class}" in ConsensusCommit*) CC_TESTS="${CC_TESTS} ${test_class}" ;; esac
-            done
-            if [ -z "${CC_TESTS}" ]; then
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              echo "Skipping: no ConsensusCommit tests in this group"
-            else
-              echo "skip=false" >> "$GITHUB_OUTPUT"
-            fi
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v7
-        if: steps.should-run.outputs.skip == 'false'
-
-      # Emulator versions before 1.5.59 slow down every read the longer the process runs
-      # (GoogleCloudPlatform/cloud-spanner-emulator#389), which pushes the long test groups past the
-      # group commit abort timeout
-      - name: Start Spanner emulator
-        if: steps.should-run.outputs.skip == 'false'
-        run: docker run -d -p 9010:9010 -p 9020:9020 gcr.io/cloud-spanner-emulator/emulator:1.5.59
 
       - name: Wait for Spanner emulator to be ready
-        if: steps.should-run.outputs.skip == 'false'
         run: |
           SECONDS=0
           until curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1; do
@@ -184,7 +156,6 @@ jobs:
           echo "Spanner emulator is ready"
 
       - name: Set up JDK 8
-        if: steps.should-run.outputs.skip == 'false'
         uses: actions/setup-java@v6.0.1
         with:
           java-version: 8
@@ -192,39 +163,33 @@ jobs:
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         id: setup-int-test-jdk
-        if: ${{ steps.should-run.outputs.skip == 'false' && env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle' }}
+        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle' }}
         uses: actions/setup-java@v6.0.1
         with:
           java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
           distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ steps.should-run.outputs.skip == 'false' && steps.setup-int-test-jdk.outcome == 'skipped' }}
+        if: ${{ steps.setup-int-test-jdk.outcome == 'skipped' }}
         run: |
           echo ${{ secrets.OCR_TOKEN }} | docker login container-registry.oracle.com -u ${{ secrets.OCR_USERNAME }} --password-stdin
           container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
           docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
 
       - name: Setup Gradle
-        if: steps.should-run.outputs.skip == 'false'
         uses: gradle/actions/setup-gradle@v6.4.0
 
       - name: Run integration test
-        if: steps.should-run.outputs.skip == 'false'
         id: run-integration-test
         env:
           ORG_GRADLE_PROJECT_javaVersion: '8'
           ORG_GRADLE_PROJECT_javaVendor: 'temurin'
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}"
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
+          SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
         run: |
-          # Build the --tests arguments; for group_commit, filter to ConsensusCommit* only
-          # (prefix match — must match the should-run guard above)
           TESTS_ARGS=""
           for test_class in ${{ matrix.test_group.tests }}; do
-            if [ "${{ matrix.group_commit_enabled }}" = "true" ]; then
-              case "${test_class}" in ConsensusCommit*) ;; *) continue ;; esac
-            fi
             TESTS_ARGS="${TESTS_ARGS} --tests ${test_class}"
           done
 
@@ -235,19 +200,19 @@ jobs:
           fi
 
           ./gradlew core:integrationTestJdbc \
-            "-Dscalardb.jdbc.url=${{ env.SPANNER_JDBC_URL }}" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" \
+            "-Dscalardb.jdbc.url=${SPANNER_JDBC_URL}" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" \
             ${GROUP_COMMIT_OPTS} \
             ${TESTS_ARGS}
 
       - name: Upload binary test results
-        if: ${{ always() && steps.should-run.outputs.skip == 'false' }}
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: internal_test-results_${{ matrix.test_group.label }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}
           path: core/build/test-results/integrationTestJdbc/
 
       - name: Upload HTML test report
-        if: ${{ always() && steps.should-run.outputs.skip == 'false' }}
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.run-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.test_group.label }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}_report_${{ env.ARTIFACT_SUFFIX }}
