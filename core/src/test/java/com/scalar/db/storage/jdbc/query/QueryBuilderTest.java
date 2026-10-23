@@ -1723,7 +1723,7 @@ public class QueryBuilderTest {
     // Assert
     assertThat(sql)
         .isEqualTo(
-            "INSERT INTO \"n1\".\"excluded\" AS t1 (\"p1\",\"v1\") VALUES (?,?) "
+            "INSERT INTO \"n1\".\"excluded\" AS upsert_target (\"p1\",\"v1\") VALUES (?,?) "
                 + "ON CONFLICT (\"p1\") DO UPDATE SET \"v1\"=excluded.\"v1\"");
   }
 

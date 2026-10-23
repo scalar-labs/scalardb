@@ -65,7 +65,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
   // A target table named excluded makes excluded.col ambiguous, and an alias hides the table name.
   private String targetAlias() {
-    return useExcludedAlias && table.equalsIgnoreCase("excluded") ? " AS t1" : "";
+    return useExcludedAlias && table.equalsIgnoreCase("excluded") ? " AS upsert_target" : "";
   }
 
   private String makeValuesSqlString() {
