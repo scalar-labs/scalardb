@@ -1,6 +1,7 @@
 package com.scalar.db.util;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan.Ordering;
@@ -201,7 +202,8 @@ public final class TestUtils {
         return BlobColumn.of(columnName, blobBytes);
       case TEXT:
         StringBuilder builder = new StringBuilder();
-        IntStream.range(0, MAX_TEXT_COUNT).forEach(i -> builder.append(Character.MAX_VALUE));
+        IntStream.range(0, MAX_TEXT_COUNT)
+            .forEach(i -> builder.appendCodePoint(Character.MAX_CODE_POINT));
         return TextColumn.of(columnName, builder.toString());
       case BOOLEAN:
         return BooleanColumn.of(columnName, true);
@@ -216,6 +218,30 @@ public final class TestUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  /**
+   * Returns values for a TEXT column that make code point ordering and UTF-16 code unit ordering
+   * disagree, for a key corpus that already contains {@link #getColumnWithMaxValue}.
+   *
+   * <p>A supplementary code point encodes to a high surrogate in {@code 0xD800}-{@code 0xDBFF},
+   * which sorts below a BMP code point in {@code 0xE000}-{@code 0xFFFF} by code unit but above it
+   * by code point. Those are the only pairs the two orderings rank differently. The maximum value
+   * supplies the supplementary half, so a corpus whose other values are all below {@code 0xD800}
+   * sorts identically under either ordering and cannot detect one being used for the other.
+   *
+   * @param columnName the column name
+   * @param dataType the data type, which has such values only for {@code TEXT}
+   * @return the values to add to the corpus, empty when the data type has none
+   */
+  public static List<Column<?>> getColumnsDistinguishingCodePointOrder(
+      String columnName, DataType dataType) {
+    if (dataType != DataType.TEXT) {
+      return ImmutableList.of();
+    }
+    StringBuilder builder = new StringBuilder();
+    IntStream.range(0, MAX_TEXT_COUNT).forEach(i -> builder.append(Character.MAX_VALUE));
+    return ImmutableList.of(TextColumn.of(columnName, builder.toString()));
   }
 
   public static List<BooleanColumn> booleanColumns(String columnName) {

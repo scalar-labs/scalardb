@@ -4,15 +4,12 @@ import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleColumn;
 import com.scalar.db.io.FloatColumn;
-import com.scalar.db.io.TextColumn;
-import com.scalar.db.util.TestUtils;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public final class JdbcTestUtils {
 
@@ -50,13 +47,6 @@ public final class JdbcTestUtils {
 
   public static DoubleColumn getMinDb2DoubleValue(String columnName) {
     return DoubleColumn.of(columnName, Double.MIN_NORMAL);
-  }
-
-  public static TextColumn getMaxSqlServerTextValue(String columnName) {
-    // Since SQL Server can't handle 0xFF character correctly, we use "ZZZ..." as the max value
-    StringBuilder builder = new StringBuilder();
-    IntStream.range(0, TestUtils.MAX_TEXT_COUNT).forEach(i -> builder.append('Z'));
-    return TextColumn.of(columnName, builder.toString());
   }
 
   public static boolean isPostgresql(RdbEngineStrategy rdbEngine) {
