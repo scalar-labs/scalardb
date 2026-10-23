@@ -94,12 +94,4 @@ public final class JdbcEnv {
   static String getJdbcUrl() {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL);
   }
-
-  static String getUsername() {
-    return System.getProperty(PROP_JDBC_USERNAME, DEFAULT_JDBC_USERNAME);
-  }
-
-  static String getPassword() {
-    return System.getProperty(PROP_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
-  }
 }
