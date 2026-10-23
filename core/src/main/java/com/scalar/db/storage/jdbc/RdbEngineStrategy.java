@@ -207,6 +207,17 @@ public interface RdbEngineStrategy {
   default void throwIfImportNotSupported() {}
 
   /**
+   * Returns a query listing the columns of a table that cannot be imported and that {@link
+   * java.sql.DatabaseMetaData#getColumns} does not report, or null if there are none to look for.
+   * The query binds the schema to parameter 1 and the table to parameter 2, and each row holds the
+   * column name and then its type name.
+   */
+  @Nullable
+  default String unreportedNonImportableColumnsSql() {
+    return null;
+  }
+
+  /**
    * Return properly-preprocessed like pattern for each underlying database.
    *
    * @param likeExpression A like conditional expression

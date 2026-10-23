@@ -575,6 +575,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                       overrideDataType);
               builder.addColumn(columnName, dataType);
             }
+            String unreportedColumnsSql = rdbEngine.unreportedNonImportableColumnsSql();
+            if (unreportedColumnsSql != null) {
+              executeQuery(
+                  connection,
+                  rdbEngine,
+                  unreportedColumnsSql,
+                  requiresExplicitCommit,
+                  ps -> {
+                    ps.setString(1, namespace);
+                    ps.setString(2, table);
+                  },
+                  rs -> {
+                    if (rs.next()) {
+                      throw new IllegalArgumentException(
+                          CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                              rs.getString(2),
+                              getFullTableName(namespace, table) + " " + rs.getString(1)));
+                    }
+                    return null;
+                  });
+            }
 
             return builder.build();
           });

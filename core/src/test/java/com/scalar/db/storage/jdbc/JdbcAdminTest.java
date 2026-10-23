@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
@@ -65,6 +66,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.EnumSource.Mode;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -4875,6 +4877,12 @@ public class JdbcAdminTest {
     ResultSet checkResultSet = mock(ResultSet.class);
     when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
     when(checkResultSet.next()).thenReturn(true);
+    if (rdbEngine == RdbEngine.SQL_SERVER) {
+      PreparedStatement sysColumnsStatement = mock(PreparedStatement.class);
+      when(connection.prepareStatement(argThat(sql -> sql.contains("sys.columns"))))
+          .thenReturn(sysColumnsStatement);
+      when(sysColumnsStatement.executeQuery()).thenReturn(mock(ResultSet.class));
+    }
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1").thenReturn("pk2");
     when(columnResults.next())
@@ -5090,6 +5098,56 @@ public class JdbcAdminTest {
     // Assert
     verify(connection, description(description)).prepareStatement(expectedCheckTableExistStatement);
     assertThat(thrown).as(description).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"json", "vector"})
+  public void
+      getImportTableMetadata_ForSqlServerColumnMissingFromDatabaseMetaData_ShouldThrowIllegalArgumentException(
+          String typeName) throws SQLException {
+    // Arrange
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    PreparedStatement sysColumnsStatement = mock(PreparedStatement.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    ResultSet sysColumnsResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(prepareSqlForTableCheck(RdbEngine.SQL_SERVER)))
+        .thenReturn(checkTableExistStatement);
+    when(connection.prepareStatement(argThat(sql -> sql.contains("sys.columns"))))
+        .thenReturn(sysColumnsStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
+    when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.INTEGER);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("int");
+    when(sysColumnsStatement.executeQuery()).thenReturn(sysColumnsResults);
+    when(sysColumnsResults.next()).thenReturn(true).thenReturn(false);
+    when(sysColumnsResults.getString(1)).thenReturn("col");
+    when(sysColumnsResults.getString(2)).thenReturn(typeName);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.SQL_SERVER);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()));
+
+    // Assert
+    verify(sysColumnsStatement).setString(1, NAMESPACE);
+    verify(sysColumnsStatement).setString(2, TABLE);
+    assertThat(thrown)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, getFullTableName(NAMESPACE, TABLE) + " col"));
   }
 
   @ParameterizedTest

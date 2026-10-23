@@ -358,6 +358,15 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     }
   }
 
+  // On SQL Server 2025, sp_columns_100, which mssql-jdbc 12 calls for
+  // DatabaseMetaData.getColumns(), omits json and vector columns.
+  @Override
+  public String unreportedNonImportableColumnsSql() {
+    return "SELECT name, TYPE_NAME(user_type_id) FROM sys.columns"
+        + " WHERE object_id = OBJECT_ID(QUOTENAME(?) + '.' + QUOTENAME(?))"
+        + " AND TYPE_NAME(user_type_id) IN ('json', 'vector')";
+  }
+
   @Override
   public int getSqlTypes(DataType dataType) {
     switch (dataType) {
