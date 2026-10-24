@@ -32,9 +32,13 @@ import javax.annotation.concurrent.ThreadSafe;
  * attributes supplied to {@code begin} are forwarded to the participant when the coordinator
  * establishes its local context.
  *
- * <p>A single in-process participant is wired in, so a global transaction has at most one
- * meaningful branch (enlisting is idempotent per participant ID). Calling {@code beginBranch} again
- * for the same transaction returns a new handle fronting that same participant context — the {@link
+ * <p>A single in-process participant is wired in, so each manager contributes at most one
+ * meaningful branch to a global transaction (enlisting is idempotent per participant ID). Managers
+ * that share a coordinator, each with its own participant, give a global transaction one branch
+ * each. Because {@link #close()} closes the coordinator as well, closing one of the managers that
+ * share a coordinator closes it under the others; close their participants and the shared
+ * coordinator directly instead, once each. Calling {@code beginBranch} again for the same
+ * transaction returns a new handle fronting that same participant context — the {@link
  * BranchTransaction#end(BranchTransaction.Status)} bookkeeping is per handle — so begin each branch
  * once and drive it through that one handle. The participant may be {@code null}
  * (coordinator-only), in which case {@code beginBranch} is unsupported.

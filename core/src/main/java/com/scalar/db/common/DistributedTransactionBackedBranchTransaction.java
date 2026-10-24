@@ -30,8 +30,8 @@ import javax.annotation.concurrent.NotThreadSafe;
  * shares (see {@link DistributedTransactionBackedGlobalTransactionManager} for the concurrency
  * implications); the commit/rollback outcome is driven by the owning {@link
  * com.scalar.db.api.GlobalTransaction}. {@link #end(BranchTransaction.Status)} triggers no backing
- * action for this backing — it only marks the branch ended, after which CRUD (or another {@code
- * end}) is rejected with {@link IllegalStateException}.
+ * action for this backing — it only marks the branch ended; see {@link
+ * BranchTransaction#end(BranchTransaction.Status)} for what an ended branch accepts.
  *
  * <p>Operations must be fully qualified with their namespace and table; this handle carries no
  * default target. See {@link DistributedTransactionBackedGlobalTransactionManager} for how the

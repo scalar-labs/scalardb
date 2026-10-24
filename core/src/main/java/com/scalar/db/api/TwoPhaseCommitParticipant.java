@@ -51,10 +51,12 @@ import java.util.Optional;
  *   <li>Lifecycle and record-level two-phase commit methods ({@link #join}, {@link
  *       #prepareRecords}, {@link #validateRecords}, {@link #commitRecords}, {@link
  *       #rollbackRecords}) are invoked by {@link TwoPhaseCommitCoordinator}.
- *   <li>{@link #releaseTransactionContext} and {@link #hasTransactionContext} are invoked by
- *       neither — they are driven by a context-reaper/decorator: the former a reap-only terminal
- *       that reclaims an abandoned or idle-reaped context without touching storage, the latter a
- *       liveness probe consulted before such a reap.
+ *   <li>{@link #releaseTransactionContext} and {@link #hasTransactionContext} are driven by a
+ *       context-reaper/decorator: the former a terminal that reclaims an abandoned or idle-reaped
+ *       context without touching storage, the latter a liveness probe consulted before such a reap.
+ *       A {@link TwoPhaseCommitCoordinator} may also invoke {@link #releaseTransactionContext},
+ *       best-effort, for a transaction that will not reach {@link #commitRecords} or {@link
+ *       #rollbackRecords}.
  * </ul>
  *
  * <p>Operations must follow the transaction's lifecycle: CRUD while the transaction is open, then
