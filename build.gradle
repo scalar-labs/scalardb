@@ -101,7 +101,7 @@ subprojects {
         // Bumping the major version means updating the wrapperTargetDriverDialect value in
         // RdbEngineMysql too -- the AWS wrapper names its MariaDB dialect after the driver's major
         // version, and only defines one for v3.
-        mariadDbDriverVersion = '3.5.10'
+        mariadDbDriverVersion = '4.0.0'
         alloyDbJdbcConnectorVersion = '1.3.3'
         googleCloudStorageVersion = '2.75.0'
         spannerDriverVersion = '2.46.0'
