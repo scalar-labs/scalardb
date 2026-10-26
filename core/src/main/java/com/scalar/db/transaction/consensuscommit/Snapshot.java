@@ -590,9 +590,8 @@ public class Snapshot {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
         // If startKey <= writtenKey <= endKey
-        if ((scan.getStartInclusive() && writtenKey.equals(startKey))
-            || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
-            || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
+        if (isAfterStart(writtenKey, startKey, scan.getStartInclusive())
+            && isBeforeEnd(writtenKey, endKey, scan.getEndInclusive())) {
           return entry.getKey();
         }
       }
@@ -600,8 +599,7 @@ public class Snapshot {
       if (isStartGiven && !isEndGiven) {
         com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
         // If startKey <= writtenKey
-        if ((scan.getStartInclusive() && startKey.equals(writtenKey))
-            || writtenKey.compareTo(startKey) > 0) {
+        if (isAfterStart(writtenKey, startKey, scan.getStartInclusive())) {
           return entry.getKey();
         }
       }
@@ -609,13 +607,24 @@ public class Snapshot {
       if (!isStartGiven) {
         com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
         // If writtenKey <= endKey
-        if ((scan.getEndInclusive() && writtenKey.equals(endKey))
-            || writtenKey.compareTo(endKey) < 0) {
+        if (isBeforeEnd(writtenKey, endKey, scan.getEndInclusive())) {
           return entry.getKey();
         }
       }
     }
     return null;
+  }
+
+  private boolean isAfterStart(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key startKey, boolean inclusive) {
+    int cmp = writtenKey.compareTo(startKey);
+    return inclusive ? cmp >= 0 : cmp > 0;
+  }
+
+  private boolean isBeforeEnd(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key endKey, boolean inclusive) {
+    int cmp = writtenKey.compareTo(endKey);
+    return inclusive ? cmp <= 0 : cmp < 0;
   }
 
   private boolean areConjunctionsOverlapped(Put put, Scan scan) {

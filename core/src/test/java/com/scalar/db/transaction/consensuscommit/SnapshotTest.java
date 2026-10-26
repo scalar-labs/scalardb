@@ -2237,6 +2237,62 @@ public class SnapshotTest {
 
   @Test
   public void
+      verifyNoOverlap_ScanWithEmptyOrInvertedRangeBoundedByPutInWriteSet_ShouldNotThrowAnyException()
+          throws CrudException {
+    // Arrange
+    snapshot = prepareSnapshot();
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.putIntoWriteSet(putKey, put);
+    Scan scan1 =
+        Scan.newBuilder(prepareScan())
+            // ["text2", "text2")
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .build();
+    Scan scan2 =
+        Scan.newBuilder(prepareScan())
+            // ("text2", "text2"]
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), false)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
+            .build();
+    Scan scan3 =
+        Scan.newBuilder(prepareScan())
+            // ["text2", "text1"]
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_1), true)
+            .build();
+    Scan scan4 =
+        Scan.newBuilder(prepareScan())
+            // ["text3", "text2"]
+            .start(Key.ofText(ANY_NAME_2, ANY_TEXT_3), true)
+            .end(Key.ofText(ANY_NAME_2, ANY_TEXT_2), true)
+            .build();
+
+    // Act
+    Throwable thrown1 =
+        catchThrowable(
+            () -> snapshot.verifyNoOverlap(scan1, Collections.emptyMap(), Collections.emptySet()));
+    Throwable thrown2 =
+        catchThrowable(
+            () -> snapshot.verifyNoOverlap(scan2, Collections.emptyMap(), Collections.emptySet()));
+    Throwable thrown3 =
+        catchThrowable(
+            () -> snapshot.verifyNoOverlap(scan3, Collections.emptyMap(), Collections.emptySet()));
+    Throwable thrown4 =
+        catchThrowable(
+            () -> snapshot.verifyNoOverlap(scan4, Collections.emptyMap(), Collections.emptySet()));
+
+    // Assert
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2).doesNotThrowAnyException();
+    assertThat(thrown3).doesNotThrowAnyException();
+    assertThat(thrown4).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
       verifyNoOverlap_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException()
           throws CrudException {
     // Arrange
