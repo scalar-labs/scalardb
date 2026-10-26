@@ -4,6 +4,7 @@ import static com.scalar.db.api.ConditionBuilder.column;
 import static com.scalar.db.api.ConditionBuilder.deleteIfExists;
 import static com.scalar.db.api.ConditionBuilder.putIfExists;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,6 +37,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.CollationComparators;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -56,6 +58,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -123,7 +126,8 @@ public class CrudHandlerTest {
             false,
             false,
             mutationConditionsValidator,
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparators.BINARY);
 
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
@@ -260,7 +264,7 @@ public class CrudHandlerTest {
   public void get_GetExistsInSnapshot_ShouldReturnFromSnapshot() throws CrudException {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     Optional<TransactionResult> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     when(snapshot.containsKeyInGetSet(get)).thenReturn(true);
     when(snapshot.getResult(key, get)).thenReturn(expected);
@@ -287,7 +291,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.getResult(key, get)).thenReturn(transactionResult);
@@ -317,7 +321,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.getResult(key, get)).thenReturn(transactionResult);
@@ -347,7 +351,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.mergeResult(key, transactionResult, get.getConjunctions()))
@@ -378,7 +382,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.mergeResult(key, transactionResult, get.getConjunctions()))
@@ -415,7 +419,7 @@ public class CrudHandlerTest {
             .build();
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.mergeResult(
@@ -447,7 +451,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.mergeResult(key, transactionResult, get.getConjunctions()))
@@ -478,7 +482,7 @@ public class CrudHandlerTest {
     Get getForStorage = toGetForStorageFrom(get);
     Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Optional<TransactionResult> transactionResult = expected.map(e -> (TransactionResult) e);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(storage.get(getForStorage)).thenReturn(expected);
     when(snapshot.mergeResult(key, transactionResult, get.getConjunctions()))
@@ -506,7 +510,7 @@ public class CrudHandlerTest {
           throws ExecutionException, CrudException {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     Get getForStorage = toGetForStorageFrom(get);
     result = prepareResult(TransactionState.PREPARED);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
@@ -561,7 +565,7 @@ public class CrudHandlerTest {
           throws ExecutionException, CrudException {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     Get getForStorage = toGetForStorageFrom(get);
     result = prepareResult(TransactionState.PREPARED);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
@@ -619,7 +623,7 @@ public class CrudHandlerTest {
           throws ExecutionException, CrudException {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     Get getForStorage = toGetForStorageFrom(get);
     result = prepareResult(TransactionState.PREPARED);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
@@ -687,7 +691,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).get(getForStorage);
-    verify(snapshot).putIntoReadSet(new Snapshot.Key(get), Optional.empty());
+    verify(snapshot)
+        .putIntoReadSet(new Snapshot.Key(get, CollationComparators.BINARY), Optional.empty());
     verify(snapshot).putIntoGetSet(get, Optional.empty());
     assertThat(result.isPresent()).isFalse();
   }
@@ -719,7 +724,7 @@ public class CrudHandlerTest {
     Get anotherGet = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false).thenReturn(true);
     when(snapshot.getResult(key, get)).thenReturn(expected).thenReturn(expected);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
@@ -751,7 +756,7 @@ public class CrudHandlerTest {
     Get anotherGet = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     when(snapshot.containsKeyInGetSet(get)).thenReturn(false);
     when(snapshot.mergeResult(
             key, Optional.of(new TransactionResult(result)), get.getConjunctions()))
@@ -784,7 +789,8 @@ public class CrudHandlerTest {
     Get anotherGet = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    snapshot =
+        new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor, CollationComparators.BINARY);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -805,6 +811,49 @@ public class CrudHandlerTest {
   }
 
   @Test
+  public void
+      get_CalledTwiceWithCaseDifferingKeySpellingUnderIcuAndRealSnapshot_SecondTimeShouldReturnFromSnapshot()
+          throws ExecutionException, CrudException {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            CollationComparators.CASE_INSENSITIVE_ICU);
+    Get get = prepareGet();
+    Get getForStorage = toGetForStorageFrom(get);
+    Get anotherGet =
+        Get.newBuilder(get)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toUpperCase(Locale.ROOT)))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toUpperCase(Locale.ROOT)))
+            .build();
+    Result result = prepareResult(TransactionState.COMMITTED);
+    snapshot =
+        new Snapshot(
+            ANY_ID_1,
+            tableMetadataManager,
+            parallelExecutor,
+            CollationComparators.CASE_INSENSITIVE_ICU);
+    when(storage.get(getForStorage)).thenReturn(Optional.of(result));
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act
+    Optional<Result> results1 = handler.get(get, context);
+    Optional<Result> results2 = handler.get(anotherGet, context);
+
+    // Assert
+    assertThat(results1).isEqualTo(results2);
+    verify(storage).get(getForStorage);
+    verify(storage, never()).get(toGetForStorageFrom(anotherGet));
+  }
+
+  @Test
   public void get_CalledTwiceUnderRealSnapshot_ReadCommittedIsolation_BothShouldReturnFromStorage()
       throws ExecutionException, CrudException {
     // Arrange
@@ -813,7 +862,8 @@ public class CrudHandlerTest {
     Get anotherGet = prepareGet();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    snapshot =
+        new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor, CollationComparators.BINARY);
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.READ_COMMITTED, false, false);
@@ -873,7 +923,7 @@ public class CrudHandlerTest {
             .build();
     Result result = prepareResult(TransactionState.COMMITTED);
     Optional<TransactionResult> expected = Optional.of(new TransactionResult(result));
-    Snapshot.Key key = new Snapshot.Key(getForStorage1);
+    Snapshot.Key key = new Snapshot.Key(getForStorage1, CollationComparators.BINARY);
     when(snapshot.getResult(any(), any())).thenReturn(expected).thenReturn(expected);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false).thenReturn(true);
     when(storage.get(any())).thenReturn(Optional.of(result));
@@ -904,7 +954,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult expected = new TransactionResult(result);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -941,7 +991,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult expected = new TransactionResult(result);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -1006,7 +1056,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult expected = new TransactionResult(result);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
@@ -1047,7 +1097,7 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
 
     TransactionResult recoveredResult = mock(TransactionResult.class);
 
@@ -1106,7 +1156,7 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
 
     TransactionResult recoveredResult = mock(TransactionResult.class);
 
@@ -1164,7 +1214,7 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
 
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
 
     TransactionResult recoveredResult = mock(TransactionResult.class);
 
@@ -1217,7 +1267,7 @@ public class CrudHandlerTest {
       when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     when(snapshot.getResults(scan))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, expected))));
@@ -1250,7 +1300,8 @@ public class CrudHandlerTest {
     Scan anotherScan = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
     TransactionResult expected = new TransactionResult(result);
-    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    snapshot =
+        new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor, CollationComparators.BINARY);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1290,7 +1341,7 @@ public class CrudHandlerTest {
     }
     when(storage.scan(scanForStorage)).thenReturn(scanner);
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
     Get getForStorage = toGetForStorageFrom(get);
     Optional<TransactionResult> transactionResult = Optional.of(new TransactionResult(result));
     when(storage.get(getForStorage)).thenReturn(Optional.of(result));
@@ -1321,7 +1372,8 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     result = prepareResult(TransactionState.COMMITTED);
-    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    snapshot =
+        new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor, CollationComparators.BINARY);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1380,6 +1432,7 @@ public class CrudHandlerTest {
             ANY_ID_1,
             tableMetadataManager,
             parallelExecutor,
+            CollationComparators.BINARY,
             readSet,
             new ConcurrentHashMap<>(),
             new HashMap<>(),
@@ -1412,7 +1465,7 @@ public class CrudHandlerTest {
 
     // check the delete set
     assertThat(deleteSet.size()).isEqualTo(1);
-    assertThat(deleteSet).containsKey(new Snapshot.Key(delete));
+    assertThat(deleteSet).containsKey(new Snapshot.Key(delete, CollationComparators.BINARY));
 
     assertThatThrownBy(() -> scanOrGetScanner(scan, scanType, context))
         .isInstanceOf(IllegalArgumentException.class);
@@ -1434,7 +1487,7 @@ public class CrudHandlerTest {
             .or(column(Attribute.BEFORE_PREFIX + ANY_NAME_4).isEqualToInt(ANY_INT_1))
             .build();
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1480,7 +1533,7 @@ public class CrudHandlerTest {
             .build();
 
     result = prepareResult(TransactionState.PREPARED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1547,7 +1600,7 @@ public class CrudHandlerTest {
             .build();
 
     result = prepareResult(TransactionState.PREPARED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     if (scanType == ScanType.SCAN) {
       when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     } else {
@@ -1603,8 +1656,10 @@ public class CrudHandlerTest {
     Result result1 = prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
     Result result2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED);
 
-    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, result2, TABLE_METADATA);
+    Snapshot.Key key1 =
+        new Snapshot.Key(scanWithLimit, result1, TABLE_METADATA, CollationComparators.BINARY);
+    Snapshot.Key key2 =
+        new Snapshot.Key(scanWithLimit, result2, TABLE_METADATA, CollationComparators.BINARY);
 
     TransactionResult transactionResult1 = new TransactionResult(result1);
     TransactionResult transactionResult2 = new TransactionResult(result2);
@@ -1660,7 +1715,8 @@ public class CrudHandlerTest {
     Scan scanForStorage = Scan.newBuilder(toScanForStorageFrom(scanWithLimit)).limit(0).build();
 
     Result result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, result, TABLE_METADATA);
+    Snapshot.Key key1 =
+        new Snapshot.Key(scanWithLimit, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult transactionResult1 = new TransactionResult(result);
 
     // Set up mock scanner to return one result (less than limit)
@@ -1697,9 +1753,15 @@ public class CrudHandlerTest {
     Result uncommittedResult2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.PREPARED);
     Result uncommittedResult3 = prepareResult(ANY_TEXT_1, ANY_TEXT_4, TransactionState.PREPARED);
 
-    Snapshot.Key key1 = new Snapshot.Key(scanWithLimit, uncommittedResult1, TABLE_METADATA);
-    Snapshot.Key key2 = new Snapshot.Key(scanWithLimit, uncommittedResult2, TABLE_METADATA);
-    Snapshot.Key key3 = new Snapshot.Key(scanWithLimit, uncommittedResult3, TABLE_METADATA);
+    Snapshot.Key key1 =
+        new Snapshot.Key(
+            scanWithLimit, uncommittedResult1, TABLE_METADATA, CollationComparators.BINARY);
+    Snapshot.Key key2 =
+        new Snapshot.Key(
+            scanWithLimit, uncommittedResult2, TABLE_METADATA, CollationComparators.BINARY);
+    Snapshot.Key key3 =
+        new Snapshot.Key(
+            scanWithLimit, uncommittedResult3, TABLE_METADATA, CollationComparators.BINARY);
 
     // Set up mock scanner to return one committed and one uncommitted result
     if (scanType == ScanType.SCAN) {
@@ -1889,7 +1951,8 @@ public class CrudHandlerTest {
     Scan scanForStorage = toScanForStorageFrom(scan);
     Result result1 = prepareResult(TransactionState.COMMITTED);
     Result result2 = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 =
+        new Snapshot.Key(scan, result1, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult txResult1 = new TransactionResult(result1);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
@@ -1923,7 +1986,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     Result result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult txResult = new TransactionResult(result);
     when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
@@ -1949,7 +2012,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     Scan scanForStorage = toScanForStorageFrom(scan);
     Result result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult txResult = new TransactionResult(result);
     when(scanner.one()).thenReturn(Optional.of(result)).thenReturn(Optional.empty());
     when(storage.scan(scanForStorage)).thenReturn(scanner);
@@ -2004,7 +2067,7 @@ public class CrudHandlerTest {
     // Arrange: the scan is already in the scan set, so the cached snapshot scanner serves it
     Scan scan = prepareScan();
     Result result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult txResult = new TransactionResult(result);
     when(snapshot.getResults(scan))
         .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, txResult))));
@@ -2029,7 +2092,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     Result result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult txResult = new TransactionResult(result);
     when(snapshot.getResults(scan))
         .thenReturn(Optional.of(Maps.newLinkedHashMap(ImmutableMap.of(key, txResult))));
@@ -2087,7 +2150,8 @@ public class CrudHandlerTest {
     Scan scanForStorage = toScanForStorageFrom(scan);
     Result result1 = prepareResult(TransactionState.COMMITTED);
     Result result2 = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key1 = new Snapshot.Key(scan, result1, TABLE_METADATA);
+    Snapshot.Key key1 =
+        new Snapshot.Key(scan, result1, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult txResult1 = new TransactionResult(result1);
     when(scanner.one())
         .thenReturn(Optional.of(result1))
@@ -2130,7 +2194,7 @@ public class CrudHandlerTest {
     verify(snapshot, never()).getResult(any());
     verify(mutationConditionsValidator, never())
         .checkIfConditionIsSatisfied(any(Put.class), any(), any());
-    verify(snapshot).putIntoWriteSet(new Snapshot.Key(put), put);
+    verify(snapshot).putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
   }
 
   @Test
@@ -2146,7 +2210,7 @@ public class CrudHandlerTest {
             .condition(putIfExists())
             .enableImplicitPreRead()
             .build();
-    Snapshot.Key key = new Snapshot.Key(put);
+    Snapshot.Key key = new Snapshot.Key(put, CollationComparators.BINARY);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -2180,7 +2244,7 @@ public class CrudHandlerTest {
             .condition(putIfExists())
             .enableImplicitPreRead()
             .build();
-    Snapshot.Key key = new Snapshot.Key(put);
+    Snapshot.Key key = new Snapshot.Key(put, CollationComparators.BINARY);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -2223,7 +2287,7 @@ public class CrudHandlerTest {
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(putIfExists())
             .build();
-    Snapshot.Key key = new Snapshot.Key(put);
+    Snapshot.Key key = new Snapshot.Key(put, CollationComparators.BINARY);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -2287,7 +2351,8 @@ public class CrudHandlerTest {
     verify(snapshot, never()).getResult(any());
     verify(mutationConditionsValidator, never())
         .checkIfConditionIsSatisfied(any(Delete.class), any(), any());
-    verify(snapshot).putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    verify(snapshot)
+        .putIntoDeleteSet(new Snapshot.Key(delete, CollationComparators.BINARY), delete);
   }
 
   @Test
@@ -2301,7 +2366,7 @@ public class CrudHandlerTest {
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(deleteIfExists())
             .build();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    Snapshot.Key key = new Snapshot.Key(delete, CollationComparators.BINARY);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
     TransactionResult result = mock(TransactionResult.class);
     when(result.isCommitted()).thenReturn(true);
@@ -2333,7 +2398,7 @@ public class CrudHandlerTest {
             .partitionKey(Key.ofText("c1", "foo"))
             .condition(deleteIfExists())
             .build();
-    Snapshot.Key key = new Snapshot.Key(delete);
+    Snapshot.Key key = new Snapshot.Key(delete, CollationComparators.BINARY);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
     when(snapshot.getResult(key)).thenReturn(Optional.empty());
 
@@ -2778,7 +2843,7 @@ public class CrudHandlerTest {
     verify(storage).scan(toIndexScanForStorageFrom(getWithIndex));
     verify(snapshot)
         .putIntoReadSet(
-            new Snapshot.Key(getWithIndex, result, TABLE_METADATA),
+            new Snapshot.Key(getWithIndex, result, TABLE_METADATA, CollationComparators.BINARY),
             Optional.of(new TransactionResult(result)));
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(new TransactionResult(result)));
   }
@@ -2803,7 +2868,8 @@ public class CrudHandlerTest {
     when(snapshot.containsKeyInGetSet(getWithIndex)).thenReturn(false);
     when(storage.scan(toIndexScanForStorageFrom(getWithIndex))).thenReturn(scannerOf(result));
 
-    Snapshot.Key key = new Snapshot.Key(getWithIndex, result, TABLE_METADATA);
+    Snapshot.Key key =
+        new Snapshot.Key(getWithIndex, result, TABLE_METADATA, CollationComparators.BINARY);
 
     TransactionResult recoveredResult = mock(TransactionResult.class);
     @SuppressWarnings("unchecked")
@@ -2859,7 +2925,8 @@ public class CrudHandlerTest {
             .build();
     when(storage.scan(toIndexScanForStorageFrom(getWithIndex))).thenReturn(scannerOf(result));
 
-    Snapshot.Key key = new Snapshot.Key(getWithIndex, result, TABLE_METADATA);
+    Snapshot.Key key =
+        new Snapshot.Key(getWithIndex, result, TABLE_METADATA, CollationComparators.BINARY);
 
     TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_1);
     @SuppressWarnings("unchecked")
@@ -2927,9 +2994,9 @@ public class CrudHandlerTest {
 
     Map<Snapshot.Key, Put> writeSet =
         ImmutableMap.of(
-            new Snapshot.Key(put1), put1,
-            new Snapshot.Key(put2), put2,
-            new Snapshot.Key(put3), put3);
+            new Snapshot.Key(put1, CollationComparators.BINARY), put1,
+            new Snapshot.Key(put2, CollationComparators.BINARY), put2,
+            new Snapshot.Key(put3, CollationComparators.BINARY), put3);
     when(snapshot.getWriteSet()).thenReturn(writeSet.entrySet());
 
     Delete delete1 = mock(Delete.class);
@@ -2944,8 +3011,8 @@ public class CrudHandlerTest {
 
     Map<Snapshot.Key, Delete> deleteSet =
         ImmutableMap.of(
-            new Snapshot.Key(delete1), delete1,
-            new Snapshot.Key(delete2), delete2);
+            new Snapshot.Key(delete1, CollationComparators.BINARY), delete1,
+            new Snapshot.Key(delete2, CollationComparators.BINARY), delete2);
     when(snapshot.getDeleteSet()).thenReturn(deleteSet.entrySet());
 
     Get get1 =
@@ -3032,13 +3099,21 @@ public class CrudHandlerTest {
     verify(storage).get(get4);
 
     verify(snapshot)
-        .putIntoReadSet(new Snapshot.Key(get1), Optional.of(new TransactionResult(result1)));
+        .putIntoReadSet(
+            new Snapshot.Key(get1, CollationComparators.BINARY),
+            Optional.of(new TransactionResult(result1)));
     verify(snapshot)
-        .putIntoReadSet(new Snapshot.Key(get2), Optional.of(new TransactionResult(result2)));
+        .putIntoReadSet(
+            new Snapshot.Key(get2, CollationComparators.BINARY),
+            Optional.of(new TransactionResult(result2)));
     verify(snapshot)
-        .putIntoReadSet(new Snapshot.Key(get3), Optional.of(new TransactionResult(result3)));
+        .putIntoReadSet(
+            new Snapshot.Key(get3, CollationComparators.BINARY),
+            Optional.of(new TransactionResult(result3)));
     verify(snapshot)
-        .putIntoReadSet(new Snapshot.Key(get4), Optional.of(new TransactionResult(result4)));
+        .putIntoReadSet(
+            new Snapshot.Key(get4, CollationComparators.BINARY),
+            Optional.of(new TransactionResult(result4)));
 
     verify(snapshot).putIntoGetSet(get1, Optional.of(new TransactionResult(result1)));
     verify(snapshot).putIntoGetSet(get2, Optional.of(new TransactionResult(result2)));
@@ -3126,7 +3201,8 @@ public class CrudHandlerTest {
             false,
             true,
             mutationConditionsValidator,
-            parallelExecutor);
+            parallelExecutor,
+            CollationComparators.BINARY);
     Get getWithIndex = prepareGetWithIndex();
     Scan scanWithIndex = prepareScanWithIndex();
     Scan scanAll =
@@ -3172,7 +3248,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             true);
@@ -3223,7 +3303,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             false);
@@ -3338,7 +3422,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             true);
@@ -3391,7 +3479,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             false);
@@ -3445,7 +3537,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             true);
@@ -3509,7 +3605,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             true);
@@ -3526,7 +3626,9 @@ public class CrudHandlerTest {
 
     // Assert
     // Verify key is created from the second result, not reusing the stale key from the first
-    Snapshot.Key expectedKey = new Snapshot.Key(getWithIndex, committedResult2, TABLE_METADATA);
+    Snapshot.Key expectedKey =
+        new Snapshot.Key(
+            getWithIndex, committedResult2, TABLE_METADATA, CollationComparators.BINARY);
     verify(snapshot).putIntoReadSet(expectedKey, Optional.of(committedResult2));
   }
 
@@ -3567,7 +3669,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             true);
@@ -3626,7 +3732,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             false);
@@ -3693,7 +3803,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             true);
@@ -3753,7 +3867,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             true);
@@ -3813,7 +3931,11 @@ public class CrudHandlerTest {
     Future<Void> recoveryFuture = mock(Future.class);
     RecoveryExecutor.Result recoveryExecResult =
         new RecoveryExecutor.Result(
-            new Snapshot.Key(expectedBeforeIndexScan, preparedResult, TABLE_METADATA),
+            new Snapshot.Key(
+                expectedBeforeIndexScan,
+                preparedResult,
+                TABLE_METADATA,
+                CollationComparators.BINARY),
             Optional.of(preparedResult),
             recoveryFuture,
             false);
@@ -3870,6 +3992,27 @@ public class CrudHandlerTest {
   }
 
   @Test
+  void getScanner_StorageScannerCloseFailsWhileDiscarding_ShouldNotThrowAndMarkClosed()
+      throws ExecutionException, CrudException, IOException {
+    // Arrange
+    Scan scan = prepareScan();
+    Scan scanForStorage = toScanForStorageFrom(scan);
+    result = prepareResult(TransactionState.COMMITTED);
+    when(scanner.one()).thenReturn(Optional.of(result));
+    when(storage.scan(scanForStorage)).thenReturn(scanner);
+    doThrow(RuntimeException.class).when(scanner).close();
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    ConsensusCommitScanner actualScanner =
+        (ConsensusCommitScanner) handler.getScanner(scan, context);
+    actualScanner.one();
+
+    // Act Assert
+    assertThatCode(actualScanner::discard).doesNotThrowAnyException();
+    assertThat(actualScanner.isClosed()).isTrue();
+  }
+
+  @Test
   void getScanner_StorageScannerRequiringBeforeIndexCheckDiscarded_ShouldNotRunBeforeIndexCheck()
       throws ExecutionException, CrudException, IOException {
     // Arrange
@@ -3914,7 +4057,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     when(snapshot.getResults(scan))
         .thenReturn(
             Optional.of(
@@ -3986,7 +4129,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     when(snapshot.getResults(scan))
         .thenReturn(
             Optional.of(
@@ -4012,7 +4155,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(TransactionState.COMMITTED);
-    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA);
+    Snapshot.Key key = new Snapshot.Key(scan, result, TABLE_METADATA, CollationComparators.BINARY);
     when(snapshot.getResults(scan))
         .thenReturn(
             Optional.of(
@@ -4074,7 +4217,8 @@ public class CrudHandlerTest {
 
     // After rollback, the recovered result has a different index column value
     TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_4);
-    Snapshot.Key key = new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA);
+    Snapshot.Key key =
+        new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA, CollationComparators.BINARY);
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
     when(recoveryExecutor.execute(
@@ -4113,7 +4257,8 @@ public class CrudHandlerTest {
 
     // After rollback, the recovered result still has the matching index column value
     TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_3);
-    Snapshot.Key key = new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA);
+    Snapshot.Key key =
+        new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA, CollationComparators.BINARY);
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
     when(recoveryExecutor.execute(
@@ -4135,6 +4280,113 @@ public class CrudHandlerTest {
   }
 
   @Test
+  void
+      read_GetWithIndexAndRolledBackRecordWithCollateEqualIndexKeyUnderCaseInsensitiveIcu_ShouldReturnResult()
+          throws Exception {
+    // Arrange
+    handler =
+        new CrudHandler(
+            storage,
+            recoveryExecutor,
+            tableMetadataManager,
+            false,
+            false,
+            mutationConditionsValidator,
+            parallelExecutor,
+            CollationComparators.CASE_INSENSITIVE_ICU);
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, "apple"))
+            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage returns an uncommitted (PREPARED) record whose index column holds 'Apple'
+    TransactionResult preparedResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.PREPARED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
+
+    // After rollback, the recovered result still holds the stored spelling 'Apple'
+    TransactionResult recoveredResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.COMMITTED);
+    Snapshot.Key key =
+        new Snapshot.Key(
+            getWithIndex,
+            preparedResult,
+            TABLE_METADATA,
+            CollationComparators.CASE_INSENSITIVE_ICU);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(getWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(result.get()).isEqualTo(recoveredResult);
+    verify(snapshot).putIntoReadSet(key, Optional.of(recoveredResult));
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.of(recoveredResult));
+  }
+
+  @Test
+  void
+      read_GetWithIndexAndRolledBackRecordWithCollateEqualIndexKeyUnderBinary_ShouldFilterOutResult()
+          throws Exception {
+    // Arrange
+    Get getWithIndex =
+        Get.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .indexKey(Key.ofText(ANY_NAME_3, "apple"))
+            .build();
+    Scan mainIndexScan = toIndexScanForStorageFrom(getWithIndex);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Storage returns an uncommitted (PREPARED) record whose index column holds 'Apple'
+    TransactionResult preparedResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.PREPARED);
+    when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
+
+    // After rollback, the recovered result still holds 'Apple'
+    TransactionResult recoveredResult =
+        prepareResultWithIndexColumnValue("Apple", TransactionState.COMMITTED);
+    Snapshot.Key key =
+        new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA, CollationComparators.BINARY);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(
+            eq(key),
+            eq(getWithIndex),
+            eq(preparedResult),
+            eq(ANY_ID_1),
+            eq(RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER)))
+        .thenReturn(
+            new RecoveryExecutor.Result(key, Optional.of(recoveredResult), recoveryFuture, true));
+
+    // Act
+    Optional<TransactionResult> result =
+        handler.read(null, getWithIndex, context, TRANSACTION_TABLE_METADATA);
+
+    // Assert
+    assertThat(result).isEmpty();
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
+  }
+
+  @Test
   void read_GetWithIndexMatchingDeletedAndPreparedRecords_ShouldResolveToSingleRecord()
       throws Exception {
     // Arrange: a delete + insert on two records that have different primary keys but the same index
@@ -4152,8 +4404,10 @@ public class CrudHandlerTest {
         prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.PREPARED);
     when(storage.scan(mainIndexScan)).thenReturn(scannerOf(deletedOld, preparedNew));
 
-    Snapshot.Key keyOld = new Snapshot.Key(getWithIndex, deletedOld, TABLE_METADATA);
-    Snapshot.Key keyNew = new Snapshot.Key(getWithIndex, preparedNew, TABLE_METADATA);
+    Snapshot.Key keyOld =
+        new Snapshot.Key(getWithIndex, deletedOld, TABLE_METADATA, CollationComparators.BINARY);
+    Snapshot.Key keyNew =
+        new Snapshot.Key(getWithIndex, preparedNew, TABLE_METADATA, CollationComparators.BINARY);
     TransactionResult recoveredNew =
         prepareResult(ANY_TEXT_1, ANY_TEXT_2, TransactionState.COMMITTED);
     @SuppressWarnings("unchecked")
@@ -4263,7 +4517,8 @@ public class CrudHandlerTest {
     TransactionResult preparedResult = prepareResult(TransactionState.PREPARED);
     when(storage.scan(mainIndexScan)).thenReturn(scannerOf(preparedResult));
 
-    Snapshot.Key key = new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA);
+    Snapshot.Key key =
+        new Snapshot.Key(getWithIndex, preparedResult, TABLE_METADATA, CollationComparators.BINARY);
     when(recoveryExecutor.execute(
             eq(key),
             eq(getWithIndex),
@@ -4411,7 +4666,9 @@ public class CrudHandlerTest {
 
     // After rollback, the recovered result has a different index column value
     TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_4);
-    Snapshot.Key key = new Snapshot.Key(scanWithIndex, preparedResult, TABLE_METADATA);
+    Snapshot.Key key =
+        new Snapshot.Key(
+            scanWithIndex, preparedResult, TABLE_METADATA, CollationComparators.BINARY);
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
     when(recoveryExecutor.execute(
@@ -4451,7 +4708,9 @@ public class CrudHandlerTest {
 
     // After rollback, the recovered result still has the matching index column value
     TransactionResult recoveredResult = prepareResultWithIndexColumnValue(ANY_TEXT_3);
-    Snapshot.Key key = new Snapshot.Key(scanWithIndex, preparedResult, TABLE_METADATA);
+    Snapshot.Key key =
+        new Snapshot.Key(
+            scanWithIndex, preparedResult, TABLE_METADATA, CollationComparators.BINARY);
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
     when(recoveryExecutor.execute(
@@ -4471,6 +4730,11 @@ public class CrudHandlerTest {
   }
 
   private TransactionResult prepareResultWithIndexColumnValue(String indexColumnValue) {
+    return prepareResultWithIndexColumnValue(indexColumnValue, TransactionState.COMMITTED);
+  }
+
+  private TransactionResult prepareResultWithIndexColumnValue(
+      String indexColumnValue, TransactionState state) {
     ImmutableMap<String, Column<?>> columns =
         ImmutableMap.<String, Column<?>>builder()
             .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, ANY_TEXT_1))
@@ -4478,7 +4742,7 @@ public class CrudHandlerTest {
             .put(ANY_NAME_3, TextColumn.of(ANY_NAME_3, indexColumnValue))
             .put(ANY_NAME_4, IntColumn.of(ANY_NAME_4, ANY_INT_1))
             .put(Attribute.ID, TextColumn.of(Attribute.ID, ANY_ID_2))
-            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, TransactionState.COMMITTED.get()))
+            .put(Attribute.STATE, IntColumn.of(Attribute.STATE, state.get()))
             .put(Attribute.VERSION, IntColumn.of(Attribute.VERSION, 2))
             .put(Attribute.BEFORE_ID, TextColumn.of(Attribute.BEFORE_ID, ANY_ID_1))
             .put(
@@ -4525,7 +4789,7 @@ public class CrudHandlerTest {
       waitForRecoveryCompletion_RecoveryFailedWithRetriableExecutionException_ShouldThrowCrudConflictException()
           throws Exception {
     // Arrange
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), CollationComparators.BINARY);
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
     RetriableExecutionException cause = new RetriableExecutionException("conflict");
@@ -4549,7 +4813,7 @@ public class CrudHandlerTest {
       waitForRecoveryCompletion_RecoveryFailedWithNonConflictExecutionException_ShouldThrowCrudException()
           throws Exception {
     // Arrange
-    Snapshot.Key key = new Snapshot.Key(prepareGet());
+    Snapshot.Key key = new Snapshot.Key(prepareGet(), CollationComparators.BINARY);
     @SuppressWarnings("unchecked")
     Future<Void> recoveryFuture = mock(Future.class);
     ExecutionException cause = new ExecutionException("error");

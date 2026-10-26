@@ -124,6 +124,65 @@ public class MergedResultTest {
   }
 
   @Test
+  public void getPartitionKey_ResultAndPutWithDifferentKeySpellingGiven_ShouldReturnStoredKey() {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toUpperCase()))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toUpperCase()))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
+
+    MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
+
+    // Act
+    Optional<Key> actual = mergedResult.getPartitionKey();
+
+    // Assert
+    assertThat(actual).isEqualTo(Optional.of(Key.ofText(ANY_NAME_1, ANY_TEXT_1)));
+  }
+
+  @Test
+  public void getClusteringKey_ResultAndPutWithDifferentKeySpellingGiven_ShouldReturnStoredKey() {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toUpperCase()))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toUpperCase()))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
+
+    MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
+
+    // Act
+    Optional<Key> actual = mergedResult.getClusteringKey();
+
+    // Assert
+    assertThat(actual).isEqualTo(Optional.of(Key.ofText(ANY_NAME_2, ANY_TEXT_2)));
+  }
+
+  @Test
+  public void getText_ResultAndPutWithDifferentKeySpellingGiven_ShouldReturnStoredKeySpelling() {
+    // Arrange
+    Put put =
+        Put.newBuilder()
+            .table("test")
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1.toUpperCase()))
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_2.toUpperCase()))
+            .intValue(ANY_NAME_3, ANY_INT_3)
+            .build();
+
+    MergedResult mergedResult = new MergedResult(Optional.of(result), put, TABLE_METADATA);
+
+    // Act Assert
+    assertThat(mergedResult.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(mergedResult.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(mergedResult.getInt(ANY_NAME_3)).isEqualTo(ANY_INT_3);
+  }
+
+  @Test
   public void getPartitionKey_OnlyPutGiven_ShouldReturnCorrectKey() {
     // Arrange
     Put put =

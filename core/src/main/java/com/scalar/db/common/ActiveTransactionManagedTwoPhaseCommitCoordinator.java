@@ -143,9 +143,9 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   }
 
   // FutureReturnValueIgnored: the ScheduledFuture of the sweep schedule is deliberately unused.
-  // Its exception-reporting role is void — sweepSafely lets nothing escape, precisely so the
-  // schedule can never be silently cancelled — and its cancellation role is covered by close()'s
-  // shutdownNow(), which also interrupts an in-flight probe.
+  // Its exception-reporting role is void — sweepSafely lets no exception escape, precisely so that
+  // an exception never silently cancels the schedule — and its cancellation role is covered by
+  // close()'s shutdownNow(), which also interrupts an in-flight probe.
   @SuppressWarnings("FutureReturnValueIgnored")
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   private ActiveTransactionManagedTwoPhaseCommitCoordinator(
@@ -292,13 +292,12 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
   void sweepSafely() {
     try {
       sweep();
-    } catch (Throwable t) {
-      // Deliberately Throwable, and load-bearing: if anything escapes a scheduled task,
-      // scheduleWithFixedDelay suppresses every future run and captures the throwable in the
-      // never-read future — probing would end permanently and silently. Catching everything here
-      // keeps the schedule alive and the failure visible; the tracked entries are untouched, so
-      // the next pass simply retries.
-      logger.warn("Failed to sweep the tracked transactions", t);
+    } catch (Exception e) {
+      // If an exception escapes a scheduled task, scheduleWithFixedDelay suppresses every future
+      // run and captures the exception in the never-read future — probing would end permanently
+      // and silently. Catching it here keeps the schedule alive and the failure visible; the
+      // tracked entries are untouched, so the next pass simply retries.
+      logger.warn("Failed to sweep the tracked transactions", e);
     }
   }
 
@@ -398,9 +397,7 @@ public class ActiveTransactionManagedTwoPhaseCommitCoordinator
         // not-yet-probe-capable) remote participant being the expected case — must not reap a
         // possibly-live transaction. Wrong retentions of dead transactions are deliberately
         // unbounded in time (see the class Javadoc for why that is acceptable) and bounded in
-        // count by cap eviction. An Error deliberately propagates instead of being mapped to a
-        // liveness answer: it aborts only the current pass — the entries stay registered, and the
-        // sweep scheduler's catch-all logs it and retries on the next interval.
+        // count by cap eviction.
         logger.warn(
             "Probing participant {} for the expired transaction failed; treating the transaction "
                 + "as still held. Transaction ID: {}",
