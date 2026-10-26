@@ -98,7 +98,9 @@ public class JdbcAdminImportTestUtils {
           "INT",
           "INTERVAL YEAR(3) TO MONTH",
           "INTERVAL DAY(2) TO SECOND",
+          "NCHAR(3)",
           "NUMBER(16,0)",
+          "NVARCHAR2(512)",
           "ROWID",
           "UROWID");
   static final List<String> UNSUPPORTED_DATA_TYPES_ORACLE_V20_OR_LATER =
@@ -108,10 +110,15 @@ public class JdbcAdminImportTestUtils {
           "decimal(8,2)",
           "hierarchyid",
           "money",
+          "nchar(3)",
+          "ntext",
           "numeric(8,2)",
+          "nvarchar(512)",
+          "nvarchar(max)",
           "rowversion",
           "smallmoney",
           "sql_variant",
+          "text",
           "uniqueidentifier",
           "xml",
           "geometry",
@@ -119,7 +126,7 @@ public class JdbcAdminImportTestUtils {
   static final List<String> UNSUPPORTED_DATA_TYPES_MSSQL_2025_OR_LATER =
       Arrays.asList("json", "vector(3)");
   static final List<String> UNSUPPORTED_DATA_TYPES_DB2 =
-      Arrays.asList("DECIMAL", "DECFLOAT", "XML");
+      Arrays.asList("DECIMAL", "DECFLOAT", "DBCLOB(5)", "GRAPHIC(3)", "VARGRAPHIC(512)", "XML");
 
   private final JdbcConfig config;
   private final RdbEngineStrategy rdbEngine;
@@ -360,33 +367,31 @@ public class JdbcAdminImportTestUtils {
     columns.put("col05", "BINARY_DOUBLE");
     columns.put("col06", "CHAR(3)");
     columns.put("col07", "VARCHAR2(512)");
-    columns.put("col08", "NCHAR(3)");
-    columns.put("col09", "NVARCHAR2(512)");
-    columns.put("col10", "CLOB");
-    columns.put("col11", "NCLOB");
-    columns.put("col12", "LONG");
-    columns.put("col13", "BLOB");
-    columns.put("col14", "RAW(1024)");
-    columns.put("col15", "DATE");
-    columns.put("col16", "DATE"); // override to TIME
-    columns.put("col17", "DATE"); // override to TIMESTAMP
-    columns.put("col18", "TIMESTAMP");
-    columns.put("col19", "TIMESTAMP"); // override to TIME
-    columns.put("col20", "TIMESTAMP WITH TIME ZONE");
-    columns.put("col21", "TIMESTAMP WITH LOCAL TIME ZONE");
-    columns.put("col22", "NUMBER(1)"); // override to BOOLEAN
+    columns.put("col08", "CLOB");
+    columns.put("col09", "NCLOB");
+    columns.put("col10", "LONG");
+    columns.put("col11", "BLOB");
+    columns.put("col12", "RAW(1024)");
+    columns.put("col13", "DATE");
+    columns.put("col14", "DATE"); // override to TIME
+    columns.put("col15", "DATE"); // override to TIMESTAMP
+    columns.put("col16", "TIMESTAMP");
+    columns.put("col17", "TIMESTAMP"); // override to TIME
+    columns.put("col18", "TIMESTAMP WITH TIME ZONE");
+    columns.put("col19", "TIMESTAMP WITH LOCAL TIME ZONE");
+    columns.put("col20", "NUMBER(1)"); // override to BOOLEAN
     return columns;
   }
 
   private Map<String, DataType> prepareOverrideColumnsTypeForOracle() {
     return ImmutableMap.of(
-        "col16",
+        "col14",
         DataType.TIME,
-        "col17",
+        "col15",
         DataType.TIMESTAMP,
-        "col19",
+        "col17",
         DataType.TIME,
-        "col22",
+        "col20",
         DataType.BOOLEAN);
   }
 
@@ -404,18 +409,16 @@ public class JdbcAdminImportTestUtils {
         .addColumn("col08", DataType.TEXT)
         .addColumn("col09", DataType.TEXT)
         .addColumn("col10", DataType.TEXT)
-        .addColumn("col11", DataType.TEXT)
-        .addColumn("col12", DataType.TEXT)
-        .addColumn("col13", DataType.BLOB)
-        .addColumn("col14", DataType.BLOB)
-        .addColumn("col15", DataType.DATE)
-        .addColumn("col16", DataType.TIME)
-        .addColumn("col17", DataType.TIMESTAMP)
-        .addColumn("col18", DataType.TIMESTAMP)
-        .addColumn("col19", DataType.TIME)
-        .addColumn("col20", DataType.TIMESTAMPTZ)
-        .addColumn("col21", DataType.TIMESTAMPTZ)
-        .addColumn("col22", DataType.BOOLEAN)
+        .addColumn("col11", DataType.BLOB)
+        .addColumn("col12", DataType.BLOB)
+        .addColumn("col13", DataType.DATE)
+        .addColumn("col14", DataType.TIME)
+        .addColumn("col15", DataType.TIMESTAMP)
+        .addColumn("col16", DataType.TIMESTAMP)
+        .addColumn("col17", DataType.TIME)
+        .addColumn("col18", DataType.TIMESTAMPTZ)
+        .addColumn("col19", DataType.TIMESTAMPTZ)
+        .addColumn("col20", DataType.BOOLEAN)
         .addPartitionKey("pk1")
         .addPartitionKey("pk2")
         .build();
@@ -424,8 +427,8 @@ public class JdbcAdminImportTestUtils {
   private Map<String, Column<?>> prepareInsertColumnsForOracle(TableMetadata metadata) {
     List<Column<?>> customColumns =
         ImmutableList.of(
-            TimeColumn.of("col16", LocalTime.of(11, 8, 35)),
-            TimestampColumn.of("col17", LocalDateTime.of(1905, 10, 11, 8, 35)));
+            TimeColumn.of("col14", LocalTime.of(11, 8, 35)),
+            TimestampColumn.of("col15", LocalDateTime.of(1905, 10, 11, 8, 35)));
     return prepareInsertColumnsWithGenericAndCustomValues(metadata, customColumns);
   }
 
@@ -460,19 +463,15 @@ public class JdbcAdminImportTestUtils {
     columns.put("col07", "float");
     columns.put("col08", "char(3)");
     columns.put("col09", "varchar(512)");
-    columns.put("col10", "nchar(3)");
-    columns.put("col11", "nvarchar(512)");
-    columns.put("col12", "text");
-    columns.put("col13", "ntext");
-    columns.put("col14", "binary(5)");
-    columns.put("col15", "varbinary(5)");
-    columns.put("col16", "image");
-    columns.put("col17", "date");
-    columns.put("col18", "time");
-    columns.put("col19", "datetime");
-    columns.put("col20", "datetime2");
-    columns.put("col21", "smalldatetime");
-    columns.put("col22", "datetimeoffset");
+    columns.put("col10", "binary(5)");
+    columns.put("col11", "varbinary(5)");
+    columns.put("col12", "image");
+    columns.put("col13", "date");
+    columns.put("col14", "time");
+    columns.put("col15", "datetime");
+    columns.put("col16", "datetime2");
+    columns.put("col17", "smalldatetime");
+    columns.put("col18", "datetimeoffset");
 
     return columns;
   }
@@ -490,19 +489,15 @@ public class JdbcAdminImportTestUtils {
         .addColumn("col07", DataType.DOUBLE)
         .addColumn("col08", DataType.TEXT)
         .addColumn("col09", DataType.TEXT)
-        .addColumn("col10", DataType.TEXT)
-        .addColumn("col11", DataType.TEXT)
-        .addColumn("col12", DataType.TEXT)
-        .addColumn("col13", DataType.TEXT)
-        .addColumn("col14", DataType.BLOB)
-        .addColumn("col15", DataType.BLOB)
-        .addColumn("col16", DataType.BLOB)
-        .addColumn("col17", DataType.DATE)
-        .addColumn("col18", DataType.TIME)
-        .addColumn("col19", DataType.TIMESTAMP)
-        .addColumn("col20", DataType.TIMESTAMP)
-        .addColumn("col21", DataType.TIMESTAMP)
-        .addColumn("col22", DataType.TIMESTAMPTZ)
+        .addColumn("col10", DataType.BLOB)
+        .addColumn("col11", DataType.BLOB)
+        .addColumn("col12", DataType.BLOB)
+        .addColumn("col13", DataType.DATE)
+        .addColumn("col14", DataType.TIME)
+        .addColumn("col15", DataType.TIMESTAMP)
+        .addColumn("col16", DataType.TIMESTAMP)
+        .addColumn("col17", DataType.TIMESTAMP)
+        .addColumn("col18", DataType.TIMESTAMPTZ)
         .addPartitionKey("pk1")
         .addPartitionKey("pk2")
         .build();
@@ -511,8 +506,8 @@ public class JdbcAdminImportTestUtils {
   private Map<String, Column<?>> prepareInsertColumnsForSqlServer(TableMetadata metadata) {
     List<Column<?>> customColumns =
         ImmutableList.of(
-            TimestampColumn.of("col19", LocalDateTime.of(1905, 10, 11, 8, 35, 14, 123_000_000)),
-            TimestampColumn.of("col21", LocalDateTime.of(1905, 10, 11, 8, 35)));
+            TimestampColumn.of("col15", LocalDateTime.of(1905, 10, 11, 8, 35, 14, 123_000_000)),
+            TimestampColumn.of("col17", LocalDateTime.of(1905, 10, 11, 8, 35)));
     return prepareInsertColumnsWithGenericAndCustomValues(metadata, customColumns);
   }
 
@@ -531,29 +526,26 @@ public class JdbcAdminImportTestUtils {
     columns.put("col09", "CHAR(3)");
     columns.put("col10", "VARCHAR(512)");
     columns.put("col11", "CLOB");
-    columns.put("col12", "GRAPHIC(3)");
-    columns.put("col13", "VARGRAPHIC(512)");
-    columns.put("col14", "DBCLOB(5)");
-    columns.put("col15", "NCHAR(3)");
-    columns.put("col16", "NVARCHAR(512)");
-    columns.put("col17", "NCLOB(512)");
-    columns.put("col18", "BINARY(5)");
-    columns.put("col19", "VARBINARY(512)");
-    columns.put("col20", "BLOB(2G)");
-    columns.put("col21", "CHAR(5) FOR BIT DATA");
-    columns.put("col22", "VARCHAR(512) FOR BIT DATA");
-    columns.put("col23", "DATE");
-    columns.put("col24", "TIME");
-    columns.put("col25", "TIMESTAMP(6)"); // override to TIME
-    columns.put("col26", "TIMESTAMP(3)");
-    columns.put("col27", "TIMESTAMP(3)"); // override to TIMESTAMPTZ
-    columns.put("col28", "BOOLEAN");
+    columns.put("col12", "NCHAR(3)");
+    columns.put("col13", "NVARCHAR(512)");
+    columns.put("col14", "NCLOB(512)");
+    columns.put("col15", "BINARY(5)");
+    columns.put("col16", "VARBINARY(512)");
+    columns.put("col17", "BLOB(2G)");
+    columns.put("col18", "CHAR(5) FOR BIT DATA");
+    columns.put("col19", "VARCHAR(512) FOR BIT DATA");
+    columns.put("col20", "DATE");
+    columns.put("col21", "TIME");
+    columns.put("col22", "TIMESTAMP(6)"); // override to TIME
+    columns.put("col23", "TIMESTAMP(3)");
+    columns.put("col24", "TIMESTAMP(3)"); // override to TIMESTAMPTZ
+    columns.put("col25", "BOOLEAN");
 
     return columns;
   }
 
   private Map<String, DataType> prepareOverrideColumnsTypeForDb2() {
-    return ImmutableMap.of("col25", DataType.TIME, "col27", DataType.TIMESTAMPTZ);
+    return ImmutableMap.of("col22", DataType.TIME, "col24", DataType.TIMESTAMPTZ);
   }
 
   private TableMetadata prepareTableMetadataForDb2() {
@@ -574,20 +566,17 @@ public class JdbcAdminImportTestUtils {
         .addColumn("col12", DataType.TEXT)
         .addColumn("col13", DataType.TEXT)
         .addColumn("col14", DataType.TEXT)
-        .addColumn("col15", DataType.TEXT)
-        .addColumn("col16", DataType.TEXT)
-        .addColumn("col17", DataType.TEXT)
+        .addColumn("col15", DataType.BLOB)
+        .addColumn("col16", DataType.BLOB)
+        .addColumn("col17", DataType.BLOB)
         .addColumn("col18", DataType.BLOB)
         .addColumn("col19", DataType.BLOB)
-        .addColumn("col20", DataType.BLOB)
-        .addColumn("col21", DataType.BLOB)
-        .addColumn("col22", DataType.BLOB)
-        .addColumn("col23", DataType.DATE)
-        .addColumn("col24", DataType.TIME)
-        .addColumn("col25", DataType.TIME)
-        .addColumn("col26", DataType.TIMESTAMP)
-        .addColumn("col27", DataType.TIMESTAMPTZ)
-        .addColumn("col28", DataType.BOOLEAN)
+        .addColumn("col20", DataType.DATE)
+        .addColumn("col21", DataType.TIME)
+        .addColumn("col22", DataType.TIME)
+        .addColumn("col23", DataType.TIMESTAMP)
+        .addColumn("col24", DataType.TIMESTAMPTZ)
+        .addColumn("col25", DataType.BOOLEAN)
         .addPartitionKey("pk1")
         .addPartitionKey("pk2")
         .build();
@@ -595,7 +584,7 @@ public class JdbcAdminImportTestUtils {
 
   private Map<String, Column<?>> prepareInsertColumnsForDb2(TableMetadata metadata) {
     List<Column<?>> customColumns =
-        ImmutableList.of(TimeColumn.of("col24", LocalTime.of(11, 8, 35)));
+        ImmutableList.of(TimeColumn.of("col21", LocalTime.of(11, 8, 35)));
     return prepareInsertColumnsWithGenericAndCustomValues(metadata, customColumns);
   }
 
@@ -1037,8 +1026,6 @@ public class JdbcAdminImportTestUtils {
           .put("BINARY_DOUBLE", DataType.DOUBLE)
           .put("CHAR(3)", DataType.TEXT)
           .put("VARCHAR2(512)", DataType.TEXT)
-          .put("NCHAR(3)", DataType.TEXT)
-          .put("NVARCHAR2(512)", DataType.TEXT)
           .build();
     } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
       return ImmutableMap.<String, DataType>builder()
@@ -1051,8 +1038,6 @@ public class JdbcAdminImportTestUtils {
           .put("float", DataType.DOUBLE)
           .put("char(3)", DataType.TEXT)
           .put("varchar(512)", DataType.TEXT)
-          .put("nchar(3)", DataType.TEXT)
-          .put("nvarchar(512)", DataType.TEXT)
           .build();
     } else if (JdbcTestUtils.isDb2(rdbEngine)) {
       return ImmutableMap.<String, DataType>builder()
@@ -1066,8 +1051,6 @@ public class JdbcAdminImportTestUtils {
           .put("FLOAT(25)", DataType.DOUBLE)
           .put("CHAR(3)", DataType.TEXT)
           .put("VARCHAR(512)", DataType.TEXT)
-          .put("GRAPHIC(3)", DataType.TEXT)
-          .put("VARGRAPHIC(32)", DataType.TEXT)
           .put("NCHAR(3)", DataType.TEXT)
           .put("NVARCHAR(32)", DataType.TEXT)
           .build();

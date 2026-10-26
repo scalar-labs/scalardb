@@ -158,24 +158,24 @@ public class RdbEngineTest {
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.CHAR, "CHAR"), DataType.TEXT);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.CLOB, "CLOB"), DataType.TEXT);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.VARCHAR, "VARCHAR2"), DataType.TEXT);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NCHAR, "NCHAR"), DataType.TEXT);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NCHAR, "NCHAR"), null);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NCLOB, "NCLOB"), DataType.TEXT);
-    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NVARCHAR, "NVARCHAR"), DataType.TEXT);
+    DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.NVARCHAR, "NVARCHAR2"), null);
     DATA_TYPE_MAP.get(ORACLE).put(new Column(JDBCType.LONGVARCHAR, "LONG"), DataType.TEXT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.CHAR, "char"), DataType.TEXT);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.CHAR, "uniqueidentifier"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.VARCHAR, "varchar"), DataType.TEXT);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NCHAR, "nchar"), DataType.TEXT);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NVARCHAR, "nvarchar"), DataType.TEXT);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGVARCHAR, "text"), DataType.TEXT);
-    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "ntext"), DataType.TEXT);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NCHAR, "nchar"), null);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.NVARCHAR, "nvarchar"), null);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGVARCHAR, "text"), null);
+    DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "ntext"), null);
     DATA_TYPE_MAP.get(SQL_SERVER).put(new Column(JDBCType.LONGNVARCHAR, "xml"), null);
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CHAR, "CHAR", 3, 0), DataType.TEXT);
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.VARCHAR, "VARCHAR", 512, 0), DataType.TEXT);
     DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "CLOB", 1048576, 0), DataType.TEXT);
-    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CHAR, "GRAPHIC", 3, 0), DataType.TEXT);
-    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.VARCHAR, "VARGRAPHIC", 512, 0), DataType.TEXT);
-    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "DCLOB", 512, 10), DataType.TEXT);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CHAR, "GRAPHIC", 3, 0), null);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.VARCHAR, "VARGRAPHIC", 512, 0), null);
+    DATA_TYPE_MAP.get(DB2).put(new Column(JDBCType.CLOB, "DBCLOB", 512, 10), null);
 
     // BLOB
     DATA_TYPE_MAP.get(MYSQL).put(new Column(JDBCType.BINARY, "BINARY"), DataType.BLOB);
