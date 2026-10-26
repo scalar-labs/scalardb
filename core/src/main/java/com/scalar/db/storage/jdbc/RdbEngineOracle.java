@@ -323,10 +323,14 @@ public class RdbEngineOracle extends AbstractRdbEngine {
         return DataType.DOUBLE;
       case DOUBLE:
         return DataType.DOUBLE;
-      case CHAR:
       case NCHAR:
-      case VARCHAR:
       case NVARCHAR:
+        // Ordered by UTF-16 code unit, which breaks the code point order of TEXT
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+      case CHAR:
+      case VARCHAR:
       case CLOB:
       case NCLOB:
         logger.info(
