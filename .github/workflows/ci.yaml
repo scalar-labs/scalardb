@@ -87,6 +87,12 @@ env:
   TERM: dumb
   ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
 
+# Non pull request runs get a unique group so they are never cancelled. A called workflow shares its
+# caller's run ID, so the Java runtime inputs keep the matrix jobs of the ci-all-java-* workflows apart.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || format('{0}-{1}-{2}', github.run_id, inputs.INT_TEST_JAVA_RUNTIME_VERSION, inputs.INT_TEST_JAVA_RUNTIME_VENDOR) }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Gradle check
