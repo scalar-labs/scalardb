@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -60,7 +61,7 @@ public class MergeQuery implements UpsertQuery {
     sql.append("MERGE INTO ")
         .append(rdbEngine.encloseFullTableName(schema, table))
         .append(" t1 USING (SELECT ")
-        .append(makeUsingSelectSqlString(enclosedKeyNames));
+        .append(makeUsingSelectSqlString(enclosedKeyNames, enclosedValueNames));
     if (dualTableName != null) {
       sql.append(" FROM ").append(dualTableName);
     }
@@ -77,8 +78,11 @@ public class MergeQuery implements UpsertQuery {
     return sql.toString();
   }
 
-  private String makeUsingSelectSqlString(List<String> enclosedKeyNames) {
-    return enclosedKeyNames.stream().map(n -> "? " + n).collect(Collectors.joining(","));
+  private String makeUsingSelectSqlString(
+      List<String> enclosedKeyNames, List<String> enclosedValueNames) {
+    return Stream.concat(enclosedKeyNames.stream(), enclosedValueNames.stream())
+        .map(n -> "? " + n)
+        .collect(Collectors.joining(","));
   }
 
   private String makePrimaryKeyConditionsSqlString(List<String> enclosedKeyNames) {
@@ -88,7 +92,7 @@ public class MergeQuery implements UpsertQuery {
   }
 
   private String makeUpdateSetSqlString(List<String> enclosedValueNames) {
-    return enclosedValueNames.stream().map(n -> n + "=?").collect(Collectors.joining(","));
+    return enclosedValueNames.stream().map(n -> n + "=t2." + n).collect(Collectors.joining(","));
   }
 
   private String makeInsertSqlString(
@@ -98,7 +102,7 @@ public class MergeQuery implements UpsertQuery {
     return "("
         + String.join(",", names)
         + ") VALUES ("
-        + names.stream().map(n -> "?").collect(Collectors.joining(","))
+        + names.stream().map(n -> "t2." + n).collect(Collectors.joining(","))
         + ")";
   }
 
@@ -107,25 +111,6 @@ public class MergeQuery implements UpsertQuery {
     PreparedStatementBinder binder =
         new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
-    // For the USING SELECT statement
-    for (Column<?> column : partitionKey.getColumns()) {
-      column.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
-    }
-    if (clusteringKey.isPresent()) {
-      for (Column<?> column : clusteringKey.get().getColumns()) {
-        column.accept(binder);
-        binder.throwSQLExceptionIfOccurred();
-      }
-    }
-
-    // For the UPDATE statement
-    for (Column<?> column : columns.values()) {
-      column.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
-    }
-
-    // For the INSERT statement
     for (Column<?> column : partitionKey.getColumns()) {
       column.accept(binder);
       binder.throwSQLExceptionIfOccurred();

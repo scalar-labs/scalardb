@@ -12,6 +12,7 @@ import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,6 +21,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -32,18 +35,42 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
       "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
+  private static final Pattern MYSQL_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
+  private final boolean rowAliasSupported;
 
   RdbEngineMysql(JdbcConfig config) {
+    this(config, false);
+  }
+
+  RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
     timeTypeEngine = new RdbEngineTimeTypeMysql();
+    this.rowAliasSupported = rowAliasSupported;
   }
 
   @VisibleForTesting
   RdbEngineMysql() {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     timeTypeEngine = new RdbEngineTimeTypeMysql();
+    rowAliasSupported = false;
+  }
+
+  /**
+   * Returns whether the server accepts a row alias in {@code INSERT ... ON DUPLICATE KEY UPDATE},
+   * which is supported since MySQL 8.0.19.
+   */
+  static boolean supportsInsertRowAlias(DatabaseMetaData metaData) throws SQLException {
+    String version = metaData.getDatabaseProductVersion();
+    Matcher matcher = MYSQL_VERSION_PATTERN.matcher(version);
+    if (version.contains("MariaDB") || !matcher.lookingAt()) {
+      return false;
+    }
+    int major = Integer.parseInt(matcher.group(1));
+    int minor = Integer.parseInt(matcher.group(2));
+    int patch = Integer.parseInt(matcher.group(3));
+    return major > 8 || (major == 8 && (minor > 0 || patch >= 19));
   }
 
   @Override
@@ -186,7 +213,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new InsertOnDuplicateKeyUpdateQuery(builder);
+    return new InsertOnDuplicateKeyUpdateQuery(builder, rowAliasSupported);
   }
 
   @Override
