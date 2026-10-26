@@ -2,6 +2,7 @@ package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,35 +64,10 @@ public class TextColumn implements Column<String> {
         .compare(getName(), o.getName())
         .compareTrueFirst(hasNullValue(), o.hasNullValue())
         .compare(
-            getTextValue(), o.getTextValue(), Comparator.nullsFirst(TextColumn::compareByCodePoint))
+            getTextValue(),
+            o.getTextValue(),
+            Comparator.nullsFirst(ScalarDbUtils::compareTextByCodePoint))
         .result();
-  }
-
-  /**
-   * Orders two strings by Unicode code point, which for well-formed text is the unsigned UTF-8 byte
-   * order that byte-order backends use. {@link String#compareTo} orders by UTF-16 code unit and so
-   * places supplementary characters before U+E000..U+FFFF; comparing the UTF-8 encodings instead
-   * would conflate distinct strings whose unpaired surrogates all encode to the replacement byte.
-   * This order returns 0 only for {@link String#equals equal} strings, ill-formed ones included.
-   *
-   * @param left the first text value (non-null)
-   * @param right the second text value (non-null)
-   * @return a negative integer, zero, or a positive integer as {@code left} sorts before, equal to,
-   *     or after {@code right}
-   */
-  private static int compareByCodePoint(String left, String right) {
-    int i = 0;
-    int j = 0;
-    while (i < left.length() && j < right.length()) {
-      int l = left.codePointAt(i);
-      int r = right.codePointAt(j);
-      if (l != r) {
-        return Integer.compare(l, r);
-      }
-      i += Character.charCount(l);
-      j += Character.charCount(r);
-    }
-    return Integer.compare(left.length() - i, right.length() - j);
   }
 
   @Override
