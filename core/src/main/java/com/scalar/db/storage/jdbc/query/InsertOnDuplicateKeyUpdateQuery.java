@@ -24,9 +24,15 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
+  private final boolean useRowAlias;
 
+  /**
+   * @param useRowAlias whether the update reads the inserted row through a row alias ({@code VALUES
+   *     (...) AS new ... col=new.col}) or through {@code VALUES(col)}, which MySQL 8.0.20
+   *     deprecates
+   */
   @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public InsertOnDuplicateKeyUpdateQuery(Builder builder) {
+  public InsertOnDuplicateKeyUpdateQuery(Builder builder, boolean useRowAlias) {
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
@@ -34,6 +40,7 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     columns = builder.columns;
+    this.useRowAlias = useRowAlias;
   }
 
   @Override
@@ -48,6 +55,9 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
         .append(" ")
         .append(makeValuesSqlString());
     if (!columns.isEmpty()) {
+      if (useRowAlias) {
+        sql.append(" AS ").append(rdbEngine.enclose(rowAlias()));
+      }
       sql.append(" ").append(makeOnDuplicateKeyUpdateSqlString());
     }
     return sql.toString();
@@ -65,10 +75,17 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
         + ")";
   }
 
+  // MySQL rejects a row alias equal to the table name.
+  private String rowAlias() {
+    return table.equalsIgnoreCase("new") ? "new_row" : "new";
+  }
+
   private String makeOnDuplicateKeyUpdateSqlString() {
+    String insertedRow = useRowAlias ? rdbEngine.enclose(rowAlias()) : null;
     return "ON DUPLICATE KEY UPDATE "
         + columns.keySet().stream()
-            .map(n -> rdbEngine.enclose(n) + "=?")
+            .map(rdbEngine::enclose)
+            .map(n -> n + "=" + (useRowAlias ? insertedRow + "." + n : "VALUES(" + n + ")"))
             .collect(Collectors.joining(","));
   }
 
@@ -89,12 +106,6 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
       }
     }
 
-    for (Column<?> column : columns.values()) {
-      column.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
-    }
-
-    // For ON DUPLICATE KEY UPDATE
     for (Column<?> column : columns.values()) {
       column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
