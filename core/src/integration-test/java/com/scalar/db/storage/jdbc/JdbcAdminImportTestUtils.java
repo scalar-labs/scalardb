@@ -462,8 +462,9 @@ public class JdbcAdminImportTestUtils {
     columns.put("col09", "varchar(512)");
     columns.put("col10", "nchar(3)");
     columns.put("col11", "nvarchar(512)");
-    columns.put("col12", "text");
-    columns.put("col13", "ntext");
+    // text and ntext columns cannot take the UTF-8 collation of the test database
+    columns.put("col12", "text COLLATE Latin1_General_100_BIN2");
+    columns.put("col13", "ntext COLLATE Latin1_General_100_BIN2");
     columns.put("col14", "binary(5)");
     columns.put("col15", "varbinary(5)");
     columns.put("col16", "image");
