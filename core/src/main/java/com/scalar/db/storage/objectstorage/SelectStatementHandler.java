@@ -1,12 +1,12 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.collect.Ordering;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.EmptyScanner;
 import com.scalar.db.common.TableMetadataManager;
@@ -26,14 +26,9 @@ import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
-  private final CollationComparator collationComparator;
-
   public SelectStatementHandler(
-      ObjectStorageWrapper wrapper,
-      TableMetadataManager metadataManager,
-      CollationComparator collationComparator) {
+      ObjectStorageWrapper wrapper, TableMetadataManager metadataManager) {
     super(wrapper, metadataManager);
-    this.collationComparator = collationComparator;
   }
 
   @Nonnull
@@ -74,8 +69,7 @@ public class SelectStatementHandler extends StatementHandler {
         getPartition(getNamespace(scan), getTable(scan), operation.getConcatenatedPartitionKey());
     List<ObjectStorageRecord> records = new ArrayList<>(partition.getRecords().values());
 
-    ClusteringKeyComparator clusteringKeyComparator =
-        new ClusteringKeyComparator(metadata, collationComparator);
+    ClusteringKeyComparator clusteringKeyComparator = new ClusteringKeyComparator(metadata);
     Comparator<ObjectStorageRecord> cmp =
         Comparator.comparing(ObjectStorageRecord::getClusteringKey, clusteringKeyComparator);
     if (isReverseOrder(scan, metadata)) {
@@ -204,7 +198,6 @@ public class SelectStatementHandler extends StatementHandler {
       boolean isStart,
       boolean isInclusive,
       TableMetadata metadata) {
-    Comparator<Column<?>> perColumn = collationComparator.columnComparator();
     for (Column<?> column : clusteringKey.getColumns()) {
       Scan.Ordering.Order order = metadata.getClusteringOrder(column.getName());
       if (clusteringKey.getColumns().indexOf(column) == clusteringKey.size() - 1) {
@@ -218,8 +211,8 @@ public class SelectStatementHandler extends StatementHandler {
                           column.getDataType());
                   int cmp =
                       order == Scan.Ordering.Order.ASC
-                          ? perColumn.compare(recordColumn, column)
-                          : perColumn.compare(column, recordColumn);
+                          ? Ordering.natural().compare(recordColumn, column)
+                          : Ordering.natural().compare(column, recordColumn);
                   if (isStart) {
                     if (isInclusive) {
                       return cmp >= 0;
@@ -244,7 +237,7 @@ public class SelectStatementHandler extends StatementHandler {
                       record.getClusteringKey().get(column.getName()),
                       column.getName(),
                       column.getDataType());
-              int cmp = perColumn.compare(recordColumn, column);
+              int cmp = Ordering.natural().compare(recordColumn, column);
               if (cmp == 0) {
                 tmpRecords.add(record);
               }

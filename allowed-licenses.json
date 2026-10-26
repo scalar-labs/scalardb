@@ -44,9 +44,6 @@
         },
         {
             "moduleLicense": "CDDL/GPLv2+CE"
-        },
-        {
-            "moduleLicense": "Unicode-3.0"
         }
     ]
 }
