@@ -17,7 +17,6 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.StorageInfo;
@@ -981,7 +980,9 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new PutIf(ConditionBuilder.column(COL4).isLikeText("val%"));
+    MutationCondition condition =
+        ConditionBuilder.putIf(
+            Collections.singletonList(ConditionBuilder.column(COL4).isLikeText("val%")));
     Put put =
         Put.newBuilder()
             .namespace(NAMESPACE)
@@ -1436,6 +1437,28 @@ public class OperationCheckerTest {
                 ConditionBuilder.buildConditionalExpression(
                     IntColumn.of(COL1, 1), Operator.IS_NOT_NULL))
             .build();
+    Delete delete =
+        Delete.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE_NAME)
+            .partitionKey(partitionKey)
+            .clusteringKey(clusteringKey)
+            .condition(condition)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(delete))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void whenCheckingDeleteOperationWithLikeCondition_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
+    MutationCondition condition =
+        ConditionBuilder.deleteIf(
+            Collections.singletonList(ConditionBuilder.column(COL4).isNotLikeText("val%")));
     Delete delete =
         Delete.newBuilder()
             .namespace(NAMESPACE)
