@@ -32,13 +32,9 @@ public class MergedResult extends AbstractResult {
 
     putColumns = new HashMap<>();
     putColumns.putAll(put.getColumns());
-    if (!result.isPresent()) {
-      // A Put cannot rewrite a stored key, so a stored record keeps its own key spelling even when
-      // the Put's key only collates equal to it.
-      put.getPartitionKey().getColumns().forEach(c -> putColumns.put(c.getName(), c));
-      put.getClusteringKey()
-          .ifPresent(k -> k.getColumns().forEach(c -> putColumns.put(c.getName(), c)));
-    }
+    put.getPartitionKey().getColumns().forEach(c -> putColumns.put(c.getName(), c));
+    put.getClusteringKey()
+        .ifPresent(k -> k.getColumns().forEach(c -> putColumns.put(c.getName(), c)));
 
     this.metadata = metadata;
   }
@@ -47,16 +43,14 @@ public class MergedResult extends AbstractResult {
   @Deprecated
   @Override
   public Optional<com.scalar.db.io.Key> getPartitionKey() {
-    return result
-        .map(TransactionResult::getPartitionKey)
-        .orElse(Optional.of(put.getPartitionKey()));
+    return Optional.of(put.getPartitionKey());
   }
 
   /** @deprecated As of release 3.8.0. Will be removed in release 4.0.0 */
   @Deprecated
   @Override
   public Optional<com.scalar.db.io.Key> getClusteringKey() {
-    return result.map(TransactionResult::getClusteringKey).orElse(put.getClusteringKey());
+    return put.getClusteringKey();
   }
 
   @Override

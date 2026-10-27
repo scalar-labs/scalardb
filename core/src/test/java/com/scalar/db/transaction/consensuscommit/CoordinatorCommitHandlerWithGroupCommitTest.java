@@ -15,7 +15,6 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.CollationComparators;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -97,17 +96,14 @@ class CoordinatorCommitHandlerWithGroupCommitTest {
   }
 
   private Snapshot prepareSnapshotWithWrite(String id) throws CrudException {
-    Snapshot snapshot =
-        new Snapshot(
-            id, tableMetadataManager, new ParallelExecutor(config), CollationComparators.BINARY);
+    Snapshot snapshot = new Snapshot(id, tableMetadataManager, new ParallelExecutor(config));
     Put put = preparePut();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     return snapshot;
   }
 
   private Snapshot prepareEmptySnapshot(String id) {
-    return new Snapshot(
-        id, tableMetadataManager, new ParallelExecutor(config), CollationComparators.BINARY);
+    return new Snapshot(id, tableMetadataManager, new ParallelExecutor(config));
   }
 
   private TransactionContext createContext(String id, Snapshot snapshot, boolean slotReserved) {

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -13,14 +14,11 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Column;
-import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,9 +59,7 @@ public class ObjectStoragePartition {
     return records.isEmpty();
   }
 
-  public void applyPut(
-      Put put, TableMetadata tableMetadata, CollationComparator collationComparator)
-      throws NoMutationException {
+  public void applyPut(Put put, TableMetadata tableMetadata) throws NoMutationException {
     ObjectStorageMutation mutation = new ObjectStorageMutation(put, tableMetadata);
     if (!put.getCondition().isPresent()) {
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
@@ -93,10 +89,7 @@ public class ObjectStoragePartition {
       }
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
       if (areConditionsMet(
-          existingRecord,
-          put.getCondition().get().getExpressions(),
-          tableMetadata,
-          collationComparator)) {
+          existingRecord, put.getCondition().get().getExpressions(), tableMetadata)) {
         records.put(mutation.getRecordId(), mutation.makeRecord(existingRecord));
         return;
       }
@@ -105,9 +98,7 @@ public class ObjectStoragePartition {
     }
   }
 
-  public void applyDelete(
-      Delete delete, TableMetadata tableMetadata, CollationComparator collationComparator)
-      throws NoMutationException {
+  public void applyDelete(Delete delete, TableMetadata tableMetadata) throws NoMutationException {
     ObjectStorageMutation mutation = new ObjectStorageMutation(delete, tableMetadata);
     if (!delete.getCondition().isPresent()) {
       records.remove(mutation.getRecordId());
@@ -125,10 +116,7 @@ public class ObjectStoragePartition {
       }
       ObjectStorageRecord existingRecord = records.get(mutation.getRecordId());
       if (areConditionsMet(
-          existingRecord,
-          delete.getCondition().get().getExpressions(),
-          tableMetadata,
-          collationComparator)) {
+          existingRecord, delete.getCondition().get().getExpressions(), tableMetadata)) {
         records.remove(mutation.getRecordId());
         return;
       }
@@ -144,11 +132,7 @@ public class ObjectStoragePartition {
 
   @VisibleForTesting
   protected boolean areConditionsMet(
-      ObjectStorageRecord record,
-      List<ConditionalExpression> expressions,
-      TableMetadata metadata,
-      CollationComparator collationComparator) {
-    Comparator<Column<?>> rangeComparator = collationComparator.columnComparator();
+      ObjectStorageRecord record, List<ConditionalExpression> expressions, TableMetadata metadata) {
     for (ConditionalExpression expression : expressions) {
       Column<?> expectedColumn = expression.getColumn();
       Column<?> actualColumn =
@@ -161,7 +145,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (!ScalarDbUtils.columnEquals(actualColumn, expectedColumn, collationComparator)) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) != 0) {
             return false;
           }
           break;
@@ -169,7 +153,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (ScalarDbUtils.columnEquals(actualColumn, expectedColumn, collationComparator)) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) == 0) {
             return false;
           }
           break;
@@ -177,7 +161,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (rangeComparator.compare(actualColumn, expectedColumn) <= 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) <= 0) {
             return false;
           }
           break;
@@ -185,7 +169,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (rangeComparator.compare(actualColumn, expectedColumn) < 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) < 0) {
             return false;
           }
           break;
@@ -193,7 +177,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (rangeComparator.compare(actualColumn, expectedColumn) >= 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) >= 0) {
             return false;
           }
           break;
@@ -201,7 +185,7 @@ public class ObjectStoragePartition {
           if (actualColumn.hasNullValue()) {
             return false;
           }
-          if (rangeComparator.compare(actualColumn, expectedColumn) > 0) {
+          if (Ordering.natural().compare(actualColumn, expectedColumn) > 0) {
             return false;
           }
           break;

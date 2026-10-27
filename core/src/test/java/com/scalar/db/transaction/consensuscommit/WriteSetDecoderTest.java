@@ -12,7 +12,6 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.CollationComparators;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.proto.v1.Column;
@@ -57,7 +56,7 @@ class WriteSetDecoderTest {
   }
 
   private Snapshot newSnapshot() {
-    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor, CollationComparators.BINARY);
+    return new Snapshot(TX_ID, tableMetadataManager, parallelExecutor);
   }
 
   private Entry encodeSinglePut(DataType pkType, Key partitionKey) throws Exception {
@@ -80,7 +79,7 @@ class WriteSetDecoderTest {
             .partitionKey(partitionKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     EntryGroup group = WriteSetEncoder.encodeEntryGroup(snapshot, null);
     return group.getEntries(0);
   }
@@ -182,7 +181,7 @@ class WriteSetDecoderTest {
             .clusteringKey(clusteringKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
@@ -208,7 +207,7 @@ class WriteSetDecoderTest {
             .clusteringKey(clusteringKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
@@ -245,7 +244,7 @@ class WriteSetDecoderTest {
             .partitionKey(partitionKey)
             .textValue("v", "val")
             .build();
-    snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     Entry entry = WriteSetEncoder.encodeEntryGroup(snapshot, null).getEntries(0);
 
     // Act
