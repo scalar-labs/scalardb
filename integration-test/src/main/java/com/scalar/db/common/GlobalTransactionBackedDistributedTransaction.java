@@ -129,15 +129,19 @@ public class GlobalTransactionBackedDistributedTransaction extends AbstractDistr
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
     // The branch is ended before the transaction is committed, as the branch-lifecycle contract
-    // requires. end(Status)'s checked exceptions are unrelated to commit()'s, so they are mapped:
-    // a conflict stays retriable, anything else does not. Neither is reachable today — no backing
-    // throws from end — but the mapping has to exist for this to compile.
+    // requires. Ending it fails if, for example, a scanner is still open. A commit ends the
+    // transaction whatever its outcome, and a rollback after a failed commit does nothing, so the
+    // transaction is rolled back here before the failure is rethrown, as ConsensusCommit.commit()
+    // releases what the transaction holds. end(Status)'s checked exceptions are unrelated to
+    // commit()'s, so they are mapped: a conflict stays retriable, anything else does not.
     try {
       branchTransaction.end(BranchTransaction.Status.SUCCESS);
     } catch (CrudConflictException e) {
-      throw new CommitConflictException(e.getMessage(), e, getId());
+      throw rollBackAfterFailedEnd(new CommitConflictException(e.getMessage(), e, getId()));
     } catch (CrudException e) {
-      throw new CommitException(e.getMessage(), e, getId());
+      throw rollBackAfterFailedEnd(new CommitException(e.getMessage(), e, getId()));
+    } catch (RuntimeException e) {
+      throw rollBackAfterFailedEnd(e);
     }
 
     globalTransaction.commit();
@@ -157,5 +161,17 @@ public class GlobalTransactionBackedDistributedTransaction extends AbstractDistr
     } finally {
       globalTransaction.rollback();
     }
+  }
+
+  // Rolls back the transaction after ending the branch failed in commit(), and returns the failure
+  // to rethrow. A failure of the rollback is attached to it as suppressed, so that it cannot
+  // displace the original failure.
+  private <E extends Exception> E rollBackAfterFailedEnd(E failure) {
+    try {
+      rollback();
+    } catch (RollbackException | RuntimeException e) {
+      failure.addSuppressed(e);
+    }
+    return failure;
   }
 }

@@ -692,10 +692,14 @@ public class ActiveTransactionManagedDistributedTransactionManagerTest {
 
     // Act
     manager.getScanner(scan());
-    manager.getScanner(scan());
+    TransactionManagerCrudOperable.Scanner scanner = manager.getScanner(scan());
 
     // Assert
-    assertThat(closed.await(10, TimeUnit.SECONDS)).isTrue();
+    // Without an expiration time, the eviction can stay pending until a scanner is accessed again
+    for (int i = 0; i < 100 && !closed.await(100, TimeUnit.MILLISECONDS); i++) {
+      scanner.one();
+    }
+    assertThat(closed.getCount()).isZero();
   }
 
   private static Stream<Exception> closeFailures() {
