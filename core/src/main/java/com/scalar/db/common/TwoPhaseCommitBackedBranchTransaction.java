@@ -34,9 +34,10 @@ import javax.annotation.concurrent.NotThreadSafe;
  * (prepare/validate/commit/rollback) are not exposed here — they are driven by the coordinator
  * behind {@link com.scalar.db.api.GlobalTransaction#commit()}. {@link
  * #end(BranchTransaction.Status)} triggers no backing action for this backing, which buffers
- * nothing to flush — it only marks the branch ended, after which CRUD (or another {@code end}) is
- * rejected with {@link IllegalStateException}; the participant's local context is released by the
- * coordinator-driven commit/rollback (or reclaimed by idle expiry), not by {@code end}.
+ * nothing to flush — it only marks the branch ended (see {@link
+ * BranchTransaction#end(BranchTransaction.Status)} for what an ended branch accepts); the
+ * participant's local context is released by the coordinator-driven commit/rollback (or reclaimed
+ * by idle expiry), not by {@code end}.
  *
  * <p>Operations must be fully qualified with their namespace and table; this handle carries no
  * default target. See {@link TwoPhaseCommitBackedGlobalTransactionManager} for how the participant

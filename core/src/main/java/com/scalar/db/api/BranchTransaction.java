@@ -15,11 +15,9 @@ import com.scalar.db.exception.transaction.CrudException;
  *
  * <ul>
  *   <li><b>On the process running the branch</b> — ensure it is ended on every path with {@link
- *       #end(Status)}, declaring the outcome of its work. Ending is what releases whatever that
- *       process holds for the branch, so it applies whichever way the transaction goes. A process
- *       that also drives the outcome is not exempt: the owner's commit or rollback only ever
- *       reaches branches begun on the same manager instance, so it still ends the branches it
- *       began.
+ *       #end(Status)}, declaring the outcome of its work, whichever way the transaction goes. A
+ *       process that also drives the outcome is not exempt: committing or rolling back does not end
+ *       the branches, so it still ends the branches it began.
  *   <li><b>On whoever drives the outcome</b> — do not {@linkplain GlobalTransaction#commit()
  *       commit} until every branch has been ended with {@link Status#SUCCESS}; a branch ended with
  *       {@link Status#FAILURE} obliges you to {@linkplain GlobalTransaction#rollback() roll back}
@@ -33,15 +31,15 @@ import com.scalar.db.exception.transaction.CrudException;
  * each in turn, for the branches it began.
  *
  * <p>Close the scanners a branch handed out <em>before</em> ending it. {@link Status#FAILURE} will
- * not close them for you, and closing one afterwards is worse than leaving it open: a scanner's
- * {@code close()} participates in the transaction's read-set bookkeeping, so performing it as part
- * of a branch's cleanup can affect the outcome of the transaction as a whole. A scanner left open
- * is closed when the owning transaction is rolled back.
+ * not close them for you, and closing one afterwards is worse than leaving it open: an
+ * implementation may count a scanner's {@code close()} as part of the transaction's work, so
+ * performing it as part of a branch's cleanup can affect the outcome of the transaction as a whole.
+ * A scanner left open is closed when the owning transaction is rolled back.
  *
- * <p>Ending a branch grants it no lifetime guarantee. Ending is a client-side operation, so it does
- * not keep the transaction alive; a branch that ends early while waiting for slower branches may
- * still have its state reclaimed by expiry before the owner commits. "Every branch has ended" is
- * necessary for a safe commit, not sufficient.
+ * <p>Ending a branch grants it no lifetime guarantee. Ending does not keep the transaction alive; a
+ * branch that ends early while waiting for slower branches may still have its state reclaimed by
+ * expiry before the owner commits. "Every branch has ended" is necessary for a safe commit, not
+ * sufficient.
  *
  * <p>A branch handle is not thread-safe, and {@link #end(Status)} is no exception. Ending a branch
  * from a timeout or cancellation handler on another thread while CRUD is in flight is a data race
@@ -80,22 +78,26 @@ import com.scalar.db.exception.transaction.CrudException;
  * }</pre>
  *
  * <p>A process that also drives the outcome ends its own branch the same way, then drives the
- * transaction. Declaring {@code FAILURE} after a successful {@code SUCCESS} is a no-op, so a
- * failure arising after the branch was ended needs no extra guard:
+ * transaction. Declaring {@code FAILURE} after a successful {@code SUCCESS} is a no-op, as is a
+ * rollback after a commit, whether or not it succeeded (see {@link GlobalTransaction#commit()}), so
+ * both cleanup calls can run whatever failed:
  *
  * <pre>{@code
  * // In a method that declares throws TransactionException.
  * GlobalTransaction global = manager.begin();
- * BranchTransaction branch = manager.beginBranch(global.getId());
+ * BranchTransaction branch = null;
  * try {
+ *   branch = manager.beginBranch(global.getId());
  *   branch.insert(insert);
  *   branch.end(BranchTransaction.Status.SUCCESS);
  *   global.commit();
  * } catch (Exception e) {
- *   try {
- *     branch.end(BranchTransaction.Status.FAILURE);
- *   } catch (RuntimeException | CrudException suppressed) {
- *     e.addSuppressed(suppressed);
+ *   if (branch != null) {
+ *     try {
+ *       branch.end(BranchTransaction.Status.FAILURE);
+ *     } catch (RuntimeException | CrudException suppressed) {
+ *       e.addSuppressed(suppressed);
+ *     }
  *   }
  *   try {
  *     global.rollback();
