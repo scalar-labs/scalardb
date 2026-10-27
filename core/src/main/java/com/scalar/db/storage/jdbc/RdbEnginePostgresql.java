@@ -4,7 +4,6 @@ import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.config.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -379,12 +378,6 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "true" : "false";
-  }
-
-  @Override
-  public void throwIfCollationNotSupported(Collation collation) {
-    // PostgreSQL offers ICU itself as a collation provider (CREATE COLLATION ... PROVIDER =
-    // icu).
   }
 
   @Override

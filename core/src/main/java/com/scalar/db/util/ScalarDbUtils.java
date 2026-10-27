@@ -28,7 +28,6 @@ import com.scalar.db.api.UpdateIf;
 import com.scalar.db.api.UpdateIfExists;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.api.UpsertBuilder;
-import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
@@ -364,27 +363,13 @@ public final class ScalarDbUtils {
     return columns;
   }
 
-  /**
-   * Returns whether the given columns match any of the given conjunctions.
-   *
-   * <p>Range and equality operators on TEXT columns compare through the given comparator. {@code
-   * LIKE} and {@code NOT_LIKE} always match on exact characters, whatever the collation.
-   *
-   * @param columns the columns of a record keyed by column name
-   * @param conjunctions the conjunctions to evaluate
-   * @param collationComparator the comparator for TEXT columns
-   * @return {@code true} if the columns match any of the conjunctions
-   */
   public static boolean columnsMatchAnyOfConjunctions(
-      Map<String, Column<?>> columns,
-      Set<Conjunction> conjunctions,
-      CollationComparator collationComparator) {
+      Map<String, Column<?>> columns, Set<Conjunction> conjunctions) {
     for (Conjunction conjunction : conjunctions) {
       boolean allMatched = true;
       for (ConditionalExpression condition : conjunction.getConditions()) {
         if (!columns.containsKey(condition.getColumn().getName())
-            || !columnMatchesCondition(
-                columns.get(condition.getColumn().getName()), condition, collationComparator)) {
+            || !columnMatchesCondition(columns.get(condition.getColumn().getName()), condition)) {
           allMatched = false;
           break;
         }
@@ -398,30 +383,25 @@ public final class ScalarDbUtils {
 
   @SuppressWarnings("unchecked")
   private static <T> boolean columnMatchesCondition(
-      Column<T> column, ConditionalExpression condition, CollationComparator collationComparator) {
+      Column<T> column, ConditionalExpression condition) {
     assert column.getClass() == condition.getColumn().getClass();
     switch (condition.getOperator()) {
       case EQ:
-        return matchesEquality(column, condition, collationComparator);
       case IS_NULL:
         return column.equals(condition.getColumn());
       case IS_NOT_NULL:
         return !column.equals(condition.getColumn());
         // A NULL column satisfies no comparison, as when the storage evaluates the condition in SQL
       case NE:
-        return !column.hasNullValue() && !matchesEquality(column, condition, collationComparator);
+        return !column.hasNullValue() && !column.equals(condition.getColumn());
       case GT:
-        return !column.hasNullValue()
-            && compareForRange(column, condition, collationComparator) > 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) > 0;
       case GTE:
-        return !column.hasNullValue()
-            && compareForRange(column, condition, collationComparator) >= 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) >= 0;
       case LT:
-        return !column.hasNullValue()
-            && compareForRange(column, condition, collationComparator) < 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) < 0;
       case LTE:
-        return !column.hasNullValue()
-            && compareForRange(column, condition, collationComparator) <= 0;
+        return !column.hasNullValue() && column.compareTo((Column<T>) condition.getColumn()) <= 0;
       case LIKE:
       case NOT_LIKE:
         // assert condition instanceof LikeExpression;
@@ -429,46 +409,6 @@ public final class ScalarDbUtils {
       default:
         throw new AssertionError("Unknown operator: " + condition.getOperator());
     }
-  }
-
-  private static <T> boolean matchesEquality(
-      Column<T> column, ConditionalExpression condition, CollationComparator cc) {
-    return columnEquals(column, condition.getColumn(), cc);
-  }
-
-  /**
-   * Returns whether the two columns are equal under the given collation. Only TEXT columns holding
-   * two non-null values use the collation's equality; non-TEXT columns and null text compare with
-   * {@code Column.equals}.
-   *
-   * <p>Text values are compared without their column names, matching {@link
-   * CollationComparator#columnComparator()}, so that equality and the range operators built on that
-   * comparator cannot disagree.
-   *
-   * @param column a column
-   * @param other the column to compare against
-   * @param collationComparator the collation comparator
-   * @return {@code true} when the columns are equal under the collation
-   */
-  public static boolean columnEquals(
-      Column<?> column, Column<?> other, CollationComparator collationComparator) {
-    if (column.getDataType() == DataType.TEXT && other.getDataType() == DataType.TEXT) {
-      String a = column.getTextValue();
-      String b = other.getTextValue();
-      if (a != null && b != null) {
-        return collationComparator.textEquals(a, b);
-      }
-    }
-    return column.equals(other);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <T> int compareForRange(
-      Column<T> column, ConditionalExpression condition, CollationComparator collationComparator) {
-    if (column.getDataType() == DataType.TEXT) {
-      return collationComparator.columnComparator().compare(column, condition.getColumn());
-    }
-    return column.compareTo((Column<T>) condition.getColumn());
   }
 
   @VisibleForTesting

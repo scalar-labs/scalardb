@@ -7,7 +7,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
-import com.scalar.db.common.CollationComparators;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -96,11 +95,10 @@ public class TransactionContextTest {
       isValidationRequired_WhenSerializableIsolationWithGetNotInWriteOrDeleteSet_ShouldReturnTrue() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
+    Snapshot.Key key = new Snapshot.Key(get);
 
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(true);
-    when(snapshot.getCollationComparator()).thenReturn(CollationComparators.BINARY);
     when(snapshot.getGetSet())
         .thenReturn(
             Collections.singletonList(
@@ -123,11 +121,10 @@ public class TransactionContextTest {
       isValidationRequired_WhenSerializableIsolationWithAllGetsInWriteSet_ShouldReturnFalse() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
+    Snapshot.Key key = new Snapshot.Key(get);
 
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(true);
-    when(snapshot.getCollationComparator()).thenReturn(CollationComparators.BINARY);
     when(snapshot.getGetSet())
         .thenReturn(
             Collections.singletonList(
@@ -149,11 +146,10 @@ public class TransactionContextTest {
       isValidationRequired_WhenSerializableIsolationWithAllGetsInDeleteSet_ShouldReturnFalse() {
     // Arrange
     Get get = prepareGet();
-    Snapshot.Key key = new Snapshot.Key(get, CollationComparators.BINARY);
+    Snapshot.Key key = new Snapshot.Key(get);
 
     when(snapshot.isScanSetEmpty()).thenReturn(true);
     when(snapshot.isScannerSetEmpty()).thenReturn(true);
-    when(snapshot.getCollationComparator()).thenReturn(CollationComparators.BINARY);
     when(snapshot.getGetSet())
         .thenReturn(
             Collections.singletonList(
