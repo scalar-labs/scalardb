@@ -53,11 +53,12 @@ import org.slf4j.LoggerFactory;
  * transaction-lifetime bound: a context lives exactly as long as some participant holds the
  * transaction, or its absence cannot be confirmed. Fail-open probing keeps a context alive with no
  * time limit, and each such retention logs a WARN, so a persistent probe failure is loudly visible.
- * During a total outage of a participant no new transactions can enlist it, so the affected entries
- * are bounded to the in-flight snapshot at outage time; every cycle re-probes, so they are reaped
- * as soon as probes are answered again; and the registry cap stays the hard memory bound. A
- * participant that is <em>permanently</em> unreachable would keep its snapshot probing forever,
- * cleared only when the coordinator process is restarted.
+ * During a total outage of a participant, a new transaction whose enlist of it fails is tracked as
+ * well; it is removed when the caller rolls it back, as the caller must, and otherwise retained
+ * like the in-flight ones. Every cycle re-probes, so they are reaped as soon as probes are answered
+ * again; and the registry cap stays the hard memory bound. A participant that is
+ * <em>permanently</em> unreachable would keep its entries probing forever, cleared only when the
+ * coordinator process is restarted.
  *
  * <p>One boundary of that semantics: a transaction with no enlisted participants yet (begun, with
  * nothing enlisted) has nothing to probe, so its expiration time is authoritative and the reap
