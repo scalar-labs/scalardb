@@ -30,9 +30,7 @@ public interface GlobalTransaction {
    * has finished its CRUD and been ended with {@link BranchTransaction.Status#SUCCESS}. A branch
    * ended with {@link BranchTransaction.Status#FAILURE} obliges you to {@link #rollback()} instead.
    * <b>Nothing enforces this.</b> No check detects a commit that follows a branch ended with {@code
-   * FAILURE}, and committing while a branch is still working may commit that branch's partial work:
-   * the commit proceeds with the writes staged so far, and a straggling operation is rejected
-   * without stopping a commit already in flight.
+   * FAILURE}, and committing while a branch is still working may commit that branch's partial work.
    *
    * @throws CommitConflictException if the commit fails due to transient faults (e.g., a conflict).
    *     You can retry the transaction from the beginning
@@ -47,8 +45,8 @@ public interface GlobalTransaction {
    * Rolls back this global transaction, discarding the writes of all its branches.
    *
    * <p>This does not end the branches. Each branch is still ended by the process running it, with
-   * {@link BranchTransaction.Status#FAILURE} — see {@link
-   * BranchTransaction#end(BranchTransaction.Status)} for why that obligation has no exemption.
+   * {@link BranchTransaction.Status#FAILURE}, including a branch begun by the process that rolls
+   * back. See {@link BranchTransaction} for the branch lifecycle.
    *
    * @throws RollbackException if the rollback fails due to transient or nontransient faults
    */
