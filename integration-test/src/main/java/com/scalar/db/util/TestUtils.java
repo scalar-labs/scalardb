@@ -250,6 +250,11 @@ public final class TestUtils {
    * Compares two non-null columns in the order a storage returns them. TEXT values are compared by
    * their unsigned UTF-8 bytes, which is code point order, without {@link TextColumn#compareTo}, so
    * that the expected order does not depend on the comparison ScalarDB itself uses.
+   *
+   * @param column1 the first column
+   * @param column2 the second column, of the same type as the first
+   * @return a negative integer, zero, or a positive integer as the first column sorts before, equal
+   *     to, or after the second
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   public static int compareInStorageOrder(Column<?> column1, Column<?> column2) {
