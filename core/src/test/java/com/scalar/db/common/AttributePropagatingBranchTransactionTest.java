@@ -1,6 +1,7 @@
 package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -236,10 +237,22 @@ class AttributePropagatingBranchTransactionTest {
 
   @Test
   void getId_ShouldDelegateToBranch() {
-    when(delegate.getId()).thenReturn("tx-1");
+    when(delegate.getId()).thenReturn("branch-1");
+    when(delegate.getGlobalTransactionId()).thenReturn("tx-1");
 
-    assertThat(branch(attrs("k", "v")).getId()).isEqualTo("tx-1");
+    assertThat(branch(attrs("k", "v")).getId()).isEqualTo("branch-1");
     verify(delegate).getId();
+    verify(delegate, never()).getGlobalTransactionId();
+  }
+
+  @Test
+  void getGlobalTransactionId_ShouldDelegateToBranch() {
+    when(delegate.getId()).thenReturn("branch-1");
+    when(delegate.getGlobalTransactionId()).thenReturn("tx-1");
+
+    assertThat(branch(attrs("k", "v")).getGlobalTransactionId()).isEqualTo("tx-1");
+    verify(delegate).getGlobalTransactionId();
+    verify(delegate, never()).getId();
   }
 
   @Test
