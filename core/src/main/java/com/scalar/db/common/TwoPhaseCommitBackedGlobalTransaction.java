@@ -46,8 +46,9 @@ public class TwoPhaseCommitBackedGlobalTransaction implements GlobalTransaction 
     try {
       coordinator.commit(transactionId);
     } catch (TransactionNotFoundException e) {
-      // The coordinator no longer knows this transaction (e.g., it expired). Surface it as a
-      // retriable commit conflict so the caller can restart the transaction from the beginning.
+      // The coordinator or a participant no longer knows this transaction (e.g., it expired).
+      // Surface it as a retriable commit conflict so the caller can restart the transaction from
+      // the beginning.
       throw new CommitConflictException(e.getMessage(), e, transactionId);
     }
   }
