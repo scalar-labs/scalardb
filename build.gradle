@@ -90,7 +90,7 @@ subprojects {
         azureCosmosVersion = '4.83.0'
         azureBlobStorageVersion = '12.36.0'
         jooqVersion = '3.14.16'
-        awssdkVersion = '2.56.0'
+        awssdkVersion = '2.57.2'
         hikariCpVersion = '4.0.3'
         postgresqlDriverVersion = '42.7.14'
         oracleDriverVersion = '23.26.3.0.0'
@@ -109,13 +109,10 @@ subprojects {
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
-//      ICU4J collation behavior may shift in any release, including maintenance ones, so its
-//      version is bumped manually, only at a ScalarDB major version
-        icu4jVersion = '77.1'
         protobufVersion = '4.36.2'
         junitVersion = '5.14.4'
         commonsLangVersion = '3.21.0'
-        jacksonVersion = '2.22.3'
+        jacksonVersion = '2.22.4'
         nettyVersion = '4.1.139.Final'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'

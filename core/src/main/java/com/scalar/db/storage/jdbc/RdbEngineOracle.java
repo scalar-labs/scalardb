@@ -10,7 +10,6 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.config.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -340,10 +339,14 @@ class RdbEngineOracle extends AbstractRdbEngine {
         return DataType.DOUBLE;
       case DOUBLE:
         return DataType.DOUBLE;
-      case CHAR:
       case NCHAR:
-      case VARCHAR:
       case NVARCHAR:
+        // Ordered by UTF-16 code unit, which breaks the code point order of TEXT
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+      case CHAR:
+      case VARCHAR:
       case CLOB:
       case NCLOB:
         logger.info(
@@ -435,11 +438,6 @@ class RdbEngineOracle extends AbstractRdbEngine {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "1" : "0";
-  }
-
-  @Override
-  public void throwIfCollationNotSupported(Collation collation) {
-    // Oracle offers UCA-based linguistic sorts through NLS_SORT.
   }
 
   @Override

@@ -26,7 +26,6 @@ import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.CollationComparators;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntColumn;
@@ -143,7 +142,7 @@ public class RollbackMutationComposerTest {
     // Arrange
     when(tableMetadataManager.getTransactionTableMetadata(any()))
         .thenReturn(new TransactionTableMetadata(TABLE_METADATA));
-    composer = new RollbackMutationComposer(ANY_ID_2, tableMetadataManager);
+    composer = new RollbackMutationComposer(ANY_ID_2, tableMetadataManager, ImmutableMap.of());
   }
 
   private Get prepareGet() {
@@ -174,13 +173,12 @@ public class RollbackMutationComposerTest {
       Mutation mutation, @Nullable TransactionResult latestRecord) {
     Snapshot.Key key =
         mutation instanceof Put
-            ? new Snapshot.Key((Put) mutation, CollationComparators.BINARY)
-            : new Snapshot.Key((Delete) mutation, CollationComparators.BINARY);
+            ? new Snapshot.Key((Put) mutation)
+            : new Snapshot.Key((Delete) mutation);
     return new RollbackMutationComposer(
         ANY_ID_2,
         tableMetadataManager,
-        latestRecord == null ? ImmutableMap.of() : ImmutableMap.of(key, latestRecord),
-        CollationComparators.BINARY);
+        latestRecord == null ? ImmutableMap.of() : ImmutableMap.of(key, latestRecord));
   }
 
   private Put preparePut() {

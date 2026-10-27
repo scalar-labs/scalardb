@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.config.Collation;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
@@ -302,10 +301,14 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
         return DataType.FLOAT;
       case DOUBLE:
         return DataType.DOUBLE;
-      case CHAR:
       case NCHAR:
-      case VARCHAR:
       case NVARCHAR:
+        // Ordered by UTF-16 code unit, which breaks the code point order of TEXT
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+      case CHAR:
+      case VARCHAR:
         if (typeName.equalsIgnoreCase("uniqueidentifier")) {
           throw new IllegalArgumentException(
               CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -318,12 +321,10 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
         return DataType.TEXT;
       case LONGVARCHAR:
       case LONGNVARCHAR:
-        if (typeName.equalsIgnoreCase("xml")) {
-          throw new IllegalArgumentException(
-              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
-                  typeName, columnDescription));
-        }
-        return DataType.TEXT;
+        // text and ntext cannot use a UTF-8 collation, and xml is not a text type
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
       case BINARY:
       case VARBINARY:
         if (!typeName.equalsIgnoreCase("binary") && !typeName.equalsIgnoreCase("varbinary")) {
@@ -398,11 +399,6 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   @Override
   public String computeBooleanValue(boolean value) {
     return value ? "1" : "0";
-  }
-
-  @Override
-  public void throwIfCollationNotSupported(Collation collation) {
-    // SQL Server offers non-binary Windows collations at the database and column level.
   }
 
   @Override

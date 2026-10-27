@@ -114,11 +114,23 @@ import com.scalar.db.exception.transaction.CrudException;
 public interface BranchTransaction extends TransactionCrudOperable {
 
   /**
-   * Returns the ID of the global transaction this branch belongs to.
+   * Returns the ID of this branch. To get the ID of the global transaction this branch belongs to,
+   * use {@link #getGlobalTransactionId()}.
+   *
+   * <p>Implementations may return the same ID as {@link #getGlobalTransactionId()}, so do not rely
+   * on it to tell the branches of a global transaction apart.
+   *
+   * @return the ID of this branch
+   */
+  String getId();
+
+  /**
+   * Returns the ID of the global transaction this branch belongs to, which is the ID this branch
+   * was begun with by {@link GlobalTransactionManager#beginBranch(String)}.
    *
    * @return the global transaction ID
    */
-  String getId();
+  String getGlobalTransactionId();
 
   /**
    * Ends the branch, declaring the outcome of its work. This does not commit the transaction; the

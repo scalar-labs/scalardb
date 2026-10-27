@@ -66,6 +66,13 @@ public class TwoPhaseCommitBackedBranchTransaction implements BranchTransaction 
 
   @Override
   public String getId() {
+    // Nothing identifies a branch on its own, so this returns the ID of the global transaction,
+    // the same as getGlobalTransactionId().
+    return transactionId;
+  }
+
+  @Override
+  public String getGlobalTransactionId() {
     return transactionId;
   }
 

@@ -57,6 +57,13 @@ public class DistributedTransactionBackedBranchTransaction implements BranchTran
 
   @Override
   public String getId() {
+    // Nothing identifies a branch on its own, so this returns the ID of the global transaction,
+    // the same as getGlobalTransactionId().
+    return transaction.getId();
+  }
+
+  @Override
+  public String getGlobalTransactionId() {
     return transaction.getId();
   }
 
