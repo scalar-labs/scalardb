@@ -19,7 +19,6 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
-import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -58,7 +57,6 @@ public class CrudHandler {
   private final boolean isIndexEventuallyConsistentReadEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
   private final ParallelExecutor parallelExecutor;
-  private final CollationComparator collationComparator;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
@@ -67,15 +65,13 @@ public class CrudHandler {
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
       boolean isIndexEventuallyConsistentReadEnabled,
-      ParallelExecutor parallelExecutor,
-      CollationComparator collationComparator) {
+      ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.isIncludeMetadataEnabled = isIncludeMetadataEnabled;
     this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
-    this.collationComparator = checkNotNull(collationComparator);
-    this.mutationConditionsValidator = new MutationConditionsValidator(collationComparator);
+    this.mutationConditionsValidator = new MutationConditionsValidator();
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
@@ -87,8 +83,7 @@ public class CrudHandler {
       boolean isIncludeMetadataEnabled,
       boolean isIndexEventuallyConsistentReadEnabled,
       MutationConditionsValidator mutationConditionsValidator,
-      ParallelExecutor parallelExecutor,
-      CollationComparator collationComparator) {
+      ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -96,7 +91,6 @@ public class CrudHandler {
     this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
     this.mutationConditionsValidator = checkNotNull(mutationConditionsValidator);
     this.parallelExecutor = checkNotNull(parallelExecutor);
-    this.collationComparator = checkNotNull(collationComparator);
   }
 
   public Optional<Result> get(Get get, TransactionContext context) throws CrudException {
@@ -108,7 +102,7 @@ public class CrudHandler {
       // In case of a Get with index, we don't know the key until we read the record
       key = null;
     } else {
-      key = new Snapshot.Key(get, collationComparator);
+      key = new Snapshot.Key(get);
     }
 
     if (isSnapshotReadRequired(context)) {
@@ -220,7 +214,7 @@ public class CrudHandler {
           if (result.isPresent()) {
             // Only when we can get the record with the Get with index, we can put it into the read
             // set
-            key = new Snapshot.Key(get, result.get(), metadata, collationComparator);
+            key = new Snapshot.Key(get, result.get(), metadata);
             putIntoReadSetInSnapshot(key, result, context);
           }
         }
@@ -264,7 +258,7 @@ public class CrudHandler {
     try (Scanner scanner = scanFromStorage(indexScan, metadata, context.transactionId)) {
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
-        Snapshot.Key key = new Snapshot.Key(get, r, metadata, collationComparator);
+        Snapshot.Key key = new Snapshot.Key(get, r, metadata);
         RecoveredResult recovered = recoverAndFilter(key, get, result, context, metadata);
         if (recovered.indexKeyFilteredOut) {
           indexKeyFilteredOut = true;
@@ -358,7 +352,7 @@ public class CrudHandler {
           ret.filter(
               r ->
                   ScalarDbUtils.columnsMatchAnyOfConjunctions(
-                      r.getColumns(), selection.getConjunctions(), collationComparator));
+                      r.getColumns(), selection.getConjunctions()));
     }
 
     return new RecoveredResult(ret, indexKeyFilteredOut);
@@ -443,7 +437,7 @@ public class CrudHandler {
       try (Scanner scanner = scanFromStorage(scan, metadata, context.transactionId)) {
         for (Result r : scanner) {
           TransactionResult result = new TransactionResult(r);
-          Snapshot.Key key = new Snapshot.Key(scan, r, metadata, collationComparator);
+          Snapshot.Key key = new Snapshot.Key(scan, r, metadata);
           Optional<TransactionResult> processedScanResult =
               processScanResult(key, scan, result, context, metadata);
           processedScanResult.ifPresent(res -> results.put(key, res));
@@ -610,7 +604,7 @@ public class CrudHandler {
 
   public void put(Put put, TransactionContext context) throws CrudException {
     TransactionTableMetadata txMetadata = getTransactionTableMetadata(put, context.transactionId);
-    Snapshot.Key key = new Snapshot.Key(put, collationComparator);
+    Snapshot.Key key = new Snapshot.Key(put);
 
     if (put.getCondition().isPresent()
         && (!isImplicitPreReadEnabled(put) && !context.snapshot.containsKeyInReadSet(key))) {
@@ -634,7 +628,7 @@ public class CrudHandler {
   public void delete(Delete delete, TransactionContext context) throws CrudException {
     TransactionTableMetadata txMetadata =
         getTransactionTableMetadata(delete, context.transactionId);
-    Snapshot.Key key = new Snapshot.Key(delete, collationComparator);
+    Snapshot.Key key = new Snapshot.Key(delete);
 
     if (delete.getCondition().isPresent()) {
       if (!context.snapshot.containsKeyInReadSet(key)) {
@@ -866,8 +860,7 @@ public class CrudHandler {
     assert selection.getPartitionKey().getColumns().size() == 1;
     Column<?> indexColumn = selection.getPartitionKey().getColumns().get(0);
     Column<?> resultColumn = result.getColumns().get(indexColumn.getName());
-    return resultColumn != null
-        && ScalarDbUtils.columnEquals(resultColumn, indexColumn, collationComparator);
+    return resultColumn != null && resultColumn.equals(indexColumn);
   }
 
   /**
@@ -914,9 +907,7 @@ public class CrudHandler {
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
-          Snapshot.Key key =
-              new Snapshot.Key(
-                  beforeIndexScan, r, metadata.getTableMetadata(), collationComparator);
+          Snapshot.Key key = new Snapshot.Key(beforeIndexScan, r, metadata.getTableMetadata());
           // This intentionally bypasses executeRecovery(): it always uses
           // RETURN_LATEST_RESULT_AND_RECOVER regardless of isolation level (recovery must actually
           // execute; otherwise the PREPARED/DELETED record remains in storage and retrying would be
@@ -1026,7 +1017,7 @@ public class CrudHandler {
             return Optional.empty();
           }
 
-          Snapshot.Key key = new Snapshot.Key(scan, r.get(), metadata, collationComparator);
+          Snapshot.Key key = new Snapshot.Key(scan, r.get(), metadata);
           TransactionResult result = new TransactionResult(r.get());
 
           Optional<TransactionResult> processedScanResult =

@@ -17,7 +17,6 @@ import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.StorageInfo;
@@ -53,7 +52,6 @@ public class OperationCheckerTest {
   private static final String COL1 = "v1";
   private static final String COL2 = "v2";
   private static final String COL3 = "v3";
-  private static final String COL4 = "v4";
   private static final StorageInfo STORAGE_INFO =
       new StorageInfoImpl(
           "cassandra", StorageInfo.MutationAtomicityUnit.PARTITION, Integer.MAX_VALUE, false);
@@ -78,7 +76,6 @@ public class OperationCheckerTest {
                 .addColumn(COL1, DataType.INT)
                 .addColumn(COL2, DataType.DOUBLE)
                 .addColumn(COL3, DataType.BOOLEAN)
-                .addColumn(COL4, DataType.TEXT)
                 .addPartitionKey(PKEY1)
                 .addPartitionKey(PKEY2)
                 .addClusteringKey(CKEY1, Scan.Ordering.Order.ASC)
@@ -137,7 +134,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val2");
-    List<String> projections = Arrays.asList(COL1, COL2, "v5");
+    List<String> projections = Arrays.asList(COL1, COL2, "v4");
     Get get =
         Get.newBuilder()
             .namespace(NAMESPACE)
@@ -460,7 +457,7 @@ public class OperationCheckerTest {
     Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
     Key startClusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
     Key endClusteringKey = Key.of(CKEY1, 2, CKEY2, "val9");
-    List<String> projections = Arrays.asList(COL1, COL2, "v5");
+    List<String> projections = Arrays.asList(COL1, COL2, "v4");
     int limit = 10;
     Scan scan =
         Scan.newBuilder()
@@ -815,7 +812,7 @@ public class OperationCheckerTest {
             .clusteringKey(clusteringKey)
             .intValue(COL1, 1)
             .doubleValue(COL2, 0.1)
-            .booleanValue("v5", true)
+            .booleanValue("v4", true)
             .condition(condition)
             .build();
 
@@ -968,27 +965,6 @@ public class OperationCheckerTest {
             .intValue(COL1, 1)
             .doubleValue(COL2, 0.1)
             .booleanValue(COL3, true)
-            .condition(condition)
-            .build();
-
-    // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void whenCheckingPutOperationWithLikeCondition_shouldThrowIllegalArgumentException() {
-    // Arrange
-    Key partitionKey = Key.of(PKEY1, 1, PKEY2, "val1");
-    Key clusteringKey = Key.of(CKEY1, 2, CKEY2, "val1");
-    MutationCondition condition = new PutIf(ConditionBuilder.column(COL4).isLikeText("val%"));
-    Put put =
-        Put.newBuilder()
-            .namespace(NAMESPACE)
-            .table(TABLE_NAME)
-            .partitionKey(partitionKey)
-            .clusteringKey(clusteringKey)
-            .intValue(COL1, 1)
             .condition(condition)
             .build();
 
@@ -1987,7 +1963,7 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanAllOperationWithInvalidProjections_shouldThrowIllegalArgumentException() {
     // Arrange
-    List<String> projections = Arrays.asList(COL1, COL2, "v5");
+    List<String> projections = Arrays.asList(COL1, COL2, "v4");
     int limit = 10;
     Scan scanAll =
         Scan.newBuilder()
