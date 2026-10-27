@@ -15,13 +15,10 @@ import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * An UPSERT query using {@code INSERT ... ON CONFLICT (pk) DO UPDATE SET ...}.
+ * An UPSERT query using {@code INSERT ... ON CONFLICT (pk) DO UPDATE SET col=excluded.col}.
  *
- * <p>The SET-clause format depends on the backend. Standard PostgreSQL and SQLite accept bind
- * parameters ({@code SET col=?}), while Spanner PostgreSQL rejects that form and requires the
- * {@code excluded} table alias ({@code SET col=excluded.col}). Pass {@code useExcludedAlias=true}
- * to produce the Spanner-compatible form, which also skips the second bind pass since the SET
- * clause no longer contains placeholders.
+ * <p>The SET clause reads the proposed row through the {@code excluded} alias, so each value is
+ * bound once. Spanner PostgreSQL also rejects bind parameters in the SET clause.
  */
 @ThreadSafe
 public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
@@ -33,15 +30,9 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Map<String, Column<?>> columns;
-  private final boolean useExcludedAlias;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public InsertOnConflictDoUpdateQuery(Builder builder) {
-    this(builder, false);
-  }
-
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public InsertOnConflictDoUpdateQuery(Builder builder, boolean useExcludedAlias) {
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
@@ -49,17 +40,22 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     columns = builder.columns;
-    this.useExcludedAlias = useExcludedAlias;
   }
 
   @Override
   public String sql() {
     return "INSERT INTO "
         + rdbEngine.encloseFullTableName(schema, table)
+        + targetAlias()
         + " "
         + makeValuesSqlString()
         + " "
         + makeOnConflictDoUpdateSqlString();
+  }
+
+  // A target table named excluded makes excluded.col ambiguous, and an alias hides the table name.
+  private String targetAlias() {
+    return table.equalsIgnoreCase("excluded") ? " AS t1" : "";
   }
 
   private String makeValuesSqlString() {
@@ -88,11 +84,7 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
       sql.append("UPDATE SET ")
           .append(
               columns.keySet().stream()
-                  .map(
-                      n ->
-                          useExcludedAlias
-                              ? rdbEngine.enclose(n) + "=excluded." + rdbEngine.enclose(n)
-                              : rdbEngine.enclose(n) + "=?")
+                  .map(n -> rdbEngine.enclose(n) + "=excluded." + rdbEngine.enclose(n))
                   .collect(Collectors.joining(",")));
     } else {
       sql.append("NOTHING");
@@ -120,16 +112,6 @@ public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
     for (Column<?> column : columns.values()) {
       column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
-    }
-
-    if (!useExcludedAlias) {
-      // Second bind pass for the "SET col=?" placeholders in the ON CONFLICT DO UPDATE clause.
-      // When useExcludedAlias is true, the SET clause uses excluded.col references with no
-      // placeholders, so this pass is skipped.
-      for (Column<?> column : columns.values()) {
-        column.accept(binder);
-        binder.throwSQLExceptionIfOccurred();
-      }
     }
   }
 }

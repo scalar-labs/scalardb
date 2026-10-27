@@ -66,6 +66,11 @@ class TwoPhaseCommitBackedBranchTransactionTest {
   }
 
   @Test
+  void getGlobalTransactionId_ShouldReturnTransactionId() {
+    assertThat(branch().getGlobalTransactionId()).isEqualTo(TX_ID);
+  }
+
+  @Test
   void get_ShouldDelegateToParticipantGet() throws Exception {
     Get get = get();
     when(participant.get(TX_ID, get)).thenReturn(Optional.empty());
