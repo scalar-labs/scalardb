@@ -19,6 +19,12 @@ RUN keytool -delete -cacerts -storepass changeit -alias "cn_emsign_ecc_root_ca__
 
 COPY scalardb-schema-loader-*.jar /app.jar
 
+# Temporary fix for https://emudhra.we-have-a-problem.com/
+# Users can run `java CheckCerts` in the root directory (the default working
+# directory) to confirm that the compromised CA certificates are not trusted.
+# We can remove this COPY after we update to the fixed version of Java.
+COPY CheckCerts.class CheckCerts.java /
+
 USER 201:201
 
 ENTRYPOINT ["java", "-jar", "/app.jar"]
