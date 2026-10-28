@@ -227,33 +227,71 @@ public class CloudStorageWrapper implements ObjectStorageWrapper {
   @Override
   public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
     try {
-      // Collect all blob IDs with the specified prefix
+      // Collect all blobs with the specified prefix
       Iterable<Blob> blobs =
           storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll();
-      List<BlobId> blobIds =
-          StreamSupport.stream(blobs.spliterator(), false)
-              .map(blob -> BlobId.of(bucket, blob.getName()))
-              .collect(Collectors.toList());
+      List<Blob> blobList =
+          StreamSupport.stream(blobs.spliterator(), false).collect(Collectors.toList());
       // Delete blobs in batches
-      for (int i = 0; i < blobIds.size(); i += BATCH_DELETE_SIZE_LIMIT) {
-        int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobIds.size());
-        List<BlobId> batch = blobIds.subList(i, endIndex);
-        StorageBatch storageBatch = storage.batch();
-        List<StorageBatchResult<Boolean>> results = new ArrayList<>(batch.size());
-        for (BlobId blobId : batch) {
-          results.add(storageBatch.delete(blobId));
-        }
-        storageBatch.submit();
-        // A deletion in a batch reports its failure through its result instead of throwing an
-        // exception, so the result is checked. A blob that no longer exists results in false, which
-        // is regarded as deleted
-        for (StorageBatchResult<Boolean> result : results) {
-          result.get();
+      for (int i = 0; i < blobList.size(); i += BATCH_DELETE_SIZE_LIMIT) {
+        int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, blobList.size());
+        for (Blob blob : deleteInBatch(blobList.subList(i, endIndex))) {
+          // The Cloud Storage client does not retry a deletion in a batch, so a failed deletion is
+          // retried individually
+          deleteIndividually(blob);
         }
       }
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(
           String.format("Failed to delete the objects with prefix '%s'", prefix), e);
+    }
+  }
+
+  /** Deletes the blobs in a batch and returns the blobs whose deletions failed. */
+  private List<Blob> deleteInBatch(List<Blob> blobs) {
+    StorageBatch storageBatch = storage.batch();
+    List<StorageBatchResult<Boolean>> results = new ArrayList<>(blobs.size());
+    for (Blob blob : blobs) {
+      results.add(storageBatch.delete(BlobId.of(bucket, blob.getName())));
+    }
+    try {
+      storageBatch.submit();
+    } catch (StorageException e) {
+      // The batch request itself failed, so all the deletions are regarded as failed
+      return blobs;
+    }
+    // A deletion in a batch reports its failure through its result instead of throwing an
+    // exception, so the result is checked. A blob that no longer exists results in false, which is
+    // regarded as deleted
+    List<Blob> failedBlobs = new ArrayList<>();
+    for (int i = 0; i < blobs.size(); i++) {
+      try {
+        results.get(i).get();
+      } catch (StorageException e) {
+        failedBlobs.add(blobs.get(i));
+      }
+    }
+    return failedBlobs;
+  }
+
+  /**
+   * Deletes the blob individually. The deletion has a precondition on the generation of the blob,
+   * which makes it conditionally idempotent, so the Cloud Storage client retries it on transient
+   * errors, such as rate limit errors. See https://cloud.google.com/storage/docs/retry-strategy for
+   * the details.
+   */
+  private void deleteIndividually(Blob blob) {
+    try {
+      // A blob that no longer exists results in false, which is regarded as deleted
+      storage.delete(
+          BlobId.of(bucket, blob.getName()),
+          Storage.BlobSourceOption.generationMatch(blob.getGeneration()));
+    } catch (StorageException e) {
+      // A blob overwritten after the listing results in a precondition failure. It is not deleted,
+      // as with the blobs created after the listing
+      if (e.getCode() != CloudStorageErrorCode.PRECONDITION_FAILED.get()) {
+        throw e;
+      }
     }
   }
 
