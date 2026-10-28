@@ -1659,24 +1659,25 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     } else {
       Set<Column<?>> valueSet = new HashSet<>();
 
-      // Add min and max first clustering key values
-      Arrays.asList(
-              getColumnWithMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType),
-              getColumnWithMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType))
-          .forEach(
-              firstClusteringKeyValue -> {
-                valueSet.add(firstClusteringKeyValue);
-                prepareRecords(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    firstClusteringKeyValue,
-                    secondClusteringKeyType,
-                    secondClusteringOrder,
-                    puts,
-                    ret);
-              });
+      List<Column<?>> fixedValues = new ArrayList<>();
+      fixedValues.add(getColumnWithMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+      fixedValues.add(getColumnWithMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+      fixedValues.addAll(
+          getColumnsDistinguishingCodePointOrder(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+      fixedValues.forEach(
+          firstClusteringKeyValue -> {
+            valueSet.add(firstClusteringKeyValue);
+            prepareRecords(
+                firstClusteringKeyType,
+                firstClusteringOrder,
+                firstClusteringKeyValue,
+                secondClusteringKeyType,
+                secondClusteringOrder,
+                puts,
+                ret);
+          });
 
-      IntStream.range(0, FIRST_CLUSTERING_KEY_NUM - 2)
+      IntStream.range(0, FIRST_CLUSTERING_KEY_NUM - fixedValues.size())
           .forEach(
               i -> {
                 Column<?> firstClusteringKeyValue;
@@ -1733,25 +1734,26 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
     } else {
       Set<Column<?>> valueSet = new HashSet<>();
 
-      // min and max second clustering key values
-      Arrays.asList(
-              getColumnWithMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
-              getColumnWithMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType))
-          .forEach(
-              secondClusteringKeyValue -> {
-                ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
-                puts.add(
-                    preparePut(
-                        firstClusteringKeyType,
-                        firstClusteringOrder,
-                        firstClusteringKeyValue,
-                        secondClusteringKeyType,
-                        secondClusteringOrder,
-                        secondClusteringKeyValue));
-                valueSet.add(secondClusteringKeyValue);
-              });
+      List<Column<?>> fixedValues = new ArrayList<>();
+      fixedValues.add(getColumnWithMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+      fixedValues.add(getColumnWithMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+      fixedValues.addAll(
+          getColumnsDistinguishingCodePointOrder(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+      fixedValues.forEach(
+          secondClusteringKeyValue -> {
+            ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
+            puts.add(
+                preparePut(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    firstClusteringKeyValue,
+                    secondClusteringKeyType,
+                    secondClusteringOrder,
+                    secondClusteringKeyValue));
+            valueSet.add(secondClusteringKeyValue);
+          });
 
-      for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - 2; i++) {
+      for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - fixedValues.size(); i++) {
         Column<?> secondClusteringKeyValue;
         while (true) {
           secondClusteringKeyValue =
@@ -1852,6 +1854,11 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
 
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     return TestUtils.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  protected List<Column<?>> getColumnsDistinguishingCodePointOrder(
+      String columnName, DataType dataType) {
+    return TestUtils.getColumnsDistinguishingCodePointOrder(columnName, dataType);
   }
 
   private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
@@ -1989,23 +1996,20 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
 
   private Comparator<ClusteringKey> getClusteringKeyComparator(
       Order firstClusteringOrder, Order secondClusteringOrder) {
+    Comparator<Column<?>> storageOrder = TestUtils::compareInStorageOrder;
     return (l, r) -> {
       ComparisonChain chain =
           ComparisonChain.start()
               .compare(
                   l.first,
                   r.first,
-                  firstClusteringOrder == Order.ASC
-                      ? com.google.common.collect.Ordering.natural()
-                      : com.google.common.collect.Ordering.natural().reverse());
+                  firstClusteringOrder == Order.ASC ? storageOrder : storageOrder.reversed());
       if (l.second != null && r.second != null) {
         chain =
             chain.compare(
                 l.second,
                 r.second,
-                secondClusteringOrder == Order.ASC
-                    ? com.google.common.collect.Ordering.natural()
-                    : com.google.common.collect.Ordering.natural().reverse());
+                secondClusteringOrder == Order.ASC ? storageOrder : storageOrder.reversed());
       }
       return chain.result();
     };
@@ -2159,9 +2163,10 @@ public abstract class DistributedStorageMultipleClusteringKeyScanIntegrationTest
 
     @Override
     public int compareTo(ClusteringKey o) {
-      ComparisonChain chain = ComparisonChain.start().compare(first, o.first);
+      ComparisonChain chain =
+          ComparisonChain.start().compare(first, o.first, TestUtils::compareInStorageOrder);
       if (second != null && o.second != null) {
-        chain = chain.compare(second, o.second);
+        chain = chain.compare(second, o.second, TestUtils::compareInStorageOrder);
       }
       return chain.result();
     }
