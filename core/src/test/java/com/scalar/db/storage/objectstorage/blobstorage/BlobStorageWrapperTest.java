@@ -48,6 +48,7 @@ public class BlobStorageWrapperTest {
 
   @Mock private BlobStorageConfig config;
   @Mock private BlobContainerClient client;
+  @Mock private PagedIterable<BlobItem> pagedIterable;
   private BlobStorageWrapper wrapper;
 
   @BeforeEach
@@ -139,7 +140,6 @@ public class BlobStorageWrapperTest {
   // getKeys tests
 
   @Test
-  @SuppressWarnings("unchecked")
   public void getKeys_PrefixGiven_ShouldReturnObjectKeys() throws Exception {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
@@ -150,7 +150,6 @@ public class BlobStorageWrapperTest {
     BlobItem item2 = new BlobItem().setName(objectKey2);
     BlobItem item3 = new BlobItem().setName(objectKey3);
 
-    PagedIterable<BlobItem> pagedIterable = mock(PagedIterable.class);
     when(client.listBlobs(any(ListBlobsOptions.class), any())).thenReturn(pagedIterable);
     when(pagedIterable.stream()).thenReturn(Stream.of(item1, item2, item3));
 
@@ -162,10 +161,8 @@ public class BlobStorageWrapperTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void getKeys_NoObjectsWithPrefix_ShouldReturnEmptySet() throws Exception {
     // Arrange
-    PagedIterable<BlobItem> pagedIterable = mock(PagedIterable.class);
     when(client.listBlobs(any(ListBlobsOptions.class), any())).thenReturn(pagedIterable);
     when(pagedIterable.stream()).thenReturn(Stream.empty());
 
@@ -504,7 +501,6 @@ public class BlobStorageWrapperTest {
   // deleteByPrefix tests
 
   @Test
-  @SuppressWarnings("unchecked")
   public void deleteByPrefix_PrefixGiven_ShouldDeleteAllObjectsWithThePrefix() throws Exception {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
@@ -518,7 +514,6 @@ public class BlobStorageWrapperTest {
     when(client.getBlobClient(objectKey1)).thenReturn(blobClient1);
     when(client.getBlobClient(objectKey2)).thenReturn(blobClient2);
 
-    PagedIterable<BlobItem> pagedIterable = mock(PagedIterable.class);
     when(client.listBlobs(any(ListBlobsOptions.class), any())).thenReturn(pagedIterable);
     doAnswer(
             invocation -> {
@@ -539,10 +534,8 @@ public class BlobStorageWrapperTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void deleteByPrefix_NoObjectsWithPrefix_ShouldDoNothing() throws Exception {
     // Arrange
-    PagedIterable<BlobItem> pagedIterable = mock(PagedIterable.class);
     when(client.listBlobs(any(ListBlobsOptions.class), any())).thenReturn(pagedIterable);
     doAnswer(
             invocation -> {
@@ -560,7 +553,6 @@ public class BlobStorageWrapperTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void deleteByPrefix_BlobNotFoundDuringDelete_ShouldIgnore() throws Exception {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
@@ -572,7 +564,6 @@ public class BlobStorageWrapperTest {
     BlobStorageException exception = createBlobStorageException(BlobErrorCode.BLOB_NOT_FOUND);
     doThrow(exception).when(blobClient1).delete();
 
-    PagedIterable<BlobItem> pagedIterable = mock(PagedIterable.class);
     when(client.listBlobs(any(ListBlobsOptions.class), any())).thenReturn(pagedIterable);
     doAnswer(
             invocation -> {

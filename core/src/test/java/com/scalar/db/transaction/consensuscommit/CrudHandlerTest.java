@@ -2471,7 +2471,6 @@ public class CrudHandlerTest {
     verify(snapshot).putIntoDeleteSet(key, delete);
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void readUnread_GetContainedInGetSet_ShouldCallAppropriateMethods()
       throws CrudException, ExecutionException {
@@ -2496,8 +2495,8 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage, never()).get(getForStorage);
-    verify(snapshot, never()).putIntoReadSet(any(Snapshot.Key.class), any(Optional.class));
-    verify(snapshot, never()).putIntoGetSet(any(Get.class), any(Optional.class));
+    verify(snapshot, never()).putIntoReadSet(any(), any());
+    verify(snapshot, never()).putIntoGetSet(any(), any());
   }
 
   @Test
