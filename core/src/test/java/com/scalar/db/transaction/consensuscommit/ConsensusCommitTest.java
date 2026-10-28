@@ -681,7 +681,8 @@ public class ConsensusCommitTest {
     TransactionResult result2 = mock(TransactionResult.class);
     TransactionResult result3 = mock(TransactionResult.class);
 
-    when(crud.get(get, context)).thenReturn(Optional.of(result1));
+    when(crud.batchGet(Collections.singletonList(get), context))
+        .thenReturn(Collections.singletonList(Optional.of(result1)));
     when(crud.scan(scan, context)).thenReturn(Arrays.asList(result2, result3));
 
     // Act
@@ -715,7 +716,7 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    verify(crud).get(get, context);
+    verify(crud).batchGet(Collections.singletonList(get), context);
     verify(crud).scan(scan, context);
     verify(crud).put(put, context);
     verify(crud).put(expectedPutFromInsert, context);
@@ -737,6 +738,42 @@ public class ConsensusCommitTest {
     assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
     assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
     assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+  }
+
+  @Test
+  public void batch_ConsecutiveGetsGiven_ShouldCallCrudHandlerBatchGetWithThem()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3)).build();
+    Scan scan = prepareScan();
+    Get get3 = Get.newBuilder(get1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4)).build();
+
+    TransactionResult result1 = mock(TransactionResult.class);
+    TransactionResult result2 = mock(TransactionResult.class);
+    TransactionResult result3 = mock(TransactionResult.class);
+
+    when(crud.batchGet(Arrays.asList(get1, get2), context))
+        .thenReturn(Arrays.asList(Optional.of(result1), Optional.empty()));
+    when(crud.scan(scan, context)).thenReturn(Collections.singletonList(result2));
+    when(crud.batchGet(Collections.singletonList(get3), context))
+        .thenReturn(Collections.singletonList(Optional.of(result3)));
+
+    // Act
+    List<CrudOperable.BatchResult> results = consensus.batch(Arrays.asList(get1, get2, scan, get3));
+
+    // Assert
+    verify(crud).batchGet(Arrays.asList(get1, get2), context);
+    verify(crud).scan(scan, context);
+    verify(crud).batchGet(Collections.singletonList(get3), context);
+    verify(operationChecker).check(get1, context);
+    verify(operationChecker).check(get2, context);
+    verify(operationChecker).check(get3, context);
+    assertThat(results).hasSize(4);
+    assertThat(results.get(0).getGetResult()).hasValue(result1);
+    assertThat(results.get(1).getGetResult()).isEmpty();
+    assertThat(results.get(2).getScanResult()).containsExactly(result2);
+    assertThat(results.get(3).getGetResult()).hasValue(result3);
   }
 
   @Test

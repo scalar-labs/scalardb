@@ -1028,6 +1028,33 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void batch_ManyGetsGiven_ShouldReturnTheirResultsInOrder() throws TransactionException {
+    // Arrange
+    populateRecords();
+    List<Get> gets = new ArrayList<>();
+    for (int i = 0; i < NUM_ACCOUNTS; i++) {
+      for (int j = 0; j < NUM_TYPES; j++) {
+        gets.add(prepareGet(i, j));
+      }
+    }
+    gets.add(prepareGet(1, 2)); // A record that another Get of the batch also reads
+    gets.add(prepareGet(NUM_ACCOUNTS, 0)); // A record that does not exist
+
+    // Act
+    DistributedTransaction tx = manager.start();
+    List<CrudOperable.BatchResult> results = tx.batch(gets);
+    tx.commit();
+
+    // Assert
+    assertThat(results).hasSize(gets.size());
+    for (int i = 0; i < NUM_ACCOUNTS * NUM_TYPES; i++) {
+      assertResult(i / NUM_TYPES, i % NUM_TYPES, results.get(i).getGetResult());
+    }
+    assertResult(1, 2, results.get(NUM_ACCOUNTS * NUM_TYPES).getGetResult());
+    assertThat(results.get(NUM_ACCOUNTS * NUM_TYPES + 1).getGetResult()).isEmpty();
+  }
+
+  @Test
   public void batch_ShouldBatchProperly() throws TransactionException {
     // Arrange
     populateRecords();
