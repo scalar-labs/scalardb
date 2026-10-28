@@ -1,11 +1,13 @@
 package com.scalar.db.storage.objectstorage;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorageSingleClusteringKeyScanIntegrationTestBase;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.util.TestUtils;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.stream.IntStream;
@@ -38,6 +40,16 @@ public class ObjectStorageSingleClusteringKeyScanIntegrationTest
       return BigIntColumn.of(columnName, ObjectStorageTestUtils.BIGINT_MIN_VALUE);
     }
     return super.getColumnWithMinValue(columnName, dataType);
+  }
+
+  @Override
+  protected List<Column<?>> getColumnsDistinguishingCodePointOrder(
+      String columnName, DataType dataType) {
+    if (ObjectStorageEnv.isCloudStorage()) {
+      // The values contain the 0xFF character, which Cloud Storage can't handle correctly
+      return ImmutableList.of();
+    }
+    return super.getColumnsDistinguishingCodePointOrder(columnName, dataType);
   }
 
   @Override

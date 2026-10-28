@@ -2,6 +2,7 @@ package com.scalar.db.io;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
@@ -62,7 +63,10 @@ public class TextColumn implements Column<String> {
     return ComparisonChain.start()
         .compare(getName(), o.getName())
         .compareTrueFirst(hasNullValue(), o.hasNullValue())
-        .compare(getTextValue(), o.getTextValue(), Comparator.nullsFirst(Comparator.naturalOrder()))
+        .compare(
+            getTextValue(),
+            o.getTextValue(),
+            Comparator.nullsFirst(ScalarDbUtils::compareTextByCodePoint))
         .result();
   }
 

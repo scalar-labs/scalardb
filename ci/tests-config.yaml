@@ -108,13 +108,17 @@ jdbc:
     # Connect over TCP, which the entrypoint's temporary server does not listen on
     db_healthcheck: docker exec alloydb psql -h 127.0.0.1 -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
+      # AlloyDB Omni forces the ICU locale provider at initdb time, so the test database takes the
+      # byte-order C locale of the libc provider, which matches the code point order ScalarDB uses for TEXT.
+      docker exec alloydb psql -U postgres -c "CREATE DATABASE test_db TEMPLATE template0 LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' ENCODING UTF8;"
       docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
-        GRANT CREATE ON DATABASE postgres TO test;"
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/postgres -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+        GRANT CREATE ON DATABASE test_db TO test;"
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/test_db -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
 
   - label: db2_%VERSION%
     display_name: Db2 %VERSION%
+    # The image's setup script creates DBNAME with "COLLATE USING IDENTITY", a byte-order collation
     setup: docker run -d --privileged --name db2 -e DB2INSTANCE=db2inst1 -e DB2INST1_PASSWORD=db2inst1 -e DBNAME=test_db -e LICENSE=accept -p 50000:50000 icr.io/db2_community/db2:%VERSION%
     versions:
       - 11.5.9.0
@@ -128,7 +132,7 @@ jdbc:
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
-    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_nopad_bin
     versions:
       - 10.11
       - 11.4
@@ -150,7 +154,13 @@ jdbc:
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
-    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    # utf8mb4_0900_bin (NO PAD) is the exact match for the code point order ScalarDB uses for TEXT;
+    # it only exists on MySQL 8.x, and mysqld 5.7 exits at startup on unknown collations,
+    # so 5.7 stays on legacy utf8mb4_bin (PAD SPACE, closest available option).
+    setup: |
+      COLLATION=utf8mb4_0900_bin
+      case "%VERSION%" in 5.7*) COLLATION=utf8mb4_bin;; esac
+      docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=$COLLATION
     versions:
       - 5.7
       - 8.0
@@ -209,6 +219,12 @@ jdbc:
       GRANT DELETE ANY TABLE TO test;
       GRANT CREATE ANY VIEW TO test;
       GRANT DROP ANY VIEW TO test;
+      -- The driver derives NLS_SORT from the JVM locale at logon, so pin binary order for every session
+      CREATE OR REPLACE TRIGGER test.nls_binary AFTER LOGON ON test.SCHEMA
+      BEGIN
+        EXECUTE IMMEDIATE 'ALTER SESSION SET NLS_SORT = BINARY NLS_COMP = BINARY';
+      END;
+      /
       EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
     run: |
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
@@ -216,7 +232,7 @@ jdbc:
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
-    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:%VERSION%-alpine
+    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--locale=C --encoding=UTF8" -p 5432:5432 postgres:%VERSION%-alpine
     versions:
       - 13
       - 14
@@ -242,7 +258,7 @@ jdbc:
     db_healthcheck: docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
       # Create the database here, not in setup, because setup runs before db_healthcheck
-      docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Japanese_BIN2;"
+      docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Latin1_General_100_BIN2_UTF8;"
       docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
         CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
         CREATE USER test FOR LOGIN test;
@@ -270,6 +286,9 @@ jdbc:
       $HOME/.tiup/bin/tiup playground v%VERSION% --db 1 --pd 1 --kv 1 --tiflash 0 --without-monitor > tiup.log 2>&1 &
     db_healthcheck: mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
+      # utf8mb4_0900_bin (NO PAD) matches the code point order ScalarDB uses for TEXT and exists
+      # from TiDB 7.4; the default utf8mb4_bin trims trailing spaces.
+      case "%VERSION%" in 6.5) ;; *) mysql -h 127.0.0.1 -P 4000 -u root -e "SET GLOBAL collation_server = 'utf8mb4_0900_bin';";; esac
       mysql -h 127.0.0.1 -P 4000 -u root -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
         GRANT CREATE ON *.* TO 'test'@'%%';
