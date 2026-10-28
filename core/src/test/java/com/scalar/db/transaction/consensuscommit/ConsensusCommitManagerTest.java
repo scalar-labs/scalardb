@@ -53,6 +53,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -2262,7 +2263,8 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(recovered).isTrue();
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
   }
 
   @Test
@@ -2280,7 +2282,8 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(recovered).isTrue();
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
   }
 
   @Test
@@ -2301,7 +2304,8 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(recovered).isTrue();
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
   }
 
   @Test
@@ -2342,7 +2346,8 @@ public class ConsensusCommitManagerTest {
     // The record could not be read, so neither the coordinator nor the recovery executor is
     // touched.
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
     verify(coordinator, never()).deleteState(anyString());
   }
 
