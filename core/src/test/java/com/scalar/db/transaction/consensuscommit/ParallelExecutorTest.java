@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -22,13 +23,18 @@ import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecut
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -553,6 +559,80 @@ public class ParallelExecutorTest {
     assertThat(completed.get()).isEqualTo(6);
     assertThat(maxRunning.get()).isEqualTo(2);
     verify(parallelExecutorService, times(1)).execute(any());
+  }
+
+  @Test
+  public void
+      executeBatchGets_ParallelExecutorBusy_ShouldReturnWithoutWaitingForWorkersNotStartedYet()
+          throws Exception {
+    // Arrange
+    when(config.isParallelBatchGetEnabled()).thenReturn(true);
+    when(config.getParallelBatchGetMaxConcurrencyPerBatch()).thenReturn(3);
+    int poolSize = 2;
+    ExecutorService busyExecutorService = Executors.newFixedThreadPool(poolSize);
+    ParallelExecutor executor = new ParallelExecutor(config, busyExecutorService);
+    CountDownLatch blocker = new CountDownLatch(1);
+    for (int i = 0; i < poolSize; i++) {
+      busyExecutorService.execute(() -> Uninterruptibles.awaitUninterruptibly(blocker));
+    }
+    AtomicInteger completed = new AtomicInteger();
+    ParallelExecutorTask countingTask = completed::incrementAndGet;
+    ExecutorService caller = Executors.newSingleThreadExecutor();
+
+    try {
+      // Act
+      Future<?> future =
+          caller.submit(
+              () -> {
+                executor.executeBatchGets(Collections.nCopies(4, countingTask), TX_ID);
+                return null;
+              });
+
+      // Assert
+      future.get(10, TimeUnit.SECONDS);
+      assertThat(completed.get()).isEqualTo(4);
+    } finally {
+      blocker.countDown();
+      caller.shutdown();
+    }
+
+    // The workers queued behind the blocking tasks should run no task once they start
+    busyExecutorService.shutdown();
+    assertThat(busyExecutorService.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+    assertThat(completed.get()).isEqualTo(4);
+  }
+
+  @Test
+  public void
+      executeBatchGets_SubmissionFailed_ShouldThrowWithoutLettingSubmittedWorkersRunTasksLater()
+          throws Exception {
+    // Arrange
+    when(config.isParallelBatchGetEnabled()).thenReturn(true);
+    when(config.getParallelBatchGetMaxConcurrencyPerBatch()).thenReturn(3);
+    ExecutorService busyExecutorService = spy(Executors.newFixedThreadPool(1));
+    ParallelExecutor executor = new ParallelExecutor(config, busyExecutorService);
+    CountDownLatch blocker = new CountDownLatch(1);
+    busyExecutorService.execute(() -> Uninterruptibles.awaitUninterruptibly(blocker));
+    doCallRealMethod()
+        .doThrow(new RejectedExecutionException())
+        .when(busyExecutorService)
+        .submit(ArgumentMatchers.<Callable<Void>>any());
+    AtomicInteger completed = new AtomicInteger();
+    ParallelExecutorTask countingTask = completed::incrementAndGet;
+
+    try {
+      // Act Assert
+      assertThatThrownBy(
+              () -> executor.executeBatchGets(Collections.nCopies(4, countingTask), TX_ID))
+          .isInstanceOf(RejectedExecutionException.class);
+    } finally {
+      blocker.countDown();
+    }
+
+    // The worker submitted before the failure should run no task once it starts
+    busyExecutorService.shutdown();
+    assertThat(busyExecutorService.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+    assertThat(completed.get()).isEqualTo(0);
   }
 
   @Test

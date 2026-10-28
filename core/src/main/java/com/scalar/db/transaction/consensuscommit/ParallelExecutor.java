@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -162,8 +163,9 @@ public class ParallelExecutor {
    * Runs the tasks of a batch Get on at most {@link
    * ConsensusCommitConfig#getParallelBatchGetMaxConcurrencyPerBatch()} threads, the calling thread
    * and threads of the parallel executor, each of which runs the next task not started yet until
-   * none is left. This waits for all the tasks even if some of them fail, so that none of them is
-   * left running on the transaction after this returns.
+   * none is left. This waits for the workers that have started even if some of the tasks fail, so
+   * that none of them is left running on the transaction after this returns, but not for the
+   * workers still queued in the parallel executor, which return without running any task.
    */
   public void executeBatchGets(List<ParallelExecutorTask> tasks, String transactionId) {
     try {
@@ -183,38 +185,56 @@ public class ParallelExecutor {
           };
 
       // The calling thread runs one of the workers, so that a batch hands one worker fewer to the
-      // pool
+      // pool. Each submitted worker runs only if it claims itself before the calling thread does,
+      // so that the calling thread doesn't have to wait for workers still queued in the pool
       assert parallelExecutorService != null;
+      List<AtomicBoolean> claims = new ArrayList<>(workerCount - 1);
       List<Future<Void>> futures = new ArrayList<>(workerCount - 1);
-      for (int i = 1; i < workerCount; i++) {
-        futures.add(
-            parallelExecutorService.submit(
-                () -> {
-                  worker.run();
-                  return null;
-                }));
-      }
-
       Throwable throwable = null;
       try {
+        for (int i = 1; i < workerCount; i++) {
+          AtomicBoolean claim = new AtomicBoolean();
+          futures.add(
+              parallelExecutorService.submit(
+                  () -> {
+                    if (claim.compareAndSet(false, true)) {
+                      worker.run();
+                    }
+                    return null;
+                  }));
+          claims.add(claim);
+        }
+
         worker.run();
       } catch (Throwable t) {
+        // When a submission fails, e.g., because the parallel executor is shut down, the calling
+        // thread doesn't run its worker, but still takes care of the workers already submitted
         throwable = t;
       }
 
-      // Wait for the other workers even on failure, since they use the transaction context too
-      for (Future<Void> future : futures) {
+      // Wait for the other workers that have started even on failure, since they use the
+      // transaction context too. A worker that hasn't started returns without running any task
+      for (int i = 0; i < futures.size(); i++) {
+        if (claims.get(i).compareAndSet(false, true)) {
+          // Cancel it so that the parallel executor doesn't keep the tasks and the transaction
+          // context while it is queued
+          futures.get(i).cancel(false);
+          continue;
+        }
         try {
-          Uninterruptibles.getUninterruptibly(future);
+          Uninterruptibles.getUninterruptibly(futures.get(i));
         } catch (java.util.concurrent.ExecutionException e) {
           if (throwable == null) {
             throwable = e.getCause();
+          } else {
+            throwable.addSuppressed(e.getCause());
           }
         }
       }
 
       if (throwable != null) {
-        logger.warn("Failed to run executeBatchGets tasks. Transaction ID: {}", transactionId);
+        logger.warn(
+            "Failed to run executeBatchGets tasks. Transaction ID: {}", transactionId, throwable);
         rethrow(throwable);
       }
     } catch (ExecutionException | ValidationConflictException | CrudException e) {
