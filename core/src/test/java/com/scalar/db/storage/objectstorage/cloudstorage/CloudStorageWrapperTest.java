@@ -519,7 +519,8 @@ public class CloudStorageWrapperTest {
   }
 
   @Test
-  public void deleteByPrefix_DeletionInBatchFailed_ShouldThrowObjectStorageWrapperException() {
+  public void
+      deleteByPrefix_RetryOfDeletionInBatchFailed_ShouldThrowObjectStorageWrapperException() {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
     String objectKey2 = ANY_PREFIX + "test1/object2";
@@ -528,6 +529,7 @@ public class CloudStorageWrapperTest {
     Blob blob2 = mock(Blob.class);
     when(blob1.getName()).thenReturn(objectKey1);
     when(blob2.getName()).thenReturn(objectKey2);
+    when(blob2.getGeneration()).thenReturn(2L);
 
     @SuppressWarnings("unchecked")
     Page<Blob> page = mock(Page.class);
@@ -542,15 +544,125 @@ public class CloudStorageWrapperTest {
     StorageBatchResult<Boolean> batchResult2 = mock(StorageBatchResult.class);
     // The deletion of object1 succeeds, but the deletion of object2 fails
     when(batchResult1.get()).thenReturn(true);
-    StorageException toThrow = new StorageException(429, "Rate limit exceeded");
-    when(batchResult2.get()).thenThrow(toThrow);
+    when(batchResult2.get()).thenThrow(new StorageException(429, "Rate limit exceeded"));
     doReturn(batchResult1).when(batch).delete(BlobId.of(BUCKET, objectKey1));
     doReturn(batchResult2).when(batch).delete(BlobId.of(BUCKET, objectKey2));
+    StorageException toThrow = new StorageException(403, "Forbidden");
+    when(storage.delete(
+            BlobId.of(BUCKET, objectKey2), Storage.BlobSourceOption.generationMatch(2L)))
+        .thenThrow(toThrow);
 
     // Act Assert
     assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX))
         .isExactlyInstanceOf(ObjectStorageWrapperException.class)
         .hasCause(toThrow);
+  }
+
+  @Test
+  public void deleteByPrefix_DeletionInBatchFailed_ShouldRetryItIndividually() throws Exception {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+
+    Blob blob1 = mock(Blob.class);
+    Blob blob2 = mock(Blob.class);
+    when(blob1.getName()).thenReturn(objectKey1);
+    when(blob2.getName()).thenReturn(objectKey2);
+    when(blob2.getGeneration()).thenReturn(2L);
+
+    @SuppressWarnings("unchecked")
+    Page<Blob> page = mock(Page.class);
+    when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2));
+
+    StorageBatch batch = mock(StorageBatch.class);
+    when(storage.batch()).thenReturn(batch);
+    @SuppressWarnings("unchecked")
+    StorageBatchResult<Boolean> batchResult1 = mock(StorageBatchResult.class);
+    @SuppressWarnings("unchecked")
+    StorageBatchResult<Boolean> batchResult2 = mock(StorageBatchResult.class);
+    // The deletion of object1 succeeds, but the deletion of object2 fails
+    when(batchResult1.get()).thenReturn(true);
+    when(batchResult2.get()).thenThrow(new StorageException(429, "Rate limit exceeded"));
+    doReturn(batchResult1).when(batch).delete(BlobId.of(BUCKET, objectKey1));
+    doReturn(batchResult2).when(batch).delete(BlobId.of(BUCKET, objectKey2));
+    when(storage.delete(
+            BlobId.of(BUCKET, objectKey2), Storage.BlobSourceOption.generationMatch(2L)))
+        .thenReturn(true);
+
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
+
+    // Assert
+    verify(storage)
+        .delete(BlobId.of(BUCKET, objectKey2), Storage.BlobSourceOption.generationMatch(2L));
+    // Only the failed deletion is retried
+    verify(storage, times(1)).delete(any(BlobId.class), any(Storage.BlobSourceOption.class));
+  }
+
+  @Test
+  public void deleteByPrefix_BlobOverwrittenBeforeRetryOfDeletion_ShouldNotThrowAnyException()
+      throws Exception {
+    // Arrange
+    String objectKey = ANY_PREFIX + "test1/object1";
+
+    Blob blob = mock(Blob.class);
+    when(blob.getName()).thenReturn(objectKey);
+    when(blob.getGeneration()).thenReturn(1L);
+
+    @SuppressWarnings("unchecked")
+    Page<Blob> page = mock(Page.class);
+    when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Collections.singletonList(blob));
+
+    StorageBatch batch = mock(StorageBatch.class);
+    when(storage.batch()).thenReturn(batch);
+    @SuppressWarnings("unchecked")
+    StorageBatchResult<Boolean> batchResult = mock(StorageBatchResult.class);
+    when(batchResult.get()).thenThrow(new StorageException(429, "Rate limit exceeded"));
+    doReturn(batchResult).when(batch).delete(BlobId.of(BUCKET, objectKey));
+    // The blob has been overwritten with a new generation after the listing
+    when(storage.delete(BlobId.of(BUCKET, objectKey), Storage.BlobSourceOption.generationMatch(1L)))
+        .thenThrow(
+            new StorageException(
+                CloudStorageErrorCode.PRECONDITION_FAILED.get(), "Precondition failed"));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX)).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void deleteByPrefix_BatchRequestFailed_ShouldRetryAllDeletionsIndividually()
+      throws Exception {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+
+    Blob blob1 = mock(Blob.class);
+    Blob blob2 = mock(Blob.class);
+    when(blob1.getName()).thenReturn(objectKey1);
+    when(blob2.getName()).thenReturn(objectKey2);
+    when(blob1.getGeneration()).thenReturn(1L);
+    when(blob2.getGeneration()).thenReturn(2L);
+
+    @SuppressWarnings("unchecked")
+    Page<Blob> page = mock(Page.class);
+    when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2));
+
+    StorageBatch batch = mock(StorageBatch.class);
+    when(storage.batch()).thenReturn(batch);
+    doThrow(new StorageException(0, "Socket write error.")).when(batch).submit();
+    when(storage.delete(any(BlobId.class), any(Storage.BlobSourceOption.class))).thenReturn(true);
+
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
+
+    // Assert
+    verify(storage)
+        .delete(BlobId.of(BUCKET, objectKey1), Storage.BlobSourceOption.generationMatch(1L));
+    verify(storage)
+        .delete(BlobId.of(BUCKET, objectKey2), Storage.BlobSourceOption.generationMatch(2L));
   }
 
   @Test
