@@ -722,8 +722,8 @@ public class S3WrapperTest {
   }
 
   @Test
-  public void
-      deleteByPrefix_DeletionFailedForSomeObjects_ShouldThrowObjectStorageWrapperException() {
+  public void deleteByPrefix_DeletionFailedForSomeObjects_ShouldRetryThemIndividually()
+      throws Exception {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
     String objectKey2 = ANY_PREFIX + "test1/object2";
@@ -751,7 +751,6 @@ public class S3WrapperTest {
 
     // The request succeeds, but the deletion of object2 fails
     DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
-    when(deleteObjectsResponse.hasErrors()).thenReturn(true);
     when(deleteObjectsResponse.errors())
         .thenReturn(
             Collections.singletonList(
@@ -759,10 +758,65 @@ public class S3WrapperTest {
     when(client.deleteObjects(any(DeleteObjectsRequest.class)))
         .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
 
+    when(client.deleteObject(any(DeleteObjectRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(DeleteObjectResponse.builder().build()));
+
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
+
+    // Assert
+    ArgumentCaptor<DeleteObjectRequest> requestCaptor =
+        ArgumentCaptor.forClass(DeleteObjectRequest.class);
+    verify(client).deleteObject(requestCaptor.capture());
+    assertThat(requestCaptor.getValue().bucket()).isEqualTo(BUCKET);
+    assertThat(requestCaptor.getValue().key()).isEqualTo(objectKey2);
+    assertThat(requestCaptor.getValue().ifMatch()).isNull();
+  }
+
+  @Test
+  public void
+      deleteByPrefix_RetryOfFailedDeletionFailed_ShouldThrowObjectStorageWrapperException() {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+
+    S3Object s3Object1 = mock(S3Object.class);
+    S3Object s3Object2 = mock(S3Object.class);
+    when(s3Object1.key()).thenReturn(objectKey1);
+    when(s3Object2.key()).thenReturn(objectKey2);
+
+    ListObjectsV2Response response = mock(ListObjectsV2Response.class);
+    when(response.contents()).thenReturn(Arrays.asList(s3Object1, s3Object2));
+
+    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
+    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
+
+    @SuppressWarnings("unchecked")
+    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
+    when(paginator.subscribe(consumer))
+        .thenAnswer(
+            invocation -> {
+              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
+              actualConsumer.accept(response);
+              return CompletableFuture.completedFuture(null);
+            });
+
+    // The request succeeds, but the deletion of object2 fails
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(deleteObjectsResponse.errors())
+        .thenReturn(
+            Collections.singletonList(
+                S3Error.builder().key(objectKey2).code("SlowDown").message("Any Error").build()));
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
+
+    S3Exception toThrow = s3Exception(403, 1);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
     // Act Assert
     assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX))
         .isExactlyInstanceOf(ObjectStorageWrapperException.class)
-        .hasMessageContaining(objectKey2);
+        .hasRootCause(toThrow);
   }
 
   @Test
