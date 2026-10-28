@@ -11,6 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.HttpHeaders;
 import com.azure.core.http.HttpResponse;
 import com.azure.core.http.rest.PagedIterable;
@@ -62,7 +63,8 @@ public class BlobStorageWrapperTest {
 
   private BlobStorageException createBlobStorageException(BlobErrorCode errorCode) {
     HttpResponse httpResponse = mock(HttpResponse.class);
-    HttpHeaders headers = new HttpHeaders().set("x-ms-error-code", errorCode.toString());
+    HttpHeaders headers =
+        new HttpHeaders().set(HttpHeaderName.fromString("x-ms-error-code"), errorCode.toString());
     // The error code is not read when the request was resent
     lenient().when(httpResponse.getHeaders()).thenReturn(headers);
     return new BlobStorageException("test error", httpResponse, null);
@@ -94,7 +96,7 @@ public class BlobStorageWrapperTest {
     BlobDownloadContentResponse response = mock(BlobDownloadContentResponse.class);
     when(blobClient.downloadContentWithResponse(any(), any(), any(), any())).thenReturn(response);
     when(response.getValue()).thenReturn(BinaryData.fromString(ANY_DATA));
-    HttpHeaders headers = new HttpHeaders().set("ETag", ANY_ETAG);
+    HttpHeaders headers = new HttpHeaders().set(HttpHeaderName.ETAG, ANY_ETAG);
     when(response.getHeaders()).thenReturn(headers);
 
     // Act
