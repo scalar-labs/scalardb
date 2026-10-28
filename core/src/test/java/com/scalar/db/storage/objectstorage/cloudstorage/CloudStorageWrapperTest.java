@@ -570,8 +570,10 @@ public class CloudStorageWrapperTest {
     when(blob2.getName()).thenReturn(objectKey2);
     when(blob2.getGeneration()).thenReturn(2L);
 
-    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2));
+    @SuppressWarnings("unchecked")
+    Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -608,8 +610,10 @@ public class CloudStorageWrapperTest {
     when(blob.getName()).thenReturn(objectKey);
     when(blob.getGeneration()).thenReturn(1L);
 
-    Page<Blob> page = pageOf(Collections.singletonList(blob));
+    @SuppressWarnings("unchecked")
+    Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Collections.singletonList(blob));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
@@ -641,8 +645,10 @@ public class CloudStorageWrapperTest {
     when(blob1.getGeneration()).thenReturn(1L);
     when(blob2.getGeneration()).thenReturn(2L);
 
-    Page<Blob> page = pageOf(Arrays.asList(blob1, blob2));
+    @SuppressWarnings("unchecked")
+    Page<Blob> page = mock(Page.class);
     when(storage.list(eq(BUCKET), any(Storage.BlobListOption.class))).thenReturn(page);
+    when(page.iterateAll()).thenReturn(Arrays.asList(blob1, blob2));
 
     StorageBatch batch = mock(StorageBatch.class);
     when(storage.batch()).thenReturn(batch);
