@@ -446,7 +446,9 @@ public class RecoveryExecutorTest {
     CoordinatorStateAccessor.State committedState =
         new CoordinatorStateAccessor.State(
             ANY_ID_2, TransactionState.COMMITTED, System.currentTimeMillis());
-    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(committedState));
+    when(coordinator.getState(ANY_ID_2))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of(committedState));
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(false);
@@ -480,7 +482,9 @@ public class RecoveryExecutorTest {
     CoordinatorStateAccessor.State abortedState =
         new CoordinatorStateAccessor.State(
             ANY_ID_2, TransactionState.ABORTED, System.currentTimeMillis());
-    when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty(), Optional.of(abortedState));
+    when(coordinator.getState(ANY_ID_2))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of(abortedState));
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(false);
@@ -601,7 +605,8 @@ public class RecoveryExecutorTest {
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
     // First (pre-abort) re-read sees PREPARED; second (post-abort) re-read sees committed.
     when(storage.get(any(Get.class)))
-        .thenReturn(Optional.of(transactionResult), Optional.of(committedRecord));
+        .thenReturn(Optional.of(transactionResult))
+        .thenReturn(Optional.of(committedRecord));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
 
     // Act
@@ -633,7 +638,9 @@ public class RecoveryExecutorTest {
     when(coordinator.getState(ANY_ID_2)).thenReturn(Optional.empty());
     when(recovery.isTransactionExpired(transactionResult)).thenReturn(true);
     // First (pre-abort) re-read sees PREPARED; second (post-abort) re-read finds the record gone.
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(transactionResult), Optional.empty());
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(transactionResult))
+        .thenReturn(Optional.empty());
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
 
     // Act
@@ -674,7 +681,9 @@ public class RecoveryExecutorTest {
     when(recovery.isTransactionExpired(original)).thenReturn(true);
     // First (pre-abort) re-read sees the same writer PREPARED; second (post-abort) re-read sees a
     // different writer's PREPARED record.
-    when(storage.get(any(Get.class))).thenReturn(Optional.of(original), Optional.of(rePrepared));
+    when(storage.get(any(Get.class)))
+        .thenReturn(Optional.of(original))
+        .thenReturn(Optional.of(rePrepared));
     when(recovery.tryAbortExpiredTransaction(ANY_ID_2)).thenReturn(true);
 
     // Act
@@ -877,12 +886,11 @@ public class RecoveryExecutorTest {
     // current starts as ANY_ID_2; each re-read returns the opposite id so the re-prepare branch is
     // taken on every pass.
     when(storage.get(any(Get.class)))
-        .thenReturn(
-            Optional.of(rePreparedAs1),
-            Optional.of(rePreparedAs2),
-            Optional.of(rePreparedAs1),
-            Optional.of(rePreparedAs2),
-            Optional.of(rePreparedAs1));
+        .thenReturn(Optional.of(rePreparedAs1))
+        .thenReturn(Optional.of(rePreparedAs2))
+        .thenReturn(Optional.of(rePreparedAs1))
+        .thenReturn(Optional.of(rePreparedAs2))
+        .thenReturn(Optional.of(rePreparedAs1));
 
     // Act Assert
     assertThatThrownBy(
