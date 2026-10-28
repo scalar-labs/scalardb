@@ -3678,6 +3678,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
    * <p>Returns {@code true} by default; subclasses override it to {@code false} for the engines
    * that cannot support such a write. The Get variants are unaffected because a point Get releases
    * its connection immediately.
+   *
+   * @return {@code true} if the storage engine allows a concurrent write to a row that an open scan
+   *     cursor is still reading
    */
   protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
     return true;

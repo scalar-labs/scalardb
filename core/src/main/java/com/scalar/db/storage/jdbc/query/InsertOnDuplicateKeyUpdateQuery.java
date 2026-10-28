@@ -27,6 +27,7 @@ public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
   private final boolean useRowAlias;
 
   /**
+   * @param builder the builder that holds the target table and the keys and columns to upsert
    * @param useRowAlias whether the update reads the inserted row through a row alias ({@code VALUES
    *     (...) AS new ... col=new.col}) or through {@code VALUES(col)}, which MySQL 8.0.20
    *     deprecates

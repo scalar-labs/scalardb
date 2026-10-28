@@ -29,6 +29,7 @@ import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -120,6 +121,82 @@ public class CrudHandler {
           .map(
               r -> new FilteredResult(r, get.getProjections(), metadata, isIncludeMetadataEnabled));
     }
+  }
+
+  /**
+   * Executes the Gets as {@link #get(Get, TransactionContext)} would one by one, but runs the Gets
+   * on distinct records in parallel. Gets of the same transaction can run concurrently because they
+   * only add to the read set and the get set, which are concurrent maps, and to the recovery
+   * results, a concurrent list, while the write set and the delete set stay unchanged. Two Gets on
+   * the same record, however, would race on the read set, so a Get on a record that another Get of
+   * the list already reads, and a Get with index, whose record is unknown until it is read, run one
+   * by one after the others. When parallel batch Gets are disabled, the Gets all run one by one in
+   * order.
+   *
+   * <p>When some of the parallel Gets fail, the ones that have not started yet are skipped, and
+   * this waits for the running ones to finish, so that none of them is left running on the
+   * transaction. It then throws the failure of the first failed Get in the order of the Gets.
+   * Unlike in a serial run, Gets after it in the order may have run as well, and the failure thrown
+   * may not be the one a serial run would hit first.
+   *
+   * @param gets the Gets
+   * @param context the transaction context
+   * @return the results of the Gets, in the order of the Gets
+   * @throws CrudException if any of the Gets fails
+   */
+  public List<Optional<Result>> batchGet(List<Get> gets, TransactionContext context)
+      throws CrudException {
+    @SuppressWarnings("unchecked")
+    Optional<Result>[] results = new Optional[gets.size()];
+    if (gets.size() < 2 || !parallelExecutor.isParallelBatchGetEnabled()) {
+      for (int i = 0; i < gets.size(); i++) {
+        results[i] = get(gets.get(i), context);
+      }
+      return Arrays.asList(results);
+    }
+
+    CrudException[] failures = new CrudException[gets.size()];
+    AtomicBoolean failed = new AtomicBoolean();
+    List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
+    List<Integer> serial = new ArrayList<>();
+    Set<Snapshot.Key> keys = new HashSet<>();
+    for (int i = 0; i < gets.size(); i++) {
+      Get get = gets.get(i);
+      TableMetadata metadata =
+          getTransactionTableMetadata(get, context.transactionId).getTableMetadata();
+      if (!ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)
+          && keys.add(new Snapshot.Key(get))) {
+        int index = i;
+        tasks.add(
+            () -> {
+              // Once a Get fails, the Gets that have not started yet are skipped
+              if (failed.get()) {
+                return;
+              }
+              try {
+                results[index] = get(get, context);
+              } catch (CrudException e) {
+                failures[index] = e;
+                failed.set(true);
+              }
+            });
+      } else {
+        serial.add(i);
+      }
+    }
+
+    if (!tasks.isEmpty()) {
+      parallelExecutor.executeBatchGets(tasks, context.transactionId);
+    }
+    for (CrudException failure : failures) {
+      if (failure != null) {
+        throw failure;
+      }
+    }
+    for (int i : serial) {
+      results[i] = get(gets.get(i), context);
+    }
+    return Arrays.asList(results);
   }
 
   // Only for a Get with index, the argument `key` is null

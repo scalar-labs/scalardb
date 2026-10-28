@@ -85,10 +85,16 @@ public abstract class GlobalTransactionTestBase {
    * {@link #manager1}, and both are driven by the same {@link GlobalTransaction#commit()} / {@link
    * GlobalTransaction#rollback()}. They may be the same instance (single-phase backing) or two
    * distinct instances sharing a coordinator (two-phase-commit backing).
+   *
+   * @throws Exception if an error occurs
    */
   protected abstract void setUpManagers() throws Exception;
 
-  /** Releases the resources set up in {@link #setUpManagers()}. */
+  /**
+   * Releases the resources set up in {@link #setUpManagers()}.
+   *
+   * @throws Exception if an error occurs
+   */
   protected abstract void tearDownManagers() throws Exception;
 
   protected String getNamespaceBaseName() {

@@ -44,7 +44,12 @@ public abstract class TwoPhaseCommitBackedConsensusCommitIntegrationTestBase
     return properties;
   }
 
-  /** Storage-specific ConsensusCommit properties (typically from a {@code ConsensusCommit*Env}). */
+  /**
+   * Storage-specific ConsensusCommit properties (typically from a {@code ConsensusCommit*Env}).
+   *
+   * @param testName the name of the test
+   * @return the storage-specific ConsensusCommit properties
+   */
   protected abstract Properties getFacadeStorageProperties(String testName);
 
   // --- Tests disabled: the facade does not support by-id Coordinator-state operations ---
