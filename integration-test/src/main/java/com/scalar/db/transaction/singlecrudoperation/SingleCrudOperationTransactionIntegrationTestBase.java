@@ -231,6 +231,11 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
+  public void batch_ManyGetsGiven_ShouldReturnTheirResultsInOrder() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
   public void
       get_GetWithProjectionOnNonPrimaryKeyColumnsForGivenForCommittedRecord_ShouldReturnOnlyProjectedColumns() {}
 

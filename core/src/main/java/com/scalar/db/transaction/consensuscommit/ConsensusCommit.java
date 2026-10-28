@@ -8,12 +8,14 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Insert;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.AbstractDistributedTransaction;
+import com.scalar.db.common.BatchResultImpl;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
@@ -24,6 +26,7 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.UnsatisfiedConditionException;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -74,6 +77,10 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
+    return crud.get(checkedGet(get), context);
+  }
+
+  private Get checkedGet(Get get) throws CrudException {
     get = copyAndSetTargetToIfNot(get);
 
     try {
@@ -82,7 +89,40 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
       throw new CrudException(e.getMessage(), e, getId());
     }
 
-    return crud.get(get, context);
+    return get;
+  }
+
+  /**
+   * Executes the operations in order, as the default implementation does, except that each run of
+   * consecutive Gets goes through {@link CrudHandler#batchGet(List, TransactionContext)}, which
+   * runs them in parallel.
+   */
+  @Override
+  public List<BatchResult> batch(List<? extends Operation> operations) throws CrudException {
+    checkArgument(!operations.isEmpty(), CoreError.EMPTY_OPERATIONS_SPECIFIED.buildMessage());
+    List<BatchResult> ret = new ArrayList<>(operations.size());
+    int i = 0;
+    while (i < operations.size()) {
+      boolean gets = operations.get(i) instanceof Get;
+      int end = i + 1;
+      while (end < operations.size() && operations.get(end) instanceof Get == gets) {
+        end++;
+      }
+
+      if (gets) {
+        List<Get> run = new ArrayList<>(end - i);
+        for (Operation operation : operations.subList(i, end)) {
+          run.add(checkedGet((Get) operation));
+        }
+        for (Optional<Result> result : crud.batchGet(run, context)) {
+          ret.add(new BatchResultImpl(result));
+        }
+      } else {
+        ret.addAll(super.batch(operations.subList(i, end)));
+      }
+      i = end;
+    }
+    return ret;
   }
 
   @Override

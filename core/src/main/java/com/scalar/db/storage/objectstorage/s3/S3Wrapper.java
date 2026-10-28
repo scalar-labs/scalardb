@@ -13,8 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -303,11 +301,6 @@ public class S3Wrapper implements ObjectStorageWrapper {
   @Override
   public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
     try {
-      // The DeleteObjects API reports the failure of each object in the response instead of
-      // failing the request, so the errors are counted to check them after the deletion. Only the
-      // first error is kept so as not to hold all the errors in memory
-      AtomicInteger errorCount = new AtomicInteger();
-      AtomicReference<S3Error> firstError = new AtomicReference<>();
       client
           .listObjectsV2Paginator(
               ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).build())
@@ -334,22 +327,20 @@ public class S3Wrapper implements ObjectStorageWrapper {
                                     .delete(Delete.builder().objects(batch).build())
                                     .build())
                             .join();
-                    if (deleteResponse.hasErrors() && !deleteResponse.errors().isEmpty()) {
-                      errorCount.addAndGet(deleteResponse.errors().size());
-                      firstError.compareAndSet(null, deleteResponse.errors().get(0));
+                    // The DeleteObjects API reports the failure of each object in the response
+                    // instead of failing the request, so the AWS SDK does not retry it. A failed
+                    // deletion is retried individually so that the AWS SDK retries it on transient
+                    // errors, such as InternalError and SlowDown
+                    for (S3Error error : deleteResponse.errors()) {
+                      client
+                          .deleteObject(
+                              DeleteObjectRequest.builder().bucket(bucket).key(error.key()).build())
+                          .join();
                     }
                   }
                 }
               })
           .join();
-      if (errorCount.get() > 0) {
-        throw new ObjectStorageWrapperException(
-            String.format(
-                "Failed to delete the objects with prefix '%s' (%d failed). First error: %s",
-                prefix, errorCount.get(), firstError.get()));
-      }
-    } catch (ObjectStorageWrapperException e) {
-      throw e;
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(
           String.format("Failed to delete the objects with prefix '%s'", prefix), e);
