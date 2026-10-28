@@ -51,10 +51,12 @@ import java.util.Optional;
  *   <li>Lifecycle and record-level two-phase commit methods ({@link #join}, {@link
  *       #prepareRecords}, {@link #validateRecords}, {@link #commitRecords}, {@link
  *       #rollbackRecords}) are invoked by {@link TwoPhaseCommitCoordinator}.
- *   <li>{@link #releaseTransactionContext} and {@link #hasTransactionContext} are invoked by
- *       neither — they are driven by a context-reaper/decorator: the former a reap-only terminal
- *       that reclaims an abandoned or idle-reaped context without touching storage, the latter a
- *       liveness probe consulted before such a reap.
+ *   <li>{@link #releaseTransactionContext} and {@link #hasTransactionContext} are driven by a
+ *       context-reaper/decorator: the former a terminal that reclaims an abandoned or idle-reaped
+ *       context without touching storage, the latter a liveness probe consulted before such a reap.
+ *       A {@link TwoPhaseCommitCoordinator} may also invoke {@link #releaseTransactionContext},
+ *       best-effort, for a transaction that will not reach {@link #commitRecords} or {@link
+ *       #rollbackRecords}.
  * </ul>
  *
  * <p>Operations must follow the transaction's lifecycle: CRUD while the transaction is open, then
@@ -426,11 +428,11 @@ public interface TwoPhaseCommitParticipant extends AutoCloseable {
   /**
    * Releases the participant's in-memory context for the transaction without touching storage.
    *
-   * <p>This is a reap-only terminal used to reclaim a local context that did not reach {@link
-   * #commitRecords} / {@link #rollbackRecords} — for example, an abandoned transaction, or one
-   * reaped on idle by a decorator. It closes any scanners and discards the in-memory snapshot for
-   * the transaction; it does <strong>not</strong> roll back or commit any PREPARED records — those
-   * are reconciled by lazy recovery on a subsequent read.
+   * <p>This is a terminal used to reclaim a local context that did not reach {@link #commitRecords}
+   * / {@link #rollbackRecords} — for example, an abandoned transaction, or one reaped on idle by a
+   * decorator. It closes any scanners and discards the in-memory snapshot for the transaction; it
+   * does <strong>not</strong> roll back or commit any PREPARED records — those are reconciled by
+   * lazy recovery on a subsequent read.
    *
    * <p>An unknown transaction — never joined, or whose context was already released — is a no-op. A
    * decorator may treat this as a terminal step, releasing any per-transaction resources it holds.

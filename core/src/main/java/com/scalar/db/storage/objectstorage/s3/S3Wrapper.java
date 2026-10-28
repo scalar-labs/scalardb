@@ -6,12 +6,14 @@ import com.scalar.db.storage.objectstorage.ObjectStorageWrapper;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -22,14 +24,17 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 
@@ -42,17 +47,11 @@ public class S3Wrapper implements ObjectStorageWrapper {
   private final String bucket;
 
   public S3Wrapper(S3Config config) {
-    AwsCrtAsyncHttpClient.Builder httpClientBuilder = AwsCrtAsyncHttpClient.builder();
-    if (config.getMultipartUploadMaxConcurrency().isPresent()) {
-      httpClientBuilder.maxConcurrency(config.getMultipartUploadMaxConcurrency().get());
-    }
-    MultipartConfiguration.Builder multipartConfigBuilder = MultipartConfiguration.builder();
-    if (config.getMultipartUploadPartSizeBytes().isPresent()) {
-      multipartConfigBuilder.minimumPartSizeInBytes(config.getMultipartUploadPartSizeBytes().get());
-    }
-    if (config.getMultipartUploadThresholdSizeBytes().isPresent()) {
-      multipartConfigBuilder.thresholdInBytes(config.getMultipartUploadThresholdSizeBytes().get());
-    }
+    this(config, createClient(config, null));
+  }
+
+  @VisibleForTesting
+  static S3AsyncClient createClient(S3Config config, @Nullable URI endpoint) {
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
         ClientOverrideConfiguration.builder();
     if (config.getRequestTimeoutSecs().isPresent()) {
@@ -60,18 +59,40 @@ public class S3Wrapper implements ObjectStorageWrapper {
           Duration.ofSeconds(config.getRequestTimeoutSecs().get()));
     }
 
-    this.client =
+    S3AsyncClientBuilder clientBuilder =
         S3AsyncClient.builder()
             .multipartEnabled(true)
             .region(Region.of(config.getRegion()))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(config.getUsername(), config.getPassword())))
-            .httpClientBuilder(httpClientBuilder)
-            .multipartConfiguration(multipartConfigBuilder.build())
-            .overrideConfiguration(overrideConfigBuilder.build())
-            .build();
-    this.bucket = config.getBucket();
+            .httpClientBuilder(AwsCrtAsyncHttpClient.builder())
+            .multipartConfiguration(buildMultipartConfiguration(config))
+            .overrideConfiguration(overrideConfigBuilder.build());
+    if (endpoint != null) {
+      clientBuilder.endpointOverride(endpoint).forcePathStyle(true);
+    }
+    return clientBuilder.build();
+  }
+
+  @VisibleForTesting
+  static MultipartConfiguration buildMultipartConfiguration(S3Config config) {
+    MultipartConfiguration.Builder multipartConfigBuilder = MultipartConfiguration.builder();
+    if (config.getMultipartUploadPartSizeBytes().isPresent()) {
+      multipartConfigBuilder.minimumPartSizeInBytes(config.getMultipartUploadPartSizeBytes().get());
+    }
+    if (config.getMultipartUploadThresholdSizeBytes().isPresent()) {
+      multipartConfigBuilder.thresholdInBytes(config.getMultipartUploadThresholdSizeBytes().get());
+    }
+    if (config.getMultipartUploadMaxConcurrency().isPresent()) {
+      // The concurrency is limited per upload instead of by the maximum concurrency of the HTTP
+      // client, since the HTTP client is shared by all the requests, including the ones other than
+      // multipart uploads
+      int maxConcurrency = config.getMultipartUploadMaxConcurrency().get();
+      multipartConfigBuilder.parallelConfiguration(
+          parallelConfig -> parallelConfig.maxInFlightParts(maxConcurrency));
+    }
+    return multipartConfigBuilder.build();
   }
 
   @VisibleForTesting
@@ -298,13 +319,24 @@ public class S3Wrapper implements ObjectStorageWrapper {
                   for (int i = 0; i < pageObjects.size(); i += BATCH_DELETE_SIZE_LIMIT) {
                     int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, pageObjects.size());
                     List<ObjectIdentifier> batch = pageObjects.subList(i, endIndex);
-                    client
-                        .deleteObjects(
-                            DeleteObjectsRequest.builder()
-                                .bucket(bucket)
-                                .delete(Delete.builder().objects(batch).build())
-                                .build())
-                        .join();
+                    DeleteObjectsResponse deleteResponse =
+                        client
+                            .deleteObjects(
+                                DeleteObjectsRequest.builder()
+                                    .bucket(bucket)
+                                    .delete(Delete.builder().objects(batch).build())
+                                    .build())
+                            .join();
+                    // The DeleteObjects API reports the failure of each object in the response
+                    // instead of failing the request, so the AWS SDK does not retry it. A failed
+                    // deletion is retried individually so that the AWS SDK retries it on transient
+                    // errors, such as InternalError and SlowDown
+                    for (S3Error error : deleteResponse.errors()) {
+                      client
+                          .deleteObject(
+                              DeleteObjectRequest.builder().bucket(bucket).key(error.key()).build())
+                          .join();
+                    }
                   }
                 }
               })

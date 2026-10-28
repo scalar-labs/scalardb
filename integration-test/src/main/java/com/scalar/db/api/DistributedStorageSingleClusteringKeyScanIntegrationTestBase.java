@@ -14,10 +14,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
@@ -758,18 +758,18 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     } else {
       Set<Column<?>> valueSet = new HashSet<>();
 
-      // Add min and max clustering key values
-      Arrays.asList(
-              getColumnWithMinValue(CLUSTERING_KEY, clusteringKeyType),
-              getColumnWithMaxValue(CLUSTERING_KEY, clusteringKeyType))
-          .forEach(
-              clusteringKeyValue -> {
-                valueSet.add(clusteringKeyValue);
-                ret.add(clusteringKeyValue);
-                puts.add(preparePut(clusteringKeyType, clusteringOrder, clusteringKeyValue));
-              });
+      List<Column<?>> fixedValues = new ArrayList<>();
+      fixedValues.add(getColumnWithMinValue(CLUSTERING_KEY, clusteringKeyType));
+      fixedValues.add(getColumnWithMaxValue(CLUSTERING_KEY, clusteringKeyType));
+      fixedValues.addAll(getColumnsDistinguishingCodePointOrder(CLUSTERING_KEY, clusteringKeyType));
+      fixedValues.forEach(
+          clusteringKeyValue -> {
+            valueSet.add(clusteringKeyValue);
+            ret.add(clusteringKeyValue);
+            puts.add(preparePut(clusteringKeyType, clusteringOrder, clusteringKeyValue));
+          });
 
-      IntStream.range(0, CLUSTERING_KEY_NUM - 2)
+      IntStream.range(0, CLUSTERING_KEY_NUM - fixedValues.size())
           .forEach(
               i -> {
                 Column<?> clusteringKeyValue;
@@ -793,10 +793,8 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
       throw new ExecutionException("Put data to database failed", e);
     }
 
-    ret.sort(
-        clusteringOrder == Order.ASC
-            ? com.google.common.collect.Ordering.natural()
-            : com.google.common.collect.Ordering.natural().reverse());
+    Comparator<Column<?>> storageOrder = TestUtils::compareInStorageOrder;
+    ret.sort(clusteringOrder == Order.ASC ? storageOrder : storageOrder.reversed());
     return ret;
   }
 
@@ -826,6 +824,11 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
 
   protected Column<?> getColumnWithMaxValue(String columnName, DataType dataType) {
     return TestUtils.getColumnWithMaxValue(columnName, dataType);
+  }
+
+  protected List<Column<?>> getColumnsDistinguishingCodePointOrder(
+      String columnName, DataType dataType) {
+    return TestUtils.getColumnsDistinguishingCodePointOrder(columnName, dataType);
   }
 
   private String description(
@@ -866,21 +869,13 @@ public abstract class DistributedStorageSingleClusteringKeyScanIntegrationTestBa
     List<Column<?>> ret = new ArrayList<>();
     for (Column<?> clusteringKeyValue : clusteringKeyValues) {
       if (startClusteringKeyValue != null && startInclusive != null) {
-        int compare =
-            Objects.compare(
-                clusteringKeyValue,
-                startClusteringKeyValue,
-                com.google.common.collect.Ordering.natural());
+        int compare = TestUtils.compareInStorageOrder(clusteringKeyValue, startClusteringKeyValue);
         if (!(startInclusive ? compare >= 0 : compare > 0)) {
           continue;
         }
       }
       if (endClusteringKeyValue != null && endInclusive != null) {
-        int compare =
-            Objects.compare(
-                clusteringKeyValue,
-                endClusteringKeyValue,
-                com.google.common.collect.Ordering.natural());
+        int compare = TestUtils.compareInStorageOrder(clusteringKeyValue, endClusteringKeyValue);
         if (!(endInclusive ? compare <= 0 : compare < 0)) {
           continue;
         }

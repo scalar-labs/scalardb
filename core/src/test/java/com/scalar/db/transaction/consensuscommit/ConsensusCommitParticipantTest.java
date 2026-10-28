@@ -25,7 +25,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
-import com.scalar.db.common.CollationComparators;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -92,8 +91,7 @@ class ConsensusCommitParticipantTest {
             recoveryExecutor,
             crud,
             commit,
-            operationChecker,
-            CollationComparators.BINARY);
+            operationChecker);
   }
 
   @Test
@@ -120,8 +118,7 @@ class ConsensusCommitParticipantTest {
                     recoveryExecutor,
                     crud,
                     commit,
-                    operationChecker,
-                    CollationComparators.BINARY))
+                    operationChecker))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -649,9 +646,8 @@ class ConsensusCommitParticipantTest {
     // builds its entry without consulting the table metadata.
     TransactionContext context = getContext(ANY_TX_ID);
     Put put = Put.newBuilder(buildPutFromInsert(insert)).textValue("tx_id", "meta").build();
-    context.snapshot.putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
-    context.snapshot.putIntoDeleteSet(
-        new Snapshot.Key(delete, CollationComparators.BINARY), delete);
+    context.snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    context.snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
 
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
@@ -978,9 +974,7 @@ class ConsensusCommitParticipantTest {
             .partitionKey(Key.ofInt("pk", 1))
             .intValue("v", 100)
             .build();
-    getContext(txId)
-        .snapshot
-        .putIntoWriteSet(new Snapshot.Key(put, CollationComparators.BINARY), put);
+    getContext(txId).snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
     doNothing().when(crud).readIfImplicitPreReadEnabled(any(TransactionContext.class));
     doNothing().when(crud).waitForRecoveryCompletionIfNecessary(any(TransactionContext.class));
     doNothing().when(commit).prepareRecords(any(TransactionContext.class), anyLong());

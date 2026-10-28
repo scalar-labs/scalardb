@@ -8,6 +8,8 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +17,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TwoPhaseCommitCoordinator;
 import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.config.DatabaseConfig;
@@ -173,6 +176,22 @@ class GlobalTransactionBackedDistributedTransactionManagerTest {
     // A coordinator that no longer knows the transaction (e.g., it expired) surfaces as a retriable
     // commit conflict rather than an unrecoverable error.
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+  }
+
+  @Test
+  void commit_WithScannerLeftOpen_ShouldRollBackAndThrowIllegalStateException() throws Exception {
+    // Arrange — a scanner left open makes ending the branch fail.
+    DistributedTransaction transaction = manager.begin();
+    Scan scan = Scan.newBuilder().namespace(NS).table(TBL).partitionKey(Key.ofInt("pk", 1)).build();
+    when(participant.getScanner(eq(CANONICAL_ID), any(Scan.class)))
+        .thenReturn(mock(TransactionCrudOperable.Scanner.class));
+    transaction.getScanner(scan);
+
+    // Act Assert — a commit ends the transaction whatever its outcome, so the failed commit rolls
+    // the transaction back rather than leaving it to the caller, whose rollback would do nothing.
+    assertThatThrownBy(transaction::commit).isInstanceOf(IllegalStateException.class);
+    verify(coordinator, never()).commit(anyString());
+    verify(coordinator).rollback(CANONICAL_ID);
   }
 
   @Test

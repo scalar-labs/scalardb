@@ -20,7 +20,6 @@ import com.scalar.db.api.TwoPhaseCommitParticipant;
 import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.BatchResultImpl;
-import com.scalar.db.common.CollationComparator;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ScannerIterator;
 import com.scalar.db.common.StorageInfoProvider;
@@ -82,7 +81,6 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
   private final CrudHandler crud;
   private final ParticipantCommitHandler commit;
   private final ConsensusCommitOperationChecker operationChecker;
-  private final CollationComparator collationComparator;
 
   private final ConcurrentMap<String, ParticipantContext> contexts = new ConcurrentHashMap<>();
 
@@ -101,7 +99,6 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     this.recoveryExecutor =
         new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
-    this.collationComparator = CollationComparator.from(databaseConfig);
     this.crud =
         new CrudHandler(
             storage,
@@ -109,8 +106,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor,
-            collationComparator);
+            parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     this.commit =
         new ParticipantCommitHandler(
@@ -128,8 +124,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             tableMetadataManager,
             virtualTableInfoManager,
             storageInfoProvider,
-            config.isIncludeMetadataEnabled(),
-            databaseConfig.getCollation());
+            config.isIncludeMetadataEnabled());
   }
 
   @VisibleForTesting
@@ -141,8 +136,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
       RecoveryExecutor recoveryExecutor,
       CrudHandler crud,
       ParticipantCommitHandler commit,
-      ConsensusCommitOperationChecker operationChecker,
-      CollationComparator collationComparator) {
+      ConsensusCommitOperationChecker operationChecker) {
     this.config = checkNotNull(config);
     this.participantId = resolveParticipantId(config);
     this.storage = null;
@@ -154,7 +148,6 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.operationChecker = checkNotNull(operationChecker);
-    this.collationComparator = checkNotNull(collationComparator);
   }
 
   private static String resolveParticipantId(ConsensusCommitConfig config) {
@@ -174,8 +167,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
   @Override
   public void join(String transactionId, boolean readOnly, Map<String, String> attributes)
       throws TransactionException {
-    Snapshot snapshot =
-        new Snapshot(transactionId, tableMetadataManager, parallelExecutor, collationComparator);
+    Snapshot snapshot = new Snapshot(transactionId, tableMetadataManager, parallelExecutor);
     // The isolation level can be overridden per transaction via the transaction-isolation
     // attribute; otherwise it falls back to the participant's configured default.
     Isolation isolation =

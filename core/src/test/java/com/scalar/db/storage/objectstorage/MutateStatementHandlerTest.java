@@ -14,7 +14,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.common.CollationComparators;
 import com.scalar.db.common.TableMetadataManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -60,7 +59,7 @@ public class MutateStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new MutateStatementHandler(wrapper, metadataManager, CollationComparators.BINARY);
+    handler = new MutateStatementHandler(wrapper, metadataManager);
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())

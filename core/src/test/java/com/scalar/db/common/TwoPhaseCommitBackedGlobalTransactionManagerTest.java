@@ -76,7 +76,7 @@ class TwoPhaseCommitBackedGlobalTransactionManagerTest {
     verify(coordinator).enlist(TX_ID, participant);
     assertThat(branch).isInstanceOf(TwoPhaseCommitBackedBranchTransaction.class);
     assertThat(branch).isNotInstanceOf(AttributePropagatingBranchTransaction.class);
-    assertThat(branch.getId()).isEqualTo(TX_ID);
+    assertThat(branch.getGlobalTransactionId()).isEqualTo(TX_ID);
     branch.end(BranchTransaction.Status.SUCCESS);
   }
 

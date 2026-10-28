@@ -16,7 +16,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.common.CollationComparator;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.Key;
@@ -36,20 +35,6 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   // caller drives this composer with the record to roll back, which it passes to `add` directly.
   private final Map<Snapshot.Key, TransactionResult> latestRecords;
 
-  private final CollationComparator collationComparator;
-
-  /**
-   * Creates a composer for a caller that passes the record to roll back to {@link #add(Operation,
-   * TransactionResult)} itself, which is how lazy recovery rolls a record back.
-   *
-   * @param id the ID of the transaction that wrote the record to roll back
-   * @param tableMetadataManager a transaction table metadata manager
-   */
-  public RollbackMutationComposer(String id, TransactionTableMetadataManager tableMetadataManager) {
-    // No latest records are looked up, so the comparator of their keys is never used
-    this(id, tableMetadataManager, ImmutableMap.of(), CollationComparator.binary());
-  }
-
   /**
    * Creates a composer that uses the latest records the caller has read. The records a transaction
    * writes are read together elsewhere, which lets them be read in parallel and lets the caller use
@@ -60,19 +45,16 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
    * @param tableMetadataManager a transaction table metadata manager
    * @param latestRecords the latest state of the records the transaction writes, by key. A key that
    *     has no record in storage is absent from this map
-   * @param collationComparator the comparator the keys of {@code latestRecords} were built with
    */
   public RollbackMutationComposer(
       String id,
       TransactionTableMetadataManager tableMetadataManager,
-      Map<Snapshot.Key, TransactionResult> latestRecords,
-      CollationComparator collationComparator) {
+      Map<Snapshot.Key, TransactionResult> latestRecords) {
     // Rollback restores before-images and does not write a fresh phase timestamp, so the inherited
     // `timestamp` field is unused here. We pass 0L to the base constructor only to satisfy it;
     // there is no commit-phase timestamp to thread in on the rollback path.
     super(id, 0L, tableMetadataManager);
     this.latestRecords = ImmutableMap.copyOf(latestRecords);
-    this.collationComparator = collationComparator;
   }
 
   /** Rollback in either prepare phase in commit or lazy recovery phase in read. */
@@ -117,9 +99,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     assert base instanceof Mutation;
 
     Snapshot.Key key =
-        base instanceof Put
-            ? new Snapshot.Key((Put) base, collationComparator)
-            : new Snapshot.Key((Delete) base, collationComparator);
+        base instanceof Put ? new Snapshot.Key((Put) base) : new Snapshot.Key((Delete) base);
     return Optional.ofNullable(latestRecords.get(key));
   }
 
