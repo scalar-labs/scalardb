@@ -11,6 +11,22 @@ ext {
 group = projectGroup
 version = projectVersion
 
+// Temporary fix for https://emudhra.we-have-a-problem.com/
+// Compile CheckCerts.java so that the container images can include CheckCerts.class.
+// Users can run `java CheckCerts` in the container to confirm that the compromised
+// CA certificates are not trusted by the actual runtime environment.
+// We can remove this task after we update to the fixed version of Java.
+tasks.register('compileCheckCerts', JavaCompile) {
+    description = 'Compile CheckCerts.java to include it in the container images'
+    source = file('ci/tmp-fix-ca-compromise/CheckCerts.java')
+    classpath = files()
+    destinationDirectory = layout.buildDirectory.dir('check-certs')
+    // This repository is built with JDK 8. The Java 8 class file runs on the
+    // JRE in the container images (Java 21) as well.
+    sourceCompatibility = '8'
+    targetCompatibility = '8'
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'eclipse'
