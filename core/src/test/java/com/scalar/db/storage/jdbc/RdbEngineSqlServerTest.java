@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -106,5 +107,14 @@ class RdbEngineSqlServerTest {
 
     assertThat(rdbEngine.parseTimestampTZColumn(resultSet, "ck"))
         .isEqualTo(TimestampTZColumn.ofNull("ck"));
+  }
+
+  @Test
+  void getConnectionProperties_ShouldSendStringParametersAsNonUnicode() {
+    // Act
+    Map<String, String> properties = rdbEngine.getConnectionProperties(mock(JdbcConfig.class));
+
+    // Assert
+    assertThat(properties).containsEntry("sendStringParametersAsUnicode", "false");
   }
 }

@@ -466,6 +466,33 @@ public final class ScalarDbUtils {
     return "(?s)" + out; // (?s) enables dotall mode, causing "." to match new lines
   }
 
+  /**
+   * Orders two strings by Unicode code point, which for well-formed text is the unsigned UTF-8 byte
+   * order that byte-order backends use. {@link String#compareTo} orders by UTF-16 code unit and so
+   * places supplementary characters before U+E000..U+FFFF; comparing the UTF-8 encodings instead
+   * would conflate distinct strings whose unpaired surrogates all encode to the replacement byte.
+   * This order returns 0 only for {@link String#equals equal} strings, ill-formed ones included.
+   *
+   * @param left the first text value (non-null)
+   * @param right the second text value (non-null)
+   * @return a negative integer, zero, or a positive integer as {@code left} sorts before, equal to,
+   *     or after {@code right}
+   */
+  public static int compareTextByCodePoint(String left, String right) {
+    int i = 0;
+    int j = 0;
+    while (i < left.length() && j < right.length()) {
+      int l = left.codePointAt(i);
+      int r = right.codePointAt(j);
+      if (l != r) {
+        return Integer.compare(l, r);
+      }
+      i += Character.charCount(l);
+      j += Character.charCount(r);
+    }
+    return Integer.compare(left.length() - i, right.length() - j);
+  }
+
   public static Key getPartitionKey(Result result, TableMetadata metadata) {
     Optional<Key> key = getKey(result.getColumns(), metadata.getPartitionKeyNames());
     assert key.isPresent();

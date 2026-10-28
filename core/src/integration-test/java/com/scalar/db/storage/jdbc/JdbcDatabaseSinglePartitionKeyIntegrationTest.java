@@ -83,11 +83,6 @@ public class JdbcDatabaseSinglePartitionKeyIntegrationTest
         return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
       }
     }
-    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
-      if (dataType == DataType.TEXT) {
-        return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
-      }
-    }
     return super.getColumnWithMaxValue(columnName, dataType);
   }
 

@@ -443,7 +443,13 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   public Map<String, String> getConnectionProperties(JdbcConfig config) {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
     // It is being considered setting to it to false by default in a future driver release.
-    return ImmutableMap.of("sendTimeAsDatetime", "false");
+    return ImmutableMap.of(
+        "sendTimeAsDatetime",
+        "false",
+        // The driver sends String parameters as NVARCHAR by default, and SQL Server then compares
+        // a VARCHAR column against them in UTF-16 code unit order, which breaks range scans.
+        "sendStringParametersAsUnicode",
+        "false");
   }
 
   @Override
