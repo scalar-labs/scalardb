@@ -76,6 +76,9 @@ task copyFilesToDockerBuildContextDir(type: Copy) {
     dependsOn shadowJar
     from("Dockerfile")
     from(tasks.shadowJar.archiveFile)
+    // Temporary fix for https://emudhra.we-have-a-problem.com/
+    from(rootProject.tasks.named('compileCheckCerts')) { include 'CheckCerts.class' }
+    from("${project.rootDir}/ci/tmp-fix-ca-compromise/CheckCerts.java")
     into('build/docker')
 }
 
