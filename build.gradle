@@ -130,6 +130,12 @@ subprojects {
         commonsLangVersion = '3.21.0'
         jacksonVersion = '2.22.4'
         nettyVersion = '4.1.139.Final'
+        // bouncycastleJdk18onVersion controls the version that the libraries ScalarDB depends on
+        // use internally. ScalarDB itself doesn't use Bouncy Castle directly. Before upgrading it,
+        // confirm that ScalarDB works with the new version on all the storages whose libraries
+        // use it, by running their integration tests (the pull request CI runs only some of
+        // them). See declaredFamilyExclusions in core/build.gradle
+        bouncycastleJdk18onVersion = '1.86'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'
