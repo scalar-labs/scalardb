@@ -17,6 +17,7 @@ import com.zaxxer.hikari.HikariConfig;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -300,5 +301,12 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
                   CLUSTERING_ORDER_INDEX_NAME_PREFIX)));
     }
     return sqls.toArray(new String[0]);
+  }
+
+  @Override
+  public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
+    // Spanner supports only the REPEATABLE READ and SERIALIZABLE isolation levels, and both
+    // guarantee consistent reads
+    return Connection.TRANSACTION_REPEATABLE_READ;
   }
 }
