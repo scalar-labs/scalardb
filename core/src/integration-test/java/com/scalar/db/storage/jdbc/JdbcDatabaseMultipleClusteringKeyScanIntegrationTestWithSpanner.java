@@ -38,7 +38,7 @@ public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
   @Override
   protected int getThreadNum() {
     // Optimized for a standard Github action runner
-    return 4;
+    return Integer.getInteger("scalardb.spanner.thread_num", 4);
   }
 
   @Override

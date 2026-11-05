@@ -1,46 +1,23 @@
-# Do not include Spanner integration test in the CI because some tests require more than 2 hours
-# to complete.
+# Throwaway experiment: time the two slowest Spanner test classes with several thread counts
 name: CI for Spanner Adapter
-run-name: "CI for Spanner Adapter : JDK ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }} (${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }})"
+run-name: "Spanner thread tuning experiment"
 
 on:
   workflow_dispatch:
     inputs:
       INT_TEST_JAVA_RUNTIME_VERSION:
-        description: JDK version used to run the integration test
-        type: choice
+        type: string
         default: '8'
-        options:
-          - '8'
-          - '11'
-          - '17'
-          - '21'
       INT_TEST_JAVA_RUNTIME_VENDOR:
-        description: Vendor of the JDK used to run the integration test
-        type: choice
+        type: string
         default: 'temurin'
-        options:
-          - 'corretto'
-          - 'microsoft'
-          - 'oracle'
-          - 'temurin'
       REPORT_ON_SLACK:
-        description: Whether to report the result to Slack or not
         type: boolean
         default: false
 
-env:
-  ARTIFACT_SUFFIX: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}_${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
-  INT_TEST_JAVA_RUNTIME_VERSION: ${{ inputs.INT_TEST_JAVA_RUNTIME_VERSION || '8' }}
-  INT_TEST_JAVA_RUNTIME_VENDOR: ${{ inputs.INT_TEST_JAVA_RUNTIME_VENDOR || 'temurin' }}
-
-# Group commit only applies to **.ConsensusCommit** tests, so the group_commit jobs list only
-# ConsensusCommit test classes. MultipleClusteringKeyScan, the longest test class, runs alone and
-# the other groups are sized to finish within its duration.
-
 jobs:
   spanner-integration-test:
-    name: "${{ matrix.test_group.name }} (${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }})"
+    name: "${{ matrix.test }} threads=${{ matrix.threads }}"
     runs-on: ubuntu-latest
     services:
       spanner-emulator:
@@ -52,98 +29,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - group_commit_enabled: 'false'
-            test_group:
-              name: "MultipleClusteringKeyScan"
-              label: spanner_default_1
-              tests: >-
-                JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
-
-          - group_commit_enabled: 'false'
-            test_group:
-              name: "ConditionalMutation & CC specific (metadata decoupling)"
-              label: spanner_default_2
-              tests: >-
-                JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
-                ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-
-          - group_commit_enabled: 'false'
-            test_group:
-              name: "CC specific & other tests"
-              label: spanner_default_3
-              tests: >-
-                ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
-                ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
-                JdbcDatabaseIntegrationTest
-                JdbcDatabaseColumnValueIntegrationTest
-                JdbcDatabaseCrossPartitionScanIntegrationTest
-                JdbcDatabaseSingleClusteringKeyScanIntegrationTest
-                JdbcDatabaseSinglePartitionKeyIntegrationTest
-                JdbcDatabaseMultiplePartitionKeyIntegrationTest
-                JdbcDatabaseSecondaryIndexIntegrationTest
-                ConsensusCommitAdminIntegrationTestWithJdbcDatabase
-                ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
-                ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
-                ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-                ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
-                ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-                JdbcAdminImportTableIntegrationTest
-                JdbcAdminRepairIntegrationTest
-                JdbcSchemaLoaderImportIntegrationTest
-                JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
-                JdbcAdminIntegrationTest
-                JdbcTransactionAdminIntegrationTest
-                ConsensusCommitIntegrationTestWithJdbcDatabase
-                ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
-                ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
-                ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
-                ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
-                ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-                SingleCrudOperationTransactionIntegrationTestWithJdbcDatabase
-                SingleCrudOperationTransactionAdminIntegrationTestWithJdbcDatabase
-                JdbcTransactionCrossPartitionScanIntegrationTest
-                JdbcTransactionIntegrationTest
-                JdbcDatabaseJapaneseIntegrationTest
-                JdbcDatabaseCaseSensitivityIntegrationTest
-                JdbcDatabaseWithReservedKeywordIntegrationTest
-                JdbcDatabaseVirtualTablesIntegrationTest
-                JdbcDatabaseMutationAtomicityUnitIntegrationTest
-                JdbcAdminCaseSensitivityIntegrationTest
-                JdbcSchemaLoaderIntegrationTest
-                JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
-                RdbEngineStrategyExceptionIntegrationTest
-                TwoPhaseCommitBackedConsensusCommitIntegrationTestWithJdbcDatabase
-                TwoPhaseCommitBackedConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
-                DistributedTransactionBackedConsensusCommitGlobalTransactionTestWithJdbcDatabase
-                TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestWithJdbcDatabase
-
-          - group_commit_enabled: 'true'
-            test_group:
-              name: "CC specific (metadata decoupling, highest isolation)"
-              label: spanner_group_commit_1
-              tests: >-
-                ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-                ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
-
-          - group_commit_enabled: 'true'
-            test_group:
-              name: "CC specific & other tests"
-              label: spanner_group_commit_2
-              tests: >-
-                ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
-                ConsensusCommitIntegrationTestWithJdbcDatabase
-                ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
-                ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
-                ConsensusCommitNullMetadataIntegrationTestWithJdbcDatabase
-                ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
-                ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-                ConsensusCommitAdminIntegrationTestWithJdbcDatabase
-                ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
-                ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
-                ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-                ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
-                ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
-
+          - { test: JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner, threads: 4 }
+          - { test: JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner, threads: 6 }
+          - { test: JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner, threads: 8 }
+          - { test: JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner, threads: 12 }
+          - { test: JdbcDatabaseConditionalMutationIntegrationTestWithSpanner, threads: 12 }
+          - { test: JdbcDatabaseConditionalMutationIntegrationTestWithSpanner, threads: 18 }
+          - { test: JdbcDatabaseConditionalMutationIntegrationTestWithSpanner, threads: 24 }
+          - { test: JdbcDatabaseConditionalMutationIntegrationTestWithSpanner, threads: 32 }
     steps:
       - uses: actions/checkout@v7
 
@@ -151,14 +44,9 @@ jobs:
         run: |
           SECONDS=0
           until curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1; do
-            if (( SECONDS > 60 )); then
-              echo "Timeout: Spanner emulator failed to start within 60 seconds"
-              exit 1
-            fi
-            echo "Waiting for Spanner emulator..."
+            if (( SECONDS > 60 )); then exit 1; fi
             sleep 2
           done
-          echo "Spanner emulator is ready"
 
       - name: Set up JDK 8
         uses: actions/setup-java@v6.0.1
@@ -166,162 +54,28 @@ jobs:
           java-version: 8
           distribution: temurin
 
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
-        id: setup-int-test-jdk
-        if: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle' }}
-        uses: actions/setup-java@v6.0.1
-        with:
-          java-version: ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}
-          distribution: ${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}
-
-      - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (oracle) to run the integration test
-        if: ${{ steps.setup-int-test-jdk.outcome == 'skipped' }}
-        run: |
-          echo ${{ secrets.OCR_TOKEN }} | docker login container-registry.oracle.com -u ${{ secrets.OCR_USERNAME }} --password-stdin
-          container_id=$(docker create "container-registry.oracle.com/java/jdk:${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}")
-          docker cp -L "$container_id:/usr/java/default" /usr/lib/jvm/oracle-jdk && docker rm "$container_id"
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6.4.0
+
+      - name: Sample CPU usage in the background
+        run: |
+          nproc
+          nohup bash -c 'while true; do date -u +%T; top -b -n1 | head -15; sleep 60; done' > /tmp/cpu.log 2>&1 &
 
       - name: Run integration test
-        id: run-integration-test
         env:
-          ORG_GRADLE_PROJECT_javaVersion: '8'
-          ORG_GRADLE_PROJECT_javaVendor: 'temurin'
-          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}"
-          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
           SPANNER_JDBC_URL: "jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL"
         run: |
-          TESTS_ARGS=""
-          for test_class in ${{ matrix.test_group.tests }}; do
-            TESTS_ARGS="${TESTS_ARGS} --tests ${test_class}"
-          done
-
-          # Group commit options
-          GROUP_COMMIT_OPTS=""
-          if [ "${{ matrix.group_commit_enabled }}" = "true" ]; then
-            GROUP_COMMIT_OPTS="-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true -Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000"
-          fi
-
           ./gradlew core:integrationTestJdbc \
             "-Dscalardb.jdbc.url=${SPANNER_JDBC_URL}" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password=" \
-            ${GROUP_COMMIT_OPTS} \
-            ${TESTS_ARGS}
+            "-Dscalardb.spanner.thread_num=${{ matrix.threads }}" \
+            --tests ${{ matrix.test }}
 
-      - name: Upload binary test results
+      - name: Upload results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: internal_test-results_${{ matrix.test_group.label }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}
-          path: core/build/test-results/integrationTestJdbc/
-
-      - name: Upload HTML test report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.run-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.test_group.label }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}_report_${{ env.ARTIFACT_SUFFIX }}
-          path: core/build/reports/tests/
-
-  aggregate-report:
-    if: always()
-    name: "Aggregate report (${{ matrix.flavor }})"
-    runs-on: ubuntu-latest
-    needs:
-      - spanner-integration-test
-    strategy:
-      matrix:
-        flavor:
-          - default
-          - group_commit
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up JDK 8
-        uses: actions/setup-java@v6.0.1
-        with:
-          java-version: 8
-          distribution: temurin
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6.4.0
-
-      - name: Download all ${{ matrix.flavor }} test results
-        uses: actions/download-artifact@v8
-        with:
-          pattern: internal_test-results_*_${{ matrix.flavor }}
-          path: downloaded-results/
-
-      - name: Generate aggregated HTML report
-        id: aggregate-report
-        run: |
-          # Create an init script that registers an aggregate TestReport task
-          cat > /tmp/aggregate-init.gradle << 'EOF'
-          import org.gradle.api.tasks.testing.TestReport
-
-          rootProject {
-              tasks.register('aggregateTestReport', TestReport) {
-                  destinationDirectory = layout.buildDirectory.dir('reports/tests/aggregated')
-                  def resultsDir = file("${rootDir}/downloaded-results")
-                  resultsDir.eachDirRecurse { dir ->
-                      if (dir.name == 'binary') {
-                          testResults.from(dir)
-                      }
-                  }
-              }
-          }
-          EOF
-
-          ./gradlew -I /tmp/aggregate-init.gradle aggregateTestReport
-
-      - name: Upload aggregated HTML report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: spanner_ci_${{ matrix.flavor }}_report_${{ env.ARTIFACT_SUFFIX }}_run_#${{ github.run_attempt }}
-          path: build/reports/tests/aggregated/
-
-      - name: Delete per-job binary and HTML report artifacts
-        if: steps.aggregate-report.outcome == 'success'
-        uses: geekyeggo/delete-artifact@v6
-        with:
-          name: |
-            internal_test-results_*_${{ matrix.flavor }}
-            *_${{ matrix.flavor }}_report_${{ env.ARTIFACT_SUFFIX }}
-          failOnError: false
-
-  report:
-    if: ${{ always() && inputs.REPORT_ON_SLACK && github.run_attempt == '1' }}
-    name: Report on Slack
-    runs-on: ubuntu-latest
-    needs:
-      - spanner-integration-test
-    env:
-      ACTION_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      BRANCH_NAME: ${{ github.ref_name }}
-    steps:
-      - name: Report the success on Slack
-        uses: slackapi/slack-github-action@v4.0.0
-        if: needs.spanner-integration-test.result == 'success'
-        with:
-          webhook: ${{ secrets.SLACK_SCALARDB_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            blocks:
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: ":large_green_circle:【ScalarDB Core on Spanner】The weekly CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|passed>"
-
-      - name: Report the failure on Slack
-        uses: slackapi/slack-github-action@v4.0.0
-        if: needs.spanner-integration-test.result == 'failure'
-        with:
-          webhook: ${{ secrets.SLACK_SCALARDB_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            blocks:
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: ":red_circle:【ScalarDB Core on Spanner】The weekly CI run on `${{ env.BRANCH_NAME }}` branch <${{ env.ACTION_URL }}|failed>"
+          name: results_${{ matrix.test }}_${{ matrix.threads }}
+          path: |
+            core/build/test-results/integrationTestJdbc/
+            /tmp/cpu.log

@@ -38,7 +38,7 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
   @Override
   protected int getThreadNum() {
     // Optimized for a standard Github action runner
-    return 18;
+    return Integer.getInteger("scalardb.spanner.thread_num", 18);
   }
 
   @Override
