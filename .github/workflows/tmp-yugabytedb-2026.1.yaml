@@ -1,0 +1,88 @@
+name: "TMP: YugabyteDB 2026.1 integration test"
+
+on:
+  push:
+    branches:
+      - tmp/ci-yugabytedb-2026.1
+
+jobs:
+  integration-test:
+    name: YugabyteDB 2026.1 integration test (${{ matrix.group_commit_enabled == 'true' && 'group commit' || 'default' }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group_commit_enabled: ['false', 'true']
+    env:
+      LABEL: yugabytedb_2026.1
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Groovy
+        run: |
+          curl -s "https://get.sdkman.io?ci=true" | bash
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install groovy
+          echo "$HOME/.sdkman/candidates/groovy/current/bin" >> $GITHUB_PATH
+
+      - name: Load test configuration from ci/tests-config.yaml
+        env:
+          ALL: 'false'
+          BASIC: 'false'
+          BLOB_STORAGE: 'false'
+          CASSANDRA: 'false'
+          COSMOS: 'false'
+          DYNAMO: 'false'
+          JDBC: 'true'
+          MULTI_STORAGE: 'false'
+          EXPANDED_TESTS_CONFIG_FILE: expanded-tests-config.json
+        run: |
+          groovy ci/generate-test-matrix.groovy > /dev/null
+          CONFIG=$(jq -r ".[] | select(.label == \"$LABEL\" and .group_commit_enabled == \"${{ matrix.group_commit_enabled }}\")" expanded-tests-config.json)
+          test -n "$CONFIG"
+          for key in setup db_healthcheck create_test_user run; do
+            VAR=$(echo "$key" | tr a-z A-Z)_CMD
+            { echo "$VAR<<EOF"; echo "$CONFIG" | jq -r ".$key // \"\""; echo "EOF"; } >> $GITHUB_ENV
+          done
+
+      - name: Set up the database
+        run: ${{ env.SETUP_CMD }}
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v6.1.0
+        with:
+          java-version: 8
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.4.1
+
+      - name: Wait for the database to be ready
+        shell: bash
+        run: |
+          SECONDS=0
+          until bash -c "${DB_HEALTHCHECK_CMD}"; do
+            if (( SECONDS > 600 )); then echo "Timeout"; exit 1; fi
+            sleep 2s
+          done
+          docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -tAc 'select version();'"
+
+      - name: Create test user
+        run: ${{ env.CREATE_TEST_USER_CMD }}
+
+      - name: Run integration test
+        id: run-integration-test
+        env:
+          ORG_GRADLE_PROJECT_javaVersion: '8'
+          ORG_GRADLE_PROJECT_javaVendor: 'temurin'
+          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: '8'
+          ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: 'temurin'
+          GROUP_COMMIT_OPTIONS: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
+        run: ${{ env.RUN_CMD }} ${{ matrix.group_commit_enabled == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
+
+      - name: Upload Gradle test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.run-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ env.LABEL }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}_test
+          path: core/build/reports/tests
