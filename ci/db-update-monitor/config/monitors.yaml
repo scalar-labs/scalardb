@@ -1,0 +1,460 @@
+defaults:
+  first_run_policy: baseline_silent
+  version_granularity: exact
+
+databases:
+  - id: cosmos
+    name: Azure Cosmos DB
+    adapter_package: core/src/main/java/com/scalar/db/storage/cosmos
+    watch_features:
+      - hierarchical partition key
+      - partition key
+      - multi-region write
+    adapter_capabilities:
+      partition_key_model: v1_single_path
+    sources:
+      - type: rss
+        url: https://devblogs.microsoft.com/cosmosdb/feed/
+        include_all: true
+    components:
+      - id: sdk
+        type: sdk
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: azureCosmosVersion
+        upstream:
+          type: maven
+          artifact: com.azure:azure-cosmos
+
+  - id: cassandra
+    name: Apache Cassandra
+    adapter_package: core/src/main/java/com/scalar/db/storage/cassandra
+    watch_features:
+      - partition
+      - compaction
+      - deprecated
+    sources:
+      - type: rss
+        url: https://github.com/apache/cassandra/releases.atom
+        include_all: true
+    components:
+      - id: driver
+        type: driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: cassandraDriverVersion
+        upstream:
+          type: maven
+          artifact: com.datastax.cassandra:cassandra-driver-core
+      - id: server
+        type: server
+        version_granularity: major
+        current_version:
+          source: tests-config
+          file: ci/tests-config.yaml
+          path: cassandra
+          strategy: highest
+        upstream:
+          type: docker
+          image: cassandra
+          tag_pattern: '^\d+(\.\d+)?$'
+          exclude_pattern: '(rc|beta|alpha|preview|snapshot)'
+
+  - id: dynamo
+    name: Amazon DynamoDB
+    adapter_package: core/src/main/java/com/scalar/db/storage/dynamo
+    watch_features:
+      - Amazon DynamoDB
+      - global tables
+      - deprecated
+    sources:
+      - type: rss
+        url: https://aws.amazon.com/about-aws/whats-new/recent/feed/
+        keywords: ["Amazon DynamoDB", "DynamoDB"]
+        match_scope: title
+    components:
+      - id: sdk
+        type: sdk
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: awssdkVersion
+        upstream:
+          type: maven
+          artifact: software.amazon.awssdk:dynamodb
+
+  - id: postgresql
+    name: PostgreSQL
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - jdbc
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://www.postgresql.org/news.rss
+        include_all: true
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: postgresqlDriverVersion
+        upstream:
+          type: maven
+          artifact: org.postgresql:postgresql
+      - id: server
+        type: server
+        version_granularity: major
+        current_version:
+          source: tests-config
+          file: ci/tests-config.yaml
+          filter: postgresql
+          strategy: highest
+        upstream:
+          type: docker
+          image: postgres
+          tag_pattern: '^\d+(\.\d+)?$'
+          exclude_tags: [latest, alpine, slim, bookworm, bullseye]
+
+  - id: mysql
+    name: MySQL
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - jdbc
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://github.com/mysql/mysql-server/releases.atom
+        include_all: true
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: mariadDbDriverVersion
+        upstream:
+          type: maven
+          artifact: org.mariadb.jdbc:mariadb-java-client
+      - id: server
+        type: server
+        version_granularity: major
+        current_version:
+          source: tests-config
+          file: ci/tests-config.yaml
+          filter: mysql
+          strategy: highest
+        upstream:
+          type: docker
+          image: mysql
+          tag_pattern: '^\d+(\.\d+)?$'
+          exclude_tags: [latest, alpine, slim]
+
+  - id: mariadb
+    name: MariaDB
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - jdbc
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://mariadb.org/feed/
+        include_all: true
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: mariadDbDriverVersion
+        upstream:
+          type: maven
+          artifact: org.mariadb.jdbc:mariadb-java-client
+      - id: server
+        type: server
+        version_granularity: major
+        current_version:
+          source: tests-config
+          file: ci/tests-config.yaml
+          filter: mariadb
+          strategy: highest
+        upstream:
+          type: docker
+          image: mariadb
+          tag_pattern: '^\d+(\.\d+)?$'
+          exclude_tags: [latest, alpine, slim]
+
+  - id: oracle
+    name: Oracle Database
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - json
+      - partition
+      - jdbc
+      - deprecated
+      - breaking
+    sources:
+      - type: webpage
+        url: https://docs.oracle.com/en/database/oracle/oracle-database/23/nfcoa/toc.htm
+        keywords: ["JSON", "partition", "JDBC", "deprecated", "breaking"]
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: oracleDriverVersion
+        upstream:
+          type: maven
+          artifact: com.oracle.database.jdbc:ojdbc11
+
+  - id: sqlserver
+    name: Microsoft SQL Server
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - sql server
+      - jdbc
+      - deprecated
+    sources:
+      - type: rss
+        url: https://devblogs.microsoft.com/azure-sql/feed/
+        keywords: ["SQL Server"]
+        match_scope: title
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: sqlserverDriverVersion
+        upstream:
+          type: maven
+          artifact: com.microsoft.sqlserver:mssql-jdbc
+
+  - id: sqlite
+    name: SQLite
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - json
+      - fts
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://github.com/sqlite/sqlite/releases.atom
+        include_all: true
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: sqliteDriverVersion
+        upstream:
+          type: maven
+          artifact: org.xerial:sqlite-jdbc
+
+  - id: yugabytedb
+    name: YugabyteDB
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - ysql
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://docs.yugabyte.com/stable/releases/ybdb-releases/index.xml
+        include_all: true
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: yugabyteDriverVersion
+        upstream:
+          type: maven
+          artifact: com.yugabyte:jdbc-yugabytedb
+
+  - id: db2
+    name: IBM Db2
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - json
+      - jdbc
+      - deprecated
+      - breaking
+    sources:
+      # IBM blocks automated access to ibm.com/docs, so the Db2 server "what's new"
+      # page is unreachable. These driver repos are the only machine-readable Db2
+      # release notes IBM publishes; they cover the shared CLI driver layer, not
+      # server features.
+      - type: github_releases
+        repo: ibmdb/python-ibmdb
+        keywords: ["clidriver", "JDBC", "deprecated", "breaking", "SQL"]
+      - type: github_releases
+        repo: ibmdb/java_reactive_driver
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: db2DriverVersion
+        upstream:
+          type: maven
+          artifact: com.ibm.db2:jcc
+
+  - id: tidb
+    name: TiDB
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - tidb
+      - deprecated
+      - breaking
+    sources:
+      - type: github_releases
+        repo: pingcap/tidb
+        include_all: true
+    components:
+      - id: server
+        type: server
+        current_version:
+          source: tests-config
+          file: ci/tests-config.yaml
+          filter: tidb
+          strategy: highest
+        upstream:
+          type: github_releases
+          repo: pingcap/tidb
+
+  - id: alloydb
+    name: AlloyDB
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - columnar
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://cloud.google.com/feeds/alloydb-release-notes.xml
+        include_all: true
+    components:
+      - id: connector
+        type: connector
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: alloyDbJdbcConnectorVersion
+        upstream:
+          type: maven
+          artifact: com.google.cloud:alloydb-jdbc-connector
+      - id: server
+        type: server
+        version_granularity: major
+        current_version:
+          source: tests-config
+          file: ci/tests-config.yaml
+          filter: alloydb
+          strategy: highest
+        upstream:
+          type: docker
+          image: google/alloydbomni
+
+  - id: spanner
+    name: Cloud Spanner
+    adapter_package: core/src/main/java/com/scalar/db/storage/jdbc
+    watch_features:
+      - interleaved
+      - stale read
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://cloud.google.com/feeds/spanner-release-notes.xml
+        include_all: true
+    components:
+      - id: jdbc-driver
+        type: jdbc-driver
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: spannerDriverVersion
+        upstream:
+          type: maven
+          artifact: com.google.cloud:google-cloud-spanner-jdbc
+
+  - id: s3
+    name: Amazon S3
+    adapter_package: core/src/main/java/com/scalar/db/storage/objectstorage/s3
+    watch_features:
+      - Amazon S3
+      - object lock
+      - deprecated
+    sources:
+      - type: rss
+        url: https://aws.amazon.com/about-aws/whats-new/recent/feed/
+        keywords: ["Amazon S3"]
+        match_scope: title
+    components:
+      - id: sdk
+        type: sdk
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: awssdkVersion
+        upstream:
+          type: maven
+          artifact: software.amazon.awssdk:s3
+
+  - id: gcs
+    name: Google Cloud Storage
+    adapter_package: core/src/main/java/com/scalar/db/storage/objectstorage/cloudstorage
+    watch_features:
+      - hierarchical namespace
+      - soft delete
+      - deprecated
+      - breaking
+    sources:
+      - type: rss
+        url: https://cloud.google.com/feeds/storage-release-notes.xml
+        include_all: true
+    components:
+      - id: sdk
+        type: sdk
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: googleCloudStorageVersion
+        upstream:
+          type: maven
+          artifact: com.google.cloud:google-cloud-storage
+
+  - id: blob-storage
+    name: Azure Blob Storage
+    adapter_package: core/src/main/java/com/scalar/db/storage/objectstorage/blobstorage
+    watch_features:
+      - Azure Blob
+      - Blob storage
+      - deprecated
+    sources:
+      - type: rss
+        url: https://azure.microsoft.com/en-us/blog/feed/
+        keywords: ["Azure Blob", "Blob storage", "Azure Storage"]
+        match_scope: title
+    components:
+      - id: sdk
+        type: sdk
+        current_version:
+          source: gradle
+          file: build.gradle
+          property: azureBlobStorageVersion
+        upstream:
+          type: maven
+          artifact: com.azure:azure-storage-blob

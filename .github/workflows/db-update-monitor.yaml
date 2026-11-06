@@ -1,0 +1,128 @@
+name: Database Update Monitor
+
+on:
+  schedule:
+    # Every Sunday 17:00 UTC (Monday 02:00 JST)
+    - cron: '0 17 * * 0'
+  workflow_dispatch:
+    inputs:
+      database_filter:
+        description: 'Run for a specific database ID only (empty = all)'
+        type: string
+        default: ''
+      dry_run:
+        description: 'Dry run (no state commit, still writes report artifacts)'
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - 'ci/db-update-monitor/**'
+      - '.github/workflows/db-update-monitor.yaml'
+
+concurrency:
+  group: db-update-monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Unit tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ci/db-update-monitor/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r ci/db-update-monitor/requirements.txt
+
+      - name: Run tests
+        working-directory: ci/db-update-monitor
+        run: pytest
+
+  monitor:
+    name: Check database updates
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ci/db-update-monitor/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r ci/db-update-monitor/requirements.txt
+
+      - name: Run database update monitor
+        env:
+          DATABASE_FILTER: ${{ github.event.inputs.database_filter }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python ci/db-update-monitor/src/main.py \
+            --config ci/db-update-monitor/config/monitors.yaml \
+            --state ci/db-update-monitor/state/last-run.json \
+            --output-dir ci/db-update-monitor/output \
+            --repo-root "${{ github.workspace }}" \
+            ${DATABASE_FILTER:+--filter "$DATABASE_FILTER"}
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-monitor-report
+          path: ci/db-update-monitor/output/
+          retention-days: 90
+
+      - name: Commit state update
+        id: commit
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ci/db-update-monitor/state/
+          if git diff --staged --quiet; then
+            echo "No state changes"
+            exit 0
+          fi
+          git commit -m "chore: update db monitor state [skip ci]"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push
+
+      - name: Decide Slack notify
+        id: slack
+        if: always()
+        run: |
+          FLAG=false
+          if [ -f ci/db-update-monitor/output/notify-slack ]; then
+            FLAG=$(cat ci/db-update-monitor/output/notify-slack)
+          fi
+          echo "has_blocks=${FLAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack
+        if: >-
+          always()
+          && github.event.inputs.dry_run != 'true'
+          && steps.slack.outputs.has_blocks == 'true'
+          && (steps.commit.outcome == 'success' || steps.commit.outcome == 'skipped')
+        uses: slackapi/slack-github-action@v4.0.0
+        with:
+          webhook: ${{ secrets.SLACK_SCALARDB_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload-file-path: ci/db-update-monitor/output/slack-payload.json
