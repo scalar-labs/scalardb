@@ -179,6 +179,18 @@ public interface RdbEngineStrategy {
     return false;
   }
 
+  /**
+   * Returns {@code true} if this RDB engine allows an UPDATE statement to assign a value to a
+   * primary key column. Some engines (e.g. Spanner) reject such an assignment even when the value
+   * does not change.
+   *
+   * @return {@code true} if an UPDATE statement can assign a value to a primary key column, {@code
+   *     false} otherwise
+   */
+  default boolean isPrimaryKeyColumnAssignableInUpdate() {
+    return true;
+  }
+
   String[] renameIndexSqls(
       String schema, String table, String column, String oldIndexName, String newIndexName);
 
