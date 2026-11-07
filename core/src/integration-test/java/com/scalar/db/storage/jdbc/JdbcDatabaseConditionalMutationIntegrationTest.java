@@ -31,9 +31,6 @@ import org.junit.jupiter.api.condition.DisabledIf;
 public class JdbcDatabaseConditionalMutationIntegrationTest
     extends DistributedStorageConditionalMutationIntegrationTestBase {
 
-  private static final String PARTITION_KEY = "pkey";
-  private static final String INT_COLUMN = "c2";
-  private static final String TEXT_COLUMN = "c6";
   private static final String TABLE_WITH_ONLY_PRIMARY_KEY_COLUMNS = "tbl_pk_only";
   private static final String CLUSTERING_KEY = "ckey";
 
@@ -145,7 +142,7 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
             .table(TABLE)
             .partitionKey(Key.ofText(PARTITION_KEY, "pkeyValue"))
             .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(INT_COLUMN).isEqualToInt(1)).build())
+                ConditionBuilder.putIf(ConditionBuilder.column(COL_NAME2).isEqualToInt(1)).build())
             .build();
 
     // Act
@@ -166,7 +163,7 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
             .table(TABLE)
             .partitionKey(Key.ofText(PARTITION_KEY, "pkeyValue"))
             .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column(INT_COLUMN).isEqualToInt(2)).build())
+                ConditionBuilder.putIf(ConditionBuilder.column(COL_NAME2).isEqualToInt(2)).build())
             .build();
 
     // Act Assert
@@ -239,8 +236,8 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
             .namespace(getNamespace())
             .table(TABLE)
             .partitionKey(Key.ofText(PARTITION_KEY, "pkeyValue"))
-            .intValue(INT_COLUMN, intValue)
-            .textValue(TEXT_COLUMN, textValue)
+            .intValue(COL_NAME2, intValue)
+            .textValue(COL_NAME6, textValue)
             .condition(ConditionBuilder.putIfNotExists())
             .build());
   }
@@ -249,8 +246,8 @@ public class JdbcDatabaseConditionalMutationIntegrationTest
       throws ExecutionException {
     Optional<Result> result = storage.get(prepareGetForRecord());
     assertThat(result).isPresent();
-    assertThat(result.get().getInt(INT_COLUMN)).isEqualTo(expectedIntValue);
-    assertThat(result.get().getText(TEXT_COLUMN)).isEqualTo(expectedTextValue);
+    assertThat(result.get().getInt(COL_NAME2)).isEqualTo(expectedIntValue);
+    assertThat(result.get().getText(COL_NAME6)).isEqualTo(expectedTextValue);
   }
 
   private Get prepareGetForRecord() {
