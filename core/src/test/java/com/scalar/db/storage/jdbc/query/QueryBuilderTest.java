@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc.query;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
