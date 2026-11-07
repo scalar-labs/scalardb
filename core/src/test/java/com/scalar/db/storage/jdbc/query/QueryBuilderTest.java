@@ -1166,6 +1166,100 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
+  public void updateQueryTest_WithoutColumnsToSet_ShouldAssignNonPrimaryKeyColumnToItself(
+      RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    UpdateQuery query;
+    PreparedStatement preparedStatement;
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, TABLE_METADATA)
+            .set(Collections.emptyMap())
+            .where(Key.ofText("p1", "p1Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("UPDATE n1.t1 SET v1=v1 WHERE p1=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verifyNoMoreInteractions(preparedStatement);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, TABLE_METADATA)
+            .set(Collections.emptyMap())
+            .where(
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql("UPDATE n1.t1 SET v1=v1 WHERE p1=? AND p2=? AND c1=? AND c2=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verifyNoMoreInteractions(preparedStatement);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, TABLE_METADATA)
+            .set(Collections.emptyMap())
+            .where(
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
+                Arrays.asList(
+                    ConditionBuilder.column("v2").isEqualToText("v2ConditionValue"),
+                    ConditionBuilder.column("v3").isNullText()))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "UPDATE n1.t1 SET v1=v1 WHERE p1=? AND c1=? AND v2=? AND v3 IS NULL", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v2ConditionValue");
+    verifyNoMoreInteractions(preparedStatement);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      updateQueryTest_WithoutColumnsToSetForTableWithOnlyPrimaryKeyColumns_ShouldAssignPartitionKeyColumnToItself(
+          RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("p1", DataType.TEXT)
+            .addColumn("c1", DataType.TEXT)
+            .addPartitionKey("p1")
+            .addClusteringKey("c1")
+            .build();
+
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    UpdateQuery query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, tableMetadata)
+            .set(Collections.emptyMap())
+            .where(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("UPDATE n1.t1 SET p1=p1 WHERE p1=? AND c1=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verifyNoMoreInteractions(preparedStatement);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
   public void deleteQueryTest(RdbEngine rdbEngineType) throws SQLException {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
