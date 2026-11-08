@@ -65,7 +65,7 @@ subprojects {
         // whose libraries use it, by running their integration tests (the pull request CI runs
         // only some of them). See declaredFamilyExclusions in core/build.gradle
         jacksonVersion = '2.22.3'
-        nettyVersion = '4.1.138.Final'
+        nettyVersion = '4.1.139.Final'
         assertjVersion = '3.27.3'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'
