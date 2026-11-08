@@ -67,6 +67,11 @@ subprojects {
         caffeineVersion = '2.9.3'
         junitVersion = '5.14.4'
         commonsLangVersion = '3.20.0'
+        // jacksonVersion and nettyVersion control the versions that the libraries ScalarDB
+        // depends on use internally. ScalarDB itself uses only Jackson directly. Before upgrading
+        // either of them, confirm that ScalarDB works with the new version on all the storages
+        // whose libraries use it, by running their integration tests (the pull request CI runs
+        // only some of them). See declaredFamilyExclusions in core/build.gradle
         jacksonVersion = '2.22.3'
         nettyVersion = '4.1.138.Final'
         assertjVersion = '3.27.7'
@@ -85,14 +90,6 @@ subprojects {
 
     repositories {
         mavenCentral()
-    }
-
-    configurations.all {
-        resolutionStrategy {
-            force "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-            force "io.netty:netty-codec-http:${nettyVersion}"
-            force "io.netty:netty-codec-http2:${nettyVersion}"
-        }
     }
 
     tasks.withType(Test) {
