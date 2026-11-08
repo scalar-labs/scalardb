@@ -123,20 +123,62 @@ configurations {
     integrationTestDynamoPermissionCompileOnly.extendsFrom testCompileOnly
 }
 
+// Families of artifacts (artifacts released together under one version, such as Bouncy Castle)
+// that some dependencies bring in transitively, and whose versions this project decides. To
+// decide the versions that applications using ScalarDB as a library get (for example, to fix a
+// vulnerability), we exclude these families from every dependency that brings them in and
+// declare all of their artifacts directly, with one version variable for each family. The Netty
+// and Jackson artifacts are declared without versions, and their BOMs, whose versions are
+// nettyVersion and jacksonVersion, decide them. The BOMs also decide the versions of the
+// artifacts that are versioned differently from the rest of the family (netty-tcnative and
+// jackson-annotations). We don't use `resolutionStrategy.force` for this: it affects only this
+// build and is not published in the POM or the Gradle module metadata, so applications would
+// still get the versions that the dependencies request.
+//
+// When you add a dependency or upgrade one, check, with these exclusions temporarily removed,
+// which artifacts of these families it brings in. If it brings in any, apply these exclusions to
+// it, and declare directly any of those artifacts that aren't declared yet: the exclusions remove
+// the whole family, so an artifact that isn't declared would be missing at runtime. To check that
+// no family artifact comes in without the exclusions, temporarily set the family's version
+// variable lower than any version the dependencies request, and confirm that only the versions
+// it decides appear in the resolved classpaths. Then run the integration tests for the storages
+// whose libraries bring in the family.
+def declaredFamilyExclusions = [
+    [group: 'io.netty'],
+    [group: 'com.fasterxml.jackson.core'],
+    [group: 'com.fasterxml.jackson.dataformat'],
+    [group: 'com.fasterxml.jackson.datatype'],
+    [group: 'org.bouncycastle'],
+]
+
 dependencies {
     implementation "com.google.guava:guava:${guavaVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
-    implementation "org.apache.cassandra:cassandra-driver-core:${cassandraDriverVersion}"
-    implementation "com.azure:azure-cosmos:${azureCosmosVersion}"
-    implementation "com.azure:azure-storage-blob:${azureBlobStorageVersion}"
+    implementation("org.apache.cassandra:cassandra-driver-core:${cassandraDriverVersion}") {
+        declaredFamilyExclusions.each { exclude it }
+    }
+    implementation("com.azure:azure-cosmos:${azureCosmosVersion}") {
+        declaredFamilyExclusions.each { exclude it }
+    }
+    implementation("com.azure:azure-storage-blob:${azureBlobStorageVersion}") {
+        declaredFamilyExclusions.each { exclude it }
+    }
     implementation "org.jooq:jooq:${jooqVersion}"
     implementation platform("software.amazon.awssdk:bom:${awssdkVersion}")
-    implementation 'software.amazon.awssdk:applicationautoscaling'
-    implementation 'software.amazon.awssdk:dynamodb'
-    implementation 'software.amazon.awssdk:s3'
+    implementation('software.amazon.awssdk:applicationautoscaling') {
+        declaredFamilyExclusions.each { exclude it }
+    }
+    implementation('software.amazon.awssdk:dynamodb') {
+        declaredFamilyExclusions.each { exclude it }
+    }
+    implementation('software.amazon.awssdk:s3') {
+        declaredFamilyExclusions.each { exclude it }
+    }
     implementation 'software.amazon.awssdk:aws-crt-client'
-    testImplementation 'software.amazon.awssdk:iam'
+    testImplementation('software.amazon.awssdk:iam') {
+        declaredFamilyExclusions.each { exclude it }
+    }
     testImplementation 'software.amazon.awssdk:iam-policy-builder'
     implementation "com.zaxxer:HikariCP:${hikariCpVersion}"
     implementation "org.postgresql:postgresql:${postgresqlDriverVersion}"
@@ -154,10 +196,46 @@ dependencies {
     }
     implementation("com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
+        declaredFamilyExclusions.each { exclude it }
     }
     implementation("com.google.cloud:google-cloud-spanner-jdbc:${spannerDriverVersion}") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
+        declaredFamilyExclusions.each { exclude it }
     }
+    // Bouncy Castle, brought in by google-cloud-spanner-jdbc. See declaredFamilyExclusions
+    implementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleJdk18onVersion}"
+    // Netty, brought in by cassandra-driver-core, azure-cosmos, azure-storage-blob, and the AWS
+    // SDK. See declaredFamilyExclusions
+    implementation platform("io.netty:netty-bom:${nettyVersion}")
+    implementation 'io.netty:netty-buffer'
+    implementation 'io.netty:netty-codec'
+    implementation 'io.netty:netty-codec-dns'
+    implementation 'io.netty:netty-codec-http'
+    implementation 'io.netty:netty-codec-http2'
+    implementation 'io.netty:netty-codec-socks'
+    implementation 'io.netty:netty-common'
+    implementation 'io.netty:netty-handler'
+    implementation 'io.netty:netty-handler-proxy'
+    implementation 'io.netty:netty-resolver'
+    implementation 'io.netty:netty-resolver-dns'
+    implementation 'io.netty:netty-resolver-dns-classes-macos'
+    implementation 'io.netty:netty-resolver-dns-native-macos::osx-x86_64'
+    implementation 'io.netty:netty-tcnative-boringssl-static'
+    implementation 'io.netty:netty-tcnative-classes'
+    implementation 'io.netty:netty-transport'
+    implementation 'io.netty:netty-transport-classes-epoll'
+    implementation 'io.netty:netty-transport-classes-kqueue'
+    implementation 'io.netty:netty-transport-native-epoll::linux-x86_64'
+    implementation 'io.netty:netty-transport-native-kqueue::osx-x86_64'
+    implementation 'io.netty:netty-transport-native-unix-common'
+    // Jackson, brought in by cassandra-driver-core, azure-cosmos, azure-storage-blob,
+    // google-cloud-storage, and google-cloud-spanner-jdbc. See declaredFamilyExclusions
+    implementation platform("com.fasterxml.jackson:jackson-bom:${jacksonVersion}")
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.core:jackson-core'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     // Enables fast Aurora failover by discovering the cluster topology instead of waiting for DNS
     implementation "software.amazon.jdbc:aws-advanced-jdbc-wrapper:${awsAdvancedJdbcWrapperVersion}"
     implementation "org.apache.commons:commons-text:${commonsTextVersion}"
