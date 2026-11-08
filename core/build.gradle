@@ -223,8 +223,8 @@ dependencies {
     implementation 'io.netty:netty-transport-native-epoll::linux-x86_64'
     implementation 'io.netty:netty-transport-native-kqueue::osx-x86_64'
     implementation 'io.netty:netty-transport-native-unix-common'
-    // Jackson, brought in by cassandra-driver-core, azure-cosmos, azure-storage-blob,
-    // google-cloud-storage, and google-cloud-spanner-jdbc. See declaredFamilyExclusions
+    // Jackson, brought in by cassandra-driver-core, azure-cosmos, azure-storage-blob, and
+    // google-cloud-storage. See declaredFamilyExclusions
     implementation platform("com.fasterxml.jackson:jackson-bom:${jacksonVersion}")
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
     implementation 'com.fasterxml.jackson.core:jackson-core'
