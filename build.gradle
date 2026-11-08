@@ -68,13 +68,13 @@ subprojects {
         protobufVersion = '4.36.2'
         junitVersion = '5.14.4'
         commonsLangVersion = '3.21.0'
+        // jacksonVersion, nettyVersion, and bouncycastleJdk18onVersion control the versions that
+        // the libraries ScalarDB depends on use internally. ScalarDB itself uses only Jackson
+        // directly. Before upgrading any of them, confirm that ScalarDB works with the new version
+        // on all the storages whose libraries use it, by running their integration tests (the pull
+        // request CI runs only some of them). See declaredFamilyExclusions in core/build.gradle
         jacksonVersion = '2.22.4'
         nettyVersion = '4.1.139.Final'
-        // bouncycastleJdk18onVersion controls the version that the libraries ScalarDB depends on
-        // use internally. ScalarDB itself doesn't use Bouncy Castle directly. Before upgrading it,
-        // confirm that ScalarDB works with the new version on all the storages whose libraries
-        // use it, by running their integration tests (the pull request CI runs only some of
-        // them). See declaredFamilyExclusions in core/build.gradle
         bouncycastleJdk18onVersion = '1.86'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'
@@ -93,14 +93,6 @@ subprojects {
 
     repositories {
         mavenCentral()
-    }
-
-    configurations.all {
-        resolutionStrategy {
-            force "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-            force "io.netty:netty-codec-http:${nettyVersion}"
-            force "io.netty:netty-codec-http2:${nettyVersion}"
-        }
     }
 
     tasks.withType(Test) {
