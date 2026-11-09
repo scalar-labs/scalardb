@@ -23,6 +23,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -126,6 +127,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     dropTables();
+    manager = createConsensusCommitManager(consensusCommitConfig.getIsolation(), false);
+  }
+
+  private ConsensusCommitManager createConsensusCommitManager(
+      Isolation isolation, boolean onePhaseCommitEnabled) {
     storage = spy(originalStorage);
     coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
@@ -141,33 +147,36 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
-    CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
-    manager =
-        new ConsensusCommitManager(
-            storage,
-            admin,
-            consensusCommitConfig,
-            databaseConfig,
-            coordinator,
-            parallelExecutor,
-            asyncExecutor,
-            recoveryExecutor,
-            crud,
-            commit,
-            consensusCommitConfig.getIsolation(),
-            groupCommitter);
+    CommitHandler commit =
+        spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
+    return new ConsensusCommitManager(
+        storage,
+        admin,
+        consensusCommitConfig,
+        databaseConfig,
+        coordinator,
+        parallelExecutor,
+        asyncExecutor,
+        recoveryExecutor,
+        crud,
+        commit,
+        isolation,
+        groupCommitter);
   }
 
   private CommitHandler createCommitHandler(
       TransactionTableMetadataManager tableMetadataManager,
-      @Nullable CoordinatorGroupCommitter groupCommitter) {
+      @Nullable CoordinatorGroupCommitter groupCommitter,
+      boolean onePhaseCommitEnabled) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    VirtualTableInfoManager virtualTableInfoManager = new VirtualTableInfoManager(admin, -1);
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
@@ -181,12 +190,13 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
           true,
           false,
-          false);
+          onePhaseCommitEnabled);
     }
   }
 
@@ -219,6 +229,10 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   protected String getImportedTableName() {
     return TABLE;
+  }
+
+  private boolean isGroupCommitEnabled() {
+    return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
   }
 
   private void prepareImportedTableAndRecords() throws Exception {
@@ -1046,6 +1060,40 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     DistributedTransaction another = manager.begin();
     assertThat(another.get(get).isPresent()).isFalse();
     another.commit();
+  }
+
+  @Test
+  public void commit_DeleteGivenForExistingAfterReadWithOnePhaseCommit_ShouldDeleteRecord()
+      throws Exception {
+    if (isGroupCommitEnabled()) {
+      // Enabling both one-phase commit and group commit is not supported
+      return;
+    }
+
+    // Arrange
+    prepareImportedTableAndRecords();
+    ConsensusCommitManager onePhaseCommitManager =
+        createConsensusCommitManager(Isolation.SNAPSHOT, true);
+    DistributedTransaction transaction = onePhaseCommitManager.begin();
+
+    // Act
+    Optional<Result> result = transaction.get(prepareGet(0));
+    transaction.delete(prepareDelete(0));
+    transaction.commit();
+
+    // Assert
+    assertThat(result).isPresent();
+    DistributedTransaction another = onePhaseCommitManager.begin();
+    assertThat(another.get(prepareGet(0))).isEmpty();
+    another.commit();
+    assertThat(
+            originalStorage.get(
+                Get.newBuilder()
+                    .namespace(namespace)
+                    .table(TABLE)
+                    .partitionKey(createPartitionKey(0))
+                    .build()))
+        .isEmpty();
   }
 
   @Test
