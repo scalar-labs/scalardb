@@ -67,11 +67,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.EnumSource.Mode;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -7645,8 +7647,13 @@ public class JdbcAdminTest {
     assertThat(actual).isEmpty();
   }
 
-  @Test
-  public void importTable_CollationReadFails_ShouldStillImport()
+  private static Stream<Exception> catalogReadFailures() {
+    return Stream.of(new SQLException("catalog failure"), new RuntimeException("catalog failure"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("catalogReadFailures")
+  public void importTable_CollationReadFails_ShouldStillImport(Exception failure)
       throws SQLException, ExecutionException {
     // Arrange
     PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
@@ -7668,7 +7675,7 @@ public class JdbcAdminTest {
     when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
     when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doThrow(new SQLException("catalog failure"))
+    doThrow(failure)
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), anyString(), anyString());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
@@ -7740,16 +7747,15 @@ public class JdbcAdminTest {
     verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
   }
 
-  @Test
-  public void createTable_EncodingCheckThrows_ShouldStillCreateTable()
+  @ParameterizedTest
+  @MethodSource("catalogReadFailures")
+  public void createTable_EncodingCheckThrows_ShouldStillCreateTable(Exception failure)
       throws SQLException, ExecutionException {
     // Arrange
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doThrow(new SQLException("catalog failure"))
-        .when(rdbEngineStrategy)
-        .getNonUtf8DatabaseEncoding(any());
+    doThrow(failure).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
     TableMetadata metadata = textTableMetadata();
 

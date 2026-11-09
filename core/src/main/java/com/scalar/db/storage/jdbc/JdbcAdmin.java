@@ -671,7 +671,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           rdbEngine.getTextColumnCollations(connection, namespace, table);
       buildImportTextColumnWarnings(fullTableName, tableMetadata, collations, rdbEngine)
           .forEach(logger::warn);
-    } catch (SQLException e) {
+    } catch (SQLException | RuntimeException e) {
       logger.debug("Reading the text column collations of the {} table failed", fullTableName, e);
     }
   }
@@ -686,7 +686,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             encoding,
             getFullTableName(namespace, table));
       }
-    } catch (SQLException e) {
+    } catch (SQLException | RuntimeException e) {
       logger.debug("Reading the database encoding failed", e);
     }
   }
