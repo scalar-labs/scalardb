@@ -278,6 +278,11 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
+  public boolean isPrimaryKeyColumnAssignableInUpdate() {
+    return false;
+  }
+
+  @Override
   public String[] dropTableInternalSqlsBeforeDropTable(
       String schema, String table, TableMetadata metadata) {
     // Indexes must be dropped explicitly before dropping the table.

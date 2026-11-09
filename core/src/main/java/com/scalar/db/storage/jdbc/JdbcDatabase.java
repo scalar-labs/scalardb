@@ -187,8 +187,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
     VirtualTableInfo virtualTableInfo = getVirtualTableInfo(put);
     if (virtualTableInfo != null) {
       // For a virtual table
-      List<Put> dividedPuts = dividePutForSourceTables(put, virtualTableInfo);
-      mutateInternal(dividedPuts);
+      List<Mutation> dividedMutations = dividePutForSourceTables(put, virtualTableInfo);
+      mutateInternal(dividedMutations);
       return;
     }
 
@@ -307,8 +307,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         // For a virtual table
         if (mutation instanceof Put) {
           Put put = (Put) mutation;
-          List<Put> dividedPuts = dividePutForSourceTables(put, virtualTableInfo);
-          convertedMutations.addAll(dividedPuts);
+          List<Mutation> dividedMutations = dividePutForSourceTables(put, virtualTableInfo);
+          convertedMutations.addAll(dividedMutations);
         } else {
           assert mutation instanceof Delete;
           Delete delete = (Delete) mutation;
@@ -378,7 +378,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         operation.forNamespace().get(), operation.forTable().get());
   }
 
-  private List<Put> dividePutForSourceTables(Put put, VirtualTableInfo virtualTableInfo)
+  private List<Mutation> dividePutForSourceTables(Put put, VirtualTableInfo virtualTableInfo)
       throws ExecutionException {
     TableMetadata leftSourceTableMetadata =
         tableMetadataManager.getTableMetadata(
@@ -389,6 +389,14 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             virtualTableInfo.getRightSourceNamespaceName(),
             virtualTableInfo.getRightSourceTableName());
     assert leftSourceTableMetadata != null && rightSourceTableMetadata != null;
+
+    // In a LEFT_OUTER join, a right-side record whose non-primary-key columns are all NULL and the
+    // absence of a right-side record look the same through the virtual table. By default, the two
+    // are treated as the same. This behavior is controlled by the operation attribute
+    boolean isAllNullRightRecordTreatedAsAbsent =
+        virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER
+            && JdbcOperationAttributes
+                .isLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(put);
 
     Map<String, Column<?>> columns = put.getColumns();
 
@@ -454,9 +462,8 @@ public class JdbcDatabase extends AbstractDistributedStorage {
           putBuilderForLeftSourceTable.condition(ConditionBuilder.putIf(leftExpressions));
         }
         if (!rightExpressions.isEmpty()) {
-          if (isAllIsNullOnRightColumnsInLeftOuterJoin(virtualTableInfo, rightExpressions)
-              && JdbcOperationAttributes
-                  .isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(put)) {
+          if (isAllNullRightRecordTreatedAsAbsent
+              && isAllIsNullOnRightColumnsInLeftOuterJoin(virtualTableInfo, rightExpressions)) {
             // In a LEFT_OUTER join, when all conditions on the right source table columns are
             // IS_NULL, we cannot distinguish whether we should check for the existence of a
             // right-side record with NULL values or for the case where the right-side record does
@@ -464,6 +471,16 @@ public class JdbcDatabase extends AbstractDistributedStorage {
             // By default, we convert the condition to PutIfNotExists, assuming that the more common
             // use case is to check that the right-side record does not exist.
             putBuilderForRightSourceTable.condition(ConditionBuilder.putIfNotExists());
+
+            // A PutIf condition is satisfied only when the virtual record exists, but
+            // PutIfNotExists on the right source table is also satisfied when the left-side record
+            // does not exist. So, when no condition on the left source table columns requires the
+            // left-side record, check that it exists with PutIfExists. The check is skipped only
+            // when the RDB engine cannot execute it for the left source table
+            if (leftExpressions.isEmpty()
+                && isConditionalPutWithoutValuesSupported(leftSourceTableMetadata)) {
+              putBuilderForLeftSourceTable.condition(ConditionBuilder.putIfExists());
+            }
           } else {
             putBuilderForRightSourceTable.condition(ConditionBuilder.putIf(rightExpressions));
           }
@@ -473,7 +490,103 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
     Put putForLeftSourceTable = putBuilderForLeftSourceTable.build();
     Put putForRightSourceTable = putBuilderForRightSourceTable.build();
-    return Arrays.asList(putForLeftSourceTable, putForRightSourceTable);
+
+    List<Mutation> mutations = new ArrayList<>(2);
+    mutations.add(putForLeftSourceTable);
+    if (isAllNullRightRecordTreatedAsAbsent) {
+      getMutationForRightSourceTableTreatingAllNullRecordAsAbsent(
+              putForRightSourceTable, rightSourceTableMetadata)
+          .ifPresent(mutations::add);
+    } else {
+      mutations.add(putForRightSourceTable);
+    }
+    return mutations;
+  }
+
+  /**
+   * Returns the mutation for the right source table of a LEFT_OUTER virtual table, treating a
+   * right-side record whose non-primary-key columns are all NULL as the same as the absence of a
+   * right-side record. The returned mutation makes the physical state of the right source table
+   * match this treatment.
+   *
+   * @param putForRightSourceTable the put for the right source table divided from the put for the
+   *     virtual table
+   * @param rightSourceTableMetadata the metadata of the right source table
+   * @return the mutation for the right source table, or empty if nothing needs to be written to it
+   */
+  private Optional<Mutation> getMutationForRightSourceTableTreatingAllNullRecordAsAbsent(
+      Put putForRightSourceTable, TableMetadata rightSourceTableMetadata) {
+    Map<String, Column<?>> columns = putForRightSourceTable.getColumns();
+    Optional<MutationCondition> condition = putForRightSourceTable.getCondition();
+
+    List<String> nonPrimaryKeyColumnNames = new ArrayList<>();
+    for (String columnName : rightSourceTableMetadata.getColumnNames()) {
+      if (!rightSourceTableMetadata.getPartitionKeyNames().contains(columnName)
+          && !rightSourceTableMetadata.getClusteringKeyNames().contains(columnName)) {
+        nonPrimaryKeyColumnNames.add(columnName);
+      }
+    }
+
+    if (nonPrimaryKeyColumnNames.stream().noneMatch(columns::containsKey)) {
+      // The put changes no right-side column. Without a condition, writing it would at most create
+      // a right-side record whose non-primary-key columns are all NULL, which is the same as the
+      // absence of the record. So, skip it. With a condition, write it to check the condition. When
+      // the condition is the converted PutIfNotExists, this creates such a record as in the case
+      // of PutIfNotExists below
+      return condition.isPresent() ? Optional.of(putForRightSourceTable) : Optional.empty();
+    }
+
+    boolean setsAllNonPrimaryKeyColumnsToNull =
+        nonPrimaryKeyColumnNames.stream()
+            .allMatch(c -> columns.containsKey(c) && columns.get(c).hasNullValue());
+    if (!setsAllNonPrimaryKeyColumnsToNull) {
+      return Optional.of(putForRightSourceTable);
+    }
+
+    if (condition.isPresent() && condition.get() instanceof PutIfNotExists) {
+      // The condition was converted from IS_NULL conditions to check that the right-side record
+      // does not exist. A delete cannot check that, so keep the put. When the right-side record
+      // does not exist, the put creates a right-side record whose non-primary-key columns are all
+      // NULL, and a later put whose condition is converted in the same way fails on the record
+      return Optional.of(putForRightSourceTable);
+    }
+
+    // The put makes the right-side record the same as its absence. So, delete the record instead
+    assert putForRightSourceTable.forNamespace().isPresent()
+        && putForRightSourceTable.forTable().isPresent();
+    DeleteBuilder.Buildable deleteBuilder =
+        Delete.newBuilder()
+            .namespace(putForRightSourceTable.forNamespace().get())
+            .table(putForRightSourceTable.forTable().get())
+            .partitionKey(putForRightSourceTable.getPartitionKey())
+            .consistency(putForRightSourceTable.getConsistency())
+            .attributes(putForRightSourceTable.getAttributes());
+    putForRightSourceTable.getClusteringKey().ifPresent(deleteBuilder::clusteringKey);
+    if (condition.isPresent()) {
+      // Other than the one above, only a PutIf condition with the conditions on the right source
+      // table columns is applied to the right source table in a LEFT_OUTER join
+      assert condition.get() instanceof PutIf;
+      deleteBuilder.condition(ConditionBuilder.deleteIf(condition.get().getExpressions()));
+    }
+    return Optional.of(deleteBuilder.build());
+  }
+
+  /**
+   * Returns whether a conditional put that specifies only primary key values can be executed for
+   * the table. Such a put becomes an UPDATE statement that assigns a column to itself. For a table
+   * that has only primary key columns, the column is a primary key column, which some RDB engines
+   * do not allow.
+   *
+   * @param tableMetadata the metadata of the table
+   * @return whether a conditional put that specifies only primary key values can be executed
+   */
+  private boolean isConditionalPutWithoutValuesSupported(TableMetadata tableMetadata) {
+    if (rdbEngine.isPrimaryKeyColumnAssignableInUpdate()) {
+      return true;
+    }
+    return tableMetadata.getColumnNames().size()
+        > tableMetadata.getPartitionKeyNames().size()
+            + tableMetadata.getClusteringKeyNames().size();
   }
 
   private List<Delete> divideDeleteForSourceTables(Delete delete, VirtualTableInfo virtualTableInfo)
