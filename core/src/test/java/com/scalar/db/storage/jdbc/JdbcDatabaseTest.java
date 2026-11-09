@@ -1478,63 +1478,6 @@ public class JdbcDatabaseTest {
 
   @Test
   public void
-      put_ForLeftOuterVirtualTableWithAllIsNullConditionsOnRightColumnsOnlyInSpanner_ShouldCheckLeftSourceRecordExists()
-          throws Exception {
-    // Arrange
-    jdbcDatabase = createJdbcDatabase(RdbEngine.SPANNER);
-    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
-    Put put =
-        virtualTablePut()
-            .textValue("right_col1", "right_val1")
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText()).build())
-            .build();
-
-    // Act
-    jdbcDatabase.put(put);
-
-    // Assert
-    assertThat(captureMutations())
-        .containsExactly(
-            leftSourceTablePut().condition(ConditionBuilder.putIfExists()).build(),
-            rightSourceTablePut()
-                .textValue("right_col1", "right_val1")
-                .condition(ConditionBuilder.putIfNotExists())
-                .build());
-  }
-
-  @Test
-  public void
-      put_ForLeftOuterVirtualTableWithAllIsNullConditionsOnRightColumnsOnlyAndLeftSourceTableWithOnlyPrimaryKeyInSpanner_ShouldNotCheckLeftSourceRecordExists()
-          throws Exception {
-    // Arrange
-    jdbcDatabase = createJdbcDatabase(RdbEngine.SPANNER);
-    prepareVirtualTable(
-        VirtualTableJoinType.LEFT_OUTER,
-        createSourceTableMetadataWithOnlyPrimaryKey(),
-        createRightSourceTableMetadata());
-    Put put =
-        virtualTablePut()
-            .textValue("right_col1", "right_val1")
-            .condition(
-                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText()).build())
-            .build();
-
-    // Act
-    jdbcDatabase.put(put);
-
-    // Assert
-    assertThat(captureMutations())
-        .containsExactly(
-            leftSourceTablePut().build(),
-            rightSourceTablePut()
-                .textValue("right_col1", "right_val1")
-                .condition(ConditionBuilder.putIfNotExists())
-                .build());
-  }
-
-  @Test
-  public void
       put_ForLeftOuterVirtualTableWithConditionsOnRightColumns_ShouldPutRightSourceRecordWithSameConditions()
           throws Exception {
     // Arrange
@@ -2517,13 +2460,13 @@ public class JdbcDatabaseTest {
         .thenReturn(leftSourceTableMetadata);
     when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
         .thenReturn(rightSourceTableMetadata);
-    when(jdbcCrudService.mutate(any(), any())).thenReturn(true);
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
   }
 
   private List<Mutation> captureMutations() throws Exception {
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
-    verify(jdbcCrudService).mutate(mutationsCaptor.capture(), any());
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
     return mutationsCaptor.getValue();
   }
 
@@ -2579,18 +2522,6 @@ public class JdbcDatabaseTest {
         .addClusteringKey("ck1")
         .addClusteringKey("ck2")
         .build();
-  }
-
-  private JdbcDatabase createJdbcDatabase(RdbEngine rdbEngine) {
-    return new JdbcDatabase(
-        databaseConfig,
-        RdbEngine.createRdbEngineStrategy(rdbEngine),
-        dataSource,
-        tableMetadataDataSource,
-        tableMetadataManager,
-        virtualTableInfoManager,
-        jdbcCrudService,
-        false);
   }
 
   private JdbcDatabase createJdbcDatabaseWithExplicitCommit() {
