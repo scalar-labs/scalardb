@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -489,8 +490,7 @@ public class VirtualTableMetadataServiceTest {
 
     // Act
     Throwable thrown =
-        org.assertj.core.api.Assertions.catchThrowable(
-            () -> oracleService.createVirtualTablesTableIfNotExists(connection));
+        catchThrowable(() -> oracleService.createVirtualTablesTableIfNotExists(connection));
 
     // Assert
     assertThat(thrown).isNull();
@@ -508,8 +508,7 @@ public class VirtualTableMetadataServiceTest {
 
     // Act
     Throwable thrown =
-        org.assertj.core.api.Assertions.catchThrowable(
-            () -> oracleService.createVirtualTablesTableIfNotExists(connection));
+        catchThrowable(() -> oracleService.createVirtualTablesTableIfNotExists(connection));
 
     // Assert
     assertThat(thrown)
