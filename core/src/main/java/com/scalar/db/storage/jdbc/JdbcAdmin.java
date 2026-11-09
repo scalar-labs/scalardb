@@ -240,7 +240,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Connection connection, String namespace, TableMetadata metadata, Map<String, String> options)
       throws SQLException {
     String sourceTable = options.get(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE);
-    if (sourceTable == null) {
+    if (sourceTable == null || rdbEngine.getBinaryTextCollationClause().isEmpty()) {
       return Collections.emptyMap();
     }
     Map<String, TextColumnCollation> sourceCollations =

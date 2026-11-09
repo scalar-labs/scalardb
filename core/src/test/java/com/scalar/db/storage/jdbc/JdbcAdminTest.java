@@ -1700,6 +1700,29 @@ public class JdbcAdminTest {
                     .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin"));
   }
 
+  @Test
+  public void createTable_WithKeyCollationSourceTableOnDb2_ShouldNotReadCatalogCollations()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getTextColumnCollations(any(), anyString(), anyString());
+  }
+
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void repairTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(RdbEngine rdbEngine)
