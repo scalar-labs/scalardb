@@ -12,6 +12,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableJoinType;
+import com.scalar.db.common.InternalTableOptions;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -109,7 +110,9 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
         // Import the left source table
         admin.importTable(namespace, importedTableName, Collections.emptyMap());
 
-        // Create a right source table
+        // Create a right source table whose TEXT key takes the collation of the imported table's
+        // key, since some databases, such as Oracle, reject a join on keys of conflicting
+        // collations
         admin.createTable(
             namespace,
             anotherTableName,
@@ -117,7 +120,9 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
                 .addColumn("pk", dataType)
                 .addColumn("col2", DataType.TEXT)
                 .addPartitionKey("pk")
-                .build());
+                .build(),
+            Collections.singletonMap(
+                InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, importedTableName));
 
         // Create a virtual table that joins the above two source tables with different join types
         admin.createVirtualTable(
