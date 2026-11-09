@@ -270,6 +270,11 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
+  void isPrimaryKeyColumnAssignableInUpdate_ShouldReturnFalse() {
+    assertThat(rdbEngine.isPrimaryKeyColumnAssignableInUpdate()).isFalse();
+  }
+
+  @Test
   void parseTimeColumn_NullValue_ShouldReturnNullColumn() throws SQLException {
     ResultSet rs = mock(ResultSet.class);
     when(rs.getObject("t", OffsetDateTime.class)).thenReturn(null);
