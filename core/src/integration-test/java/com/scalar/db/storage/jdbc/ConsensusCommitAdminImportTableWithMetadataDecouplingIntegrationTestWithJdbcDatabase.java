@@ -1,11 +1,21 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase.TestData;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Insert;
+import com.scalar.db.api.Result;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestBase;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -88,5 +98,58 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();
+  }
+
+  @Test
+  @DisabledIf("isSqlite")
+  public void importTable_WithDecouplingAndNonBinaryTextKey_ShouldReadAndWriteThroughVirtualTable()
+      throws Exception {
+    // Arrange
+    String table = "non_binary_key_tbl";
+    String importedCollation = testUtils.createTableWithNonBinaryTextKey(namespace, table);
+    assumeTrue(importedCollation != null, "The engine has no per-column collation");
+    JdbcAdminTestUtils adminTestUtils = new JdbcAdminTestUtils(getProps(getTestName()));
+    String virtualTable = getImportedTableName(table);
+    try {
+      // Act
+      admin.importTable(namespace, table, getCreationOptions());
+      Insert insert =
+          Insert.newBuilder()
+              .namespace(namespace)
+              .table(virtualTable)
+              .partitionKey(Key.ofText("pk", "k1"))
+              .bigIntValue("col", 7L)
+              .build();
+      while (true) {
+        DistributedTransaction tx = manager.start();
+        try {
+          tx.insert(insert);
+          tx.commit();
+          break;
+        } catch (CommitConflictException e) {
+          tx.abort();
+        }
+      }
+      DistributedTransaction tx = manager.start();
+      Optional<Result> result =
+          tx.get(
+              Get.newBuilder()
+                  .namespace(namespace)
+                  .table(virtualTable)
+                  .partitionKey(Key.ofText("pk", "k1"))
+                  .build());
+      tx.commit();
+
+      // Assert
+      assertThat(result).isPresent();
+      assertThat(result.get().getBigInt("col")).isEqualTo(7L);
+      assertThat(adminTestUtils.getColumnCollation(namespace, table + "_tx_metadata", "pk"))
+          .isEqualTo(importedCollation);
+    } finally {
+      adminTestUtils.close();
+      if (admin.tableExists(namespace, virtualTable)) {
+        admin.dropTable(namespace, virtualTable);
+      }
+    }
   }
 }

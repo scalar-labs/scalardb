@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.common.InternalTableOptions;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -35,6 +36,7 @@ import java.sql.Statement;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -216,7 +218,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           requiresExplicitCommit,
           connection -> {
             createMetadataSchemaIfNotExists(connection);
-            createTableInternal(connection, namespace, table, metadata, false);
+            createTableInternal(
+                connection,
+                namespace,
+                table,
+                metadata,
+                false,
+                getKeyCollationClauses(connection, namespace, metadata, options));
             addTableMetadata(connection, namespace, table, metadata, true, false);
             if (metadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
               warnIfDatabaseEncodingIsNotUtf8(connection, namespace, table);
@@ -228,6 +236,26 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  private Map<String, String> getKeyCollationClauses(
+      Connection connection, String namespace, TableMetadata metadata, Map<String, String> options)
+      throws SQLException {
+    String sourceTable = options.get(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE);
+    if (sourceTable == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, TextColumnCollation> sourceCollations =
+        rdbEngine.getTextColumnCollations(connection, namespace, sourceTable);
+    Map<String, String> clauses = new HashMap<>();
+    for (String columnName :
+        Iterables.concat(metadata.getPartitionKeyNames(), metadata.getClusteringKeyNames())) {
+      if (metadata.getColumnDataType(columnName) == DataType.TEXT) {
+        clauses.put(
+            columnName, getCollationClauseOrBinary(rdbEngine, sourceCollations, columnName));
+      }
+    }
+    return clauses;
+  }
+
   @VisibleForTesting
   void createTableInternal(
       Connection connection,
@@ -235,6 +263,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String table,
       TableMetadata metadata,
       boolean ifNotExists)
+      throws SQLException {
+    createTableInternal(connection, schema, table, metadata, ifNotExists, Collections.emptyMap());
+  }
+
+  @VisibleForTesting
+  void createTableInternal(
+      Connection connection,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> keyCollationClauses)
       throws SQLException {
     rdbEngine.throwIfInvalidTableName(table);
 
@@ -251,7 +291,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         sortedColumnNames.stream()
             .map(
                 columnName ->
-                    enclose(columnName) + " " + getVendorDbColumnType(metadata, columnName))
+                    enclose(columnName)
+                        + " "
+                        + getVendorDbColumnType(metadata, columnName, keyCollationClauses))
             .collect(Collectors.joining(","));
 
     // Add primary key definition

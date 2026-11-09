@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -43,6 +44,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.common.InternalTableOptions;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.zaxxer.hikari.HikariDataSource;
@@ -1609,8 +1611,53 @@ public class JdbcAdminTest {
     adminSpy.createTable(namespace, table, metadata, Collections.emptyMap());
 
     // Assert
-    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, false);
+    verify(adminSpy)
+        .createTableInternal(connection, namespace, table, metadata, false, Collections.emptyMap());
     verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, false);
+  }
+
+  @Test
+  public void createTable_WithKeyCollationSourceTable_ShouldUseSourceKeyCollations()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(
+            ImmutableMap.of(
+                "pk", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4"),
+                "col", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    String createTable =
+        sql.getAllValues().stream()
+            .filter(s -> s.startsWith("CREATE TABLE `my_ns`.`foo_table`"))
+            .findFirst()
+            .orElseThrow(AssertionError::new);
+    assertThat(createTable)
+        .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        .doesNotContain("`col` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        .contains("`col` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
   }
 
   @ParameterizedTest
@@ -7678,7 +7725,8 @@ public class JdbcAdminTest {
 
     // Assert
     assertThat(thrown).isNull();
-    verify(adminSpy).createTableInternal(connection, "ns", "tbl", metadata, false);
+    verify(adminSpy)
+        .createTableInternal(connection, "ns", "tbl", metadata, false, Collections.emptyMap());
     verify(adminSpy).addTableMetadata(connection, "ns", "tbl", metadata, true, false);
   }
 
