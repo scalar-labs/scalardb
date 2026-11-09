@@ -218,6 +218,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             createMetadataSchemaIfNotExists(connection);
             createTableInternal(connection, namespace, table, metadata, false);
             addTableMetadata(connection, namespace, table, metadata, true, false);
+            if (metadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
+              warnIfDatabaseEncodingIsNotUtf8(connection, namespace, table);
+            }
           });
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -628,6 +631,21 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           .forEach(logger::warn);
     } catch (SQLException e) {
       logger.debug("Reading the text column collations of the {} table failed", fullTableName, e);
+    }
+  }
+
+  private void warnIfDatabaseEncodingIsNotUtf8(
+      Connection connection, String namespace, String table) {
+    try {
+      String encoding = rdbEngine.getNonUtf8DatabaseEncoding(connection);
+      if (encoding != null) {
+        logger.warn(
+            "The database encoding is {}, not UTF-8, so TEXT columns of the {} table cannot store every character ScalarDB accepts",
+            encoding,
+            getFullTableName(namespace, table));
+      }
+    } catch (SQLException e) {
+      logger.debug("Reading the database encoding failed", e);
     }
   }
 
@@ -1088,6 +1106,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     + getVendorDbColumnType(updatedTableMetadata, columnName);
             execute(connection, rdbEngine, addNewColumnStatement, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+            if (columnType == DataType.TEXT) {
+              warnIfDatabaseEncodingIsNotUtf8(connection, namespace, table);
+            }
           });
     } catch (SQLException e) {
       throw new ExecutionException(

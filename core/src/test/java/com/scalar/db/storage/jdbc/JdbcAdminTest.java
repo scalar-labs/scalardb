@@ -1601,7 +1601,9 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act
     adminSpy.createTable(namespace, table, metadata, Collections.emptyMap());
@@ -7612,5 +7614,140 @@ public class JdbcAdminTest {
             any(TableMetadata.class),
             eq(true),
             eq(false));
+  }
+
+  private TableMetadata textTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addPartitionKey("pk")
+        .addColumn("pk", DataType.TEXT)
+        .addColumn("c", DataType.INT)
+        .build();
+  }
+
+  @Test
+  public void createTable_TextColumnOnNonUtf8Database_ShouldCallEncodingCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn("latin1").when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
+
+    // Assert
+    verify(rdbEngineStrategy).getNonUtf8DatabaseEncoding(connection);
+  }
+
+  @Test
+  public void createTable_NoTextColumn_ShouldNotCallEncodingCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.INT).build();
+
+    // Act
+    admin.createTable("ns", "tbl", metadata, Collections.emptyMap());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+  }
+
+  @Test
+  public void createTable_EncodingCheckThrows_ShouldStillCreateTable()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doThrow(new SQLException("catalog failure"))
+        .when(rdbEngineStrategy)
+        .getNonUtf8DatabaseEncoding(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    TableMetadata metadata = textTableMetadata();
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> adminSpy.createTable("ns", "tbl", metadata, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isNull();
+    verify(adminSpy).createTableInternal(connection, "ns", "tbl", metadata, false);
+    verify(adminSpy).addTableMetadata(connection, "ns", "tbl", metadata, true, false);
+  }
+
+  private void prepareAddNewColumnToTable() throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.INT.toString(), "PARTITION", null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+  }
+
+  @Test
+  public void addNewColumnToTable_TextColumn_ShouldCallEncodingCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn("latin1").when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
+
+    // Assert
+    verify(rdbEngineStrategy).getNonUtf8DatabaseEncoding(connection);
+  }
+
+  @Test
+  public void addNewColumnToTable_IntColumn_ShouldNotCallEncodingCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.INT);
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+  }
+
+  @Test
+  public void addNewColumnToTable_EncodingCheckThrows_ShouldStillAddColumn()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doThrow(new SQLException("catalog failure"))
+        .when(rdbEngineStrategy)
+        .getNonUtf8DatabaseEncoding(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> adminSpy.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT));
+
+    // Assert
+    assertThat(thrown).isNull();
+    verify(adminSpy)
+        .addTableMetadata(
+            eq(connection), eq("ns"), eq("tbl"), any(TableMetadata.class), eq(false), eq(true));
   }
 }
