@@ -54,6 +54,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -113,25 +115,27 @@ public class RollbackMutationComposerTest {
   private static final Instant ANY_TIMESTAMPTZ_3 =
       LocalDateTime.of(2022, 1, 1, 14, 0, 0).toInstant(ZoneOffset.UTC);
 
+  private static final TableMetadata DATA_TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn(ANY_NAME_1, DataType.TEXT)
+          .addColumn(ANY_NAME_2, DataType.TEXT)
+          .addColumn(ANY_NAME_3, DataType.INT)
+          .addColumn(ANY_NAME_4, DataType.BOOLEAN)
+          .addColumn(ANY_NAME_5, DataType.BIGINT)
+          .addColumn(ANY_NAME_6, DataType.FLOAT)
+          .addColumn(ANY_NAME_7, DataType.DOUBLE)
+          .addColumn(ANY_NAME_8, DataType.TEXT)
+          .addColumn(ANY_NAME_9, DataType.BLOB)
+          .addColumn(ANY_NAME_10, DataType.DATE)
+          .addColumn(ANY_NAME_11, DataType.TIME)
+          .addColumn(ANY_NAME_12, DataType.TIMESTAMP)
+          .addColumn(ANY_NAME_13, DataType.TIMESTAMPTZ)
+          .addPartitionKey(ANY_NAME_1)
+          .addClusteringKey(ANY_NAME_2)
+          .build();
+
   private static final TableMetadata TABLE_METADATA =
-      ConsensusCommitUtils.buildTransactionTableMetadata(
-          TableMetadata.newBuilder()
-              .addColumn(ANY_NAME_1, DataType.TEXT)
-              .addColumn(ANY_NAME_2, DataType.TEXT)
-              .addColumn(ANY_NAME_3, DataType.INT)
-              .addColumn(ANY_NAME_4, DataType.BOOLEAN)
-              .addColumn(ANY_NAME_5, DataType.BIGINT)
-              .addColumn(ANY_NAME_6, DataType.FLOAT)
-              .addColumn(ANY_NAME_7, DataType.DOUBLE)
-              .addColumn(ANY_NAME_8, DataType.TEXT)
-              .addColumn(ANY_NAME_9, DataType.BLOB)
-              .addColumn(ANY_NAME_10, DataType.DATE)
-              .addColumn(ANY_NAME_11, DataType.TIME)
-              .addColumn(ANY_NAME_12, DataType.TIMESTAMP)
-              .addColumn(ANY_NAME_13, DataType.TIMESTAMPTZ)
-              .addPartitionKey(ANY_NAME_1)
-              .addClusteringKey(ANY_NAME_2)
-              .build());
+      ConsensusCommitUtils.buildTransactionTableMetadata(DATA_TABLE_METADATA);
 
   private RollbackMutationComposer composer;
   @Mock private DistributedStorage storage;
@@ -550,6 +554,39 @@ public class RollbackMutationComposerTest {
             .timestampTZValue(BEFORE_PREFIX + ANY_NAME_13, null)
             .build();
     assertThat(actual).isEqualTo(expected);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = TransactionState.class,
+      names = {"PREPARED", "DELETED"})
+  public void
+      add_GetAndResultWithNullMetadataByThisGiven_ShouldComposePutSettingAllNonPrimaryKeyColumnsOfTransactionMetadataTableToNull(
+          TransactionState state) throws ExecutionException {
+    // Arrange
+    TransactionResult result = prepareResultWithNullMetadata(state);
+    Get get = prepareGet();
+
+    // Act
+    composer.add(get, result);
+
+    // Assert
+    // With transaction metadata decoupling, a record whose before image has no transaction
+    // metadata has no record in the transaction metadata table. The rollback restores that state
+    // only if the put sets all non-primary-key columns of the transaction metadata table to NULL
+    Put actual = (Put) composer.get().get(0);
+    TableMetadata transactionMetadataTableMetadata =
+        ConsensusCommitUtils.buildTransactionMetadataTableMetadata(DATA_TABLE_METADATA);
+    for (String columnName : transactionMetadataTableMetadata.getColumnNames()) {
+      if (transactionMetadataTableMetadata.getPartitionKeyNames().contains(columnName)
+          || transactionMetadataTableMetadata.getClusteringKeyNames().contains(columnName)) {
+        continue;
+      }
+      assertThat(actual.getColumns()).containsKey(columnName);
+      assertThat(actual.getColumns().get(columnName).hasNullValue())
+          .describedAs(columnName)
+          .isTrue();
+    }
   }
 
   @Test
