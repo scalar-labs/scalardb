@@ -23,6 +23,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -170,11 +171,13 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
       TransactionTableMetadataManager tableMetadataManager,
       @Nullable CoordinatorGroupCommitter groupCommitter) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    VirtualTableInfoManager virtualTableInfoManager = new VirtualTableInfoManager(admin, -1);
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           mutationsGrouper,
           true,
@@ -186,6 +189,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
           storage,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           mutationsGrouper,
           true,
