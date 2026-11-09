@@ -32,10 +32,12 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 
 @ThreadSafe
@@ -301,49 +303,55 @@ public class S3Wrapper implements ObjectStorageWrapper {
   @Override
   public void deleteByPrefix(String prefix) throws ObjectStorageWrapperException {
     try {
-      client
-          .listObjectsV2Paginator(
-              ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).build())
-          .subscribe(
-              response -> {
-                if (!response.contents().isEmpty()) {
-                  List<ObjectIdentifier> pageObjects = new ArrayList<>();
-                  // Collect all objects from this page
-                  response
-                      .contents()
-                      .forEach(
-                          s3Object ->
-                              pageObjects.add(
-                                  ObjectIdentifier.builder().key(s3Object.key()).build()));
-                  // Delete objects from this page in batches
-                  for (int i = 0; i < pageObjects.size(); i += BATCH_DELETE_SIZE_LIMIT) {
-                    int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, pageObjects.size());
-                    List<ObjectIdentifier> batch = pageObjects.subList(i, endIndex);
-                    DeleteObjectsResponse deleteResponse =
-                        client
-                            .deleteObjects(
-                                DeleteObjectsRequest.builder()
-                                    .bucket(bucket)
-                                    .delete(Delete.builder().objects(batch).build())
-                                    .build())
-                            .join();
-                    // The DeleteObjects API reports the failure of each object in the response
-                    // instead of failing the request, so the AWS SDK does not retry it. A failed
-                    // deletion is retried individually so that the AWS SDK retries it on transient
-                    // errors, such as InternalError and SlowDown
-                    for (S3Error error : deleteResponse.errors()) {
-                      client
-                          .deleteObject(
-                              DeleteObjectRequest.builder().bucket(bucket).key(error.key()).build())
-                          .join();
-                    }
-                  }
-                }
-              })
-          .join();
+      // Don't use listObjectsV2Paginator() here. Waiting for the deletions in the callback of its
+      // subscription, which runs on a thread of the AWS SDK, can exhaust the threads and cause a
+      // deadlock
+      String continuationToken = null;
+      do {
+        ListObjectsV2Response response =
+            client
+                .listObjectsV2(
+                    ListObjectsV2Request.builder()
+                        .bucket(bucket)
+                        .prefix(prefix)
+                        .continuationToken(continuationToken)
+                        .build())
+                .join();
+        List<ObjectIdentifier> objects = new ArrayList<>(response.contents().size());
+        for (S3Object s3Object : response.contents()) {
+          objects.add(ObjectIdentifier.builder().key(s3Object.key()).build());
+        }
+        deleteObjects(objects);
+        continuationToken =
+            Boolean.TRUE.equals(response.isTruncated()) ? response.nextContinuationToken() : null;
+      } while (continuationToken != null);
     } catch (Exception e) {
       throw new ObjectStorageWrapperException(
           String.format("Failed to delete the objects with prefix '%s'", prefix), e);
+    }
+  }
+
+  private void deleteObjects(List<ObjectIdentifier> objects) {
+    for (int i = 0; i < objects.size(); i += BATCH_DELETE_SIZE_LIMIT) {
+      int endIndex = Math.min(i + BATCH_DELETE_SIZE_LIMIT, objects.size());
+      List<ObjectIdentifier> batch = objects.subList(i, endIndex);
+      DeleteObjectsResponse deleteResponse =
+          client
+              .deleteObjects(
+                  DeleteObjectsRequest.builder()
+                      .bucket(bucket)
+                      .delete(Delete.builder().objects(batch).build())
+                      .build())
+              .join();
+      // The DeleteObjects API reports the failure of each object in the response instead of
+      // failing the request, so the AWS SDK does not retry it. A failed deletion is retried
+      // individually so that the AWS SDK retries it on transient errors, such as InternalError
+      // and SlowDown
+      for (S3Error error : deleteResponse.errors()) {
+        client
+            .deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(error.key()).build())
+            .join();
+      }
     }
   }
 
