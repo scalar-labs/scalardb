@@ -92,10 +92,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
-    commit = createCommitHandler(config, storageInfoProvider);
-    isolation = config.getIsolation();
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    commit = createCommitHandler(config, storageInfoProvider, virtualTableInfoManager);
+    isolation = config.getIsolation();
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager,
@@ -132,10 +132,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
-    commit = createCommitHandler(config, storageInfoProvider);
-    isolation = config.getIsolation();
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    commit = createCommitHandler(config, storageInfoProvider, virtualTableInfoManager);
+    isolation = config.getIsolation();
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager,
@@ -188,13 +188,16 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   // `groupCommitter` must be set before calling this method.
   private CommitHandler createCommitHandler(
-      ConsensusCommitConfig config, StorageInfoProvider storageInfoProvider) {
+      ConsensusCommitConfig config,
+      StorageInfoProvider storageInfoProvider,
+      VirtualTableInfoManager virtualTableInfoManager) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(storageInfoProvider);
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
           storage,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
@@ -205,6 +208,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           storage,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           mutationsGrouper,
           config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),

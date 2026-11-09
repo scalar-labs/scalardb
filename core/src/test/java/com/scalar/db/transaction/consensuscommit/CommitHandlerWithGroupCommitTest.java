@@ -82,6 +82,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         storage,
         coordinator,
         tableMetadataManager,
+        virtualTableInfoManager,
         parallelExecutor,
         new MutationsGrouper(storageInfoProvider),
         coordinatorWriteOmissionOnReadOnlyEnabled,
@@ -96,6 +97,7 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
         storage,
         coordinator,
         tableMetadataManager,
+        virtualTableInfoManager,
         parallelExecutor,
         mutationsGrouper,
         true,
@@ -502,6 +504,73 @@ class CommitHandlerWithGroupCommitTest extends CommitHandlerTest {
 
     // Assert
     verify(groupCommitter).remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInLeftOuterVirtualTable_ShouldReturnFalse()
+          throws Exception {
+    super
+        .canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInLeftOuterVirtualTable_ShouldReturnFalse();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInInnerVirtualTable_ShouldReturnTrue()
+          throws Exception {
+    super
+        .canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInInnerVirtualTable_ShouldReturnTrue();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInNonVirtualTable_ShouldReturnTrue()
+          throws Exception {
+    super.canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInNonVirtualTable_ShouldReturnTrue();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenDeleteOfRecordWithTransactionIdInLeftOuterVirtualTable_ShouldReturnTrue()
+          throws Exception {
+    super
+        .canOnePhaseCommit_WhenDeleteOfRecordWithTransactionIdInLeftOuterVirtualTable_ShouldReturnTrue();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenPutToRecordDeemedAsCommittedInLeftOuterVirtualTable_ShouldReturnTrue()
+          throws Exception {
+    super
+        .canOnePhaseCommit_WhenPutToRecordDeemedAsCommittedInLeftOuterVirtualTable_ShouldReturnTrue();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void
+      canOnePhaseCommit_WhenOnePhaseCommitDisabledWithDeleteOfRecordDeemedAsCommitted_ShouldNotGetVirtualTableInfo()
+          throws Exception {
+    super
+        .canOnePhaseCommit_WhenOnePhaseCommitDisabledWithDeleteOfRecordDeemedAsCommitted_ShouldNotGetVirtualTableInfo();
+    groupCommitter.remove(anyId());
+  }
+
+  @Test
+  @Override
+  public void canOnePhaseCommit_WhenGettingVirtualTableInfoFails_ShouldThrowCommitException()
+      throws Exception {
+    super.canOnePhaseCommit_WhenGettingVirtualTableInfoFails_ShouldThrowCommitException();
+    groupCommitter.remove(anyId());
   }
 
   @Test

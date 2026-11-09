@@ -80,6 +80,8 @@ public interface DistributedStorageAdmin extends Admin, AutoCloseable {
    *   <li>Both sources must reside within the atomicity unit of the underlying storage, meaning
    *       that the atomicity unit must be at least at the namespace level.
    *   <li>Currently, using virtual tables as sources is not supported.
+   *   <li>Currently, for {@code LEFT_OUTER}, a {@code DeleteIf} whose conditions on the right-side
+   *       columns are all {@code IS_NULL} is not supported.
    * </ul>
    *
    * <p>Note: This feature is primarily for internal use. Breaking changes can and will be
