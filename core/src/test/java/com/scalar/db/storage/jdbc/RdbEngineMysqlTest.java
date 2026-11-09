@@ -433,4 +433,99 @@ class RdbEngineMysqlTest {
     assertThat(withClause).isEqualTo("VARCHAR(10) COLLATE c");
     assertThat(withoutClause).isEqualTo("VARCHAR(10)");
   }
+
+  @Test
+  void isBinaryCollation_Utf8mb4BinOnNoPadServer_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isBinaryCollation_Utf8mb4BinOnPadOnlyServer_ShouldReturnTrue() {
+    // Arrange
+    RdbEngineMysql padOnlyEngine =
+        new RdbEngineMysql(mock(JdbcConfig.class), false, false, "utf8mb4_bin");
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    boolean actual = padOnlyEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_Utf8mb40900Bin_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_Utf8mb4NopadBin_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_nopad_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_CaseInsensitiveCollation_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_general_ci", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isUtf8Charset_Utf8mb4_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngineMysql.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isUtf8Charset_Utf8mb3_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb3_bin", "utf8mb3");
+
+    // Act
+    boolean actual = rdbEngineMysql.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void getNonUtf8DatabaseEncoding_ShouldReturnNull() throws SQLException {
+    // Arrange Act
+    String actual = rdbEngineMysql.getNonUtf8DatabaseEncoding(mock(Connection.class));
+
+    // Assert
+    assertThat(actual).isNull();
+  }
 }

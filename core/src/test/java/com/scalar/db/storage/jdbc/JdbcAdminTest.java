@@ -145,7 +145,9 @@ public class JdbcAdminTest {
   // Only the engines that read the catalog need the stub. The others run their real strategy.
   private JdbcAdmin createJdbcAdminWithoutCatalogCollations(RdbEngine rdbEngine) {
     RdbEngineStrategy strategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
-    if (strategy instanceof RdbEngineMysql || strategy instanceof RdbEnginePostgresql) {
+    if (strategy instanceof RdbEngineMysql
+        || strategy instanceof RdbEnginePostgresql
+        || strategy instanceof RdbEngineDb2) {
       strategy = spy(strategy);
       try {
         doReturn(Collections.emptyMap())

@@ -112,4 +112,64 @@ public class RdbEngineDb2Test {
     // Assert
     assertThat(clause).isEqualTo("");
   }
+
+  @Test
+  void getCollationClause_ShouldReturnEmpty() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    String clause = rdbEngineDb2.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEmpty();
+  }
+
+  @Test
+  void isBinaryCollation_Identity_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_UcaCollation_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("UCA500R1_LEN_S3", "utf-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isUtf8Charset_Utf8InAnyCase_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isUtf8Charset_Iso88591_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "iso8859-1");
+
+    // Act
+    boolean actual = rdbEngineDb2.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
 }

@@ -553,6 +553,19 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    String name = collation.getCollation();
+    return name.equals("utf8mb4_0900_bin")
+        || name.equals("utf8mb4_nopad_bin")
+        || name.equals(binaryCollation);
+  }
+
+  @Override
+  public boolean isUtf8Charset(TextColumnCollation collation) {
+    return "utf8mb4".equals(collation.getCharset());
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }

@@ -60,4 +60,28 @@ class RdbEngineMariaDBTest {
     assertThat(collations)
         .containsOnly(entry("c1", new TextColumnCollation("utf8mb4_nopad_bin", "utf8mb4")));
   }
+
+  @Test
+  void isBinaryCollation_Utf8mb4NopadBin_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_nopad_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_Utf8mb4Bin_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
 }

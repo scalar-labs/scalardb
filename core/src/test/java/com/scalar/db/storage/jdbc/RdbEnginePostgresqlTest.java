@@ -16,6 +16,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class RdbEnginePostgresqlTest {
 
@@ -185,5 +188,80 @@ class RdbEnginePostgresqlTest {
             entry("c2", new TextColumnCollation("\"pg_catalog\".\"C\"", "UTF8", null)));
     verify(ps).setString(1, "ns");
     verify(ps).setString(2, "tbl");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"C", "POSIX", "ucs_basic", "pg_c_utf8"})
+  void isBinaryCollation_BinaryPgCatalogCollation_ShouldReturnTrue(String name) {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    TextColumnCollation collation =
+        new TextColumnCollation("\"pg_catalog\".\"" + name + "\"", "UTF8");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_CollationNamedCInAnotherSchema_ShouldReturnFalse() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    TextColumnCollation collation = new TextColumnCollation("\"app\".\"C\"", "UTF8");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "libc:C,true",
+    "libc:POSIX,true",
+    "builtin:C,true",
+    "builtin:C.UTF-8,true",
+    "libc:C.UTF-8,false",
+    "libc:en_US.UTF-8,false",
+    "icu:en-US,false"
+  })
+  void isBinaryCollation_DefaultCollation_ShouldFollowDatabaseCollation(
+      String databaseCollation, boolean expected) {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    TextColumnCollation collation = new TextColumnCollation("default", "UTF8", databaseCollation);
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  void isUtf8Charset_Utf8_ShouldReturnTrue() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    boolean actual = rdbEngine.isUtf8Charset(new TextColumnCollation("default", "UTF8"));
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isUtf8Charset_Latin1_ShouldReturnFalse() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    boolean actual = rdbEngine.isUtf8Charset(new TextColumnCollation("default", "LATIN1"));
+
+    // Assert
+    assertThat(actual).isFalse();
   }
 }

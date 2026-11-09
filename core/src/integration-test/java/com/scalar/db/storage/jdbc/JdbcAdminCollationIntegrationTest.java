@@ -21,13 +21,13 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
-@DisabledIf("isDb2OrSpanner")
 public class JdbcAdminCollationIntegrationTest {
   private static final String NAMESPACE = "collation_ns";
   private static final String TABLE = "collation_tbl";
@@ -54,6 +54,11 @@ public class JdbcAdminCollationIntegrationTest {
         || JdbcEnv.isSqlite()
         || JdbcEnv.isDb2()
         || JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
+  private static boolean isSqliteOrSpanner() {
+    return JdbcEnv.isSqlite() || JdbcEnv.isSpanner();
   }
 
   @BeforeEach
@@ -118,6 +123,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
+  @DisabledIf("isDb2OrSpanner")
   void createTable_TextColumns_ShouldUseBinaryCollation() throws Exception {
     // Arrange
     admin.createNamespace(NAMESPACE, true);
@@ -134,6 +140,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
+  @DisabledIf("isDb2OrSpanner")
   void createTable_InNamespaceWithCaseInsensitiveDefault_ShouldUseBinaryCollation()
       throws Exception {
     // Arrange
@@ -154,6 +161,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
+  @DisabledIf("isDb2OrSpanner")
   void createNamespace_SystemTables_ShouldUseBinaryCollation() throws Exception {
     // Arrange
     String metadataSchema = new JdbcConfig(new DatabaseConfig(properties)).getMetadataSchema();
@@ -174,6 +182,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
+  @DisabledIf("isDb2OrSpanner")
   void put_KeysDifferingOnlyByTrailingSpace_ShouldBeDistinct() throws Exception {
     // Arrange
     String clause = rdbEngine.getBinaryTextCollationClause();
@@ -208,6 +217,96 @@ public class JdbcAdminCollationIntegrationTest {
         List<Result> results = scanner.all();
         assertThat(results).hasSize(2);
       }
+    }
+  }
+
+  @Test
+  @DisabledIf("isSqliteOrSpanner")
+  void getTextColumnCollations_TableCreatedByAdmin_ShouldReportBinaryUtf8() throws Exception {
+    // Arrange
+    admin.createNamespace(NAMESPACE, true);
+    admin.createTable(NAMESPACE, TABLE, textTableMetadata(), true);
+
+    // Act
+    Map<String, TextColumnCollation> collations =
+        testUtils.withCatalogConnection(
+            connection -> rdbEngine.getTextColumnCollations(connection, NAMESPACE, TABLE));
+
+    // Assert
+    assertThat(collations.keySet())
+        .containsExactlyInAnyOrder(TEXT_PK, TEXT_CK, TEXT_INDEX, TEXT_PLAIN);
+    for (Map.Entry<String, TextColumnCollation> entry : collations.entrySet()) {
+      assertThat(rdbEngine.isBinaryCollation(entry.getValue())).as(entry.toString()).isTrue();
+      assertThat(rdbEngine.isUtf8Charset(entry.getValue())).as(entry.toString()).isTrue();
+    }
+  }
+
+  @Test
+  @DisabledIf("isSqliteOrSpanner")
+  void getTextColumnCollations_MixedCaseNames_ShouldFindColumns() throws Exception {
+    // Arrange
+    String namespace = "MixedCase";
+    String table = "MixedCase";
+    try {
+      admin.createNamespace(namespace, true);
+      admin.createTable(
+          namespace,
+          table,
+          TableMetadata.newBuilder().addColumn("Col", DataType.TEXT).addPartitionKey("Col").build(),
+          true);
+
+      // Act
+      Map<String, TextColumnCollation> collations =
+          testUtils.withCatalogConnection(
+              connection -> rdbEngine.getTextColumnCollations(connection, namespace, table));
+
+      // Assert
+      assertThat(collations).containsKey("Col");
+    } finally {
+      if (JdbcTestUtils.isOracle(rdbEngine)) {
+        if (testUtils.namespaceExists(namespace)) {
+          testUtils.executeSql("DROP USER " + rdbEngine.enclose(namespace) + " CASCADE");
+        }
+      } else if (JdbcTestUtils.isMysql(rdbEngine)) {
+        testUtils.executeSql("DROP DATABASE IF EXISTS `" + namespace + "`");
+      } else {
+        admin.dropTable(namespace, table, true);
+        admin.dropNamespace(namespace, true);
+      }
+    }
+  }
+
+  @Test
+  void getNonUtf8DatabaseEncoding_CiDatabase_ShouldReturnNull() throws Exception {
+    // Arrange Act
+    String encoding = testUtils.withCatalogConnection(rdbEngine::getNonUtf8DatabaseEncoding);
+
+    // Assert
+    assertThat(encoding).isNull();
+  }
+
+  @Test
+  void isBinaryCollation_PostgresqlColumnOnDefaultCollation_ShouldResolveDatabaseCollation()
+      throws Exception {
+    // Arrange
+    assumeTrue(JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcTestUtils.isSpanner(rdbEngine));
+    admin.createNamespace(NAMESPACE, true);
+    testUtils.executeSql(
+        "CREATE TABLE "
+            + rdbEngine.encloseFullTableName(NAMESPACE, TABLE)
+            + "(\"pk\" text PRIMARY KEY)");
+    try {
+      // Act
+      Map<String, TextColumnCollation> collations =
+          testUtils.withCatalogConnection(
+              connection -> rdbEngine.getTextColumnCollations(connection, NAMESPACE, TABLE));
+
+      // Assert
+      assertThat(collations.get("pk").getCollation()).isEqualTo("default");
+      assertThat(rdbEngine.isBinaryCollation(collations.get("pk"))).isTrue();
+    } finally {
+      // The table has no ScalarDB metadata, so the admin cannot drop it.
+      testUtils.dropTable(NAMESPACE, TABLE);
     }
   }
 
@@ -360,6 +459,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
+  @DisabledIf("isDb2OrSpanner")
   void createTable_OracleMaxStringSizeStandard_ShouldFailWithMaxStringSizeMessage()
       throws Exception {
     // Arrange
@@ -379,6 +479,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
+  @DisabledIf("isDb2OrSpanner")
   void repairTable_MaxStringSizeStandardAndTablesCreatedBeforeUpgrade_ShouldSucceed()
       throws Exception {
     // Arrange

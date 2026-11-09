@@ -66,6 +66,22 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    return true;
+  }
+
+  @Override
+  public boolean isUtf8Charset(TextColumnCollation collation) {
+    return true;
+  }
+
+  @Override
+  @Nullable
+  public String getNonUtf8DatabaseEncoding(Connection connection) {
+    return null;
+  }
+
+  @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {
       case INT:

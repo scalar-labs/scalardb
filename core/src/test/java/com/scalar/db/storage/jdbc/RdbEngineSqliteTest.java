@@ -146,4 +146,35 @@ class RdbEngineSqliteTest {
     // Assert
     assertThat(clause).isEqualTo("COLLATE BINARY");
   }
+
+  @Test
+  void getNonUtf8DatabaseEncoding_DefaultDatabase_ShouldReturnNull() throws SQLException {
+    // Arrange Act
+    String encoding = rdbEngine.getNonUtf8DatabaseEncoding(connection);
+
+    // Assert
+    assertThat(encoding).isNull();
+  }
+
+  @Test
+  void getNonUtf8DatabaseEncoding_Utf16Database_ShouldReturnEncoding()
+      throws SQLException, IOException {
+    // Arrange
+    File utf16File = File.createTempFile(getClass().getName(), ".db");
+    try (Connection utf16Connection =
+        DriverManager.getConnection("jdbc:sqlite:" + utf16File.getAbsolutePath())) {
+      try (Statement stmt = utf16Connection.createStatement()) {
+        stmt.execute("PRAGMA encoding = 'UTF-16le'");
+        stmt.execute("CREATE TABLE t (c TEXT)");
+      }
+
+      // Act
+      String encoding = rdbEngine.getNonUtf8DatabaseEncoding(utf16Connection);
+
+      // Assert
+      assertThat(encoding).isEqualTo("UTF-16le");
+    } finally {
+      assertTrue(utf16File.delete());
+    }
+  }
 }

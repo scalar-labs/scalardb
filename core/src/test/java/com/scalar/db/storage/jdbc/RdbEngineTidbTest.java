@@ -116,4 +116,38 @@ class RdbEngineTidbTest {
     assertThat(collations)
         .containsOnly(entry("c1", new TextColumnCollation("utf8mb4_bin", "utf8mb4")));
   }
+
+  @Test
+  void isBinaryCollation_Utf8mb4BinOnTidbWithoutNoPad_ShouldReturnTrue() {
+    // Arrange
+    RdbEngineTidb padEngine = new RdbEngineTidb(new JdbcConfig(new DatabaseConfig(props())));
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    boolean actual = padEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_Utf8mb4BinOnTidbWithNoPad_ShouldReturnFalse() {
+    // Arrange
+    RdbEngineTidb noPadEngine =
+        new RdbEngineTidb(new JdbcConfig(new DatabaseConfig(props())), "utf8mb4_0900_bin");
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    boolean actual = noPadEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  private static Properties props() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    return props;
+  }
 }

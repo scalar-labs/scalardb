@@ -19,11 +19,14 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -31,6 +34,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -421,6 +426,66 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       default:
         return null;
     }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    Map<String, String> settings = readDatabaseSettings(connection);
+    // DBCFG reports collate_info as "-" for a database without a UCA collation, which is the
+    // IDENTITY collating sequence of a database created with the default settings.
+    String collateInfo = settings.get("collate_info");
+    String collation = collateInfo == null || collateInfo.equals("-") ? "IDENTITY" : collateInfo;
+    String charset = settings.get("codeset");
+    String sql =
+        "SELECT COLNAME FROM SYSCAT.COLUMNS WHERE TABSCHEMA = ? AND TABNAME = ?"
+            + " AND TYPESCHEMA = 'SYSIBM'"
+            + " AND TYPENAME IN ('VARCHAR', 'CHARACTER', 'LONG VARCHAR', 'CLOB')"
+            + " AND CODEPAGE <> 0";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          collations.put(rs.getString(1), new TextColumnCollation(collation, charset));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  private static Map<String, String> readDatabaseSettings(Connection connection)
+      throws SQLException {
+    String sql =
+        "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'collate_info')";
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+      Map<String, String> settings = new HashMap<>();
+      while (rs.next()) {
+        settings.put(rs.getString(1), rs.getString(2));
+      }
+      return settings;
+    }
+  }
+
+  @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    return "IDENTITY".equals(collation.getCollation());
+  }
+
+  @Override
+  public boolean isUtf8Charset(TextColumnCollation collation) {
+    return "UTF-8".equalsIgnoreCase(collation.getCharset());
+  }
+
+  @Override
+  @Nullable
+  public String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+    String codeset = readDatabaseSettings(connection).get("codeset");
+    return codeset == null || "UTF-8".equalsIgnoreCase(codeset) ? null : codeset;
   }
 
   @Override

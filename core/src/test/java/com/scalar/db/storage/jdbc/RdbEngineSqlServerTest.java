@@ -129,4 +129,65 @@ class RdbEngineSqlServerTest {
     // Assert
     assertThat(clause).isEqualTo("COLLATE Latin1_General_100_BIN2_UTF8");
   }
+
+  @Test
+  void isBinaryCollation_Bin_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN", "CP1252");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isBinaryCollation_Bin2_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_Bin2", "CP1252");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isUtf8Charset_Utf8_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation =
+        new TextColumnCollation("Latin1_General_100_BIN2_UTF8", "UTF-8");
+
+    // Act
+    boolean actual = rdbEngine.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isUtf8Charset_CodePage_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN2", "CP1252");
+
+    // Act
+    boolean actual = rdbEngine.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void getCollationClause_ShouldReturnCollate() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Japanese_BIN2", "CP932");
+
+    // Act
+    String clause = rdbEngine.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE Japanese_BIN2");
+  }
 }

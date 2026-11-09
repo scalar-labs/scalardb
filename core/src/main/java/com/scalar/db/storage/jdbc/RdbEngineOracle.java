@@ -15,17 +15,21 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,6 +41,7 @@ import org.slf4j.LoggerFactory;
 class RdbEngineOracle extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
+  private static final String USING_NLS_COMP = "USING_NLS_COMP";
   private final String keyColumnSize;
   private final RdbEngineTimeTypeOracle timeTypeEngine;
 
@@ -439,6 +444,81 @@ class RdbEngineOracle extends AbstractRdbEngine {
   @Override
   public String getBinaryTextCollationClause() {
     return "COLLATE BINARY";
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    String charset = queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_CHARACTERSET");
+    String nCharset =
+        queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_NCHAR_CHARACTERSET");
+    String sessionNlsComp = queryNlsParameter(connection, "NLS_SESSION_PARAMETERS", "NLS_COMP");
+    // COLLATION is NULL when the database runs with COMPATIBLE below 12.2, which has no column
+    // collations and follows NLS_COMP.
+    String sql =
+        "SELECT COLUMN_NAME, DATA_TYPE, COLLATION FROM ALL_TAB_COLS"
+            + " WHERE OWNER = ? AND TABLE_NAME = ? AND HIDDEN_COLUMN = 'NO'"
+            + " AND DATA_TYPE IN ('VARCHAR2', 'CHAR', 'CLOB', 'NVARCHAR2', 'NCHAR', 'NCLOB')";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          String collation = rs.getString("COLLATION");
+          if (collation == null) {
+            collation = USING_NLS_COMP;
+          }
+          collations.put(
+              rs.getString("COLUMN_NAME"),
+              new TextColumnCollation(
+                  collation,
+                  rs.getString("DATA_TYPE").startsWith("N") ? nCharset : charset,
+                  collation.equals(USING_NLS_COMP) ? sessionNlsComp : null));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Nullable
+  private static String queryNlsParameter(Connection connection, String view, String parameter)
+      throws SQLException {
+    String sql = "SELECT VALUE FROM " + view + " WHERE PARAMETER = ?";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, parameter);
+      try (ResultSet rs = ps.executeQuery()) {
+        return rs.next() ? rs.getString(1) : null;
+      }
+    }
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    return "COLLATE " + collation.getCollation();
+  }
+
+  @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    String name = collation.getCollation();
+    if (name.equals(USING_NLS_COMP)) {
+      return "BINARY".equals(collation.getResolvedDefault());
+    }
+    return name.equals("BINARY");
+  }
+
+  @Override
+  public boolean isUtf8Charset(TextColumnCollation collation) {
+    return "AL32UTF8".equals(collation.getCharset());
+  }
+
+  @Override
+  @Nullable
+  public String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+    String charset = queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_CHARACTERSET");
+    return "AL32UTF8".equals(charset) ? null : charset;
   }
 
   @Override

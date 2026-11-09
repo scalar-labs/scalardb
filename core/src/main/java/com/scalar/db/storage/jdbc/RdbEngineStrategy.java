@@ -112,6 +112,21 @@ public interface RdbEngineStrategy {
     return "";
   }
 
+  /** Returns whether the collation compares and sorts by code point. */
+  default boolean isBinaryCollation(TextColumnCollation collation) {
+    return true;
+  }
+
+  default boolean isUtf8Charset(TextColumnCollation collation) {
+    return true;
+  }
+
+  /** Returns the database encoding when it is not UTF-8, or null. */
+  @Nullable
+  default String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+    return null;
+  }
+
   String computeBooleanValue(boolean value);
 
   String[] createSchemaSqls(String fullSchema);

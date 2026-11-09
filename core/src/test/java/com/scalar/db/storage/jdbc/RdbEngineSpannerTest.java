@@ -462,7 +462,7 @@ public class RdbEngineSpannerTest {
           + "}";
 
   @Test
-  void getBinaryTextCollationClause_ShouldReturnEmpty() {
+  void getBinaryTextCollationClause_ShouldBeEmpty() {
     // Arrange
     RdbEngineStrategy strategy = rdbEngine;
 
@@ -471,5 +471,46 @@ public class RdbEngineSpannerTest {
 
     // Assert
     assertThat(clause).isEqualTo("");
+  }
+
+  @Test
+  void isBinaryCollation_AnyCollation_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("default", "LATIN1");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isUtf8Charset_AnyCharset_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("default", "LATIN1");
+
+    // Act
+    boolean actual = rdbEngine.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void getTextColumnCollationsAndGetNonUtf8DatabaseEncoding_ShouldNotQueryTheDatabase()
+      throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+
+    // Act
+    Map<String, TextColumnCollation> collations =
+        rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
+    String encoding = rdbEngine.getNonUtf8DatabaseEncoding(connection);
+
+    // Assert
+    assertThat(collations).isEmpty();
+    assertThat(encoding).isNull();
+    verifyNoInteractions(connection);
   }
 }

@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
@@ -15,10 +16,12 @@ import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -28,6 +31,14 @@ import org.slf4j.LoggerFactory;
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
   protected static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
+  private static final Set<String> BINARY_COLLATIONS =
+      ImmutableSet.of(
+          "\"pg_catalog\".\"C\"",
+          "\"pg_catalog\".\"POSIX\"",
+          "\"pg_catalog\".\"ucs_basic\"",
+          "\"pg_catalog\".\"pg_c_utf8\"");
+  private static final Set<String> BINARY_DATABASE_COLLATIONS =
+      ImmutableSet.of("libc:C", "libc:POSIX", "builtin:C", "builtin:C.UTF-8");
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
 
   public RdbEnginePostgresql() {
@@ -375,6 +386,11 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     }
   }
 
+  @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE \"C\"";
+  }
+
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
   public Map<String, TextColumnCollation> getTextColumnCollations(
@@ -423,8 +439,33 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String getBinaryTextCollationClause() {
-    return "COLLATE \"C\"";
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    String name = collation.getCollation();
+    if (name.equals("default")) {
+      return BINARY_DATABASE_COLLATIONS.contains(collation.getResolvedDefault());
+    }
+    return BINARY_COLLATIONS.contains(name);
+  }
+
+  @Override
+  public boolean isUtf8Charset(TextColumnCollation collation) {
+    return "UTF8".equals(collation.getCharset());
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  @Nullable
+  public String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+    String sql =
+        "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = current_database()";
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+      if (rs.next()) {
+        String encoding = rs.getString(1);
+        return "UTF8".equals(encoding) ? null : encoding;
+      }
+      return null;
+    }
   }
 
   @Override

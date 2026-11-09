@@ -296,4 +296,89 @@ class RdbEngineOracleTest {
     // Assert
     assertThat(actual).isFalse();
   }
+
+  @Test
+  public void isUtf8Charset_Al32utf8_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL32UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isUtf8Charset_Utf8Cesu_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_Binary_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL32UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isBinaryCollation_BinaryCi_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY_CI", "AL32UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_UsingNlsCompWithBinarySession_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "BINARY");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isBinaryCollation_UsingNlsCompWithLinguisticSession_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation =
+        new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "LINGUISTIC");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void getCollationClause_ShouldReturnCollate() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY_CI", "AL32UTF8");
+
+    // Act
+    String clause = rdbEngineOracle.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE BINARY_CI");
+  }
 }

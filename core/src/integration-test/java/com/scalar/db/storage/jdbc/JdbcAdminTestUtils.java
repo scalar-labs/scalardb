@@ -347,6 +347,11 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     rs -> rs.next() ? rs.getString(1) : null));
   }
 
+  public <T> T withCatalogConnection(ThrowableFunction<Connection, T, SQLException> function)
+      throws SQLException {
+    return withConnection(dataSource, requiresExplicitCommit, function);
+  }
+
   @Override
   public void close() throws SQLException {
     dataSource.close();
