@@ -149,6 +149,8 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
       if (admin.tableExists(namespace, virtualTable)) {
         admin.dropTable(namespace, virtualTable);
       }
+      // The base class cleanup fails after importTable_ShouldWorkProperly, whose test data it keeps
+      admin.dropNamespace(namespace, true);
     }
   }
 
