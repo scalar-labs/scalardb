@@ -242,39 +242,40 @@ public class JdbcAdminImportTestUtils {
   }
 
   /**
-   * Creates a table with a BIGINT column {@code col} and a TEXT primary key {@code pk} that carries
-   * the returned non-binary collation.
-   *
-   * @return the collation name the catalog reports for {@code pk}, or null when the engine has no
-   *     per-column collation
+   * Returns a non-binary collation that a TEXT primary key can carry, as the catalog reports it, or
+   * null when the engine has no per-column collation.
    */
   @Nullable
-  public String createTableWithNonBinaryTextKey(String namespace, String table)
-      throws SQLException {
-    String collation;
-    String keyDefinition;
+  public String getNonBinaryTextKeyCollation() {
     if (JdbcTestUtils.isTidb(rdbEngine)) {
-      collation = "utf8mb4_general_ci";
-      keyDefinition = "VARCHAR(64) CHARACTER SET utf8mb4 COLLATE " + collation;
+      return "utf8mb4_general_ci";
     } else if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
-      collation =
-          JdbcTestUtils.isMysql(rdbEngine)
-                  && rdbEngine.getBinaryTextCollationClause().endsWith("utf8mb4_0900_bin")
-              ? "utf8mb4_0900_ai_ci"
-              : "utf8mb4_unicode_ci";
+      return JdbcTestUtils.isMysql(rdbEngine)
+              && rdbEngine.getBinaryTextCollationClause().endsWith("utf8mb4_0900_bin")
+          ? "utf8mb4_0900_ai_ci"
+          : "utf8mb4_unicode_ci";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return "und-x-icu";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return "BINARY_CI";
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return "Latin1_General_100_CI_AS_SC_UTF8";
+    }
+    return null;
+  }
+
+  /** Creates a table with a BIGINT column {@code col} and a TEXT primary key {@code pk}. */
+  public void createTableWithTextKey(String namespace, String table, String collation)
+      throws SQLException {
+    String keyDefinition;
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
       keyDefinition = "VARCHAR(64) CHARACTER SET utf8mb4 COLLATE " + collation;
     } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
-      collation = "und-x-icu";
       keyDefinition = "VARCHAR(64) COLLATE \"" + collation + "\"";
     } else if (JdbcTestUtils.isOracle(rdbEngine)) {
-      collation = "BINARY_CI";
       keyDefinition = "VARCHAR2(64) COLLATE " + collation;
-    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
-      collation = "Latin1_General_100_CI_AS_SC_UTF8";
-      keyDefinition = "VARCHAR(64) COLLATE " + collation;
     } else {
-      collation = null;
-      keyDefinition = "VARCHAR(64)";
+      keyDefinition = "VARCHAR(64) COLLATE " + collation;
     }
     execute(rdbEngine.createSchemaIfNotExistsSqls(namespace));
     execute(
@@ -288,7 +289,6 @@ public class JdbcAdminImportTestUtils {
             + rdbEngine.enclose("col")
             + (JdbcTestUtils.isOracle(rdbEngine) ? " NUMBER(18)" : " BIGINT")
             + ")");
-    return collation;
   }
 
   public void execute(String[] sqls) throws SQLException {

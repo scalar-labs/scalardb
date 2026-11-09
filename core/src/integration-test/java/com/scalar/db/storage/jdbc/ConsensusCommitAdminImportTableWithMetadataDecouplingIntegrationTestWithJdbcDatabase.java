@@ -31,6 +31,8 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
           ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
               .class);
 
+  private static final int MAX_INSERT_ATTEMPTS = 3;
+
   private JdbcAdminImportTestUtils testUtils;
 
   @Override
@@ -106,39 +108,36 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
       throws Exception {
     // Arrange
     String table = "non_binary_key_tbl";
-    String importedCollation = testUtils.createTableWithNonBinaryTextKey(namespace, table);
+    String importedCollation = testUtils.getNonBinaryTextKeyCollation();
     assumeTrue(importedCollation != null, "The engine has no per-column collation");
+    testUtils.createTableWithTextKey(namespace, table, importedCollation);
     JdbcAdminTestUtils adminTestUtils = new JdbcAdminTestUtils(getProps(getTestName()));
     String virtualTable = getImportedTableName(table);
     try {
       // Act
       admin.importTable(namespace, table, getCreationOptions());
-      Insert insert =
+      insertWithRetry(
           Insert.newBuilder()
               .namespace(namespace)
               .table(virtualTable)
               .partitionKey(Key.ofText("pk", "k1"))
               .bigIntValue("col", 7L)
-              .build();
-      while (true) {
-        DistributedTransaction tx = manager.start();
-        try {
-          tx.insert(insert);
-          tx.commit();
-          break;
-        } catch (CommitConflictException e) {
-          tx.abort();
-        }
-      }
+              .build());
+      Optional<Result> result;
       DistributedTransaction tx = manager.start();
-      Optional<Result> result =
-          tx.get(
-              Get.newBuilder()
-                  .namespace(namespace)
-                  .table(virtualTable)
-                  .partitionKey(Key.ofText("pk", "k1"))
-                  .build());
-      tx.commit();
+      try {
+        result =
+            tx.get(
+                Get.newBuilder()
+                    .namespace(namespace)
+                    .table(virtualTable)
+                    .partitionKey(Key.ofText("pk", "k1"))
+                    .build());
+        tx.commit();
+      } catch (Exception e) {
+        tx.abort();
+        throw e;
+      }
 
       // Assert
       assertThat(result).isPresent();
@@ -149,6 +148,27 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
       adminTestUtils.close();
       if (admin.tableExists(namespace, virtualTable)) {
         admin.dropTable(namespace, virtualTable);
+      }
+    }
+  }
+
+  private void insertWithRetry(Insert insert) throws Exception {
+    for (int attempt = 1; ; attempt++) {
+      DistributedTransaction tx = manager.start();
+      boolean committed = false;
+      try {
+        tx.insert(insert);
+        tx.commit();
+        committed = true;
+        return;
+      } catch (CommitConflictException e) {
+        if (attempt >= MAX_INSERT_ATTEMPTS) {
+          throw e;
+        }
+      } finally {
+        if (!committed) {
+          tx.abort();
+        }
       }
     }
   }
