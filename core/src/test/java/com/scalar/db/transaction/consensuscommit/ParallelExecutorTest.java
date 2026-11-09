@@ -611,12 +611,14 @@ public class ParallelExecutorTest {
     when(config.getParallelBatchGetMaxConcurrencyPerBatch()).thenReturn(3);
     ExecutorService busyExecutorService = spy(Executors.newFixedThreadPool(1));
     ParallelExecutor executor = new ParallelExecutor(config, busyExecutorService);
-    CountDownLatch blocker = new CountDownLatch(1);
-    busyExecutorService.execute(() -> Uninterruptibles.awaitUninterruptibly(blocker));
     doCallRealMethod()
         .doThrow(new RejectedExecutionException())
         .when(busyExecutorService)
         .submit(ArgumentMatchers.<Callable<Void>>any());
+    // Stub the spy before its pool starts a thread, since the pool thread invokes the spy and
+    // Mockito can't stub a mock while another thread invokes it
+    CountDownLatch blocker = new CountDownLatch(1);
+    busyExecutorService.execute(() -> Uninterruptibles.awaitUninterruptibly(blocker));
     AtomicInteger completed = new AtomicInteger();
     ParallelExecutorTask countingTask = completed::incrementAndGet;
 

@@ -1,6 +1,6 @@
 # You can see sha256 hash in the following page:
 # - https://hub.docker.com/_/eclipse-temurin/tags
-FROM eclipse-temurin:21.0.12.1_1-jre-resolute@sha256:c010ef3a101af9fa953f2a844238292c1772ae224ab65f0afdd3997c86b05f90
+FROM eclipse-temurin:21.0.13_9-jre-resolute@sha256:f8622d0220c9e218d7a33f24a7b9e1ad6bc726085f8b0ae74e1adf85f67f05c4
 
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
@@ -10,20 +10,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  && groupadd -r --gid 201 scalardb \
  && useradd -r --uid 201 -g scalardb -s /usr/sbin/nologin scalardb
 
-# Temporary fix for https://emudhra.we-have-a-problem.com/
-# We can remove this RUN after we update to the fixed version of Java.
-RUN keytool -delete -cacerts -storepass changeit -alias "cn_emsign_ecc_root_ca__g3,o_emudhra_technologies_limited,ou_emsign_pki,c_in [jdk]" \
- && keytool -delete -cacerts -storepass changeit -alias "cn_emsign_root_ca__g1,o_emudhra_technologies_limited,ou_emsign_pki,c_in [jdk]" \
- && keytool -delete -cacerts -storepass changeit -alias "cn_emsign_ecc_root_ca__c3,o_emudhra_inc,ou_emsign_pki,c_us [jdk]" \
- && keytool -delete -cacerts -storepass changeit -alias "cn_emsign_root_ca__c1,o_emudhra_inc,ou_emsign_pki,c_us [jdk]"
-
 COPY scalardb-data-loader-*.jar /app.jar
-
-# Temporary fix for https://emudhra.we-have-a-problem.com/
-# Users can run `java CheckCerts` in the root directory (the default working
-# directory) to confirm that the compromised CA certificates are not trusted.
-# We can remove this COPY after we update to the fixed version of Java.
-COPY CheckCerts.class CheckCerts.java /
 
 USER 201:201
 
