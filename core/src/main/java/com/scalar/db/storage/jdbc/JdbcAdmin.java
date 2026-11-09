@@ -237,9 +237,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private Map<String, String> getKeyCollationClauses(
-      Connection connection, String namespace, TableMetadata metadata, Map<String, String> options)
+      Connection connection,
+      String namespace,
+      TableMetadata metadata,
+      @Nullable Map<String, String> options)
       throws SQLException {
-    String sourceTable = options.get(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE);
+    String sourceTable =
+        options == null ? null : options.get(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE);
     if (sourceTable == null || rdbEngine.getBinaryTextCollationClause().isEmpty()) {
       return Collections.emptyMap();
     }

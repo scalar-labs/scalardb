@@ -1723,6 +1723,25 @@ public class JdbcAdminTest {
     verify(rdbEngineStrategy, never()).getTextColumnCollations(any(), anyString(), anyString());
   }
 
+  @Test
+  public void createTable_WithNullOptions_ShouldCreateTable()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata = textTableMetadata();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+
+    // Act
+    adminSpy.createTable("ns", "tbl", metadata, null);
+
+    // Assert
+    verify(adminSpy)
+        .createTableInternal(connection, "ns", "tbl", metadata, false, Collections.emptyMap());
+  }
+
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void repairTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(RdbEngine rdbEngine)
