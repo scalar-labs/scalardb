@@ -6,6 +6,7 @@ import com.google.errorprone.annotations.concurrent.LazyInit;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
@@ -63,6 +64,7 @@ public class CommitHandler {
       DistributedStorage storage,
       CoordinatorStateAccessor coordinator,
       TransactionTableMetadataManager tableMetadataManager,
+      VirtualTableInfoManager virtualTableInfoManager,
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
@@ -75,6 +77,7 @@ public class CommitHandler {
         new ParticipantCommitHandler(
             storage,
             tableMetadataManager,
+            virtualTableInfoManager,
             parallelExecutor,
             mutationsGrouper,
             onePhaseCommitEnabled);
