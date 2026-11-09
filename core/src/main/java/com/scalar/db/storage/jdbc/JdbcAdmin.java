@@ -256,7 +256,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         ", "
             + rdbEngine.createTableInternalPrimaryKeyClause(
                 hasDescClusteringOrder(metadata), metadata);
-    createTable(connection, createTableStatement, ifNotExists);
+    createTable(
+        connection,
+        rdbEngine,
+        createTableStatement,
+        ifNotExists,
+        schema,
+        table,
+        requiresExplicitCommit);
     createTableInternalSqlsAfterCreateTable(connection, schema, table, metadata, ifNotExists);
     createIndex(connection, schema, table, metadata, ifNotExists);
   }
@@ -1607,7 +1614,19 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, rdbEngine, sql, requiresExplicitCommit);
   }
 
-  private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
+  /**
+   * Creates a table. With {@code ifNotExists}, an already existing table is not an error. That
+   * includes Oracle rejecting the column collation of a table that exists, which happens before
+   * Oracle checks for the duplicate name when MAX_STRING_SIZE is STANDARD.
+   */
+  static void createTable(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      String createTableStatement,
+      boolean ifNotExists,
+      String schema,
+      String table,
+      boolean requiresExplicitCommit)
       throws SQLException {
     String stmt = createTableStatement;
     if (ifNotExists) {
@@ -1616,10 +1635,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
+      if (!ifNotExists) {
         throw e;
       }
+      // Suppress the exception thrown when the table already exists
+      if (rdbEngine.isDuplicateTableError(e)) {
+        return;
+      }
+      if (rdbEngine.isExtendedMaxStringSizeRequiredError(e)
+          && internalTableExists(connection, rdbEngine, schema, table, requiresExplicitCommit)) {
+        return;
+      }
+      throw e;
     }
   }
 
@@ -1723,15 +1750,26 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Statement stmt = connection.createStatement()) {
-      executeWithConflictRetry(
-          connection,
-          rdbEngine,
-          requiresExplicitCommit,
-          sql,
-          () -> {
-            stmt.execute(sql);
-            return null;
-          });
+      try {
+        executeWithConflictRetry(
+            connection,
+            rdbEngine,
+            requiresExplicitCommit,
+            sql,
+            () -> {
+              stmt.execute(sql);
+              return null;
+            });
+      } catch (SQLException e) {
+        if (rdbEngine.isExtendedMaxStringSizeRequiredError(e)) {
+          throw new SQLException(
+              CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage(),
+              e.getSQLState(),
+              e.getErrorCode(),
+              e);
+        }
+        throw e;
+      }
 
       // Outside the retry region on purpose: the handler runs after the commit has succeeded, so an
       // exception raised here must never trigger a re-execution of an already committed statement.

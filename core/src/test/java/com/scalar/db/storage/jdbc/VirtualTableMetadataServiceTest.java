@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
+import com.scalar.db.common.CoreError;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -474,5 +475,57 @@ public class VirtualTableMetadataServiceTest {
     verify(connection).prepareStatement(checkTableExistsSql);
     verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
     verify(checkPreparedStatement).setString(2, "virtual_tables");
+  }
+
+  @Test
+  public void
+      createVirtualTablesTableIfNotExists_OracleRejectsCollationWithOra43929AndTableExists_ShouldNotThrow()
+          throws Exception {
+    // Arrange
+    RdbEngineStrategy oracle = new RdbEngineOracle();
+    VirtualTableMetadataService oracleService =
+        new VirtualTableMetadataService(METADATA_SCHEMA, oracle, false);
+    mockOracleRejectingCreateTable(true);
+
+    // Act
+    Throwable thrown =
+        org.assertj.core.api.Assertions.catchThrowable(
+            () -> oracleService.createVirtualTablesTableIfNotExists(connection));
+
+    // Assert
+    assertThat(thrown).isNull();
+  }
+
+  @Test
+  public void
+      createVirtualTablesTableIfNotExists_OracleRejectsCollationWithOra43929AndTableMissing_ShouldThrowWithMaxStringSizeMessage()
+          throws Exception {
+    // Arrange
+    RdbEngineStrategy oracle = new RdbEngineOracle();
+    VirtualTableMetadataService oracleService =
+        new VirtualTableMetadataService(METADATA_SCHEMA, oracle, false);
+    mockOracleRejectingCreateTable(false);
+
+    // Act
+    Throwable thrown =
+        org.assertj.core.api.Assertions.catchThrowable(
+            () -> oracleService.createVirtualTablesTableIfNotExists(connection));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+  }
+
+  private void mockOracleRejectingCreateTable(boolean tableExists) throws SQLException {
+    Statement createStatement = mock(Statement.class);
+    when(createStatement.execute(anyString()))
+        .thenThrow(new SQLException("ORA-43929", "99999", 43929));
+    when(connection.createStatement()).thenReturn(createStatement);
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.next()).thenReturn(tableExists);
+    PreparedStatement existsStatement = mock(PreparedStatement.class);
+    when(existsStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(anyString())).thenReturn(existsStatement);
   }
 }

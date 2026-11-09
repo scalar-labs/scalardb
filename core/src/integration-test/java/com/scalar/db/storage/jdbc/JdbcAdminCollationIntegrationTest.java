@@ -11,10 +11,13 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -71,6 +74,14 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   private void cleanUp() throws Exception {
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
+      String schema = new JdbcConfig(new DatabaseConfig(properties)).getMetadataSchema();
+      for (String user : Arrays.asList(NAMESPACE, schema)) {
+        if (testUtils.namespaceExists(user)) {
+          testUtils.executeSql("DROP USER " + rdbEngine.enclose(user) + " CASCADE");
+        }
+      }
+    }
     if (testUtils.tableExists(NAMESPACE, TABLE)) {
       admin.dropTable(NAMESPACE, TABLE);
     }
@@ -288,5 +299,98 @@ public class JdbcAdminCollationIntegrationTest {
     assertThat(thrown).isNull();
     assertThat(testUtils.getColumnCollation(NAMESPACE, TABLE, "renamed"))
         .isEqualTo("utf8mb4_general_ci");
+  }
+
+  private boolean isOracleWithStandardMaxStringSize() throws Exception {
+    if (!JdbcTestUtils.isOracle(rdbEngine)) {
+      return false;
+    }
+    createOracleSchemaIfMissing(NAMESPACE);
+    String probe = rdbEngine.encloseFullTableName(NAMESPACE, "probe");
+    try {
+      testUtils.executeSql(
+          "CREATE TABLE "
+              + probe
+              + "(\"c\" VARCHAR2(10) "
+              + rdbEngine.getBinaryTextCollationClause()
+              + ")");
+      testUtils.executeSql("DROP TABLE " + probe);
+      return false;
+    } catch (SQLException e) {
+      return e.getErrorCode() == 43929;
+    }
+  }
+
+  private void createOracleSchemaIfMissing(String schema) throws Exception {
+    if (!testUtils.namespaceExists(schema)) {
+      for (String sql : rdbEngine.createSchemaSqls(schema)) {
+        testUtils.executeSql(sql);
+      }
+    }
+  }
+
+  // Creates the system tables and one user table with DDL that has no column collation.
+  private void createOracleTablesWithoutCollation() throws Exception {
+    String metadataSchema = new JdbcConfig(new DatabaseConfig(properties)).getMetadataSchema();
+    createOracleSchemaIfMissing(metadataSchema);
+    createOracleSchemaIfMissing(NAMESPACE);
+    testUtils.executeSql(
+        "CREATE TABLE \""
+            + metadataSchema
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),"
+            + "\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),"
+            + "\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))");
+    testUtils.executeSql(
+        "CREATE TABLE \""
+            + metadataSchema
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))");
+    for (String namespace : Arrays.asList(metadataSchema, NAMESPACE)) {
+      testUtils.executeSql(
+          "INSERT INTO \"" + metadataSchema + "\".\"namespaces\" VALUES ('" + namespace + "')");
+    }
+    testUtils.executeSql(
+        "CREATE TABLE \""
+            + NAMESPACE
+            + "\".\""
+            + TABLE
+            + "\"(\"pk\" VARCHAR2(128),\"ck\" VARCHAR2(128),\"idx\" VARCHAR2(128),"
+            + "\"plain\" VARCHAR2(4000), PRIMARY KEY (\"pk\",\"ck\")) ROWDEPENDENCIES");
+  }
+
+  @Test
+  void createTable_OracleMaxStringSizeStandard_ShouldFailWithMaxStringSizeMessage()
+      throws Exception {
+    // Arrange
+    assumeTrue(isOracleWithStandardMaxStringSize());
+    createOracleTablesWithoutCollation();
+    testUtils.executeSql("DROP TABLE \"" + NAMESPACE + "\".\"" + TABLE + "\"");
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> admin.createTable(NAMESPACE, TABLE, textTableMetadata(), true));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(ExecutionException.class)
+        .hasStackTraceContaining(
+            CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+  }
+
+  @Test
+  void repairTable_MaxStringSizeStandardAndTablesCreatedBeforeUpgrade_ShouldSucceed()
+      throws Exception {
+    // Arrange
+    assumeTrue(isOracleWithStandardMaxStringSize());
+    createOracleTablesWithoutCollation();
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () -> admin.repairTable(NAMESPACE, TABLE, textTableMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isNull();
   }
 }

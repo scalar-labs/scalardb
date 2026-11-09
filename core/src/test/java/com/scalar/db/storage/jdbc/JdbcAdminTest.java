@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -7271,5 +7272,137 @@ public class JdbcAdminTest {
         this.namespaceName = namespaceName;
       }
     }
+  }
+
+  private static final String ORACLE_MAX_STRING_SIZE_MESSAGE =
+      CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage();
+
+  private void mockOracleRejectingCreateTableWithOra43929(boolean tableExists) throws SQLException {
+    Statement statement = mock(Statement.class);
+    when(statement.execute(startsWith("CREATE TABLE")))
+        .thenThrow(new SQLException("ORA-43929", "99999", 43929));
+    when(connection.createStatement()).thenReturn(statement);
+    ResultSet existsResultSet = mock(ResultSet.class);
+    when(existsResultSet.next()).thenReturn(tableExists);
+    PreparedStatement existsStatement = mock(PreparedStatement.class);
+    when(existsStatement.executeQuery()).thenReturn(existsResultSet);
+    when(connection.prepareStatement(anyString())).thenReturn(existsStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+  }
+
+  private TableMetadata oracleCollationTestMetadata() {
+    return TableMetadata.newBuilder()
+        .addPartitionKey("c1")
+        .addColumn("c1", DataType.TEXT)
+        .addColumn("c2", DataType.INT)
+        .build();
+  }
+
+  @Test
+  public void createTable_OracleRejectsCollationWithOra43929_ShouldThrowWithMaxStringSizeMessage()
+      throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.createTable(
+                    "my_ns", "foo_table", oracleCollationTestMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(ExecutionException.class);
+    assertThat(thrown.getCause())
+        .isInstanceOfSatisfying(
+            SQLException.class,
+            cause -> {
+              assertThat(cause.getMessage()).isEqualTo(ORACLE_MAX_STRING_SIZE_MESSAGE);
+              assertThat(cause.getErrorCode()).isEqualTo(43929);
+            });
+  }
+
+  @Test
+  public void repairTable_OracleRejectsCollationWithOra43929AndTableExists_ShouldNotThrow()
+      throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.repairTable(
+                    "my_ns", "foo_table", oracleCollationTestMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isNull();
+  }
+
+  @Test
+  public void
+      repairTable_OracleRejectsCollationWithOra43929AndTableMissing_ShouldThrowWithMaxStringSizeMessage()
+          throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(false);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.repairTable(
+                    "my_ns", "foo_table", oracleCollationTestMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(ExecutionException.class);
+    assertThat(thrown.getCause())
+        .isInstanceOfSatisfying(
+            SQLException.class,
+            cause -> assertThat(cause.getMessage()).isEqualTo(ORACLE_MAX_STRING_SIZE_MESSAGE));
+  }
+
+  @Test
+  public void createMetadataTables_OracleRejectsCollationWithOra43929AndTablesExist_ShouldNotThrow()
+      throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () -> {
+              admin.createTableMetadataTableIfNotExists(connection);
+              admin.createNamespacesTableIfNotExists(connection);
+            });
+
+    // Assert
+    assertThat(thrown).isNull();
+  }
+
+  @Test
+  public void
+      createMetadataTables_OracleRejectsCollationWithOra43929AndTableMissing_ShouldThrowWithMaxStringSizeMessage()
+          throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(false);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable metadataThrown =
+        catchThrowable(() -> admin.createTableMetadataTableIfNotExists(connection));
+    Throwable namespacesThrown =
+        catchThrowable(() -> admin.createNamespacesTableIfNotExists(connection));
+
+    // Assert
+    assertThat(metadataThrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(ORACLE_MAX_STRING_SIZE_MESSAGE);
+    assertThat(namespacesThrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(ORACLE_MAX_STRING_SIZE_MESSAGE);
   }
 }

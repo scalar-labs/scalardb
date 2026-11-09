@@ -272,4 +272,28 @@ class RdbEngineOracleTest {
     // Assert
     assertThat(clause).isEqualTo("COLLATE BINARY");
   }
+
+  @Test
+  public void isExtendedMaxStringSizeRequiredError_Ora43929_ShouldReturnTrue() {
+    // Arrange
+    SQLException e = new SQLException("ORA-43929", "99999", 43929);
+
+    // Act
+    boolean actual = rdbEngineOracle.isExtendedMaxStringSizeRequiredError(e);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isExtendedMaxStringSizeRequiredError_OtherCode_ShouldReturnFalse() {
+    // Arrange
+    SQLException e = new SQLException("ORA-00942", "42000", 942);
+
+    // Act
+    boolean actual = rdbEngineOracle.isExtendedMaxStringSizeRequiredError(e);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
 }

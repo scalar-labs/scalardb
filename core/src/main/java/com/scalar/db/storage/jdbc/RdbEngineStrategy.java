@@ -38,6 +38,10 @@ public interface RdbEngineStrategy {
 
   boolean isDuplicateTableError(SQLException e);
 
+  default boolean isExtendedMaxStringSizeRequiredError(SQLException e) {
+    return false;
+  }
+
   boolean isDuplicateKeyError(SQLException e);
 
   boolean isConflict(SQLException e);

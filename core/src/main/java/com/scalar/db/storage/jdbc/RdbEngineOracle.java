@@ -214,6 +214,12 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean isExtendedMaxStringSizeRequiredError(SQLException e) {
+    // ORA-43929: Collation cannot be used in the current MAX_STRING_SIZE setting
+    return e.getErrorCode() == 43929;
+  }
+
+  @Override
   public boolean isDuplicateKeyError(SQLException e) {
     if (e.getSQLState() == null) {
       return false;
