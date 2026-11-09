@@ -403,6 +403,10 @@ public interface RdbEngineStrategy {
    * isolation level that guarantees a consistent snapshot across all source tables involved in a
    * virtual table read.
    *
+   * <p>A virtual table is read with a single SELECT statement on the view that joins its source
+   * tables, so the returned level only has to make that one statement read all source tables as of
+   * the same point in time.
+   *
    * @return the minimum isolation level required for consistent virtual table reads
    */
   int getMinimumIsolationLevelForConsistentVirtualTableRead();
