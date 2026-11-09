@@ -5491,6 +5491,9 @@ public class JdbcAdminTest {
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
     RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -5583,7 +5586,10 @@ public class JdbcAdminTest {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -7474,5 +7480,137 @@ public class JdbcAdminTest {
     assertThat(namespacesThrown)
         .isInstanceOf(SQLException.class)
         .hasMessage(ORACLE_MAX_STRING_SIZE_MESSAGE);
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_AllBinaryUtf8_ShouldReturnEmpty() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_MysqlPadSpaceBin_ShouldReturnCollationWarning() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("utf8mb4_bin", "utf8mb4"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation is not binary, so the database can order and compare their values differently from ScalarDB: pk (utf8mb4_bin)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_OracleNclob_ShouldReturnCharsetWarning() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("BINARY", "AL16UTF16"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineOracle());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose character set is not UTF-8, so they cannot store every character ScalarDB accepts: pk (AL16UTF16)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_NonTextColumnInMap_ShouldIgnoreIt() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("blob_col", DataType.BLOB)
+            .build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of(
+            "pk",
+            new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4"),
+            "blob_col",
+            new TextColumnCollation("latin1_swedish_ci", "latin1"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void importTable_CollationReadFails_ShouldStillImport()
+      throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
+    when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doThrow(new SQLException("catalog failure"))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    doNothing().when(adminSpy).createMetadataSchemaIfNotExists(any());
+    doNothing().when(adminSpy).createNamespacesTableIfNotExists(any());
+    doNothing().when(adminSpy).upsertIntoNamespacesTable(any(), anyString());
+    doNothing()
+        .when(adminSpy)
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of()));
+
+    // Assert
+    assertThat(thrown).isNull();
+    verify(adminSpy)
+        .addTableMetadata(
+            eq(connection),
+            eq(NAMESPACE),
+            eq(TABLE),
+            any(TableMetadata.class),
+            eq(true),
+            eq(false));
   }
 }

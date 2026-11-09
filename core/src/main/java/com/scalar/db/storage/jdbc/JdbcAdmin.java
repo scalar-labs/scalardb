@@ -605,7 +605,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               builder.addColumn(columnName, dataType);
             }
 
-            return builder.build();
+            TableMetadata tableMetadata = builder.build();
+            warnAboutImportedTextColumns(connection, namespace, table, tableMetadata);
+            return tableMetadata;
           });
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -614,6 +616,55 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               + " table failed",
           e);
     }
+  }
+
+  private void warnAboutImportedTextColumns(
+      Connection connection, String namespace, String table, TableMetadata tableMetadata) {
+    String fullTableName = getFullTableName(namespace, table);
+    try {
+      Map<String, TextColumnCollation> collations =
+          rdbEngine.getTextColumnCollations(connection, namespace, table);
+      buildImportTextColumnWarnings(fullTableName, tableMetadata, collations, rdbEngine)
+          .forEach(logger::warn);
+    } catch (SQLException e) {
+      logger.debug("Reading the text column collations of the {} table failed", fullTableName, e);
+    }
+  }
+
+  @VisibleForTesting
+  static List<String> buildImportTextColumnWarnings(
+      String fullTableName,
+      TableMetadata metadata,
+      Map<String, TextColumnCollation> collations,
+      RdbEngineStrategy rdbEngine) {
+    List<String> nonBinary = new ArrayList<>();
+    List<String> nonUtf8 = new ArrayList<>();
+    for (Map.Entry<String, TextColumnCollation> entry : collations.entrySet()) {
+      if (metadata.getColumnDataType(entry.getKey()) != DataType.TEXT) {
+        continue;
+      }
+      TextColumnCollation collation = entry.getValue();
+      if (!rdbEngine.isBinaryCollation(collation)) {
+        nonBinary.add(entry.getKey() + " (" + collation.getCollation() + ")");
+      }
+      if (!rdbEngine.isUtf8Charset(collation)) {
+        nonUtf8.add(entry.getKey() + " (" + collation.getCharset() + ")");
+      }
+    }
+    List<String> warnings = new ArrayList<>();
+    if (!nonBinary.isEmpty()) {
+      warnings.add(
+          String.format(
+              "The %s table has TEXT columns whose collation is not binary, so the database can order and compare their values differently from ScalarDB: %s",
+              fullTableName, String.join(", ", nonBinary)));
+    }
+    if (!nonUtf8.isEmpty()) {
+      warnings.add(
+          String.format(
+              "The %s table has TEXT columns whose character set is not UTF-8, so they cannot store every character ScalarDB accepts: %s",
+              fullTableName, String.join(", ", nonUtf8)));
+    }
+    return warnings;
   }
 
   @Override

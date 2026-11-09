@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase;
 import com.scalar.db.api.TableMetadata;
@@ -122,6 +123,37 @@ public class JdbcAdminImportTableIntegrationTest
   @DisabledIf("isSqlite")
   public void importTable_ShouldWorkProperly() throws Exception {
     super.importTable_ShouldWorkProperly();
+  }
+
+  @Test
+  @DisabledIf("isImportOfNonBinaryTextColumnNotTestable")
+  public void importTable_TextColumnWithNonBinaryCollation_ShouldSucceed() throws Exception {
+    // Arrange
+    String table = "non_binary_text_table";
+    testUtils.createTableWithNonBinaryTextColumn(getNamespace(), table);
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("c", DataType.TEXT)
+            .addPartitionKey("pk")
+            .build();
+
+    try {
+      // Act
+      Throwable thrown =
+          catchThrowable(() -> admin.importTable(getNamespace(), table, Collections.emptyMap()));
+
+      // Assert
+      assertThat(thrown).isNull();
+      assertThat(admin.getTableMetadata(getNamespace(), table)).isEqualTo(expected);
+    } finally {
+      admin.dropTable(getNamespace(), table);
+    }
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isImportOfNonBinaryTextColumnNotTestable() {
+    return JdbcEnv.isSqlite() || JdbcEnv.isSpanner();
   }
 
   @Test

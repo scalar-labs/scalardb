@@ -210,6 +210,37 @@ public class JdbcAdminImportTestUtils {
         });
   }
 
+  /**
+   * Creates a table whose {@code c} TEXT column carries a collation that is not binary, where the
+   * engine lets a column choose one. Primary key {@code pk} is a plain TEXT column.
+   */
+  public void createTableWithNonBinaryTextColumn(String namespace, String table)
+      throws SQLException {
+    String columnDefinition;
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
+      columnDefinition = "VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isYugabyte(rdbEngine)) {
+      columnDefinition = "VARCHAR(64) COLLATE \"und-x-icu\"";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      columnDefinition = "VARCHAR2(64) COLLATE BINARY_CI";
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      columnDefinition = "VARCHAR(64) COLLATE SQL_Latin1_General_CP1_CI_AS";
+    } else {
+      columnDefinition = "VARCHAR(64)";
+    }
+    execute(rdbEngine.createSchemaIfNotExistsSqls(namespace));
+    execute(
+        "CREATE TABLE "
+            + rdbEngine.encloseFullTableName(namespace, table)
+            + "("
+            + rdbEngine.enclose("pk")
+            + " VARCHAR(64) NOT NULL PRIMARY KEY, "
+            + rdbEngine.enclose("c")
+            + " "
+            + columnDefinition
+            + ")");
+  }
+
   public void execute(String[] sqls) throws SQLException {
     withConnection(
         dataSource,
