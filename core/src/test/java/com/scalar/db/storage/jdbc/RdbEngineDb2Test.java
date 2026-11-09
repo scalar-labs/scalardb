@@ -140,7 +140,7 @@ public class RdbEngineDb2Test {
   @Test
   void isBinaryCollation_UcaCollation_ShouldReturnFalse() {
     // Arrange
-    TextColumnCollation collation = new TextColumnCollation("UCA500R1_LEN_S3", "utf-8");
+    TextColumnCollation collation = new TextColumnCollation("UCA400_NO", "utf-8");
 
     // Act
     boolean actual = rdbEngineDb2.isBinaryCollation(collation);
@@ -168,6 +168,30 @@ public class RdbEngineDb2Test {
 
     // Act
     boolean actual = rdbEngineDb2.isUtf8Charset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isBinaryCollation_Identity16Bit_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY_16BIT", "UTF-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isBinaryCollation_Unknown_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("UNKNOWN", "UTF-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
 
     // Assert
     assertThat(actual).isFalse();

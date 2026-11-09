@@ -433,10 +433,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   public Map<String, TextColumnCollation> getTextColumnCollations(
       Connection connection, String namespace, String table) throws SQLException {
     Map<String, String> settings = readDatabaseSettings(connection);
-    // DBCFG reports collate_info as "-" for a database without a UCA collation, which is the
-    // IDENTITY collating sequence of a database created with the default settings.
-    String collateInfo = settings.get("collate_info");
-    String collation = collateInfo == null || collateInfo.equals("-") ? "IDENTITY" : collateInfo;
+    String collation = settings.getOrDefault("db_collname", "UNKNOWN");
     String charset = settings.get("codeset");
     String sql =
         "SELECT COLNAME FROM SYSCAT.COLUMNS WHERE TABSCHEMA = ? AND TABNAME = ?"
@@ -459,8 +456,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private static Map<String, String> readDatabaseSettings(Connection connection)
       throws SQLException {
-    String sql =
-        "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'collate_info')";
+    String sql = "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'db_collname')";
     try (Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery(sql)) {
       Map<String, String> settings = new HashMap<>();
