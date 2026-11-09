@@ -1081,7 +1081,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
     // Abort the transaction so that writing its COMMITTED state conflicts, which rolls back the
     // prepared record
-    coordinator.forceAbort(transaction.getId());
+    coordinator.putStateForLazyRecoveryRollback(transaction.getId());
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
     assertTransactionMetadataNotStored(originalStorage, 0);
 
