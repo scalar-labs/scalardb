@@ -1662,6 +1662,44 @@ public class JdbcAdminTest {
         .contains("`col` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
   }
 
+  @Test
+  public void createTable_WithMissingKeyCollationSourceTable_ShouldUseBinaryCollationOnKeys()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("missing_table"));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "missing_table"));
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .anySatisfy(
+            s ->
+                assertThat(s)
+                    .startsWith("CREATE TABLE `my_ns`.`foo_table`")
+                    .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin"));
+  }
+
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
   public void repairTable_ShouldCallCreateTableAndAddTableMetadataCorrectly(RdbEngine rdbEngine)
