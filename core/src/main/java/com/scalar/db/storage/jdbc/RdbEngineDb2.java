@@ -433,6 +433,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   public Map<String, TextColumnCollation> getTextColumnCollations(
       Connection connection, String namespace, String table) throws SQLException {
     Map<String, String> settings = readDatabaseSettings(connection);
+    // A missing value is deliberately non-binary, so the import warns rather than stays silent
     String collation = settings.getOrDefault("db_collname", "UNKNOWN");
     String charset = settings.get("codeset");
     String sql =
