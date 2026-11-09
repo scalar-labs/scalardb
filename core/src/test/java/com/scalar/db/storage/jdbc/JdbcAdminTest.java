@@ -5155,6 +5155,40 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void
+      alterColumnType_IntToTextOnEngineKeepingCollationOnRedefinition_ShouldUseBinaryCollation()
+          throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c2", DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEnginePostgresql());
+    doReturn(true).when(rdbEngineStrategy).keepsCollationOnTypeRedefinition();
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.alterColumnType("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement)
+        .execute("ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE TEXT COLLATE \"C\"");
+  }
+
+  @Test
   public void renameTable_ForMysql_ShouldWorkProperly() throws SQLException, ExecutionException {
     renameTable_ForX_ShouldWorkProperly(
         RdbEngine.MYSQL,

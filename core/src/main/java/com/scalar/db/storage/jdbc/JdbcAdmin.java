@@ -962,13 +962,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String binaryClause = rdbEngine.getBinaryTextCollationClause();
     // An engine without a column collation clause has no collation to restate.
-    if (newType != DataType.TEXT
-        || binaryClause.isEmpty()
-        || rdbEngine.keepsCollationOnTypeRedefinition()) {
+    if (newType != DataType.TEXT || binaryClause.isEmpty()) {
       return bareType;
     }
     if (currentType != DataType.TEXT) {
       return rdbEngine.appendCollationClause(bareType, binaryClause);
+    }
+    if (rdbEngine.keepsCollationOnTypeRedefinition()) {
+      return bareType;
     }
     Map<String, TextColumnCollation> collations =
         rdbEngine.getTextColumnCollations(connection, namespace, table);
