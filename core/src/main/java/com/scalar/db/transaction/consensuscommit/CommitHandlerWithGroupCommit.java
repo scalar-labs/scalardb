@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -28,6 +29,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
       DistributedStorage storage,
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
+      VirtualTableInfoManager virtualTableInfoManager,
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
@@ -37,6 +39,7 @@ public class CommitHandlerWithGroupCommit extends CommitHandler {
         storage,
         coordinator,
         tableMetadataManager,
+        virtualTableInfoManager,
         parallelExecutor,
         mutationsGrouper,
         coordinatorWriteOmissionOnReadOnlyEnabled,
