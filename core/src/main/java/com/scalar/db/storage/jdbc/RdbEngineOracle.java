@@ -552,8 +552,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
-    // In Oracle, only the SERIALIZABLE isolation level guarantees consistent reads
-    return Connection.TRANSACTION_SERIALIZABLE;
+    // In Oracle, READ COMMITTED and SERIALIZABLE isolation levels guarantee consistent reads
+    return Connection.TRANSACTION_READ_COMMITTED;
   }
 
   @Override
