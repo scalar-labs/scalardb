@@ -70,7 +70,10 @@ public interface DistributedStorageAdmin extends Admin, AutoCloseable {
    *       <ul>
    *         <li>{@code INNER}: only keys present in both sources.
    *         <li>{@code LEFT_OUTER}: all keys from the left; for left-only keys, the right-side
-   *             columns appear as {@code NULL}.
+   *             columns appear as {@code NULL}. Because a right-side record whose non-key columns
+   *             are all {@code NULL} looks the same as no right-side record, the two are treated as
+   *             the same, and whether such a right-side record exists in the right source is
+   *             unspecified.
    *       </ul>
    *   <li>Column order: [primary key columns] + [left non-key columns] + [right non-key columns].
    *   <li>No non-key column name conflicts between sources are allowed.
