@@ -160,7 +160,8 @@ public class NamespaceMetadataService {
   }
 
   private String getTextType(int charLength, boolean isKey) {
-    return rdbEngine.getTextType(charLength, isKey);
+    return rdbEngine.appendCollationClause(
+        rdbEngine.getTextType(charLength, isKey), rdbEngine.getBinaryTextCollationClause());
   }
 
   private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)

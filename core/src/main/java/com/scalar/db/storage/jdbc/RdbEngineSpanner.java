@@ -50,6 +50,11 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "";
+  }
+
+  @Override
   public Map<String, TextColumnCollation> getTextColumnCollations(
       Connection connection, String namespace, String table) {
     return Collections.emptyMap();

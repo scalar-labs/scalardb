@@ -8,6 +8,11 @@ class RdbEngineMariaDB extends RdbEngineMysql {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "CHARACTER SET utf8mb4 COLLATE utf8mb4_nopad_bin";
+  }
+
+  @Override
   public String adjustJdbcUrl(String jdbcUrl) {
     return jdbcUrl;
   }

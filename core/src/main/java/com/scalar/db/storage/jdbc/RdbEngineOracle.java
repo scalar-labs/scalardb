@@ -431,6 +431,11 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE BINARY";
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR2(%s)", charLength);
   }

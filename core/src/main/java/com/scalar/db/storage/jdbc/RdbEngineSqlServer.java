@@ -392,6 +392,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE Latin1_General_100_BIN2_UTF8";
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }

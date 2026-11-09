@@ -321,6 +321,49 @@ class RdbEngineMysqlTest {
     assertThat(sql).isEqualTo("INSERT IGNORE INTO `ns`.`tbl` (`p1`,`c1`) VALUES (?,?)");
   }
 
+  @ParameterizedTest
+  @CsvSource({
+    "8.0.17,utf8mb4_0900_bin",
+    "8.0.16,utf8mb4_bin",
+    "8.4.3,utf8mb4_0900_bin",
+    "9.7.0,utf8mb4_0900_bin",
+    "5.7.44-log,utf8mb4_bin",
+    "5.5.5-10.11.6-MariaDB,utf8mb4_bin",
+    "garbage,utf8mb4_bin"
+  })
+  void selectMysqlBinaryCollation_GivenVersion_ShouldReturnNoPadOnlyFrom8017(
+      String version, String expected) {
+    // Arrange Act
+    String collation = RdbEngineMysql.selectMysqlBinaryCollation(version);
+
+    // Assert
+    assertThat(collation).isEqualTo(expected);
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ForMysql_ShouldReturnNoPadBinaryClause() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEngineMysql();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ForMariaDb_ShouldReturnNopadBinClause() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEngineMariaDB();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("CHARACTER SET utf8mb4 COLLATE utf8mb4_nopad_bin");
+  }
+
   @Test
   void getCollationClause_WithCharset_ShouldReturnCharacterSetAndCollate() {
     // Arrange

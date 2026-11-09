@@ -64,7 +64,9 @@ public class VirtualTableMetadataService {
             + ", "
             + enclose(COL_ATTRIBUTES)
             + " "
-            + rdbEngine.getDataTypeForEngine(DataType.TEXT)
+            + rdbEngine.appendCollationClause(
+                rdbEngine.getDataTypeForEngine(DataType.TEXT),
+                rdbEngine.getBinaryTextCollationClause())
             + ", "
             + "PRIMARY KEY ("
             + enclose(COL_FULL_TABLE_NAME)
@@ -301,7 +303,8 @@ public class VirtualTableMetadataService {
   }
 
   private String getTextType(int charLength, boolean isKey) {
-    return rdbEngine.getTextType(charLength, isKey);
+    return rdbEngine.appendCollationClause(
+        rdbEngine.getTextType(charLength, isKey), rdbEngine.getBinaryTextCollationClause());
   }
 
   private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)

@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class RdbEngineTidbTest {
 
@@ -54,6 +56,31 @@ class RdbEngineTidbTest {
     rdbEngineTidb.setConnectionToReadOnly(connection, true);
 
     verify(connection, never()).setReadOnly(anyBoolean());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "8.0.11-TiDB-v6.5.12,utf8mb4_bin",
+    "8.0.11-TiDB-v7.4.0,utf8mb4_0900_bin",
+    "8.0.11-TiDB-v8.5.1,utf8mb4_0900_bin",
+    "8.0.11,utf8mb4_bin"
+  })
+  void selectTidbBinaryCollation_GivenVersion_ShouldReturnNoPadOnlyFrom74(
+      String version, String expected) {
+    // Arrange Act
+    String collation = RdbEngineTidb.selectTidbBinaryCollation(version);
+
+    // Assert
+    assertThat(collation).isEqualTo(expected);
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnClauseWithSelectedCollation() {
+    // Arrange Act
+    String clause = rdbEngineTidb.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("CHARACTER SET utf8mb4 COLLATE utf8mb4_bin");
   }
 
   @Test

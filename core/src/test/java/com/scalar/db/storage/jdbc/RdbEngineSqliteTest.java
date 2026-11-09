@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
@@ -132,5 +133,17 @@ class RdbEngineSqliteTest {
       throwIfInvalidTableName_WhenContainsNamespaceSeparator_ShouldThrowIllegalArgumentException() {
     assertThatThrownBy(() -> rdbEngine.throwIfInvalidTableName("a$b"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnCollateBinary() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE BINARY");
   }
 }

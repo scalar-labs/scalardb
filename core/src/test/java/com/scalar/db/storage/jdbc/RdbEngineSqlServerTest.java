@@ -117,4 +117,16 @@ class RdbEngineSqlServerTest {
     // Assert
     assertThat(properties).containsEntry("sendStringParametersAsUnicode", "false");
   }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnBin2Utf8Collation() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE Latin1_General_100_BIN2_UTF8");
+  }
 }

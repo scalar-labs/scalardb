@@ -460,4 +460,16 @@ public class RdbEngineSpannerTest {
           + "  \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n"
           + "  \"token_uri\": \"https://oauth2.googleapis.com/token\"\n"
           + "}";
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnEmpty() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("");
+  }
 }

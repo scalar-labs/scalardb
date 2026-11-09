@@ -152,6 +152,11 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE BINARY";
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return "TEXT";
   }

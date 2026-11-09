@@ -685,6 +685,26 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * @return a vendor DB data type
    */
   private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
+    return getVendorDbColumnType(metadata, columnName, Collections.emptyMap());
+  }
+
+  private String getVendorDbColumnType(
+      TableMetadata metadata, String columnName, Map<String, String> keyCollationClauses) {
+    String bareType = getBareVendorDbColumnType(metadata, columnName);
+    if (metadata.getColumnDataType(columnName) != DataType.TEXT) {
+      return bareType;
+    }
+    boolean isKey =
+        metadata.getPartitionKeyNames().contains(columnName)
+            || metadata.getClusteringKeyNames().contains(columnName);
+    String clause =
+        isKey && keyCollationClauses.containsKey(columnName)
+            ? keyCollationClauses.get(columnName)
+            : rdbEngine.getBinaryTextCollationClause();
+    return rdbEngine.appendCollationClause(bareType, clause);
+  }
+
+  private String getBareVendorDbColumnType(TableMetadata metadata, String columnName) {
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
 
     String dataType = rdbEngine.getDataTypeForEngine(scalarDbColumnType);
@@ -1071,7 +1091,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
             TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
 
-            String columnType = getVendorDbColumnType(updatedTableMetadata, newColumnName);
+            String columnType = getBareVendorDbColumnType(updatedTableMetadata, newColumnName);
             if (rdbEngine.renameColumnRestatesType()) {
               columnType =
                   getTypeForRedefinition(

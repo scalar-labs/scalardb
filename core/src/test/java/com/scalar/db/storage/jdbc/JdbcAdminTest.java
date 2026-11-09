@@ -496,7 +496,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -510,7 +510,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -524,7 +524,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -542,7 +542,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM ALL_TABLES WHERE OWNER = ? AND TABLE_NAME = ?",
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -556,7 +556,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
@@ -700,7 +700,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForMysql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -712,7 +712,7 @@ public class JdbcAdminTest {
     when(config.getMysqlVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineMysql(config),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -721,7 +721,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForPostgresql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760) COLLATE \"C\",\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -731,7 +731,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlServer_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_100_BIN2_UTF8,[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -740,7 +740,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128) COLLATE BINARY,\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -754,7 +754,7 @@ public class JdbcAdminTest {
     when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineOracle(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64) COLLATE BINARY,\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -765,7 +765,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlite_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT COLLATE BINARY,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -850,7 +850,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.MYSQL,
-        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -860,7 +860,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760) COLLATE \"C\",\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE UNIQUE INDEX IF NOT EXISTS \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -871,7 +871,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_100_BIN2_UTF8,[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -881,7 +881,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128) COLLATE BINARY,\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -893,7 +893,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQLITE,
-        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT COLLATE BINARY,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -1094,11 +1094,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
-            + "`full_table_name` VARCHAR(128),"
-            + "`column_name` VARCHAR(128),"
-            + "`data_type` VARCHAR(20) NOT NULL,"
-            + "`key_type` VARCHAR(20),"
-            + "`clustering_order` VARCHAR(10),"
+            + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`column_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`data_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,"
+            + "`key_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`clustering_order` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
@@ -1121,11 +1121,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128),"
-            + "\"column_name\" VARCHAR(128),"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
+            + "\"full_table_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"column_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"data_type\" VARCHAR(20) COLLATE \"C\" NOT NULL,"
+            + "\"key_type\" VARCHAR(20) COLLATE \"C\","
+            + "\"clustering_order\" VARCHAR(10) COLLATE \"C\","
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1148,11 +1148,11 @@ public class JdbcAdminTest {
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[metadata]("
-            + "[full_table_name] VARCHAR(128),"
-            + "[column_name] VARCHAR(128),"
-            + "[data_type] VARCHAR(20) NOT NULL,"
-            + "[key_type] VARCHAR(20),"
-            + "[clustering_order] VARCHAR(10),"
+            + "[full_table_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[column_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[data_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8 NOT NULL,"
+            + "[key_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[clustering_order] VARCHAR(10) COLLATE Latin1_General_100_BIN2_UTF8,"
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
@@ -1174,7 +1174,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128) COLLATE BINARY,\"column_name\" VARCHAR2(128) COLLATE BINARY,\"data_type\" VARCHAR2(20) COLLATE BINARY NOT NULL,\"key_type\" VARCHAR2(20) COLLATE BINARY,\"clustering_order\" VARCHAR2(10) COLLATE BINARY,\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
@@ -1194,11 +1194,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$metadata\"("
-            + "\"full_table_name\" TEXT,"
-            + "\"column_name\" TEXT,"
-            + "\"data_type\" TEXT NOT NULL,"
-            + "\"key_type\" TEXT,"
-            + "\"clustering_order\" TEXT,"
+            + "\"full_table_name\" TEXT COLLATE BINARY,"
+            + "\"column_name\" TEXT COLLATE BINARY,"
+            + "\"data_type\" TEXT COLLATE BINARY NOT NULL,"
+            + "\"key_type\" TEXT COLLATE BINARY,"
+            + "\"clustering_order\" TEXT COLLATE BINARY,"
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1282,11 +1282,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
-            + "`full_table_name` VARCHAR(128),"
-            + "`column_name` VARCHAR(128),"
-            + "`data_type` VARCHAR(20) NOT NULL,"
-            + "`key_type` VARCHAR(20),"
-            + "`clustering_order` VARCHAR(10),"
+            + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`column_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`data_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,"
+            + "`key_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`clustering_order` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
@@ -1326,11 +1326,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128),"
-            + "\"column_name\" VARCHAR(128),"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
+            + "\"full_table_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"column_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"data_type\" VARCHAR(20) COLLATE \"C\" NOT NULL,"
+            + "\"key_type\" VARCHAR(20) COLLATE \"C\","
+            + "\"clustering_order\" VARCHAR(10) COLLATE \"C\","
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1369,11 +1369,11 @@ public class JdbcAdminTest {
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[metadata]("
-            + "[full_table_name] VARCHAR(128),"
-            + "[column_name] VARCHAR(128),"
-            + "[data_type] VARCHAR(20) NOT NULL,"
-            + "[key_type] VARCHAR(20),"
-            + "[clustering_order] VARCHAR(10),"
+            + "[full_table_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[column_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[data_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8 NOT NULL,"
+            + "[key_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[clustering_order] VARCHAR(10) COLLATE Latin1_General_100_BIN2_UTF8,"
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
@@ -1411,7 +1411,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128) COLLATE BINARY,\"column_name\" VARCHAR2(128) COLLATE BINARY,\"data_type\" VARCHAR2(20) COLLATE BINARY NOT NULL,\"key_type\" VARCHAR2(20) COLLATE BINARY,\"clustering_order\" VARCHAR2(10) COLLATE BINARY,\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
@@ -1447,11 +1447,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$metadata\"("
-            + "\"full_table_name\" TEXT,"
-            + "\"column_name\" TEXT,"
-            + "\"data_type\" TEXT NOT NULL,"
-            + "\"key_type\" TEXT,"
-            + "\"clustering_order\" TEXT,"
+            + "\"full_table_name\" TEXT COLLATE BINARY,"
+            + "\"column_name\" TEXT COLLATE BINARY,"
+            + "\"data_type\" TEXT COLLATE BINARY NOT NULL,"
+            + "\"key_type\" TEXT COLLATE BINARY,"
+            + "\"clustering_order\" TEXT COLLATE BINARY,"
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -5735,7 +5735,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -5749,7 +5749,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5763,7 +5763,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -5781,7 +5781,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM ALL_TABLES WHERE OWNER = ? AND TABLE_NAME = ?",
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5823,7 +5823,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
@@ -5926,7 +5926,7 @@ public class JdbcAdminTest {
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -5939,7 +5939,7 @@ public class JdbcAdminTest {
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5954,7 +5954,7 @@ public class JdbcAdminTest {
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5967,7 +5967,7 @@ public class JdbcAdminTest {
         ImmutableList.of("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -5980,7 +5980,7 @@ public class JdbcAdminTest {
         Collections.emptyList(),
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
@@ -6274,7 +6274,7 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -6286,7 +6286,7 @@ public class JdbcAdminTest {
         RdbEngine.POSTGRESQL,
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -6298,7 +6298,7 @@ public class JdbcAdminTest {
         RdbEngine.SQL_SERVER,
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -6310,7 +6310,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -6322,7 +6322,7 @@ public class JdbcAdminTest {
         RdbEngine.SQLITE,
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 

@@ -56,11 +56,11 @@ public class VirtualTableMetadataServiceTest {
     assertThat(createCaptor.getValue())
         .isEqualTo(
             "CREATE TABLE IF NOT EXISTS `scalardb`.`virtual_tables`("
-                + "`full_table_name` VARCHAR(128), "
-                + "`left_source_table_full_table_name` VARCHAR(128), "
-                + "`right_source_table_full_table_name` VARCHAR(128), "
-                + "`join_type` VARCHAR(20), "
-                + "`attributes` LONGTEXT, "
+                + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`left_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`right_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`join_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`attributes` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
                 + "PRIMARY KEY (`full_table_name`))");
   }
 
@@ -82,11 +82,11 @@ public class VirtualTableMetadataServiceTest {
     assertThat(createCaptor.getValue())
         .isEqualTo(
             "CREATE TABLE IF NOT EXISTS `scalardb`.`virtual_tables`("
-                + "`full_table_name` VARCHAR(128), "
-                + "`left_source_table_full_table_name` VARCHAR(128), "
-                + "`right_source_table_full_table_name` VARCHAR(128), "
-                + "`join_type` VARCHAR(20), "
-                + "`attributes` LONGTEXT, "
+                + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`left_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`right_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`join_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`attributes` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
                 + "PRIMARY KEY (`full_table_name`))");
   }
 

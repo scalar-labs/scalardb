@@ -64,6 +64,11 @@ public interface RdbEngineStrategy {
 
   String getTextType(int charLength, boolean isKey);
 
+  /** Returns the clause that makes a TEXT column compare and sort by UTF-8 bytes, or "". */
+  default String getBinaryTextCollationClause() {
+    return "";
+  }
+
   default String appendCollationClause(String type, String collationClause) {
     return collationClause.isEmpty() ? type : type + " " + collationClause;
   }

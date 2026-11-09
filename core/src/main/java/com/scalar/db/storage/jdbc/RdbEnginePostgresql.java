@@ -423,6 +423,11 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE \"C\"";
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }

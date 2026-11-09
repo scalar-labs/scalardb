@@ -45,16 +45,26 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private final RdbEngineTimeTypeMysql timeTypeEngine;
   private final boolean rowAliasSupported;
   private final boolean renameColumnSupported;
+  private final String binaryCollation;
 
   RdbEngineMysql(JdbcConfig config) {
     this(config, false, false);
   }
 
   RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported, boolean renameColumnSupported) {
+    this(config, rowAliasSupported, renameColumnSupported, "utf8mb4_bin");
+  }
+
+  RdbEngineMysql(
+      JdbcConfig config,
+      boolean rowAliasSupported,
+      boolean renameColumnSupported,
+      String binaryCollation) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     this.rowAliasSupported = rowAliasSupported;
     this.renameColumnSupported = renameColumnSupported;
+    this.binaryCollation = binaryCollation;
   }
 
   @VisibleForTesting
@@ -67,6 +77,27 @@ class RdbEngineMysql extends AbstractRdbEngine {
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     rowAliasSupported = false;
     this.renameColumnSupported = renameColumnSupported;
+    binaryCollation = "utf8mb4_0900_bin";
+  }
+
+  /**
+   * Returns the binary utf8mb4 collation to declare on TEXT columns. {@code utf8mb4_0900_bin} (NO
+   * PAD, so trailing spaces are significant) exists since MySQL 8.0.17.
+   */
+  static String selectMysqlBinaryCollation(String productVersion) {
+    Matcher matcher = MYSQL_VERSION_PATTERN.matcher(productVersion);
+    if (productVersion.contains("MariaDB") || !matcher.lookingAt()) {
+      return "utf8mb4_bin";
+    }
+    try {
+      int major = Integer.parseInt(matcher.group(1));
+      int minor = Integer.parseInt(matcher.group(2));
+      int patch = Integer.parseInt(matcher.group(3));
+      boolean supported = major > 8 || (major == 8 && (minor > 0 || patch >= 17));
+      return supported ? "utf8mb4_0900_bin" : "utf8mb4_bin";
+    } catch (NumberFormatException e) {
+      return "utf8mb4_bin";
+    }
   }
 
   /**
@@ -483,6 +514,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
       default:
         throw new AssertionError();
     }
+  }
+
+  @Override
+  public String getBinaryTextCollationClause() {
+    return "CHARACTER SET utf8mb4 COLLATE " + binaryCollation;
   }
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")

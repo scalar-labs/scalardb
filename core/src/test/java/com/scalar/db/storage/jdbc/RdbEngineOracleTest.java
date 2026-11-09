@@ -260,4 +260,16 @@ class RdbEngineOracleTest {
     // Assert
     assertThat(result).isFalse();
   }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnCollateBinary() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngineOracle;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE BINARY");
+  }
 }

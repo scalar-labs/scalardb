@@ -110,6 +110,30 @@ class RdbEnginePostgresqlTest {
   }
 
   @Test
+  void getBinaryTextCollationClause_ForPostgresql_ShouldReturnCCollation() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE \"C\"");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ForYugabyte_ShouldReturnCCollation() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEngineYugabyte();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE \"C\"");
+  }
+
+  @Test
   void getCollationClause_Default_ShouldReturnCollateDefault() {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();

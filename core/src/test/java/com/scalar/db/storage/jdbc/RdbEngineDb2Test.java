@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -98,5 +99,17 @@ public class RdbEngineDb2Test {
                     scanAll, metadata))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("blob_column1");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnEmpty() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngineDb2;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("");
   }
 }
