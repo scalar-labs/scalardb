@@ -7921,23 +7921,24 @@ public class JdbcAdminTest {
         .doesNotContain("`col` LONGTEXT CHARACTER SET");
   }
 
-  private String createOracleTableWithKeyCollationSource(
-      String sourceCollation, String schemaDefault, boolean schemaDefaultRead, boolean enabled)
-      throws SQLException, ExecutionException {
-    if (!enabled) {
-      disableBinaryTextCollation();
-    }
-    TableMetadata metadata =
-        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
-    Statement statement = mock(Statement.class);
-    when(connection.createStatement()).thenReturn(statement);
-    when(dataSource.getConnection()).thenReturn(connection);
+  private RdbEngineStrategy oracleWithKeyCollationSource(
+      String sourceCollation, String schemaDefault) throws SQLException {
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
     doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
     doReturn(ImmutableMap.of("pk", new TextColumnCollation(sourceCollation, "AL32UTF8")))
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
     doReturn(schemaDefault).when(rdbEngineStrategy).getSchemaDefaultCollation(any(), eq("my_ns"));
+    return rdbEngineStrategy;
+  }
+
+  private String createOracleTableWithKeyCollationSource(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException, ExecutionException {
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     admin.createTable(
@@ -7946,9 +7947,6 @@ public class JdbcAdminTest {
         metadata,
         ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
 
-    if (!schemaDefaultRead) {
-      verify(rdbEngineStrategy, never()).getSchemaDefaultCollation(any(), anyString());
-    }
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
     verify(statement, atLeastOnce()).execute(sql.capture());
     return sql.getAllValues().stream()
@@ -7961,47 +7959,66 @@ public class JdbcAdminTest {
   public void
       createTable_BinaryCollationDisabledOnOracleKeyMatchingSchemaDefault_ShouldOmitCollate()
           throws SQLException, ExecutionException {
-    // Arrange Act
-    String createTable =
-        createOracleTableWithKeyCollationSource("USING_NLS_COMP", "USING_NLS_COMP", true, false);
+    // Arrange
+    disableBinaryTextCollation();
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("USING_NLS_COMP", "USING_NLS_COMP");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
 
     // Assert
     assertThat(createTable).contains("\"pk\" VARCHAR2(128)").doesNotContain("COLLATE");
+    verify(rdbEngineStrategy, times(1)).getSchemaDefaultCollation(any(), eq("my_ns"));
   }
 
   @Test
   public void
       createTable_BinaryCollationDisabledOnOracleKeyDifferingFromSchemaDefault_ShouldCopyCollate()
           throws SQLException, ExecutionException {
-    // Arrange Act
-    String createTable =
-        createOracleTableWithKeyCollationSource("BINARY_CI", "USING_NLS_COMP", true, false);
+    // Arrange
+    disableBinaryTextCollation();
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("BINARY_CI", "USING_NLS_COMP");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
 
     // Assert
     assertThat(createTable).contains("\"pk\" VARCHAR2(128) COLLATE BINARY_CI");
+    verify(rdbEngineStrategy, times(1)).getSchemaDefaultCollation(any(), eq("my_ns"));
   }
 
   @Test
   public void
       createTable_BinaryCollationDisabledOnOracleUsingNlsCompKeyWithOtherDefault_ShouldCopyCollate()
           throws SQLException, ExecutionException {
-    // Arrange Act
-    String createTable =
-        createOracleTableWithKeyCollationSource("USING_NLS_COMP", "BINARY_CI", true, false);
+    // Arrange
+    disableBinaryTextCollation();
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("USING_NLS_COMP", "BINARY_CI");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
 
     // Assert
     assertThat(createTable).contains("\"pk\" VARCHAR2(128) COLLATE USING_NLS_COMP");
+    verify(rdbEngineStrategy, times(1)).getSchemaDefaultCollation(any(), eq("my_ns"));
   }
 
   @Test
   public void createTable_BinaryCollationEnabledOnOracleWithKeySource_ShouldNotReadSchemaDefault()
       throws SQLException, ExecutionException {
-    // Arrange Act
-    String createTable =
-        createOracleTableWithKeyCollationSource("USING_NLS_COMP", "USING_NLS_COMP", false, true);
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("USING_NLS_COMP", "USING_NLS_COMP");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
 
     // Assert
     assertThat(createTable).contains("\"pk\" VARCHAR2(128) COLLATE USING_NLS_COMP");
+    verify(rdbEngineStrategy, never()).getSchemaDefaultCollation(any(), anyString());
   }
 
   @Test
