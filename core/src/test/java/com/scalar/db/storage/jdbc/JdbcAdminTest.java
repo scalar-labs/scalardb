@@ -141,6 +141,22 @@ public class JdbcAdminTest {
     }
   }
 
+  // Only the engines that read the catalog need the stub. The others run their real strategy.
+  private JdbcAdmin createJdbcAdminWithoutCatalogCollations(RdbEngine rdbEngine) {
+    RdbEngineStrategy strategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
+    if (strategy instanceof RdbEngineMysql || strategy instanceof RdbEnginePostgresql) {
+      strategy = spy(strategy);
+      try {
+        doReturn(Collections.emptyMap())
+            .when(strategy)
+            .getTextColumnCollations(any(), anyString(), anyString());
+      } catch (SQLException e) {
+        throw new AssertionError(e);
+      }
+    }
+    return createJdbcAdminFor(strategy);
+  }
+
   private JdbcAdmin createJdbcAdminFor(RdbEngineStrategy rdbEngineStrategy) {
     // Arrange
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
@@ -3274,11 +3290,7 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
-    doReturn(Collections.emptyMap())
-        .when(rdbEngineStrategy)
-        .getTextColumnCollations(any(), anyString(), anyString());
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+    JdbcAdmin admin = createJdbcAdminWithoutCatalogCollations(rdbEngine);
 
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
@@ -3769,11 +3781,7 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
-    doReturn(Collections.emptyMap())
-        .when(rdbEngineStrategy)
-        .getTextColumnCollations(any(), anyString(), anyString());
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+    JdbcAdmin admin = createJdbcAdminWithoutCatalogCollations(rdbEngine);
 
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
