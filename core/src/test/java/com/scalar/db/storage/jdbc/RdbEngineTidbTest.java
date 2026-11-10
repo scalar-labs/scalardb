@@ -35,6 +35,16 @@ class RdbEngineTidbTest {
   }
 
   @Test
+  void renameColumnSql_ShouldRenameWithoutRestatingTheType() {
+    // Arrange Act
+    String sql = rdbEngineTidb.renameColumnSql("ns", "tbl", "c1", "c2", "LONGTEXT");
+
+    // Assert
+    assertThat(sql).isEqualTo("ALTER TABLE `ns`.`tbl` RENAME COLUMN `c1` TO `c2`");
+    assertThat(rdbEngineTidb.renameColumnRestatesType()).isFalse();
+  }
+
+  @Test
   void setConnectionToReadOnly_ShouldDoNothing() throws SQLException {
     // TiDB rejects "SET SESSION TRANSACTION READ ONLY" with error 1235 unless
     // tidb_enable_noop_functions is enabled, and MariaDB Connector/J 3.5.10 and later issue that

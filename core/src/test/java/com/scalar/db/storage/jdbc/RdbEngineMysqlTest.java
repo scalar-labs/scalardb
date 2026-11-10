@@ -198,11 +198,59 @@ class RdbEngineMysqlTest {
     assertThat(RdbEngineMysql.supportsInsertRowAlias(metaData)).isEqualTo(expected);
   }
 
+  @ParameterizedTest
+  @CsvSource({
+    "5.7.44, false",
+    "8.0.2, false",
+    "8.0.3, true",
+    "8.0.45-0ubuntu0.22.04.1, true",
+    "8.4.3, true",
+    "9.1.0, true",
+    "11.4.2-MariaDB, false",
+    "8.0.11-TiDB-v8.5.0, false",
+    "'', false"
+  })
+  void supportsRenameColumn_ShouldBeTrueFromMysql803AndFalseForMariaDbAndTidb(
+      String productVersion, boolean expected) throws SQLException {
+    // Arrange
+    DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+    when(metaData.getDatabaseProductVersion()).thenReturn(productVersion);
+
+    // Act Assert
+    assertThat(RdbEngineMysql.supportsRenameColumn(metaData)).isEqualTo(expected);
+  }
+
+  @Test
+  void renameColumnSql_WithRenameColumnSupported_ShouldNotRestateTheType() {
+    // Arrange
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), false, true);
+
+    // Act
+    String sql = engine.renameColumnSql("ns", "tbl", "c1", "c2", "LONGTEXT");
+
+    // Assert
+    assertThat(sql).isEqualTo("ALTER TABLE `ns`.`tbl` RENAME COLUMN `c1` TO `c2`");
+    assertThat(engine.renameColumnRestatesType()).isFalse();
+  }
+
+  @Test
+  void renameColumnSql_WithRenameColumnNotSupported_ShouldRestateTheType() {
+    // Arrange
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), false, false);
+
+    // Act
+    String sql = engine.renameColumnSql("ns", "tbl", "c1", "c2", "LONGTEXT");
+
+    // Assert
+    assertThat(sql).isEqualTo("ALTER TABLE `ns`.`tbl` CHANGE COLUMN `c1` `c2` LONGTEXT");
+    assertThat(engine.renameColumnRestatesType()).isTrue();
+  }
+
   @Test
   void buildUpsertQuery_WithRowAliasSupported_ShouldReadRowAliasAndBindEachValueOnce()
       throws SQLException {
     // Arrange
-    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true, false);
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
     Map<String, Column<?>> columns = new LinkedHashMap<>();
     columns.put("v1", TextColumn.of("v1", "v1Value"));
@@ -231,7 +279,7 @@ class RdbEngineMysqlTest {
   @Test
   void buildUpsertQuery_WithRowAliasSupportedAndTableNamedNew_ShouldUseAnotherRowAlias() {
     // Arrange
-    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true, false);
 
     // Act
     String sql =
@@ -254,7 +302,7 @@ class RdbEngineMysqlTest {
   @Test
   void buildUpsertQuery_WithRowAliasSupportedAndNoValueColumns_ShouldInsertIgnore() {
     // Arrange
-    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true, false);
 
     // Act
     String sql =

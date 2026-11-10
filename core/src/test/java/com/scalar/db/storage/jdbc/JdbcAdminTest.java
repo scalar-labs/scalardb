@@ -4714,6 +4714,88 @@ public class JdbcAdminTest {
     }
   }
 
+  private JdbcAdmin prepareRenameOfTextColumn(
+      RdbEngineStrategy strategy, boolean indexed, Statement statement) throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c0", DataType.INT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), null, null, indexed));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    PreparedStatement catalogStatement = mock(PreparedStatement.class);
+    ResultSet catalogResultSet = mock(ResultSet.class);
+    when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    when(catalogResultSet.next()).thenReturn(true, false);
+    when(catalogResultSet.getString("COLUMN_NAME")).thenReturn("c1");
+    when(catalogResultSet.getString("COLLATION_NAME")).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4");
+
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    return createJdbcAdminFor(strategy);
+  }
+
+  @Test
+  public void renameColumn_MysqlWithRenameColumnSupported_ShouldNotReadTheCatalog()
+      throws SQLException, ExecutionException {
+    // Arrange
+    JdbcConfig mysqlConfig = mock(JdbcConfig.class);
+    when(mysqlConfig.getMysqlVariableKeyColumnSize()).thenReturn(128);
+    Statement statement = mock(Statement.class);
+    JdbcAdmin admin =
+        prepareRenameOfTextColumn(new RdbEngineMysql(mysqlConfig, false, true), false, statement);
+
+    // Act
+    admin.renameColumn("ns", "table", "c1", "c2");
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `ns`.`table` RENAME COLUMN `c1` TO `c2`");
+    verify(connection, times(2)).prepareStatement(any());
+  }
+
+  @Test
+  public void renameColumn_MysqlWithoutRenameColumnSupportAndTextColumn_ShouldRestateCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    JdbcAdmin admin = prepareRenameOfTextColumn(new RdbEngineMysql(), false, statement);
+
+    // Act
+    admin.renameColumn("ns", "table", "c1", "c2");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `ns`.`table` CHANGE COLUMN `c1` `c2` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void
+      renameColumn_MysqlWithoutRenameColumnSupportAndIndexedTextColumn_ShouldRestateIndexTypeAndCollation()
+          throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    JdbcAdmin admin = prepareRenameOfTextColumn(new RdbEngineMysql(), true, statement);
+
+    // Act
+    admin.renameColumn("ns", "table", "c1", "c2");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `ns`.`table` CHANGE COLUMN `c1` `c2` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
   @Test
   public void renameColumn_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
       throws Exception {
