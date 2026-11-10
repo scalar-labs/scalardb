@@ -42,22 +42,29 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
   private final boolean rowAliasSupported;
+  private final boolean renameColumnSupported;
 
   RdbEngineMysql(JdbcConfig config) {
-    this(config, false);
+    this(config, false, false);
   }
 
-  RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported) {
+  RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported, boolean renameColumnSupported) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     this.rowAliasSupported = rowAliasSupported;
+    this.renameColumnSupported = renameColumnSupported;
   }
 
   @VisibleForTesting
   RdbEngineMysql() {
+    this(false);
+  }
+
+  RdbEngineMysql(boolean renameColumnSupported) {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     rowAliasSupported = false;
+    this.renameColumnSupported = renameColumnSupported;
   }
 
   /**
@@ -74,6 +81,25 @@ class RdbEngineMysql extends AbstractRdbEngine {
     int minor = Integer.parseInt(matcher.group(2));
     int patch = Integer.parseInt(matcher.group(3));
     return major > 8 || (major == 8 && (minor > 0 || patch >= 19));
+  }
+
+  /**
+   * Returns whether the server accepts {@code ALTER TABLE ... RENAME COLUMN}, which is supported
+   * since MySQL 8.0.3. MariaDB and TiDB have their own engine classes that always support it.
+   *
+   * @see <a href="https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-3.html">MySQL 8.0.3
+   *     release notes</a>
+   */
+  static boolean supportsRenameColumn(DatabaseMetaData metaData) throws SQLException {
+    String version = metaData.getDatabaseProductVersion();
+    Matcher matcher = MYSQL_VERSION_PATTERN.matcher(version);
+    if (version.contains("MariaDB") || version.contains("TiDB") || !matcher.lookingAt()) {
+      return false;
+    }
+    int major = Integer.parseInt(matcher.group(1));
+    int minor = Integer.parseInt(matcher.group(2));
+    int patch = Integer.parseInt(matcher.group(3));
+    return major > 8 || (major == 8 && (minor > 0 || patch >= 3));
   }
 
   @Override
@@ -146,6 +172,9 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String oldColumnName,
       String newColumnName,
       String columnType) {
+    if (renameColumnSupported) {
+      return super.renameColumnSql(namespace, table, oldColumnName, newColumnName, columnType);
+    }
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
         + " CHANGE COLUMN "
@@ -154,6 +183,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
         + enclose(newColumnName)
         + " "
         + columnType;
+  }
+
+  @Override
+  public boolean renameColumnRestatesType() {
+    return !renameColumnSupported;
   }
 
   @Override

@@ -1071,13 +1071,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
             TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
 
+            String columnType = getVendorDbColumnType(updatedTableMetadata, newColumnName);
+            if (rdbEngine.renameColumnRestatesType()) {
+              columnType =
+                  getTypeForRedefinition(
+                      connection,
+                      namespace,
+                      table,
+                      oldColumnName,
+                      currentTableMetadata.getColumnDataType(oldColumnName),
+                      columnType);
+            }
             String renameColumnStatement =
                 rdbEngine.renameColumnSql(
-                    namespace,
-                    table,
-                    oldColumnName,
-                    newColumnName,
-                    getVendorDbColumnType(updatedTableMetadata, newColumnName));
+                    namespace, table, oldColumnName, newColumnName, columnType);
             execute(connection, rdbEngine, renameColumnStatement, requiresExplicitCommit);
 
             if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {

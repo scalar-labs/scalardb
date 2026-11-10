@@ -145,6 +145,11 @@ public interface RdbEngineStrategy {
         + enclose(newColumnName);
   }
 
+  /** Returns whether {@link #renameColumnSql} uses its {@code columnType} argument. */
+  default boolean renameColumnRestatesType() {
+    return false;
+  }
+
   String renameTableSql(String namespace, String oldTableName, String newTableName);
 
   String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
