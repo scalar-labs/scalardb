@@ -534,7 +534,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
-    // In MySQL, REPEATABLE READ and SERIALIZABLE isolation levels guarantee consistent reads
-    return Connection.TRANSACTION_REPEATABLE_READ;
+    // In MySQL, READ COMMITTED and higher isolation levels guarantee consistent reads
+    return Connection.TRANSACTION_READ_COMMITTED;
   }
 }
