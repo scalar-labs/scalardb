@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
@@ -32,6 +33,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -394,6 +396,32 @@ public class RdbEngineSpannerTest {
    * GoogleCredentials.fromStream} to parse without making a network call. The private key is a
    * freshly-generated RSA key not associated with any real Google Cloud account.
    */
+  @Test
+  void getCollationClause_ShouldBeEmpty() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("default", "UTF8");
+
+    // Act
+    String clause = rdbEngine.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEmpty();
+  }
+
+  @Test
+  void getTextColumnCollations_ShouldNotQueryTheDatabase() throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+
+    // Act
+    Map<String, TextColumnCollation> collations =
+        rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
+
+    // Assert
+    assertThat(collations).isEmpty();
+    verifyNoInteractions(connection);
+  }
+
   private static final String SAMPLE_SERVICE_ACCOUNT_KEY =
       "{\n"
           + "  \"type\": \"service_account\",\n"

@@ -9,11 +9,16 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -368,6 +373,53 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
       default:
         throw new AssertionError();
     }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    // pg_database.datlocprovider and datlocale only exist on newer versions, hence to_jsonb.
+    String sql =
+        "SELECT a.attname,"
+            + " CASE WHEN a.attcollation = 100 THEN 'default'"
+            + " ELSE '\"' || replace(cn.nspname, '\"', '\"\"') || '\".\"'"
+            + " || replace(c.collname, '\"', '\"\"') || '\"' END,"
+            + " pg_encoding_to_char(d.encoding),"
+            + " CASE WHEN a.attcollation <> 100 THEN NULL"
+            + " WHEN to_jsonb(d) ->> 'datlocprovider' = 'b'"
+            + " THEN 'builtin:' || (to_jsonb(d) ->> 'datlocale')"
+            + " WHEN to_jsonb(d) ->> 'datlocprovider' = 'i'"
+            + " THEN 'icu:' || coalesce(to_jsonb(d) ->> 'datlocale', to_jsonb(d) ->> 'daticulocale')"
+            + " ELSE 'libc:' || d.datcollate END"
+            + " FROM pg_attribute a"
+            + " JOIN pg_class t ON a.attrelid = t.oid"
+            + " JOIN pg_namespace n ON t.relnamespace = n.oid"
+            + " LEFT JOIN pg_collation c ON c.oid = a.attcollation"
+            + " LEFT JOIN pg_namespace cn ON cn.oid = c.collnamespace"
+            + " CROSS JOIN pg_database d"
+            + " WHERE n.nspname = ? AND t.relname = ? AND d.datname = current_database()"
+            + " AND a.attnum > 0 AND NOT a.attisdropped"
+            + " AND a.atttypid IN ('text'::regtype, 'varchar'::regtype, 'bpchar'::regtype)";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          collations.put(
+              rs.getString(1),
+              new TextColumnCollation(rs.getString(2), rs.getString(3), rs.getString(4)));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    String name = collation.getCollation();
+    return name.equals("default") ? "COLLATE \"default\"" : "COLLATE " + name;
   }
 
   @Override
