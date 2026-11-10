@@ -73,9 +73,11 @@ jobs:
               ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
               ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
               ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+              ConsensusCommitAdminImportTablePrimaryKeyOrderIntegrationTestWithJdbcDatabase
               ConsensusCommitImportTableIntegrationTestWithJdbcDatabase
               ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
               JdbcAdminImportTableIntegrationTest
+              JdbcAdminImportTablePrimaryKeyOrderIntegrationTest
               JdbcAdminRepairIntegrationTest
               JdbcSchemaLoaderImportIntegrationTest
               JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
