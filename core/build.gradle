@@ -126,13 +126,13 @@ configurations {
 // bring in transitively, and whose versions this project decides. To decide the versions that
 // applications using ScalarDB as a library get (for example, to fix a vulnerability), we exclude
 // these families from every dependency that brings them in and declare all of their artifacts
-// directly, with one version variable for each family. The Netty and Jackson artifacts are
-// declared without versions, and their BOMs, whose versions are nettyVersion and jacksonVersion,
-// decide them. The BOMs also decide the versions of the artifacts that are versioned differently
-// from the rest of the family (netty-tcnative and jackson-annotations). We don't use
-// `resolutionStrategy.force` for this: it affects only this build and is not published in the
-// POM or the Gradle module metadata, so applications would still get the versions that the
-// dependencies request.
+// directly, with one version variable for each family. The Netty, Jackson, and Micrometer
+// artifacts are declared without versions, and their BOMs, whose versions are nettyVersion,
+// jacksonVersion, and micrometerVersion, decide them. The BOMs also decide the versions of the
+// artifacts that are versioned differently from the rest of the family (netty-tcnative and
+// jackson-annotations). We don't use `resolutionStrategy.force` for this: it affects only this
+// build and is not published in the POM or the Gradle module metadata, so applications would
+// still get the versions that the dependencies request.
 //
 // When you add a dependency or upgrade one, check, with these exclusions temporarily removed,
 // which artifacts of these families it brings in. If it brings in any, apply these exclusions to
@@ -147,6 +147,7 @@ def declaredFamilyExclusions = [
     [group: 'com.fasterxml.jackson.core'],
     [group: 'com.fasterxml.jackson.dataformat'],
     [group: 'com.fasterxml.jackson.datatype'],
+    [group: 'io.micrometer'],
 ]
 
 dependencies {
@@ -196,6 +197,11 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         declaredFamilyExclusions.each { exclude it }
     }
+    // Micrometer, brought in by azure-cosmos. See declaredFamilyExclusions
+    implementation platform("io.micrometer:micrometer-bom:${micrometerVersion}")
+    implementation 'io.micrometer:micrometer-commons'
+    implementation 'io.micrometer:micrometer-core'
+    implementation 'io.micrometer:micrometer-observation'
     // Netty, brought in by cassandra-driver-core, azure-cosmos, azure-storage-blob, and the AWS
     // SDK. See declaredFamilyExclusions
     implementation platform("io.netty:netty-bom:${nettyVersion}")
