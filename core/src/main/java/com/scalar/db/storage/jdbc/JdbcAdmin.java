@@ -783,7 +783,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    String columnType =
+        getTypeForRedefinition(
+            connection, namespace, table, columnName, dataType, columnTypeForKey);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
@@ -797,9 +800,34 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String columnType = rdbEngine.getDataTypeForEngine(dataType);
+    String columnType =
+        getTypeForRedefinition(
+            connection,
+            namespace,
+            table,
+            columnName,
+            dataType,
+            rdbEngine.getDataTypeForEngine(dataType));
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
+  }
+
+  private String getTypeForRedefinition(
+      Connection connection,
+      String namespace,
+      String table,
+      String columnName,
+      DataType dataType,
+      String bareType)
+      throws SQLException {
+    if (dataType != DataType.TEXT || rdbEngine.keepsCollationOnTypeRedefinition()) {
+      return bareType;
+    }
+    TextColumnCollation current =
+        rdbEngine.getTextColumnCollations(connection, namespace, table).get(columnName);
+    return current == null
+        ? bareType
+        : rdbEngine.appendCollationClause(bareType, rdbEngine.getCollationClause(current));
   }
 
   @Override

@@ -3274,7 +3274,11 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
@@ -3765,7 +3769,11 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
@@ -3803,6 +3811,147 @@ public class JdbcAdminTest {
     }
     assertThat(captor.getAllValues().get(expectedAlterColumnStatements.length + 1))
         .isEqualTo(expectedUpdateTableMetadataStatement);
+  }
+
+  @Test
+  public void createIndex_PostgresqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangePostgresqlTextColumnWithUndIcuCollation();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE \"my_ns\".\"foo_table\" ALTER COLUMN \"c1\" TYPE VARCHAR(10485760) COLLATE \"pg_catalog\".\"und-x-icu\"");
+  }
+
+  @Test
+  public void dropIndex_PostgresqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangePostgresqlTextColumnWithUndIcuCollation();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.dropIndex("my_ns", "foo_table", "c1");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE \"my_ns\".\"foo_table\" ALTER COLUMN \"c1\" TYPE TEXT COLLATE \"pg_catalog\".\"und-x-icu\"");
+  }
+
+  private Statement arrangePostgresqlTextColumnWithUndIcuCollation() throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c0", DataType.INT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    PreparedStatement catalogStatement = mock(PreparedStatement.class);
+    ResultSet catalogResultSet = mock(ResultSet.class);
+    when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    when(catalogResultSet.next()).thenReturn(true, false);
+    when(catalogResultSet.getString(1)).thenReturn("c1");
+    when(catalogResultSet.getString(2)).thenReturn("\"pg_catalog\".\"und-x-icu\"");
+    when(catalogResultSet.getString(3)).thenReturn("UTF8");
+
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    return statement;
+  }
+
+  @Test
+  public void createIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void dropIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.dropIndex("my_ns", "foo_table", "c1");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void createIndex_ForColumnMissingFromCatalog_ShouldRestateBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("other_column");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128)");
+  }
+
+  private Statement arrangeMysqlTextColumnWithCatalogCollation(String catalogColumn)
+      throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c0", DataType.INT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    PreparedStatement catalogStatement = mock(PreparedStatement.class);
+    ResultSet catalogResultSet = mock(ResultSet.class);
+    when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    when(catalogResultSet.next()).thenReturn(true, false);
+    when(catalogResultSet.getString("COLUMN_NAME")).thenReturn(catalogColumn);
+    when(catalogResultSet.getString("COLLATION_NAME")).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4");
+
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    return statement;
   }
 
   @Test
