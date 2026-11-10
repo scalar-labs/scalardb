@@ -8,7 +8,10 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -41,6 +44,7 @@ public class CommitHandler {
   private final DistributedStorage storage;
   protected final Coordinator coordinator;
   private final TransactionTableMetadataManager tableMetadataManager;
+  private final VirtualTableInfoManager virtualTableInfoManager;
   private final ParallelExecutor parallelExecutor;
   private final MutationsGrouper mutationsGrouper;
   protected final boolean coordinatorWriteOmissionOnReadOnlyEnabled;
@@ -53,6 +57,7 @@ public class CommitHandler {
       DistributedStorage storage,
       Coordinator coordinator,
       TransactionTableMetadataManager tableMetadataManager,
+      VirtualTableInfoManager virtualTableInfoManager,
       ParallelExecutor parallelExecutor,
       MutationsGrouper mutationsGrouper,
       boolean coordinatorWriteOmissionOnReadOnlyEnabled,
@@ -60,6 +65,7 @@ public class CommitHandler {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
+    this.virtualTableInfoManager = checkNotNull(virtualTableInfoManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
     this.mutationsGrouper = checkNotNull(mutationsGrouper);
     this.coordinatorWriteOmissionOnReadOnlyEnabled = coordinatorWriteOmissionOnReadOnlyEnabled;
@@ -224,24 +230,32 @@ public class CommitHandler {
 
     Collection<Map.Entry<Snapshot.Key, Delete>> deleteSetEntries = context.snapshot.getDeleteSet();
 
-    // If a record corresponding to a delete in the delete set does not exist in the storage,　we
-    // cannot one-phase commit the transaction. This is because the storage does not support
-    // delete-if-not-exists semantics, so we cannot detect conflicts with other transactions.
-    for (Map.Entry<Snapshot.Key, Delete> entry : deleteSetEntries) {
-      Delete delete = entry.getValue();
-      Optional<TransactionResult> result =
-          context.snapshot.getFromReadSet(new Snapshot.Key(delete));
-
-      // For deletes, we always perform implicit pre-reads if the result does not exit in the read
-      // set. So the result should always exist in the read set.
-      assert result != null;
-
-      if (!result.isPresent()) {
-        return false;
-      }
-    }
-
     try {
+      // If a record corresponding to a delete in the delete set does not exist in the storage, we
+      // cannot one-phase commit the transaction. This is because the storage does not support
+      // delete-if-not-exists semantics, so we cannot detect conflicts with other transactions.
+      for (Map.Entry<Snapshot.Key, Delete> entry : deleteSetEntries) {
+        Delete delete = entry.getValue();
+        Optional<TransactionResult> result =
+            context.snapshot.getFromReadSet(new Snapshot.Key(delete));
+
+        // For deletes, we always perform implicit pre-reads if the result does not exit in the
+        // read set. So the result should always exist in the read set.
+        assert result != null;
+
+        if (!result.isPresent()) {
+          return false;
+        }
+
+        // Similarly, we cannot one-phase commit the transaction if it deletes a record deemed as
+        // committed in a LEFT_OUTER virtual table. The delete would have only an IS_NULL condition
+        // on the transaction ID column, which is a right-side column, and LEFT_OUTER virtual tables
+        // do not support such a delete.
+        if (result.get().isDeemedAsCommitted() && isInLeftOuterVirtualTable(entry.getKey())) {
+          return false;
+        }
+      }
+
       // If the mutations can be grouped altogether, the mutations can be done in a single mutate
       // API call, so we can one-phase commit the transaction
       return mutationsGrouper.canBeGroupedAltogether(
@@ -255,6 +269,13 @@ public class CommitHandler {
           e,
           context.transactionId);
     }
+  }
+
+  private boolean isInLeftOuterVirtualTable(Snapshot.Key key) throws ExecutionException {
+    VirtualTableInfo virtualTableInfo =
+        virtualTableInfoManager.getVirtualTableInfo(key.getNamespace(), key.getTable());
+    return virtualTableInfo != null
+        && virtualTableInfo.getJoinType() == VirtualTableJoinType.LEFT_OUTER;
   }
 
   protected void handleCommitConflict(TransactionContext context, Exception cause)

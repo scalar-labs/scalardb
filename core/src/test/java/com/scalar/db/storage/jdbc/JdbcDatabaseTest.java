@@ -12,9 +12,12 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DeleteBuilder;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutBuilder;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
@@ -38,9 +41,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -1019,7 +1025,7 @@ public class JdbcDatabaseTest {
     when(jdbcService.mutate(any(), any())).thenReturn(true);
 
     Map<String, String> attributes = new HashMap<>();
-    JdbcOperationAttributes.setLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
+    JdbcOperationAttributes.setLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
         attributes, false);
 
     Put put =
@@ -1084,6 +1090,581 @@ public class JdbcDatabaseTest {
     assertThat(mutations.get(1)).isEqualTo(expectedRightPut);
 
     verify(connection).close();
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsToNull_ShouldDeleteRightSourceRecord()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").build(),
+            rightSourceTableDelete().build());
+  }
+
+  @ParameterizedTest
+  @MethodSource("conditionsAppliedOnlyToLeftSourceTableInLeftOuterJoin")
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsToNullWithConditionOnlyForLeftSourceTable_ShouldDeleteRightSourceRecordWithoutCondition(
+          MutationCondition condition) throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .condition(condition)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").condition(condition).build(),
+            rightSourceTableDelete().build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsToNullWithConditionsOnRightColumns_ShouldDeleteRightSourceRecordWithSameConditions()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .intValue("left_col2", 100)
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isEqualToText("tx1"))
+                    .and(ConditionBuilder.column("right_col2").isEqualToInt(3))
+                    .build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut()
+                .textValue("left_col1", "left_val1")
+                .intValue("left_col2", 100)
+                .build(),
+            rightSourceTableDelete()
+                .condition(
+                    ConditionBuilder.deleteIf(
+                            ConditionBuilder.column("right_col1").isEqualToText("tx1"))
+                        .and(ConditionBuilder.column("right_col2").isEqualToInt(3))
+                        .build())
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsToNullWithIsNullAndOtherConditionsOnRightColumns_ShouldDeleteRightSourceRecordWithAllConditions()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("left_col1").isEqualToText("val"))
+                    .and(ConditionBuilder.column("right_col1").isNullText())
+                    .and(ConditionBuilder.column("right_col2").isEqualToInt(3))
+                    .build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut()
+                .condition(
+                    ConditionBuilder.putIf(
+                            ConditionBuilder.column("left_col1").isEqualToText("val"))
+                        .build())
+                .build(),
+            rightSourceTableDelete()
+                .condition(
+                    ConditionBuilder.deleteIf(ConditionBuilder.column("right_col1").isNullText())
+                        .and(ConditionBuilder.column("right_col2").isEqualToInt(3))
+                        .build())
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsToNullWithAllIsNullConditionsOnRightColumns_ShouldPutRightSourceRecordWithPutIfNotExists()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText()).build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut()
+                .textValue("left_col1", "left_val1")
+                .condition(ConditionBuilder.putIfExists())
+                .build(),
+            rightSourceTablePut()
+                .textValue("right_col1", null)
+                .intValue("right_col2", null)
+                .doubleValue("right_col3", null)
+                .condition(ConditionBuilder.putIfNotExists())
+                .build());
+  }
+
+  @Test
+  public void put_ForLeftOuterVirtualTableSettingSomeRightColumnsToNull_ShouldPutRightSourceRecord()
+      throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").build(),
+            rightSourceTablePut()
+                .textValue("right_col1", null)
+                .intValue("right_col2", null)
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsWithSomeNonNullValues_ShouldPutRightSourceRecord()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("right_col1", null)
+            .intValue("right_col2", 3)
+            .doubleValue("right_col3", null)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().build(),
+            rightSourceTablePut()
+                .textValue("right_col1", null)
+                .intValue("right_col2", 3)
+                .doubleValue("right_col3", null)
+                .build());
+  }
+
+  @Test
+  public void put_ForLeftOuterVirtualTableWithoutRightColumns_ShouldNotWriteRightSourceTable()
+      throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put = virtualTablePut().textValue("left_col1", "left_val1").build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(leftSourceTablePut().textValue("left_col1", "left_val1").build());
+  }
+
+  @ParameterizedTest
+  @MethodSource("conditionsAppliedOnlyToLeftSourceTableInLeftOuterJoin")
+  public void
+      put_ForLeftOuterVirtualTableWithoutRightColumnsWithConditionOnlyForLeftSourceTable_ShouldNotWriteRightSourceTable(
+          MutationCondition condition) throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put = virtualTablePut().textValue("left_col1", "left_val1").condition(condition).build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").condition(condition).build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithRightSourceTableWithOnlyPrimaryKey_ShouldNotWriteRightSourceTable()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(
+        VirtualTableJoinType.LEFT_OUTER,
+        createLeftSourceTableMetadata(),
+        createSourceTableMetadataWithOnlyPrimaryKey());
+    Put put = virtualTablePut().textValue("left_col1", "left_val1").build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(leftSourceTablePut().textValue("left_col1", "left_val1").build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithoutRightColumnsWithConditionsOnRightColumns_ShouldPutRightSourceRecordWithoutValuesToCheckConditions()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isEqualToText("tx1"))
+                    .build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").build(),
+            rightSourceTablePut()
+                .condition(
+                    ConditionBuilder.putIf(
+                            ConditionBuilder.column("right_col1").isEqualToText("tx1"))
+                        .build())
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithAllIsNullConditionsOnRightColumnsOnly_ShouldCheckLeftSourceRecordExists()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", "right_val1")
+            .intValue("right_col2", 1)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText())
+                    .and(ConditionBuilder.column("right_col2").isNullInt())
+                    .build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut()
+                .textValue("left_col1", "left_val1")
+                .condition(ConditionBuilder.putIfExists())
+                .build(),
+            rightSourceTablePut()
+                .textValue("right_col1", "right_val1")
+                .intValue("right_col2", 1)
+                .condition(ConditionBuilder.putIfNotExists())
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithoutLeftColumnsWithAllIsNullConditionsOnRightColumnsOnly_ShouldCheckLeftSourceRecordExistsWithoutValues()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("right_col1", "right_val1")
+            .intValue("right_col2", 1)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText()).build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().condition(ConditionBuilder.putIfExists()).build(),
+            rightSourceTablePut()
+                .textValue("right_col1", "right_val1")
+                .intValue("right_col2", 1)
+                .condition(ConditionBuilder.putIfNotExists())
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithAllIsNullConditionsOnRightColumnsOnlyAndLeftSourceTableWithOnlyPrimaryKey_ShouldCheckLeftSourceRecordExists()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(
+        VirtualTableJoinType.LEFT_OUTER,
+        createSourceTableMetadataWithOnlyPrimaryKey(),
+        createRightSourceTableMetadata());
+    Put put =
+        virtualTablePut()
+            .textValue("right_col1", "right_val1")
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText()).build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().condition(ConditionBuilder.putIfExists()).build(),
+            rightSourceTablePut()
+                .textValue("right_col1", "right_val1")
+                .condition(ConditionBuilder.putIfNotExists())
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithConditionsOnRightColumns_ShouldPutRightSourceRecordWithSameConditions()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put put =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", "tx1")
+            .intValue("right_col2", 2)
+            .doubleValue("right_col3", null)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isEqualToText("tx1"))
+                    .build())
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").build(),
+            rightSourceTablePut()
+                .textValue("right_col1", "tx1")
+                .intValue("right_col2", 2)
+                .doubleValue("right_col3", null)
+                .condition(
+                    ConditionBuilder.putIf(
+                            ConditionBuilder.column("right_col1").isEqualToText("tx1"))
+                        .build())
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsToNullWhenAllNullRightRecordIsNotTreatedAsAbsent_ShouldPutRightSourceRecord()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Map<String, String> attributes = createAttributesNotTreatingAllNullRightRecordAsAbsent();
+    Put put =
+        virtualTablePut()
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .attributes(attributes)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().attributes(attributes).build(),
+            rightSourceTablePut()
+                .textValue("right_col1", null)
+                .intValue("right_col2", null)
+                .doubleValue("right_col3", null)
+                .attributes(attributes)
+                .build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithoutRightColumnsWhenAllNullRightRecordIsNotTreatedAsAbsent_ShouldPutRightSourceRecord()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Map<String, String> attributes = createAttributesNotTreatingAllNullRightRecordAsAbsent();
+    Put put = virtualTablePut().textValue("left_col1", "left_val1").attributes(attributes).build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").attributes(attributes).build(),
+            rightSourceTablePut().attributes(attributes).build());
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableWithAllIsNullConditionsOnRightColumnsOnlyWhenAllNullRightRecordIsNotTreatedAsAbsent_ShouldNotCheckLeftSourceRecordExists()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Map<String, String> attributes = createAttributesNotTreatingAllNullRightRecordAsAbsent();
+    Put put =
+        virtualTablePut()
+            .textValue("right_col1", "right_val1")
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText()).build())
+            .attributes(attributes)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().attributes(attributes).build(),
+            rightSourceTablePut()
+                .textValue("right_col1", "right_val1")
+                .condition(
+                    ConditionBuilder.putIf(ConditionBuilder.column("right_col1").isNullText())
+                        .build())
+                .attributes(attributes)
+                .build());
+  }
+
+  @Test
+  public void put_ForInnerVirtualTableSettingAllRightColumnsToNull_ShouldPutRightSourceRecord()
+      throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.INNER);
+    Put put =
+        virtualTablePut()
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().build(),
+            rightSourceTablePut()
+                .textValue("right_col1", null)
+                .intValue("right_col2", null)
+                .doubleValue("right_col3", null)
+                .build());
+  }
+
+  @Test
+  public void put_ForInnerVirtualTableWithoutRightColumns_ShouldPutRightSourceRecord()
+      throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.INNER);
+    Put put = virtualTablePut().textValue("left_col1", "left_val1").build();
+
+    // Act
+    jdbcDatabase.put(put);
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            leftSourceTablePut().textValue("left_col1", "left_val1").build(),
+            rightSourceTablePut().build());
+  }
+
+  @Test
+  public void
+      mutate_ForLeftOuterVirtualTableSettingAllRightColumnsToNull_ShouldDeleteRightSourceRecordWithOtherMutations()
+          throws Exception {
+    // Arrange
+    prepareVirtualTable(VirtualTableJoinType.LEFT_OUTER);
+    Put regularPut =
+        Put.newBuilder()
+            .namespace("regular_ns")
+            .table("regular_table")
+            .partitionKey(Key.ofText("pk1", "regular_val"))
+            .textValue("col1", "value1")
+            .consistency(Consistency.LINEARIZABLE)
+            .build();
+    Put virtualPut =
+        virtualTablePut()
+            .textValue("left_col1", "left_val1")
+            .textValue("right_col1", null)
+            .intValue("right_col2", null)
+            .doubleValue("right_col3", null)
+            .build();
+
+    // Act
+    jdbcDatabase.mutate(Arrays.asList(regularPut, virtualPut));
+
+    // Assert
+    assertThat(captureMutations())
+        .containsExactly(
+            regularPut,
+            leftSourceTablePut().textValue("left_col1", "left_val1").build(),
+            rightSourceTableDelete().build());
   }
 
   @Test
@@ -1850,6 +2431,93 @@ public class JdbcDatabaseTest {
         .addColumn("right_col1", DataType.TEXT)
         .addColumn("right_col2", DataType.INT)
         .addColumn("right_col3", DataType.DOUBLE)
+        .addPartitionKey("pk1")
+        .addClusteringKey("ck1")
+        .addClusteringKey("ck2")
+        .build();
+  }
+
+  private static Stream<MutationCondition> conditionsAppliedOnlyToLeftSourceTableInLeftOuterJoin() {
+    return Stream.of(
+        ConditionBuilder.putIfExists(),
+        ConditionBuilder.putIfNotExists(),
+        ConditionBuilder.putIf(ConditionBuilder.column("left_col1").isEqualToText("val")).build());
+  }
+
+  private void prepareVirtualTable(VirtualTableJoinType joinType) throws Exception {
+    prepareVirtualTable(
+        joinType, createLeftSourceTableMetadata(), createRightSourceTableMetadata());
+  }
+
+  private void prepareVirtualTable(
+      VirtualTableJoinType joinType,
+      TableMetadata leftSourceTableMetadata,
+      TableMetadata rightSourceTableMetadata)
+      throws Exception {
+    when(virtualTableInfoManager.getVirtualTableInfo(NAMESPACE, TABLE))
+        .thenReturn(createVirtualTableInfo(joinType));
+    when(tableMetadataManager.getTableMetadata("left_ns", "left_table"))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataManager.getTableMetadata("right_ns", "right_table"))
+        .thenReturn(rightSourceTableMetadata);
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
+  }
+
+  private List<Mutation> captureMutations() throws Exception {
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Mutation>> mutationsCaptor = ArgumentCaptor.forClass(List.class);
+    verify(jdbcService).mutate(mutationsCaptor.capture(), any());
+    return mutationsCaptor.getValue();
+  }
+
+  private PutBuilder.Buildable virtualTablePut() {
+    return Put.newBuilder()
+        .namespace(NAMESPACE)
+        .table(TABLE)
+        .partitionKey(Key.ofText("pk1", "val1"))
+        .clusteringKey(Key.ofText("ck1", "ck_val1"))
+        .consistency(Consistency.LINEARIZABLE);
+  }
+
+  private PutBuilder.Buildable leftSourceTablePut() {
+    return Put.newBuilder()
+        .namespace("left_ns")
+        .table("left_table")
+        .partitionKey(Key.ofText("pk1", "val1"))
+        .clusteringKey(Key.ofText("ck1", "ck_val1"))
+        .consistency(Consistency.LINEARIZABLE);
+  }
+
+  private PutBuilder.Buildable rightSourceTablePut() {
+    return Put.newBuilder()
+        .namespace("right_ns")
+        .table("right_table")
+        .partitionKey(Key.ofText("pk1", "val1"))
+        .clusteringKey(Key.ofText("ck1", "ck_val1"))
+        .consistency(Consistency.LINEARIZABLE);
+  }
+
+  private DeleteBuilder.Buildable rightSourceTableDelete() {
+    return Delete.newBuilder()
+        .namespace("right_ns")
+        .table("right_table")
+        .partitionKey(Key.ofText("pk1", "val1"))
+        .clusteringKey(Key.ofText("ck1", "ck_val1"))
+        .consistency(Consistency.LINEARIZABLE);
+  }
+
+  private Map<String, String> createAttributesNotTreatingAllNullRightRecordAsAbsent() {
+    Map<String, String> attributes = new HashMap<>();
+    JdbcOperationAttributes.setLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
+        attributes, false);
+    return attributes;
+  }
+
+  private TableMetadata createSourceTableMetadataWithOnlyPrimaryKey() {
+    return TableMetadata.newBuilder()
+        .addColumn("pk1", DataType.TEXT)
+        .addColumn("ck1", DataType.TEXT)
+        .addColumn("ck2", DataType.INT)
         .addPartitionKey("pk1")
         .addClusteringKey("ck1")
         .addClusteringKey("ck2")
