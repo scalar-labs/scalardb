@@ -273,9 +273,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       throws SQLException {
     String sourceTable =
         options == null ? null : options.get(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE);
-    // The engine's own clause, not the created-column clause, tells whether the engine has column
-    // collations. The setting must not turn off the copy of the source key collations.
-    if (sourceTable == null || rdbEngine.getBinaryTextCollationClause().isEmpty()) {
+    if (sourceTable == null || !engineHasColumnCollations()) {
       return Collections.emptyMap();
     }
     Map<String, TextColumnCollation> sourceCollations =
@@ -1001,6 +999,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
+  // Reads the engine's own clause, not the created-column clause, so that turning off the binary
+  // collation setting keeps copying source key collations and restating a redefined column's
+  // collation.
+  private boolean engineHasColumnCollations() {
+    return !rdbEngine.getBinaryTextCollationClause().isEmpty();
+  }
+
   private String getTypeForRedefinition(
       Connection connection,
       String namespace,
@@ -1010,9 +1015,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       DataType newType,
       String bareType)
       throws SQLException {
-    // The engine's own clause, not the created-column clause, tells whether the engine has column
-    // collations: restating the current collation must stay on when the setting is off.
-    if (newType != DataType.TEXT || rdbEngine.getBinaryTextCollationClause().isEmpty()) {
+    if (newType != DataType.TEXT || !engineHasColumnCollations()) {
       return bareType;
     }
     if (currentType != DataType.TEXT) {
