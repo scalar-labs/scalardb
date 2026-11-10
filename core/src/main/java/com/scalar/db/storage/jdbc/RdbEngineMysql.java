@@ -39,6 +39,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
       "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
   private static final Pattern MYSQL_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
+  private static final Pattern MYSQL_RENAME_COLUMN_VERSION_PATTERN =
+      Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
   private final boolean rowAliasSupported;
@@ -92,13 +94,16 @@ class RdbEngineMysql extends AbstractRdbEngine {
    */
   static boolean supportsRenameColumn(DatabaseMetaData metaData) throws SQLException {
     String version = metaData.getDatabaseProductVersion();
-    Matcher matcher = MYSQL_VERSION_PATTERN.matcher(version);
+    Matcher matcher = MYSQL_RENAME_COLUMN_VERSION_PATTERN.matcher(version);
     if (version.contains("MariaDB") || version.contains("TiDB") || !matcher.lookingAt()) {
       return false;
     }
     int major = Integer.parseInt(matcher.group(1));
     int minor = Integer.parseInt(matcher.group(2));
-    int patch = Integer.parseInt(matcher.group(3));
+    // Aurora MySQL 3 reports "8.0.mysql_aurora.3.x" with no numeric patch and is based on MySQL
+    // 8.0.23 or later.
+    boolean hasPatch = matcher.group(3) != null;
+    int patch = hasPatch ? Integer.parseInt(matcher.group(3)) : Integer.MAX_VALUE;
     return major > 8 || (major == 8 && (minor > 0 || patch >= 3));
   }
 

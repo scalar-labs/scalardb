@@ -206,6 +206,8 @@ class RdbEngineMysqlTest {
     "8.0.45-0ubuntu0.22.04.1, true",
     "8.4.3, true",
     "9.1.0, true",
+    "8.0.mysql_aurora.3.04.0, true",
+    "5.7.mysql_aurora.2.11.2, false",
     "11.4.2-MariaDB, false",
     "8.0.11-TiDB-v8.5.0, false",
     "'', false"
