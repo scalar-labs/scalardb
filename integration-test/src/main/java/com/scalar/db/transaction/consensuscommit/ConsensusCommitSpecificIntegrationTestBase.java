@@ -44,6 +44,7 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -6553,6 +6554,52 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
+  void scan_EmptyRangeBoundedByPutKeyGivenAndRecordCommitted_ShouldReturnEmptyResults(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 1, namespace1, TABLE_1)).intValue(BALANCE, 1).build());
+
+    // Act
+    // [1, 1)
+    Scan scan =
+        Scan.newBuilder(prepareScan(0, 1, 1, namespace1, TABLE_1))
+            .start(Key.ofInt(ACCOUNT_TYPE, 1), true)
+            .end(Key.ofInt(ACCOUNT_TYPE, 1), false)
+            .build();
+    List<Result> results = transaction.scan(scan);
+    transaction.rollback();
+
+    // Assert
+    assertThat(results).isEmpty();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_ReversedRangeBoundedByPutKeyGivenAndRecordCommitted_ShouldReturnEmptyResults(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 1, namespace1, TABLE_1)).intValue(BALANCE, 1).build());
+
+    // Act
+    // [1, 0]
+    Scan scan = prepareScan(0, 1, 0, namespace1, TABLE_1);
+    List<Result> results = transaction.scan(scan);
+    transaction.rollback();
+
+    // Assert
+    assertThat(results).isEmpty();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
   void scan_NonOverlappingPutGivenBefore_ShouldScan(Isolation isolation)
       throws TransactionException {
     // Arrange
@@ -12043,12 +12090,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       @Nullable CoordinatorGroupCommitter groupCommitter,
       boolean onePhaseCommitEnabled) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    VirtualTableInfoManager virtualTableInfoManager = new VirtualTableInfoManager(admin, -1);
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
@@ -12061,6 +12110,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
