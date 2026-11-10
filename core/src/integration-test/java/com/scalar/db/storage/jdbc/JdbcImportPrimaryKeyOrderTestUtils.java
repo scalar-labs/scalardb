@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.config.DatabaseConfig;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
@@ -35,6 +36,7 @@ class JdbcImportPrimaryKeyOrderTestUtils implements AutoCloseable {
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
   }
 
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   void createSchemaAndTable(String namespace) throws SQLException {
     execute(rdbEngine.createNamespaceSqls(rdbEngine.enclose(namespace)));
     // VARCHAR is used instead of CHAR because Oracle does not blank-pad a CHAR column when it is
