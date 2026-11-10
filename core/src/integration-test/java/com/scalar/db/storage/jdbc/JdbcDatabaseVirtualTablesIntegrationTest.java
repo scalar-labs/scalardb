@@ -111,8 +111,9 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
         admin.importTable(namespace, importedTableName, Collections.emptyMap());
 
         // Create a right source table whose TEXT key takes the collation of the imported table's
-        // key, since some databases, such as Oracle, reject a join on keys of conflicting
-        // collations
+        // key. On Oracle 23, joining a USING_NLS_COMP key to a BINARY key failed with ORA-43915,
+        // "unable to determine collation: arguments have conflicting collations", see
+        // https://docs.oracle.com/en/error-help/db/ora-43915/
         admin.createTable(
             namespace,
             anotherTableName,
