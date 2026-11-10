@@ -461,8 +461,6 @@ class RdbEngineOracle extends AbstractRdbEngine {
     String nCharset =
         queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_NCHAR_CHARACTERSET");
     String sessionNlsComp = queryNlsParameter(connection, "NLS_SESSION_PARAMETERS", "NLS_COMP");
-    // COLLATION is NULL when the database runs with COMPATIBLE below 12.2, which has no column
-    // collations and follows NLS_COMP.
     String sql =
         "SELECT COLUMN_NAME, DATA_TYPE, COLLATION FROM ALL_TAB_COLS"
             + " WHERE OWNER = ? AND TABLE_NAME = ? AND HIDDEN_COLUMN = 'NO'"
@@ -473,10 +471,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
       try (ResultSet rs = ps.executeQuery()) {
         Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
         while (rs.next()) {
-          String collation = rs.getString("COLLATION");
-          if (collation == null) {
-            collation = USING_NLS_COMP;
-          }
+          String collation = nullToUsingNlsComp(rs.getString("COLLATION"));
           collations.put(
               rs.getString("COLUMN_NAME"),
               new TextColumnCollation(
@@ -516,9 +511,15 @@ class RdbEngineOracle extends AbstractRdbEngine {
     try (PreparedStatement ps = connection.prepareStatement(sql)) {
       ps.setString(1, namespace);
       try (ResultSet rs = ps.executeQuery()) {
-        return rs.next() ? rs.getString(1) : null;
+        return rs.next() ? nullToUsingNlsComp(rs.getString(1)) : null;
       }
     }
+  }
+
+  // A collation reads as NULL when the database runs with COMPATIBLE below 12.2, which has no
+  // column collations and follows NLS_COMP.
+  private static String nullToUsingNlsComp(@Nullable String collation) {
+    return collation == null ? USING_NLS_COMP : collation;
   }
 
   @Override

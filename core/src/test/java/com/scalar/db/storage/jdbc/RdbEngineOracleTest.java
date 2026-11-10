@@ -432,4 +432,23 @@ class RdbEngineOracleTest {
     // Assert
     assertThat(actual).isNull();
   }
+
+  @Test
+  public void getSchemaDefaultCollation_WithNullDefaultCollation_ShouldReturnUsingNlsComp()
+      throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(org.mockito.ArgumentMatchers.anyString())).thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn(null);
+
+    // Act
+    String actual = rdbEngineOracle.getSchemaDefaultCollation(connection, "ns");
+
+    // Assert
+    assertThat(actual).isEqualTo("USING_NLS_COMP");
+  }
 }
