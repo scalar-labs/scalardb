@@ -111,13 +111,15 @@ updates:
       time: "01:00"
       timezone: "Asia/Tokyo"
 
-  # For Docker, update the base images pinned in all Dockerfiles on the default, support and release branches
-  # When a new Dockerfile is added, add its directory to every "directories" list below
+  # For Docker, update the base images pinned in all Dockerfiles on the default branch only
+  # The support and release branches are not covered here because base image updates are applied to them
+  # by backporting the changes merged into the default branch
+  # When a new Dockerfile is added, add its directory to the "directories" list below
   # The hadolint image in /ci/hadolint is used by ci/dockerfile_lint.sh to lint Dockerfiles. It has its own group
   # so that a hadolint update (including major versions, which may change the lint rules and fail the lint job)
   # never blocks the base image updates in the same PR
-  # Major version updates of the JRE base image are ignored on all branches because upgrading the Java runtime
-  # of the released images is a manual decision; the other base image updates are grouped into a single PR per branch
+  # Major version updates of the JRE base image are ignored because upgrading the Java runtime
+  # of the released images is a manual decision; the other base image updates are grouped into a single PR
   - package-ecosystem: "docker"
     groups:
       container images on branch master:
@@ -126,150 +128,6 @@ updates:
         exclude-patterns:
           - "hadolint/hadolint"
       hadolint on branch master:
-        patterns:
-          - "hadolint/hadolint"
-    directories:
-      - "/ci/hadolint"
-      - "/data-loader/cli"
-      - "/schema-loader"
-    ignore:
-      - dependency-name: "eclipse-temurin"
-        update-types: [ "version-update:semver-major" ]
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "docker"
-    target-branch: "3"
-    groups:
-      container images on branch 3:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "hadolint/hadolint"
-      hadolint on branch 3:
-        patterns:
-          - "hadolint/hadolint"
-    directories:
-      - "/ci/hadolint"
-      - "/data-loader/cli"
-      - "/schema-loader"
-    ignore:
-      - dependency-name: "eclipse-temurin"
-        update-types: [ "version-update:semver-major" ]
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "docker"
-    target-branch: "3.20"
-    groups:
-      container images on branch 3.20:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "hadolint/hadolint"
-      hadolint on branch 3.20:
-        patterns:
-          - "hadolint/hadolint"
-    directories:
-      - "/ci/hadolint"
-      - "/data-loader/cli"
-      - "/schema-loader"
-    ignore:
-      - dependency-name: "eclipse-temurin"
-        update-types: [ "version-update:semver-major" ]
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "docker"
-    target-branch: "3.19"
-    groups:
-      container images on branch 3.19:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "hadolint/hadolint"
-      hadolint on branch 3.19:
-        patterns:
-          - "hadolint/hadolint"
-    directories:
-      - "/ci/hadolint"
-      - "/data-loader/cli"
-      - "/schema-loader"
-    ignore:
-      - dependency-name: "eclipse-temurin"
-        update-types: [ "version-update:semver-major" ]
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "docker"
-    target-branch: "3.18"
-    groups:
-      container images on branch 3.18:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "hadolint/hadolint"
-      hadolint on branch 3.18:
-        patterns:
-          - "hadolint/hadolint"
-    directories:
-      - "/ci/hadolint"
-      - "/data-loader/cli"
-      - "/schema-loader"
-    ignore:
-      - dependency-name: "eclipse-temurin"
-        update-types: [ "version-update:semver-major" ]
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "docker"
-    target-branch: "3.17"
-    groups:
-      container images on branch 3.17:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "hadolint/hadolint"
-      hadolint on branch 3.17:
-        patterns:
-          - "hadolint/hadolint"
-    directories:
-      - "/ci/hadolint"
-      - "/data-loader/cli"
-      - "/schema-loader"
-    ignore:
-      - dependency-name: "eclipse-temurin"
-        update-types: [ "version-update:semver-major" ]
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "docker"
-    target-branch: "3.16"
-    groups:
-      container images on branch 3.16:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "hadolint/hadolint"
-      hadolint on branch 3.16:
         patterns:
           - "hadolint/hadolint"
     directories:
