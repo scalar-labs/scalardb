@@ -26,7 +26,9 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 class RdbEngineSpanner extends RdbEnginePostgresql {
@@ -45,6 +47,17 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   @Override
   public String getDriverClassName() {
     return JdbcDriver.class.getName();
+  }
+
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) {
+    return Collections.emptyMap();
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    return "";
   }
 
   @Override
