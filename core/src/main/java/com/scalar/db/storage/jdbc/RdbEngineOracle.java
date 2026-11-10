@@ -441,6 +441,13 @@ class RdbEngineOracle extends AbstractRdbEngine {
     }
   }
 
+  // MODIFY without COLLATE keeps the collation, see JdbcAdminCollationIntegrationTest
+  // dropIndex_ColumnWithNonBinaryCollation_ShouldKeepCollation.
+  @Override
+  public boolean keepsCollationOnTypeRedefinition() {
+    return true;
+  }
+
   @Override
   public String getBinaryTextCollationClause() {
     return "COLLATE BINARY";

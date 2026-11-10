@@ -48,12 +48,8 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @SuppressWarnings("unused")
-  private static boolean isNotMysqlOrPostgresqlFamily() {
-    return JdbcEnv.isOracle()
-        || JdbcEnv.isSqlServer()
-        || JdbcEnv.isSqlite()
-        || JdbcEnv.isDb2()
-        || JdbcEnv.isSpanner();
+  private static boolean isDb2SqliteOrSpanner() {
+    return JdbcEnv.isDb2() || JdbcEnv.isSqlite() || JdbcEnv.isSpanner();
   }
 
   @SuppressWarnings("unused")
@@ -311,32 +307,46 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   private String nonBinaryCollation() {
-    return JdbcTestUtils.isPostgresql(rdbEngine) ? "und-x-icu" : "utf8mb4_general_ci";
+    if (JdbcTestUtils.isTidb(rdbEngine)) {
+      return "utf8mb4_general_ci";
+    }
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      return rdbEngine.getBinaryTextCollationClause().endsWith("utf8mb4_0900_bin")
+          ? "utf8mb4_0900_ai_ci"
+          : "utf8mb4_unicode_ci";
+    }
+    if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return "und-x-icu";
+    }
+    if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return "BINARY_CI";
+    }
+    if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return "Latin1_General_100_CI_AS_SC_UTF8";
+    }
+    throw new AssertionError();
   }
 
   private void createTableWithNonBinaryCollationOnPlainColumn() throws Exception {
     admin.createNamespace(NAMESPACE, true);
-    admin.createTable(
-        NAMESPACE,
-        TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(TEXT_PK, DataType.TEXT)
-            .addColumn(TEXT_PLAIN, DataType.TEXT)
-            .addPartitionKey(TEXT_PK)
-            .build(),
-        true);
-    String collationClause =
-        JdbcTestUtils.isPostgresql(rdbEngine)
-            ? "COLLATE \"" + nonBinaryCollation() + "\""
-            : "CHARACTER SET utf8mb4 COLLATE " + nonBinaryCollation();
-    String type = rdbEngine.getDataTypeForEngine(DataType.TEXT) + " " + collationClause;
+    admin.createTable(NAMESPACE, TABLE, textTableMetadata(), true);
+    String collation = nonBinaryCollation();
+    String clause;
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      clause = "CHARACTER SET utf8mb4 COLLATE " + collation;
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      clause = "COLLATE \"" + collation + "\"";
+    } else {
+      clause = "COLLATE " + collation;
+    }
+    String type = rdbEngine.getDataTypeForEngine(DataType.TEXT) + " " + clause;
     for (String sql : rdbEngine.alterColumnTypeSql(NAMESPACE, TABLE, TEXT_PLAIN, type)) {
       testUtils.executeSql(sql);
     }
   }
 
   @Test
-  @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  @DisabledIf("isDb2SqliteOrSpanner")
   void createIndex_ColumnWithNonBinaryCollation_ShouldKeepCollation() throws Exception {
     // Arrange
     createTableWithNonBinaryCollationOnPlainColumn();
@@ -350,7 +360,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
-  @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  @DisabledIf("isDb2SqliteOrSpanner")
   void dropIndex_ColumnWithNonBinaryCollation_ShouldKeepCollation() throws Exception {
     // Arrange
     createTableWithNonBinaryCollationOnPlainColumn();
@@ -365,7 +375,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
-  @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  @DisabledIf("isDb2SqliteOrSpanner")
   void renameColumn_ColumnWithNonBinaryCollation_ShouldKeepCollation() throws Exception {
     // Arrange
     createTableWithNonBinaryCollationOnPlainColumn();
@@ -490,6 +500,24 @@ public class JdbcAdminCollationIntegrationTest {
     Throwable thrown =
         catchThrowable(
             () -> admin.repairTable(NAMESPACE, TABLE, textTableMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isNull();
+  }
+
+  @Test
+  @DisabledIf("isDb2OrSpanner")
+  void createIndex_MaxStringSizeStandardAndTableCreatedBeforeUpgrade_ShouldSucceed()
+      throws Exception {
+    // Arrange
+    assumeTrue(isOracleWithStandardMaxStringSize());
+    createOracleTablesWithoutCollation();
+    admin.importTable(NAMESPACE, TABLE, Collections.emptyMap());
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () -> admin.createIndex(NAMESPACE, TABLE, TEXT_PLAIN, Collections.emptyMap()));
 
     // Assert
     assertThat(thrown).isNull();

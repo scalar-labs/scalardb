@@ -812,7 +812,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String columnType =
         getTypeForRedefinition(
-            connection, namespace, table, columnName, dataType, columnTypeForKey);
+            connection, namespace, table, columnName, dataType, dataType, columnTypeForKey);
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
@@ -834,6 +834,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             table,
             columnName,
             dataType,
+            dataType,
             rdbEngine.getDataTypeForEngine(dataType));
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
@@ -844,17 +845,32 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace,
       String table,
       String columnName,
-      DataType dataType,
+      DataType currentType,
+      DataType newType,
       String bareType)
       throws SQLException {
-    if (dataType != DataType.TEXT || rdbEngine.keepsCollationOnTypeRedefinition()) {
+    String binaryClause = rdbEngine.getBinaryTextCollationClause();
+    // An engine without a column collation clause has no collation to restate.
+    if (newType != DataType.TEXT
+        || binaryClause.isEmpty()
+        || rdbEngine.keepsCollationOnTypeRedefinition()) {
       return bareType;
     }
-    TextColumnCollation current =
-        rdbEngine.getTextColumnCollations(connection, namespace, table).get(columnName);
+    if (currentType != DataType.TEXT) {
+      return rdbEngine.appendCollationClause(bareType, binaryClause);
+    }
+    Map<String, TextColumnCollation> collations =
+        rdbEngine.getTextColumnCollations(connection, namespace, table);
+    return rdbEngine.appendCollationClause(
+        bareType, getCollationClauseOrBinary(rdbEngine, collations, columnName));
+  }
+
+  private static String getCollationClauseOrBinary(
+      RdbEngineStrategy rdbEngine, Map<String, TextColumnCollation> collations, String columnName) {
+    TextColumnCollation current = collations.get(columnName);
     return current == null
-        ? bareType
-        : rdbEngine.appendCollationClause(bareType, rdbEngine.getCollationClause(current));
+        ? rdbEngine.getBinaryTextCollationClause()
+        : rdbEngine.getCollationClause(current);
   }
 
   @Override
@@ -1100,14 +1116,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
             String columnType = getBareVendorDbColumnType(updatedTableMetadata, newColumnName);
             if (rdbEngine.renameColumnRestatesType()) {
+              DataType dataType = currentTableMetadata.getColumnDataType(oldColumnName);
               columnType =
                   getTypeForRedefinition(
-                      connection,
-                      namespace,
-                      table,
-                      oldColumnName,
-                      currentTableMetadata.getColumnDataType(oldColumnName),
-                      columnType);
+                      connection, namespace, table, oldColumnName, dataType, dataType, columnType);
             }
             String renameColumnStatement =
                 rdbEngine.renameColumnSql(
@@ -1152,7 +1164,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     .removeColumn(columnName)
                     .addColumn(columnName, newColumnType)
                     .build();
-            String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
+            String newStorageColumnType =
+                getTypeForRedefinition(
+                    connection,
+                    namespace,
+                    table,
+                    columnName,
+                    currentColumnType,
+                    newColumnType,
+                    getBareVendorDbColumnType(updatedTableMetadata, columnName));
             String[] alterColumnTypeStatements =
                 rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
 

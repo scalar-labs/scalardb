@@ -145,9 +145,7 @@ public class JdbcAdminTest {
   // Only the engines that read the catalog need the stub. The others run their real strategy.
   private JdbcAdmin createJdbcAdminWithoutCatalogCollations(RdbEngine rdbEngine) {
     RdbEngineStrategy strategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
-    if (strategy instanceof RdbEngineMysql
-        || strategy instanceof RdbEnginePostgresql
-        || strategy instanceof RdbEngineDb2) {
+    if (strategy instanceof RdbEngineMysql || strategy instanceof RdbEnginePostgresql) {
       strategy = spy(strategy);
       try {
         doReturn(Collections.emptyMap())
@@ -3215,7 +3213,9 @@ public class JdbcAdminTest {
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
-        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` VARCHAR(128)"},
+        new String[] {
+          "ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin"
+        },
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `"
             + METADATA_SCHEMA
@@ -3232,7 +3232,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         new String[] {
-          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE VARCHAR(10485760)"
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE VARCHAR(10485760) COLLATE \"C\""
         },
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
@@ -3714,7 +3714,9 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
-        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` LONGTEXT"},
+        new String[] {
+          "ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin"
+        },
         "UPDATE `"
             + METADATA_SCHEMA
             + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
@@ -3729,7 +3731,9 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE TEXT"},
+        new String[] {
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE TEXT COLLATE \"C\""
+        },
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -3920,7 +3924,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createIndex_ForColumnMissingFromCatalog_ShouldRestateBareType()
+  public void createIndex_ForColumnMissingFromCatalog_ShouldUseBinaryCollation()
       throws SQLException, ExecutionException {
     // Arrange
     Statement statement = arrangeMysqlTextColumnWithCatalogCollation("other_column");
@@ -3930,7 +3934,9 @@ public class JdbcAdminTest {
     admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
 
     // Assert
-    verify(statement).execute("ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128)");
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
   }
 
   private Statement arrangeMysqlTextColumnWithCatalogCollation(String catalogColumn)
@@ -4413,6 +4419,36 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+  }
+
+  @Test
+  public void addNewColumnToTable_TextColumn_ShouldUseBinaryCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.INT.toString(), "PARTITION", null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.addNewColumnToTable("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `ns`.`table` ADD `c2` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
   }
 
   @Test
@@ -5035,6 +5071,38 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+  }
+
+  @Test
+  public void alterColumnType_IntToText_ShouldUseBinaryCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c2", DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.alterColumnType("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(connection, times(2)).prepareStatement(any());
+    verify(statement)
+        .execute("ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE TEXT COLLATE \"C\"");
   }
 
   @Test
