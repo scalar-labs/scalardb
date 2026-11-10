@@ -2,9 +2,13 @@ package com.scalar.db.storage.objectstorage.s3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +20,7 @@ import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -630,35 +636,87 @@ public class S3WrapperTest {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
     String objectKey2 = ANY_PREFIX + "test1/object2";
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey1, objectKey2)));
+
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
+
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
+
+    // Assert
+    ArgumentCaptor<ListObjectsV2Request> listRequestCaptor =
+        ArgumentCaptor.forClass(ListObjectsV2Request.class);
+    verify(client).listObjectsV2(listRequestCaptor.capture());
+    assertThat(listRequestCaptor.getValue().bucket()).isEqualTo(BUCKET);
+    assertThat(listRequestCaptor.getValue().prefix()).isEqualTo(ANY_PREFIX);
+    assertThat(listRequestCaptor.getValue().continuationToken()).isNull();
+
+    ArgumentCaptor<DeleteObjectsRequest> deleteRequestCaptor =
+        ArgumentCaptor.forClass(DeleteObjectsRequest.class);
+    verify(client).deleteObjects(deleteRequestCaptor.capture());
+    assertThat(deleteRequestCaptor.getValue().bucket()).isEqualTo(BUCKET);
+    assertThat(deleteRequestCaptor.getValue().delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly(objectKey1, objectKey2);
+  }
+
+  @Test
+  public void deleteByPrefix_MultiplePagesGiven_ShouldDeleteObjectsPageByPage() throws Exception {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
     String objectKey3 = ANY_PREFIX + "test2/object3";
+    String continuationToken = "token";
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                listResponse(continuationToken, objectKey1, objectKey2)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey3)));
 
-    S3Object s3Object1 = mock(S3Object.class);
-    S3Object s3Object2 = mock(S3Object.class);
-    S3Object s3Object3 = mock(S3Object.class);
-    when(s3Object1.key()).thenReturn(objectKey1);
-    when(s3Object2.key()).thenReturn(objectKey2);
-    when(s3Object3.key()).thenReturn(objectKey3);
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
 
-    // Mock paginated responses with 2 pages
-    ListObjectsV2Response response1 = mock(ListObjectsV2Response.class);
-    ListObjectsV2Response response2 = mock(ListObjectsV2Response.class);
-    when(response1.contents()).thenReturn(Arrays.asList(s3Object1, s3Object2));
-    when(response2.contents()).thenReturn(Collections.singletonList(s3Object3));
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
 
-    // Mock the paginator
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
+    // Assert
+    ArgumentCaptor<ListObjectsV2Request> listRequestCaptor =
+        ArgumentCaptor.forClass(ListObjectsV2Request.class);
+    verify(client, times(2)).listObjectsV2(listRequestCaptor.capture());
+    assertThat(listRequestCaptor.getAllValues())
+        .extracting(
+            ListObjectsV2Request::bucket,
+            ListObjectsV2Request::prefix,
+            ListObjectsV2Request::continuationToken)
+        .containsExactly(
+            tuple(BUCKET, ANY_PREFIX, null), tuple(BUCKET, ANY_PREFIX, continuationToken));
 
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer))
-        .thenAnswer(
-            invocation -> {
-              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
-              actualConsumer.accept(response1);
-              actualConsumer.accept(response2);
-              return CompletableFuture.completedFuture(null);
-            });
+    ArgumentCaptor<DeleteObjectsRequest> deleteRequestCaptor =
+        ArgumentCaptor.forClass(DeleteObjectsRequest.class);
+    verify(client, times(2)).deleteObjects(deleteRequestCaptor.capture());
+    List<DeleteObjectsRequest> deleteRequests = deleteRequestCaptor.getAllValues();
+    assertThat(deleteRequests.get(0).delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly(objectKey1, objectKey2);
+    assertThat(deleteRequests.get(1).delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly(objectKey3);
+  }
+
+  @Test
+  public void deleteByPrefix_ObjectsMoreThanBatchDeleteSizeLimitGiven_ShouldDeleteThemInBatches()
+      throws Exception {
+    // Arrange
+    String[] objectKeys = new String[S3Wrapper.BATCH_DELETE_SIZE_LIMIT + 1];
+    for (int i = 0; i < objectKeys.length; i++) {
+      objectKeys[i] = ANY_PREFIX + "object" + i;
+    }
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKeys)));
 
     DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
     when(client.deleteObjects(any(DeleteObjectsRequest.class)))
@@ -670,55 +728,53 @@ public class S3WrapperTest {
     // Assert
     ArgumentCaptor<DeleteObjectsRequest> requestCaptor =
         ArgumentCaptor.forClass(DeleteObjectsRequest.class);
-    verify(client, org.mockito.Mockito.times(2)).deleteObjects(requestCaptor.capture());
-
-    // Verify that all objects were deleted across the two calls
-    List<DeleteObjectsRequest> capturedRequests = requestCaptor.getAllValues();
-    assertThat(capturedRequests).hasSize(2);
-
-    // First page: should delete object1 and object2
-    DeleteObjectsRequest firstRequest = capturedRequests.get(0);
-    assertThat(firstRequest.bucket()).isEqualTo(BUCKET);
-    assertThat(firstRequest.delete().objects()).hasSize(2);
-    assertThat(firstRequest.delete().objects())
+    verify(client, times(2)).deleteObjects(requestCaptor.capture());
+    List<DeleteObjectsRequest> requests = requestCaptor.getAllValues();
+    assertThat(requests.get(0).delete().objects())
         .extracting(ObjectIdentifier::key)
-        .containsExactlyInAnyOrder(objectKey1, objectKey2);
-
-    // Second page: should delete object3
-    DeleteObjectsRequest secondRequest = capturedRequests.get(1);
-    assertThat(secondRequest.bucket()).isEqualTo(BUCKET);
-    assertThat(secondRequest.delete().objects()).hasSize(1);
-    assertThat(secondRequest.delete().objects())
+        .containsExactly(Arrays.copyOfRange(objectKeys, 0, S3Wrapper.BATCH_DELETE_SIZE_LIMIT));
+    assertThat(requests.get(1).delete().objects())
         .extracting(ObjectIdentifier::key)
-        .containsExactly(objectKey3);
+        .containsExactly(objectKeys[S3Wrapper.BATCH_DELETE_SIZE_LIMIT]);
+  }
+
+  @Test
+  public void deleteByPrefix_ListingCompletedOnThreadOfAwsSdk_ShouldNotWaitForDeletionOnIt()
+      throws Exception {
+    // The single thread plays the role of the threads of the AWS SDK, so waiting for the deletion
+    // on it never ends
+    ExecutorService sdkExecutor = Executors.newSingleThreadExecutor();
+    try {
+      // Arrange
+      ListObjectsV2Response response = listResponse(null, ANY_PREFIX + "test1/object1");
+      when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+          .thenAnswer(invocation -> CompletableFuture.supplyAsync(() -> response, sdkExecutor));
+
+      DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+      when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+          .thenAnswer(
+              invocation ->
+                  CompletableFuture.supplyAsync(() -> deleteObjectsResponse, sdkExecutor));
+
+      // Act Assert
+      assertTimeoutPreemptively(Duration.ofSeconds(10), () -> wrapper.deleteByPrefix(ANY_PREFIX));
+      verify(client).deleteObjects(any(DeleteObjectsRequest.class));
+    } finally {
+      sdkExecutor.shutdownNow();
+    }
   }
 
   @Test
   public void deleteByPrefix_NoObjectsWithPrefix_ShouldDoNothing() throws Exception {
     // Arrange
-    // Mock paginated response with no objects
-    ListObjectsV2Response response = mock(ListObjectsV2Response.class);
-    when(response.contents()).thenReturn(Collections.emptyList());
-
-    // Mock the paginator
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
-
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer))
-        .thenAnswer(
-            invocation -> {
-              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
-              actualConsumer.accept(response);
-              return CompletableFuture.completedFuture(null);
-            });
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null)));
 
     // Act
     wrapper.deleteByPrefix(ANY_PREFIX);
 
     // Assert
-    verify(client, org.mockito.Mockito.never()).deleteObjects(any(DeleteObjectsRequest.class));
+    verify(client, never()).deleteObjects(any(DeleteObjectsRequest.class));
   }
 
   @Test
@@ -727,27 +783,8 @@ public class S3WrapperTest {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
     String objectKey2 = ANY_PREFIX + "test1/object2";
-
-    S3Object s3Object1 = mock(S3Object.class);
-    S3Object s3Object2 = mock(S3Object.class);
-    when(s3Object1.key()).thenReturn(objectKey1);
-    when(s3Object2.key()).thenReturn(objectKey2);
-
-    ListObjectsV2Response response = mock(ListObjectsV2Response.class);
-    when(response.contents()).thenReturn(Arrays.asList(s3Object1, s3Object2));
-
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
-
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer))
-        .thenAnswer(
-            invocation -> {
-              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
-              actualConsumer.accept(response);
-              return CompletableFuture.completedFuture(null);
-            });
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey1, objectKey2)));
 
     // The request succeeds, but the deletion of object2 fails
     DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
@@ -779,27 +816,8 @@ public class S3WrapperTest {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
     String objectKey2 = ANY_PREFIX + "test1/object2";
-
-    S3Object s3Object1 = mock(S3Object.class);
-    S3Object s3Object2 = mock(S3Object.class);
-    when(s3Object1.key()).thenReturn(objectKey1);
-    when(s3Object2.key()).thenReturn(objectKey2);
-
-    ListObjectsV2Response response = mock(ListObjectsV2Response.class);
-    when(response.contents()).thenReturn(Arrays.asList(s3Object1, s3Object2));
-
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
-
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer))
-        .thenAnswer(
-            invocation -> {
-              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
-              actualConsumer.accept(response);
-              return CompletableFuture.completedFuture(null);
-            });
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey1, objectKey2)));
 
     // The request succeeds, but the deletion of object2 fails
     DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
@@ -822,18 +840,13 @@ public class S3WrapperTest {
   @Test
   public void deleteByPrefix_S3ExceptionThrown_ShouldThrowObjectStorageWrapperException() {
     // Arrange
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
-
-    CompletableFuture<Void> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(500).build());
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer)).thenReturn(failedFuture);
+    S3Exception toThrow = s3Exception(500, 1);
+    when(client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(failedFuture(toThrow));
 
     // Act & Assert
     assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX))
-        .isInstanceOf(ObjectStorageWrapperException.class);
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasRootCause(toThrow);
   }
 
   @Test
@@ -950,5 +963,18 @@ public class S3WrapperTest {
     CompletableFuture<T> future = new CompletableFuture<>();
     future.completeExceptionally(throwable);
     return future;
+  }
+
+  private static ListObjectsV2Response listResponse(
+      @Nullable String nextContinuationToken, String... objectKeys) {
+    List<S3Object> contents = new ArrayList<>();
+    for (String objectKey : objectKeys) {
+      contents.add(S3Object.builder().key(objectKey).build());
+    }
+    return ListObjectsV2Response.builder()
+        .contents(contents)
+        .isTruncated(nextContinuationToken != null)
+        .nextContinuationToken(nextContinuationToken)
+        .build();
   }
 }
