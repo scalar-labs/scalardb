@@ -100,8 +100,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
     }
     int major = Integer.parseInt(matcher.group(1));
     int minor = Integer.parseInt(matcher.group(2));
-    // Aurora MySQL 3 reports "8.0.mysql_aurora.3.x" with no numeric patch and is based on MySQL
-    // 8.0.23 or later.
+    // A version string without a numeric patch is read as the latest patch of its minor version.
     boolean hasPatch = matcher.group(3) != null;
     int patch = hasPatch ? Integer.parseInt(matcher.group(3)) : Integer.MAX_VALUE;
     return major > 8 || (major == 8 && (minor > 0 || patch >= 3));
