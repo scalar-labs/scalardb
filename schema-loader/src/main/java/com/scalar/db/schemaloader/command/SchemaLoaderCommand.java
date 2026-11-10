@@ -130,10 +130,6 @@ public class SchemaLoaderCommand implements Callable<Integer> {
   }
 
   private void repairTables() throws SchemaLoaderException {
-    if (schemaFile == null) {
-      throw new IllegalArgumentException(
-          SchemaLoaderError.SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL.buildMessage());
-    }
     Map<String, String> options = prepareAllOptions();
     SchemaLoader.repairTables(configPath, schemaFile, options, coordinator, replicationTables);
   }
