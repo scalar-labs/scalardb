@@ -215,9 +215,11 @@ dependencies {
     implementation platform("io.netty:netty-bom:${nettyVersion}")
     implementation 'io.netty:netty-buffer'
     implementation 'io.netty:netty-codec'
+    implementation 'io.netty:netty-codec-classes-quic'
     implementation 'io.netty:netty-codec-dns'
     implementation 'io.netty:netty-codec-http'
     implementation 'io.netty:netty-codec-http2'
+    implementation 'io.netty:netty-codec-http3'
     implementation 'io.netty:netty-codec-socks'
     implementation 'io.netty:netty-common'
     implementation 'io.netty:netty-handler'
