@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -254,17 +255,17 @@ public abstract class SchemaLoaderIntegrationTestBase {
   }
 
   protected List<String> getCommandArgsForTableReparation(
-      Path configFilePath, Path schemaFilePath) {
-    return ImmutableList.of(
-        "--config",
-        configFilePath.toString(),
-        "--schema-file",
-        schemaFilePath.toString(),
-        "--repair-all");
+      Path configFilePath, @Nullable Path schemaFilePath) {
+    ImmutableList.Builder<String> args =
+        ImmutableList.<String>builder().add("--config", configFilePath.toString());
+    if (schemaFilePath != null) {
+      args.add("--schema-file", schemaFilePath.toString());
+    }
+    return args.add("--repair-all").build();
   }
 
   protected List<String> getCommandArgsForTableReparationWithCoordinator(
-      Path configFilePath, Path schemaFilePath) {
+      Path configFilePath, @Nullable Path schemaFilePath) {
     return ImmutableList.<String>builder()
         .addAll(getCommandArgsForTableReparation(configFilePath, schemaFilePath))
         .add("--coordinator")
@@ -421,6 +422,29 @@ public abstract class SchemaLoaderIntegrationTestBase {
     assertThat(transactionAdmin.getTableMetadata(namespace1, TABLE_1))
         .isEqualTo(getTable1Metadata());
     assertThat(storageAdmin.getTableMetadata(namespace2, TABLE_2)).isEqualTo(getTable2Metadata());
+    assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isTrue();
+  }
+
+  @Test
+  public void
+      createTablesThenDropCoordinatorTablesThenRepairAllWithCoordinatorWithoutSchemaFile_ShouldExecuteProperly()
+          throws Exception {
+    // Arrange
+    int exitCodeCreation =
+        executeWithArgs(
+            getCommandArgsForCreationWithCoordinator(CONFIG_FILE_PATH, SCHEMA_FILE_PATH));
+    assertThat(exitCodeCreation).isZero();
+    transactionAdmin.dropCoordinatorTables();
+    waitForCreationIfNecessary();
+    assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isFalse();
+
+    // Act
+    int exitCodeReparation =
+        executeWithArgs(getCommandArgsForTableReparationWithCoordinator(CONFIG_FILE_PATH, null));
+
+    // Assert
+    assertThat(exitCodeReparation).isZero();
+    waitForCreationIfNecessary();
     assertThat(adminTestUtils.areTableMetadataForCoordinatorTablesPresent()).isTrue();
   }
 

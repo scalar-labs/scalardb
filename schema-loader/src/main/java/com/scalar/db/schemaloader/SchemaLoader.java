@@ -331,7 +331,7 @@ public class SchemaLoader {
    */
   public static void repairTables(
       Properties configProperties,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean repairCoordinatorTable,
       boolean repairReplicationTable)
@@ -353,7 +353,7 @@ public class SchemaLoader {
    */
   public static void repairTables(
       Properties configProperties,
-      Path schemaPath,
+      @Nullable Path schemaPath,
       Map<String, String> options,
       boolean repairCoordinatorTable,
       boolean repairReplicationTable)
@@ -375,7 +375,7 @@ public class SchemaLoader {
    */
   public static void repairTables(
       Path configPath,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean repairCoordinatorTable,
       boolean repairReplicationTable)
@@ -397,7 +397,7 @@ public class SchemaLoader {
    */
   public static void repairTables(
       Path configPath,
-      Path schemaPath,
+      @Nullable Path schemaPath,
       Map<String, String> options,
       boolean repairCoordinatorTable,
       boolean repairReplicationTable)
@@ -589,7 +589,7 @@ public class SchemaLoader {
    */
   public static void repairTables(
       Properties configProperties,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean repairCoordinatorTable)
       throws SchemaLoaderException {
@@ -608,7 +608,7 @@ public class SchemaLoader {
    */
   public static void repairTables(
       Properties configProperties,
-      Path schemaPath,
+      @Nullable Path schemaPath,
       Map<String, String> options,
       boolean repairCoordinatorTable)
       throws SchemaLoaderException {
@@ -627,7 +627,7 @@ public class SchemaLoader {
    */
   public static void repairTables(
       Path configPath,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean repairCoordinatorTable)
       throws SchemaLoaderException {
@@ -645,7 +645,10 @@ public class SchemaLoader {
    * @throws SchemaLoaderException thrown when repairing fails.
    */
   public static void repairTables(
-      Path configPath, Path schemaPath, Map<String, String> options, boolean repairCoordinatorTable)
+      Path configPath,
+      @Nullable Path schemaPath,
+      Map<String, String> options,
+      boolean repairCoordinatorTable)
       throws SchemaLoaderException {
     repairTables(configPath, schemaPath, options, repairCoordinatorTable, false);
   }
