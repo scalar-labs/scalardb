@@ -31,6 +31,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -52,6 +54,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
 
   @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
+  @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
   @VisibleForTesting static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
@@ -537,20 +540,28 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
 
             TableMetadata.Builder builder = TableMetadata.newBuilder();
-            boolean primaryKeyExists = false;
 
             DatabaseMetaData metadata = connection.getMetaData();
             ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
+            List<Map.Entry<Integer, String>> primaryKeyColumns = new ArrayList<>();
             while (resultSet.next()) {
-              primaryKeyExists = true;
-              String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-              builder.addPartitionKey(columnName);
+              primaryKeyColumns.add(
+                  new AbstractMap.SimpleImmutableEntry<>(
+                      resultSet.getInt(JDBC_COL_KEY_SEQ),
+                      resultSet.getString(JDBC_COL_COLUMN_NAME)));
             }
 
-            if (!primaryKeyExists) {
+            if (primaryKeyColumns.isEmpty()) {
               throw new IllegalStateException(
                   CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
                       getFullTableName(namespace, table)));
+            }
+
+            // The JDBC specification orders these rows by the column name, so sort them by the
+            // position of the column in the primary key
+            primaryKeyColumns.sort(Map.Entry.comparingByKey());
+            for (Map.Entry<Integer, String> primaryKeyColumn : primaryKeyColumns) {
+              builder.addPartitionKey(primaryKeyColumn.getValue());
             }
 
             resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
