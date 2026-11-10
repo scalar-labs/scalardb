@@ -4,6 +4,7 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_SIZE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DATA_TYPE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DECIMAL_DIGITS;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_KEY_SEQ;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
 import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
@@ -4880,6 +4881,7 @@ public class JdbcAdminTest {
     when(checkResultSet.next()).thenReturn(true);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1").thenReturn("pk2");
+    when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(1).thenReturn(2);
     when(columnResults.next())
         .thenAnswer(
             new Answer<Boolean>() {
@@ -4961,6 +4963,67 @@ public class JdbcAdminTest {
             anyInt(),
             eq(getFullTableName(NAMESPACE, TABLE) + " col"),
             eq(DataType.FLOAT));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void
+      getImportTableMetadata_PrimaryKeyColumnsNotReturnedInKeySeqOrderForXBesidesSqlite_ShouldAddPartitionKeysInKeySeqOrder(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    // The rows are in the column name order, which is not the primary key order (pk_c, pk_a, pk_b)
+    when(primaryKeyResults.next())
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(true)
+        .thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME))
+        .thenReturn("pk_a")
+        .thenReturn("pk_b")
+        .thenReturn("pk_c");
+    when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(2).thenReturn(3).thenReturn(1);
+    when(columnResults.next()).thenReturn(true).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME))
+        .thenReturn("pk_b")
+        .thenReturn("pk_c")
+        .thenReturn("pk_a");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+        .thenReturn(rdbEngine == RdbEngine.SPANNER ? Types.NVARCHAR : Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
+    when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
+    when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap());
+
+    // Assert
+    assertThat(new ArrayList<>(actual.getPartitionKeyNames()))
+        .as("database engine specific test failed: " + rdbEngine)
+        .containsExactly("pk_c", "pk_a", "pk_b");
   }
 
   @Test
@@ -5066,6 +5129,7 @@ public class JdbcAdminTest {
     when(checkResultSet.next()).thenReturn(true);
     when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
     when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
+    when(primaryKeyResults.getInt(JDBC_COL_KEY_SEQ)).thenReturn(1);
     when(columnResults.next()).thenReturn(true).thenReturn(false);
     when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk1");
     when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.OTHER);
