@@ -67,10 +67,6 @@ class JdbcAdminImportTablePrimaryKeyOrderIntegrationTest {
       } else {
         testUtils.dropTable(NAMESPACE, TABLE);
       }
-      if (!admin.namespaceExists(NAMESPACE)) {
-        // Create metadata to be able to delete the namespace using the Admin
-        admin.repairNamespace(NAMESPACE, Collections.emptyMap());
-      }
       admin.dropNamespace(NAMESPACE);
     } catch (Exception e) {
       logger.warn("Failed to clean up the namespace", e);

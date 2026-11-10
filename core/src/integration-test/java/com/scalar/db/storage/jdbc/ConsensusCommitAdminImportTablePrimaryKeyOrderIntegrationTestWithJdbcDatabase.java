@@ -87,10 +87,6 @@ class ConsensusCommitAdminImportTablePrimaryKeyOrderIntegrationTestWithJdbcDatab
       } else {
         testUtils.dropTable(NAMESPACE, TABLE);
       }
-      if (!admin.namespaceExists(NAMESPACE)) {
-        // Create metadata to be able to delete the namespace using the Admin
-        admin.repairNamespace(NAMESPACE, CREATION_OPTIONS);
-      }
       admin.dropNamespace(NAMESPACE);
       admin.dropCoordinatorTables();
     } catch (Exception e) {
