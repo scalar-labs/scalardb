@@ -20,12 +20,17 @@ public class NamespaceMetadataService {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final String createdTextCollationClause;
   private final boolean requiresExplicitCommit;
 
   NamespaceMetadataService(
-      String metadataSchema, RdbEngineStrategy rdbEngine, boolean requiresExplicitCommit) {
+      String metadataSchema,
+      RdbEngineStrategy rdbEngine,
+      String createdTextCollationClause,
+      boolean requiresExplicitCommit) {
     this.metadataSchema = metadataSchema;
     this.rdbEngine = rdbEngine;
+    this.createdTextCollationClause = createdTextCollationClause;
     this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
@@ -168,7 +173,7 @@ public class NamespaceMetadataService {
 
   private String getTextType(int charLength, boolean isKey) {
     return rdbEngine.appendCollationClause(
-        rdbEngine.getTextType(charLength, isKey), rdbEngine.getBinaryTextCollationClause());
+        rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }
 
   private boolean internalTableExists(Connection connection, String namespace, String table)

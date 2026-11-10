@@ -116,6 +116,7 @@ public class JdbcAdminTest {
 
     // Arrange
     when(config.getMetadataSchema()).thenReturn(METADATA_SCHEMA);
+    when(config.isBinaryTextCollationEnabled()).thenReturn(true);
   }
 
   private JdbcAdmin createJdbcAdminFor(RdbEngine rdbEngine) {
@@ -3992,6 +3993,10 @@ public class JdbcAdminTest {
   }
 
   private Statement arrangePostgresqlTextColumnWithUndIcuCollation() throws SQLException {
+    return arrangePostgresqlTextColumnWithCollation("\"pg_catalog\".\"und-x-icu\"");
+  }
+
+  private Statement arrangePostgresqlTextColumnWithCollation(String collation) throws SQLException {
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
@@ -4011,7 +4016,7 @@ public class JdbcAdminTest {
     when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
     when(catalogResultSet.next()).thenReturn(true, false);
     when(catalogResultSet.getString(1)).thenReturn("c1");
-    when(catalogResultSet.getString(2)).thenReturn("\"pg_catalog\".\"und-x-icu\"");
+    when(catalogResultSet.getString(2)).thenReturn(collation);
     when(catalogResultSet.getString(3)).thenReturn("UTF8");
 
     when(connection.prepareStatement(any()))
@@ -7807,6 +7812,283 @@ public class JdbcAdminTest {
 
     // Assert
     verify(rdbEngineStrategy).getNonUtf8DatabaseEncoding(connection);
+  }
+
+  private void disableBinaryTextCollation() {
+    when(config.isBinaryTextCollationEnabled()).thenReturn(false);
+  }
+
+  @Test
+  public void createTable_BinaryCollationDisabledOnMysql_ShouldNotDeclareCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+
+    // Act
+    admin.createTable("my_ns", "foo_table", metadata, Collections.emptyMap());
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .filteredOn(s -> s.startsWith("CREATE TABLE `my_ns`.`foo_table`"))
+        .singleElement()
+        .asString()
+        .contains("`pk` VARCHAR(128)", "`col` LONGTEXT")
+        .doesNotContain("COLLATE", "CHARACTER SET");
+  }
+
+  private static Stream<RdbEngine> enginesWithBinaryTextCollationClause() {
+    return Arrays.stream(RdbEngine.values())
+        .filter(
+            e -> !RdbEngine.createRdbEngineStrategy(e).getBinaryTextCollationClause().isEmpty());
+  }
+
+  @ParameterizedTest
+  @MethodSource("enginesWithBinaryTextCollationClause")
+  public void createTable_BinaryCollationDisabled_ShouldNotDeclareCollation(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.createTable("my_ns", "foo_table", textTableMetadata(), Collections.emptyMap());
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .filteredOn(s -> s.startsWith("CREATE TABLE") && s.contains("foo_table"))
+        .singleElement()
+        .asString()
+        .doesNotContain("COLLATE");
+  }
+
+  @Test
+  public void
+      createTable_BinaryCollationDisabledWithKeyCollationSource_ShouldCopyOnlyKeyCollations()
+          throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(
+            ImmutableMap.of(
+                "pk", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4"),
+                "col", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .filteredOn(s -> s.startsWith("CREATE TABLE `my_ns`.`foo_table`"))
+        .singleElement()
+        .asString()
+        .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        .contains("`col` LONGTEXT")
+        .doesNotContain("`col` LONGTEXT CHARACTER SET");
+  }
+
+  @Test
+  public void createTable_BinaryCollationDisabled_ShouldNotCallEncodingCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+  }
+
+  @Test
+  public void importTable_BinaryCollationDisabled_ShouldNotReadTextColumnCollations()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
+    when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    doNothing().when(adminSpy).createMetadataSchemaIfNotExists(any());
+    doNothing().when(adminSpy).createNamespacesTableIfNotExists(any());
+    doNothing().when(adminSpy).upsertIntoNamespacesTable(any(), anyString());
+    doNothing()
+        .when(adminSpy)
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+
+    // Act
+    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getTextColumnCollations(any(), anyString(), anyString());
+  }
+
+  @Test
+  public void addNewColumnToTable_BinaryCollationDisabledAndTextColumn_ShouldUseBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.INT.toString(), "PARTITION", null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.addNewColumnToTable("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `ns`.`table` ADD `c2` LONGTEXT");
+    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+  }
+
+  @Test
+  public void alterColumnType_BinaryCollationDisabledAndIntToText_ShouldUseBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c2", DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.alterColumnType("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement).execute("ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE TEXT");
+  }
+
+  @Test
+  public void createIndex_BinaryCollationDisabledOnMysql_ShouldKeepCatalogCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void createIndex_BinaryCollationDisabledOnPostgresqlDefaultCollation_ShouldRestateIt()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    Statement statement = arrangePostgresqlTextColumnWithCollation("default");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE \"my_ns\".\"foo_table\" ALTER COLUMN \"c1\" TYPE VARCHAR(10485760) COLLATE \"default\"");
+  }
+
+  @Test
+  public void createIndex_BinaryCollationDisabledAndColumnMissingFromCatalog_ShouldUseBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableBinaryTextCollation();
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("other_column");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128)");
   }
 
   @Test

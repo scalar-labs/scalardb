@@ -32,12 +32,17 @@ public class VirtualTableMetadataService {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final String createdTextCollationClause;
   private final boolean requiresExplicitCommit;
 
   VirtualTableMetadataService(
-      String metadataSchema, RdbEngineStrategy rdbEngine, boolean requiresExplicitCommit) {
+      String metadataSchema,
+      RdbEngineStrategy rdbEngine,
+      String createdTextCollationClause,
+      boolean requiresExplicitCommit) {
     this.metadataSchema = metadataSchema;
     this.rdbEngine = rdbEngine;
+    this.createdTextCollationClause = createdTextCollationClause;
     this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
@@ -65,8 +70,7 @@ public class VirtualTableMetadataService {
             + enclose(COL_ATTRIBUTES)
             + " "
             + rdbEngine.appendCollationClause(
-                rdbEngine.getDataTypeForEngine(DataType.TEXT),
-                rdbEngine.getBinaryTextCollationClause())
+                rdbEngine.getDataTypeForEngine(DataType.TEXT), createdTextCollationClause)
             + ", "
             + "PRIMARY KEY ("
             + enclose(COL_FULL_TABLE_NAME)
@@ -311,7 +315,7 @@ public class VirtualTableMetadataService {
 
   private String getTextType(int charLength, boolean isKey) {
     return rdbEngine.appendCollationClause(
-        rdbEngine.getTextType(charLength, isKey), rdbEngine.getBinaryTextCollationClause());
+        rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }
 
   private boolean internalTableExists(Connection connection, String namespace, String table)

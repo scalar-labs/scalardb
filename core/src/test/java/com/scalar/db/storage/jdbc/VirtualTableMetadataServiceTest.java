@@ -38,7 +38,9 @@ public class VirtualTableMetadataServiceTest {
   public void setUp() {
     MockitoAnnotations.openMocks(this);
     rdbEngine = new RdbEngineMysql();
-    service = new VirtualTableMetadataService(METADATA_SCHEMA, rdbEngine, false);
+    service =
+        new VirtualTableMetadataService(
+            METADATA_SCHEMA, rdbEngine, rdbEngine.getBinaryTextCollationClause(), false);
     checkTableExistsSql = rdbEngine.internalTableExistsCheckSql();
   }
 
@@ -485,7 +487,8 @@ public class VirtualTableMetadataServiceTest {
     // Arrange
     RdbEngineStrategy oracle = new RdbEngineOracle();
     VirtualTableMetadataService oracleService =
-        new VirtualTableMetadataService(METADATA_SCHEMA, oracle, false);
+        new VirtualTableMetadataService(
+            METADATA_SCHEMA, oracle, oracle.getBinaryTextCollationClause(), false);
     mockOracleRejectingCreateTable(true);
 
     // Act
@@ -503,7 +506,8 @@ public class VirtualTableMetadataServiceTest {
     // Arrange
     RdbEngineStrategy oracle = new RdbEngineOracle();
     VirtualTableMetadataService oracleService =
-        new VirtualTableMetadataService(METADATA_SCHEMA, oracle, false);
+        new VirtualTableMetadataService(
+            METADATA_SCHEMA, oracle, oracle.getBinaryTextCollationClause(), false);
     mockOracleRejectingCreateTable(false);
 
     // Act
@@ -526,5 +530,24 @@ public class VirtualTableMetadataServiceTest {
     PreparedStatement existsStatement = mock(PreparedStatement.class);
     when(existsStatement.executeQuery()).thenReturn(resultSet);
     when(connection.prepareStatement(anyString())).thenReturn(existsStatement);
+  }
+
+  @Test
+  public void
+      createVirtualTablesTableIfNotExists_NoCreatedTextCollationClause_ShouldUseBareTextTypes()
+          throws Exception {
+    // Arrange
+    VirtualTableMetadataService bareService =
+        new VirtualTableMetadataService(METADATA_SCHEMA, rdbEngine, "", false);
+    Statement createStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(createStatement);
+
+    // Act
+    bareService.createVirtualTablesTableIfNotExists(connection);
+
+    // Assert
+    ArgumentCaptor<String> createCaptor = ArgumentCaptor.forClass(String.class);
+    verify(createStatement).execute(createCaptor.capture());
+    assertThat(createCaptor.getValue()).doesNotContain("COLLATE").contains("LONGTEXT");
   }
 }
