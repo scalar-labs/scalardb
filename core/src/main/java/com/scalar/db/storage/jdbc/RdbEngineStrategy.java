@@ -102,6 +102,21 @@ public interface RdbEngineStrategy {
     return Collections.emptyMap();
   }
 
+  /** Returns whether any collation clause on a column needs a database-level setting. */
+  default boolean collationClauseRequiresExtendedStringSize() {
+    return false;
+  }
+
+  /**
+   * Returns the collation that columns of the schema get when they declare none, or null when the
+   * engine has no schema-level collation.
+   */
+  @Nullable
+  default String getSchemaDefaultCollation(Connection connection, String namespace)
+      throws SQLException {
+    return null;
+  }
+
   /**
    * Returns the clause that declares the given collation on a column.
    *

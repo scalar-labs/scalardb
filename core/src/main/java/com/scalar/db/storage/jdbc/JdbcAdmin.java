@@ -280,12 +280,25 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
     Map<String, TextColumnCollation> sourceCollations =
         rdbEngine.getTextColumnCollations(connection, namespace, sourceTable);
+    // A COLLATE clause needs MAX_STRING_SIZE=EXTENDED on Oracle, so a key that already gets the
+    // schema's default collation declares none when the setting is off.
+    String schemaDefault =
+        !binaryTextCollationEnabled && rdbEngine.collationClauseRequiresExtendedStringSize()
+            ? rdbEngine.getSchemaDefaultCollation(connection, namespace)
+            : null;
     Map<String, String> clauses = new HashMap<>();
     for (String columnName :
         Iterables.concat(metadata.getPartitionKeyNames(), metadata.getClusteringKeyNames())) {
       if (metadata.getColumnDataType(columnName) == DataType.TEXT) {
-        clauses.put(
-            columnName, getCollationClauseOrCreated(rdbEngine, sourceCollations, columnName));
+        TextColumnCollation source = sourceCollations.get(columnName);
+        if (schemaDefault != null
+            && source != null
+            && schemaDefault.equals(source.getCollation())) {
+          clauses.put(columnName, "");
+        } else {
+          clauses.put(
+              columnName, getCollationClauseOrCreated(rdbEngine, sourceCollations, columnName));
+        }
       }
     }
     return clauses;

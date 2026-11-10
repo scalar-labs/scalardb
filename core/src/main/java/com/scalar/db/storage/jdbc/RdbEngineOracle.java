@@ -503,6 +503,25 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean collationClauseRequiresExtendedStringSize() {
+    return true;
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Nullable
+  @Override
+  public String getSchemaDefaultCollation(Connection connection, String namespace)
+      throws SQLException {
+    String sql = "SELECT DEFAULT_COLLATION FROM ALL_USERS WHERE USERNAME = ?";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      try (ResultSet rs = ps.executeQuery()) {
+        return rs.next() ? rs.getString(1) : null;
+      }
+    }
+  }
+
+  @Override
   public String getCollationClause(TextColumnCollation collation) {
     return "COLLATE " + collation.getCollation();
   }

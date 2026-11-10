@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
@@ -13,6 +14,9 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
@@ -380,5 +384,52 @@ class RdbEngineOracleTest {
 
     // Assert
     assertThat(clause).isEqualTo("COLLATE BINARY_CI");
+  }
+
+  @Test
+  public void collationClauseRequiresExtendedStringSize_ShouldReturnTrue() {
+    // Act
+    boolean actual = rdbEngineOracle.collationClauseRequiresExtendedStringSize();
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void getSchemaDefaultCollation_ShouldQueryAllUsersWithNamespaceAsUsername()
+      throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement("SELECT DEFAULT_COLLATION FROM ALL_USERS WHERE USERNAME = ?"))
+        .thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn("BINARY_CI");
+
+    // Act
+    String actual = rdbEngineOracle.getSchemaDefaultCollation(connection, "MyNs");
+
+    // Assert
+    assertThat(actual).isEqualTo("BINARY_CI");
+    verify(ps).setString(1, "MyNs");
+  }
+
+  @Test
+  public void getSchemaDefaultCollation_WithNoRow_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(org.mockito.ArgumentMatchers.anyString())).thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(false);
+
+    // Act
+    String actual = rdbEngineOracle.getSchemaDefaultCollation(connection, "ns");
+
+    // Assert
+    assertThat(actual).isNull();
   }
 }
