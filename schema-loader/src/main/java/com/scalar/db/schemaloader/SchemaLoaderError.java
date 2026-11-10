@@ -39,12 +39,6 @@ public enum SchemaLoaderError implements ScalarDbError {
       "The data type for the column %s in the table %s.%s was modified, but altering data types is not supported",
       "",
       ""),
-  SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_REPAIR_ALL(
-      Category.USER_ERROR,
-      "0006",
-      "Specifying the '--schema-file' option is required when using the '--repair-all' option",
-      "",
-      ""),
   SPECIFYING_SCHEMA_FILE_REQUIRED_WHEN_USING_ALTER(
       Category.USER_ERROR,
       "0007",
