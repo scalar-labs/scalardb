@@ -90,18 +90,19 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     commit =
         new CommitHandler(
             storage,
             coordinator,
             tableMetadataManager,
+            virtualTableInfoManager,
             parallelExecutor,
             new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             false, // 2PC never logs the write set
             config.isOnePhaseCommitEnabled());
-    VirtualTableInfoManager virtualTableInfoManager =
-        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager,
@@ -134,18 +135,19 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+    VirtualTableInfoManager virtualTableInfoManager =
+        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     commit =
         new CommitHandler(
             storage,
             coordinator,
             tableMetadataManager,
+            virtualTableInfoManager,
             parallelExecutor,
             new MutationsGrouper(storageInfoProvider),
             config.isCoordinatorWriteOmissionOnReadOnlyEnabled(),
             false, // 2PC never logs the write set
             config.isOnePhaseCommitEnabled());
-    VirtualTableInfoManager virtualTableInfoManager =
-        new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager,
