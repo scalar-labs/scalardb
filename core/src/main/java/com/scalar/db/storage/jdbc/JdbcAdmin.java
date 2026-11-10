@@ -27,9 +27,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -53,6 +56,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
   @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
+  @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
   @VisibleForTesting static final String JDBC_COL_DATA_TYPE = "DATA_TYPE";
   @VisibleForTesting static final String JDBC_COL_TYPE_NAME = "TYPE_NAME";
   @VisibleForTesting static final String JDBC_COL_COLUMN_SIZE = "COLUMN_SIZE";
@@ -470,7 +474,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace, String table, Map<String, DataType> overrideColumnsType)
       throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
-    boolean primaryKeyExists = false;
 
     if (!rdbEngine.isImportable()) {
       throw new UnsupportedOperationException(
@@ -490,16 +493,24 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
       DatabaseMetaData metadata = connection.getMetaData();
       ResultSet resultSet = metadata.getPrimaryKeys(catalogName, schemaName, table);
+      List<Map.Entry<Integer, String>> primaryKeyColumns = new ArrayList<>();
       while (resultSet.next()) {
-        primaryKeyExists = true;
-        String columnName = resultSet.getString(JDBC_COL_COLUMN_NAME);
-        builder.addPartitionKey(columnName);
+        primaryKeyColumns.add(
+            new AbstractMap.SimpleImmutableEntry<>(
+                resultSet.getInt(JDBC_COL_KEY_SEQ), resultSet.getString(JDBC_COL_COLUMN_NAME)));
       }
 
-      if (!primaryKeyExists) {
+      if (primaryKeyColumns.isEmpty()) {
         throw new IllegalStateException(
             CoreError.JDBC_IMPORT_TABLE_WITHOUT_PRIMARY_KEY.buildMessage(
                 getFullTableName(namespace, table)));
+      }
+
+      // The JDBC specification orders these rows by the column name, so sort them by the position
+      // of the column in the primary key
+      primaryKeyColumns.sort(Map.Entry.comparingByKey());
+      for (Map.Entry<Integer, String> primaryKeyColumn : primaryKeyColumns) {
+        builder.addPartitionKey(primaryKeyColumn.getValue());
       }
 
       resultSet = metadata.getColumns(catalogName, schemaName, table, "%");
