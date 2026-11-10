@@ -1,6 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -9,6 +11,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -18,6 +21,7 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -27,6 +31,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class RdbEngineMysqlTest {
 
@@ -266,5 +272,94 @@ class RdbEngineMysqlTest {
 
     // Assert
     assertThat(sql).isEqualTo("INSERT IGNORE INTO `ns`.`tbl` (`p1`,`c1`) VALUES (?,?)");
+  }
+
+  @Test
+  void importColumnAttributesSql_ShouldReturnSqlToGetExtraOfColumns() {
+    // Arrange Act
+    String sql = rdbEngineMysql.importColumnAttributesSql();
+
+    // Assert
+    assertThat(sql)
+        .isEqualTo(
+            "SELECT COLUMN_NAME, EXTRA FROM INFORMATION_SCHEMA.COLUMNS"
+                + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?");
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "VIRTUAL GENERATED",
+        "STORED GENERATED",
+        "VIRTUAL GENERATED INVISIBLE",
+        "STORED GENERATED INVISIBLE",
+        // For MariaDB
+        "VIRTUAL GENERATED, INVISIBLE",
+        "STORED GENERATED, INVISIBLE",
+        // For MariaDB 10.1 or earlier
+        "VIRTUAL",
+        "PERSISTENT"
+      })
+  void validateImportColumnAttributes_GeneratedColumnGiven_ShouldThrowIllegalArgumentException(
+      String extra) throws SQLException {
+    // Arrange
+    ResultSet resultSet = mockImportColumnAttributes("col", extra);
+
+    // Act Assert
+    assertThatThrownBy(() -> rdbEngineMysql.validateImportColumnAttributes(resultSet, "ns", "tbl"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage("ns.tbl", "col"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "auto_increment",
+        "auto_increment INVISIBLE",
+        // For MariaDB
+        "auto_increment, INVISIBLE"
+      })
+  void validateImportColumnAttributes_AutoIncrementColumnGiven_ShouldThrowIllegalArgumentException(
+      String extra) throws SQLException {
+    // Arrange
+    ResultSet resultSet = mockImportColumnAttributes("col", extra);
+
+    // Act Assert
+    assertThatThrownBy(() -> rdbEngineMysql.validateImportColumnAttributes(resultSet, "ns", "tbl"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+                "ns.tbl", "col"));
+  }
+
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(
+      strings = {
+        // A column with an expression default, which is not a generated column
+        "DEFAULT_GENERATED",
+        "DEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+        "on update CURRENT_TIMESTAMP",
+        // For MariaDB
+        "on update current_timestamp()",
+        "INVISIBLE"
+      })
+  void validateImportColumnAttributes_ImportableColumnGiven_ShouldNotThrowAnyException(String extra)
+      throws SQLException {
+    // Arrange
+    ResultSet resultSet = mockImportColumnAttributes("col", extra);
+
+    // Act Assert
+    assertThatCode(() -> rdbEngineMysql.validateImportColumnAttributes(resultSet, "ns", "tbl"))
+        .doesNotThrowAnyException();
+  }
+
+  private ResultSet mockImportColumnAttributes(String columnName, String extra)
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.getString(1)).thenReturn(columnName);
+    when(resultSet.getString(2)).thenReturn(extra);
+    return resultSet;
   }
 }
