@@ -68,7 +68,11 @@ public interface RdbEngineStrategy {
 
   String getTextType(int charLength, boolean isKey);
 
-  /** Returns the clause that makes a TEXT column compare and sort by UTF-8 bytes, or "". */
+  /**
+   * Returns the clause that makes a TEXT column compare and sort by UTF-8 bytes.
+   *
+   * @return the clause, or "" when the engine has no column collation clause
+   */
   default String getBinaryTextCollationClause() {
     return "";
   }
@@ -102,14 +106,22 @@ public interface RdbEngineStrategy {
     return Collections.emptyMap();
   }
 
-  /** Returns whether any collation clause on a column needs a database-level setting. */
+  /**
+   * Returns whether any collation clause on a column needs a database-level setting.
+   *
+   * @return {@code true} if a column collation clause depends on a database-level setting
+   */
   default boolean collationClauseRequiresExtendedStringSize() {
     return false;
   }
 
   /**
-   * Returns the collation that columns of the schema get when they declare none, or null when the
-   * engine has no schema-level collation.
+   * Returns the collation that columns of the schema get when they declare none.
+   *
+   * @param connection the connection to read the catalog with
+   * @param namespace the schema to read the default collation of
+   * @return the default collation, or null when the engine has no schema-level collation
+   * @throws SQLException if the catalog query fails
    */
   @Nullable
   default String getSchemaDefaultCollation(Connection connection, String namespace)
@@ -127,7 +139,12 @@ public interface RdbEngineStrategy {
     return "";
   }
 
-  /** Returns whether the collation compares and sorts by code point. */
+  /**
+   * Returns whether the collation compares and sorts by code point.
+   *
+   * @param collation a collation read by {@link #getTextColumnCollations}
+   * @return {@code true} if the collation is binary
+   */
   default boolean isBinaryCollation(TextColumnCollation collation) {
     return true;
   }
@@ -136,7 +153,13 @@ public interface RdbEngineStrategy {
     return true;
   }
 
-  /** Returns the database encoding when it is not UTF-8, or null. */
+  /**
+   * Returns the database encoding when it is not UTF-8.
+   *
+   * @param connection the connection to read the encoding with
+   * @return the encoding name, or null when it is UTF-8 or the engine does not read it
+   * @throws SQLException if the query fails
+   */
   @Nullable
   default String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
     return null;
