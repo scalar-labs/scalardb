@@ -71,6 +71,8 @@ public interface RdbEngineStrategy {
   /**
    * Returns whether a statement that restates the type of an existing column keeps its collation
    * when the statement declares none.
+   *
+   * @return {@code true} if the collation survives a type restatement without a collation clause
    */
   default boolean keepsCollationOnTypeRedefinition() {
     return false;
@@ -79,13 +81,24 @@ public interface RdbEngineStrategy {
   /**
    * Returns the collation and charset of the character columns of a table, keyed by column name as
    * stored. Columns that are not character columns are absent.
+   *
+   * @param connection the connection to read the catalog with
+   * @param namespace the namespace of the table
+   * @param table the table name
+   * @return the collation of each character column, keyed by column name
+   * @throws SQLException if the catalog query fails
    */
   default Map<String, TextColumnCollation> getTextColumnCollations(
       Connection connection, String namespace, String table) throws SQLException {
     return Collections.emptyMap();
   }
 
-  /** Returns the clause that declares the given collation on a column, or "". */
+  /**
+   * Returns the clause that declares the given collation on a column.
+   *
+   * @param collation a collation read by {@link #getTextColumnCollations}
+   * @return the clause, or "" when the engine has no column collation clause
+   */
   default String getCollationClause(TextColumnCollation collation) {
     return "";
   }
@@ -145,7 +158,11 @@ public interface RdbEngineStrategy {
         + enclose(newColumnName);
   }
 
-  /** Returns whether {@link #renameColumnSql} uses its {@code columnType} argument. */
+  /**
+   * Returns whether {@link #renameColumnSql} uses its {@code columnType} argument.
+   *
+   * @return {@code true} if the rename statement restates the column type
+   */
   default boolean renameColumnRestatesType() {
     return false;
   }
