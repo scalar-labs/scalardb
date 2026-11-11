@@ -116,7 +116,7 @@ public class JdbcAdminTest {
 
     // Arrange
     when(config.getMetadataSchema()).thenReturn(METADATA_SCHEMA);
-    when(config.isBinaryTextCollationEnabled()).thenReturn(true);
+    when(config.isColumnCollationEnabled()).thenReturn(true);
   }
 
   private JdbcAdmin createJdbcAdminFor(RdbEngine rdbEngine) {
@@ -7814,15 +7814,15 @@ public class JdbcAdminTest {
     verify(rdbEngineStrategy).getNonUtf8DatabaseEncoding(connection);
   }
 
-  private void disableBinaryTextCollation() {
-    when(config.isBinaryTextCollationEnabled()).thenReturn(false);
+  private void disableColumnCollation() {
+    when(config.isColumnCollationEnabled()).thenReturn(false);
   }
 
   @Test
   public void createTable_BinaryCollationDisabledOnMysql_ShouldNotDeclareCollation()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     Statement statement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -7859,7 +7859,7 @@ public class JdbcAdminTest {
   public void createTable_BinaryCollationDisabled_ShouldNotDeclareCollation(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     Statement statement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
@@ -7883,7 +7883,7 @@ public class JdbcAdminTest {
       createTable_BinaryCollationDisabledWithKeyCollationSource_ShouldCopyOnlyKeyCollations()
           throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     TableMetadata metadata =
         TableMetadata.newBuilder()
             .addPartitionKey("pk")
@@ -7960,7 +7960,7 @@ public class JdbcAdminTest {
       createTable_BinaryCollationDisabledOnOracleKeyMatchingSchemaDefault_ShouldOmitCollate()
           throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     RdbEngineStrategy rdbEngineStrategy =
         oracleWithKeyCollationSource("USING_NLS_COMP", "USING_NLS_COMP");
 
@@ -7977,7 +7977,7 @@ public class JdbcAdminTest {
       createTable_BinaryCollationDisabledOnOracleKeyDifferingFromSchemaDefault_ShouldCopyCollate()
           throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     RdbEngineStrategy rdbEngineStrategy =
         oracleWithKeyCollationSource("BINARY_CI", "USING_NLS_COMP");
 
@@ -7994,7 +7994,7 @@ public class JdbcAdminTest {
       createTable_BinaryCollationDisabledOnOracleUsingNlsCompKeyWithOtherDefault_ShouldCopyCollate()
           throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     RdbEngineStrategy rdbEngineStrategy =
         oracleWithKeyCollationSource("USING_NLS_COMP", "BINARY_CI");
 
@@ -8025,7 +8025,7 @@ public class JdbcAdminTest {
   public void createTable_BinaryCollationDisabledOnMysqlWithKeySource_ShouldNotReadSchemaDefault()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     TableMetadata metadata =
         TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
     Statement statement = mock(Statement.class);
@@ -8059,7 +8059,7 @@ public class JdbcAdminTest {
   public void createTable_BinaryCollationDisabled_ShouldNotCallEncodingCheck()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
@@ -8076,7 +8076,7 @@ public class JdbcAdminTest {
   public void importTable_BinaryCollationDisabled_ShouldNotReadTextColumnCollations()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
@@ -8118,7 +8118,7 @@ public class JdbcAdminTest {
   public void addNewColumnToTable_BinaryCollationDisabledAndTextColumn_ShouldUseBareType()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
@@ -8149,7 +8149,7 @@ public class JdbcAdminTest {
   public void alterColumnType_BinaryCollationDisabledAndIntToText_ShouldUseBareType()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
@@ -8180,7 +8180,7 @@ public class JdbcAdminTest {
   public void createIndex_BinaryCollationDisabledOnMysql_ShouldKeepCatalogCollation()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
@@ -8197,7 +8197,7 @@ public class JdbcAdminTest {
   public void createIndex_BinaryCollationDisabledOnPostgresqlDefaultCollation_ShouldRestateIt()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     Statement statement = arrangePostgresqlTextColumnWithCollation("default");
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
 
@@ -8214,7 +8214,7 @@ public class JdbcAdminTest {
   public void createIndex_BinaryCollationDisabledAndColumnMissingFromCatalog_ShouldUseBareType()
       throws SQLException, ExecutionException {
     // Arrange
-    disableBinaryTextCollation();
+    disableColumnCollation();
     Statement statement = arrangeMysqlTextColumnWithCatalogCollation("other_column");
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 

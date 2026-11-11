@@ -81,7 +81,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final int MAX_CONFLICT_RETRY_COUNT = 10;
 
   private final RdbEngineStrategy rdbEngine;
-  private final boolean binaryTextCollationEnabled;
+  private final boolean columnCollationEnabled;
   private final String createdTextCollationClause;
   private final HikariDataSource dataSource;
   private final String metadataSchema;
@@ -94,7 +94,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   public JdbcAdmin(DatabaseConfig databaseConfig) {
     JdbcConfig config = new JdbcConfig(databaseConfig);
     rdbEngine = RdbEngineFactory.create(config);
-    binaryTextCollationEnabled = config.isBinaryTextCollationEnabled();
+    columnCollationEnabled = config.isColumnCollationEnabled();
     createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
     dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
     metadataSchema = config.getMetadataSchema();
@@ -113,7 +113,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config) {
     rdbEngine = RdbEngineFactory.create(config);
-    binaryTextCollationEnabled = config.isBinaryTextCollationEnabled();
+    columnCollationEnabled = config.isColumnCollationEnabled();
     createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
@@ -132,7 +132,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config, boolean requiresExplicitCommit) {
     rdbEngine = RdbEngineFactory.create(config);
-    binaryTextCollationEnabled = config.isBinaryTextCollationEnabled();
+    columnCollationEnabled = config.isColumnCollationEnabled();
     createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
@@ -155,7 +155,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       VirtualTableMetadataService virtualTableMetadataService,
       boolean requiresExplicitCommit) {
     rdbEngine = RdbEngineFactory.create(config);
-    binaryTextCollationEnabled = config.isBinaryTextCollationEnabled();
+    columnCollationEnabled = config.isColumnCollationEnabled();
     createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
@@ -178,7 +178,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       VirtualTableMetadataService virtualTableMetadataService,
       boolean requiresExplicitCommit) {
     rdbEngine = RdbEngineFactory.create(config);
-    binaryTextCollationEnabled = config.isBinaryTextCollationEnabled();
+    columnCollationEnabled = config.isColumnCollationEnabled();
     createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
@@ -190,7 +190,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private static String getCreatedTextCollationClause(
       JdbcConfig config, RdbEngineStrategy rdbEngine) {
-    return config.isBinaryTextCollationEnabled() ? rdbEngine.getBinaryTextCollationClause() : "";
+    return config.isColumnCollationEnabled() ? rdbEngine.getBinaryTextCollationClause() : "";
   }
 
   private static boolean hasDescClusteringOrder(TableMetadata metadata) {
@@ -254,7 +254,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 false,
                 getKeyCollationClauses(connection, namespace, metadata, options));
             addTableMetadata(connection, namespace, table, metadata, true, false);
-            if (binaryTextCollationEnabled
+            if (columnCollationEnabled
                 && metadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
               warnIfDatabaseEncodingIsNotUtf8(connection, namespace, table);
             }
@@ -281,7 +281,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     // A COLLATE clause needs MAX_STRING_SIZE=EXTENDED on Oracle, so a key that already gets the
     // schema's default collation declares none when the setting is off.
     String schemaDefault =
-        !binaryTextCollationEnabled && rdbEngine.collationClauseRequiresExtendedStringSize()
+        !columnCollationEnabled && rdbEngine.collationClauseRequiresExtendedStringSize()
             ? rdbEngine.getSchemaDefaultCollation(connection, namespace)
             : null;
     Map<String, String> clauses = new HashMap<>();
@@ -697,7 +697,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
 
             TableMetadata tableMetadata = builder.build();
-            if (binaryTextCollationEnabled) {
+            if (columnCollationEnabled) {
               warnAboutImportedTextColumns(connection, namespace, table, tableMetadata);
             }
             return tableMetadata;
@@ -999,7 +999,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
-  // Reads the engine's own clause, not the created-column clause, so that turning off the binary
+  // Reads the engine's own clause, not the created-column clause, so that turning off the column
   // collation setting keeps copying source key collations and restating a redefined column's
   // collation.
   private boolean engineHasColumnCollations() {
@@ -1200,7 +1200,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     + getVendorDbColumnType(updatedTableMetadata, columnName);
             execute(connection, rdbEngine, addNewColumnStatement, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
-            if (binaryTextCollationEnabled && columnType == DataType.TEXT) {
+            if (columnCollationEnabled && columnType == DataType.TEXT) {
               warnIfDatabaseEncodingIsNotUtf8(connection, namespace, table);
             }
           });

@@ -77,9 +77,8 @@ public class JdbcConfig {
       PREFIX + "db2.time_column.default_date_component";
   public static final String SPANNER_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "spanner.time_column.default_date_component";
-  public static final String BINARY_TEXT_COLLATION_ENABLED =
-      PREFIX + "binary_text_collation.enabled";
-  public static final boolean DEFAULT_BINARY_TEXT_COLLATION_ENABLED = true;
+  public static final String COLUMN_COLLATION_ENABLED = PREFIX + "column_collation.enabled";
+  public static final boolean DEFAULT_COLUMN_COLLATION_ENABLED = true;
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
 
@@ -144,7 +143,7 @@ public class JdbcConfig {
 
   @Nullable private final Isolation isolation;
 
-  private final boolean binaryTextCollationEnabled;
+  private final boolean columnCollationEnabled;
 
   private final String metadataSchema;
 
@@ -331,11 +330,11 @@ public class JdbcConfig {
         LocalDate.parse(
             spannerTimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
 
-    binaryTextCollationEnabled =
+    columnCollationEnabled =
         getBoolean(
             databaseConfig.getProperties(),
-            BINARY_TEXT_COLLATION_ENABLED,
-            DEFAULT_BINARY_TEXT_COLLATION_ENABLED);
+            COLUMN_COLLATION_ENABLED,
+            DEFAULT_COLUMN_COLLATION_ENABLED);
 
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
@@ -397,8 +396,8 @@ public class JdbcConfig {
     return Optional.ofNullable(isolation);
   }
 
-  public boolean isBinaryTextCollationEnabled() {
-    return binaryTextCollationEnabled;
+  public boolean isColumnCollationEnabled() {
+    return columnCollationEnabled;
   }
 
   public String getMetadataSchema() {

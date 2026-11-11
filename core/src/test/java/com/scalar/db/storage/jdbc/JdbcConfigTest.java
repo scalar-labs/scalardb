@@ -302,7 +302,7 @@ public class JdbcConfigTest {
   }
 
   @Test
-  public void constructor_BinaryTextCollationEnabledNotSet_ShouldDefaultToTrue() {
+  public void constructor_ColumnCollationEnabledNotSet_ShouldDefaultToTrue() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
@@ -312,21 +312,21 @@ public class JdbcConfigTest {
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.isBinaryTextCollationEnabled()).isTrue();
+    assertThat(config.isColumnCollationEnabled()).isTrue();
   }
 
   @Test
-  public void constructor_BinaryTextCollationEnabledFalse_ShouldReturnFalse() {
+  public void constructor_ColumnCollationEnabledFalse_ShouldReturnFalse() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
-    props.setProperty(JdbcConfig.BINARY_TEXT_COLLATION_ENABLED, "false");
+    props.setProperty(JdbcConfig.COLUMN_COLLATION_ENABLED, "false");
 
     // Act
     JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
 
     // Assert
-    assertThat(config.isBinaryTextCollationEnabled()).isFalse();
+    assertThat(config.isColumnCollationEnabled()).isFalse();
   }
 }
