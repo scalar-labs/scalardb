@@ -7813,6 +7813,46 @@ public class JdbcAdminTest {
     verify(rdbEngineStrategy).getNonUtf8DatabaseEncoding(connection);
   }
 
+  @Test
+  public void createTable_TextColumnOnNonBinaryDatabaseCollation_ShouldCallCollationCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn("UCA400_NO").when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
+
+    // Assert
+    verify(rdbEngineStrategy).getNonBinaryDatabaseCollation(connection);
+  }
+
+  @ParameterizedTest
+  @MethodSource("catalogReadFailures")
+  public void createTable_CollationCheckThrows_ShouldStillCreateTable(Exception failure)
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doThrow(failure).when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    TableMetadata metadata = textTableMetadata();
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> adminSpy.createTable("ns", "tbl", metadata, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isNull();
+    verify(adminSpy).addTableMetadata(connection, "ns", "tbl", metadata, true, false);
+  }
+
   private void disableColumnCollation() {
     when(config.isColumnCollationEnabled()).thenReturn(false);
   }
@@ -8069,6 +8109,7 @@ public class JdbcAdminTest {
 
     // Assert
     verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
   @Test
@@ -8142,6 +8183,7 @@ public class JdbcAdminTest {
     // Assert
     verify(statement).execute("ALTER TABLE `ns`.`table` ADD `c2` LONGTEXT");
     verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
   @Test
@@ -8240,6 +8282,7 @@ public class JdbcAdminTest {
 
     // Assert
     verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
   @ParameterizedTest
@@ -8298,6 +8341,23 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void addNewColumnToTable_TextColumn_ShouldCallCollationCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
+    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn("UCA400_NO").when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
+
+    // Assert
+    verify(rdbEngineStrategy).getNonBinaryDatabaseCollation(connection);
+  }
+
+  @Test
   public void addNewColumnToTable_IntColumn_ShouldNotCallEncodingCheck()
       throws SQLException, ExecutionException {
     // Arrange
@@ -8310,6 +8370,7 @@ public class JdbcAdminTest {
 
     // Assert
     verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
   @Test

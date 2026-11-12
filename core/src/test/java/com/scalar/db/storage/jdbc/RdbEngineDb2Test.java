@@ -3,12 +3,17 @@ package com.scalar.db.storage.jdbc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -195,5 +200,56 @@ public class RdbEngineDb2Test {
 
     // Assert
     assertThat(actual).isFalse();
+  }
+
+  private static Connection connectionWithDatabaseSettings(String name, String value)
+      throws SQLException {
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    ResultSet resultSet = mock(ResultSet.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(statement.executeQuery(
+            "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'db_collname')"))
+        .thenReturn(resultSet);
+    when(resultSet.next()).thenReturn(true, false);
+    when(resultSet.getString(1)).thenReturn(name);
+    when(resultSet.getString(2)).thenReturn(value);
+    return connection;
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_Identity_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("db_collname", "IDENTITY");
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_UcaCollation_ShouldReturnCollation() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("db_collname", "UCA400_NO");
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isEqualTo("UCA400_NO");
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_SettingNotReadable_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("codeset", "UTF-8");
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isNull();
   }
 }

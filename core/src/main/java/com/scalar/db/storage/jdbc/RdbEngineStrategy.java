@@ -165,6 +165,19 @@ public interface RdbEngineStrategy {
     return null;
   }
 
+  /**
+   * Returns the database collation when it is not binary, on engines whose columns cannot declare
+   * their own collation.
+   *
+   * @param connection the connection to read the collation with
+   * @return the collation name, or null when it is binary or the engine does not read it
+   * @throws SQLException if the query fails
+   */
+  @Nullable
+  default String getNonBinaryDatabaseCollation(Connection connection) throws SQLException {
+    return null;
+  }
+
   String computeBooleanValue(boolean value);
 
   String[] createSchemaSqls(String fullSchema);

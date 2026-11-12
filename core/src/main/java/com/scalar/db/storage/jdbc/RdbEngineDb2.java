@@ -486,6 +486,13 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
+  @Nullable
+  public String getNonBinaryDatabaseCollation(Connection connection) throws SQLException {
+    String collation = readDatabaseSettings(connection).get("db_collname");
+    return collation == null || "IDENTITY".equals(collation) ? null : collation;
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     String ret = "VARCHAR(" + charLength + ")";
     if (isKey) {

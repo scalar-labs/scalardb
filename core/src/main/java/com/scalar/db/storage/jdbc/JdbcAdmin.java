@@ -262,7 +262,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             addTableMetadata(connection, namespace, table, metadata, true, false);
             if (columnCollationEnabled
                 && metadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
-              warnIfDatabaseEncodingIsNotUtf8(connection, namespace, table);
+              warnAboutDatabaseTextSettings(connection, namespace, table);
             }
           });
     } catch (SQLException e) {
@@ -729,7 +729,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void warnIfDatabaseEncodingIsNotUtf8(
+  private void warnAboutDatabaseTextSettings(
       Connection connection, String namespace, String table) {
     try {
       String encoding = rdbEngine.getNonUtf8DatabaseEncoding(connection);
@@ -741,6 +741,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
     } catch (SQLException | RuntimeException e) {
       logger.debug("Reading the database encoding failed", e);
+    }
+    try {
+      String collation = rdbEngine.getNonBinaryDatabaseCollation(connection);
+      if (collation != null) {
+        logger.warn(
+            "The database collation is {}, not binary, so the database can order and compare the TEXT values of the {} table differently from ScalarDB",
+            collation,
+            getFullTableName(namespace, table));
+      }
+    } catch (SQLException | RuntimeException e) {
+      logger.debug("Reading the database collation failed", e);
     }
   }
 
@@ -1206,7 +1217,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             execute(connection, rdbEngine, addNewColumnStatement, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
             if (columnCollationEnabled && columnType == DataType.TEXT) {
-              warnIfDatabaseEncodingIsNotUtf8(connection, namespace, table);
+              warnAboutDatabaseTextSettings(connection, namespace, table);
             }
           });
     } catch (SQLException e) {
