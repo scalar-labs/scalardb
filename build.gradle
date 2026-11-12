@@ -103,8 +103,8 @@ subprojects {
         // version, and only defines one for v3.
         mariadDbDriverVersion = '3.5.11'
         alloyDbJdbcConnectorVersion = '1.4.0'
-        googleCloudStorageVersion = '2.77.0'
-        spannerDriverVersion = '2.48.0'
+        googleCloudStorageVersion = '2.78.0'
+        spannerDriverVersion = '2.49.0'
         awsAdvancedJdbcWrapperVersion = '4.6.0'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
@@ -118,7 +118,7 @@ subprojects {
         // new version on all the storages whose libraries use it, by running their integration
         // tests (the pull request CI runs only some of them). See declaredFamilyExclusions in
         // core/build.gradle
-        jacksonVersion = '2.22.4'
+        jacksonVersion = '2.23.0'
         nettyVersion = '4.2.20.Final'
         bouncycastleJdk18onVersion = '1.86'
         micrometerVersion = '1.17.2'
