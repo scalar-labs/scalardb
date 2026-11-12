@@ -16,7 +16,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.common.InternalTableOptions;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -54,6 +53,14 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
+
+  /**
+   * The name of a table in the same namespace whose TEXT key columns the new table copies the
+   * collation from. ScalarDB sets this option on its own {@code createTable} calls. It is internal
+   * and not for users: its meaning can change without notice.
+   */
+  public static final String KEY_COLLATION_SOURCE_TABLE =
+      "scalardb.internal.key_collation_source_table";
 
   @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
   @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
@@ -271,8 +278,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       TableMetadata metadata,
       @Nullable Map<String, String> options)
       throws SQLException {
-    String sourceTable =
-        options == null ? null : options.get(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE);
+    String sourceTable = options == null ? null : options.get(KEY_COLLATION_SOURCE_TABLE);
     if (sourceTable == null || !engineHasColumnCollations()) {
       return Collections.emptyMap();
     }

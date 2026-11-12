@@ -44,7 +44,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
-import com.scalar.db.common.InternalTableOptions;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.zaxxer.hikari.HikariDataSource;
@@ -1647,7 +1646,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
@@ -1688,7 +1687,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "missing_table"));
+        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "missing_table"));
 
     // Assert
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
@@ -1718,7 +1717,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     verify(rdbEngineStrategy, never()).getTextColumnCollations(any(), anyString(), anyString());
@@ -7907,7 +7906,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
@@ -7945,7 +7944,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
 
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
     verify(statement, atLeastOnce()).execute(sql.capture());
@@ -8042,7 +8041,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     verify(rdbEngineStrategy, never()).getSchemaDefaultCollation(any(), anyString());

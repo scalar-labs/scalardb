@@ -20,10 +20,10 @@ import com.scalar.db.api.StorageInfo.MutationAtomicityUnit;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
-import com.scalar.db.common.InternalTableOptions;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -1602,7 +1602,7 @@ public abstract class ConsensusCommitAdminTestBase {
             expectedTxMetadataTableMetadata,
             ImmutableMap.<String, String>builder()
                 .putAll(options)
-                .put(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, TABLE)
+                .put(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, TABLE)
                 .build());
     verify(distributedStorageAdmin)
         .createVirtualTable(
@@ -1646,9 +1646,9 @@ public abstract class ConsensusCommitAdminTestBase {
             any(TableMetadata.class),
             optionsCaptor.capture());
     assertThat(optionsCaptor.getValue())
-        .containsEntry(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE, TABLE)
+        .containsEntry(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, TABLE)
         .containsEntry(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
-    assertThat(options).doesNotContainKey(InternalTableOptions.KEY_COLLATION_SOURCE_TABLE);
+    assertThat(options).doesNotContainKey(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE);
   }
 
   @Test
