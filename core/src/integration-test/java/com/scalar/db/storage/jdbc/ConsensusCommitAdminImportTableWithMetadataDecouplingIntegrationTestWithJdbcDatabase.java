@@ -154,6 +154,8 @@ public class ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTes
     }
   }
 
+  // When using Oracle with the SERIALIZABLE isolation level, a CommitConflictException may occur
+  // even without any conflicts, so the insert is retried in such a case.
   private void insertWithRetry(Insert insert) throws Exception {
     for (int attempt = 1; ; attempt++) {
       DistributedTransaction tx = manager.start();
