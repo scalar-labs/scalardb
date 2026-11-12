@@ -485,7 +485,7 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       // The virtual table joins the two tables on the key, so the metadata table's TEXT keys must
       // use the collations of the imported table's keys
       Map<String, String> metadataTableOptions = new HashMap<>(options);
-      metadataTableOptions.put(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, table);
+      metadataTableOptions.put(JdbcAdmin.COLLATION_SOURCE_TABLE, table);
 
       // create a transaction metadata table
       admin.createTable(

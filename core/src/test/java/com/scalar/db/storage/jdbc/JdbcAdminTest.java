@@ -1646,7 +1646,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
@@ -1687,7 +1687,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "missing_table"));
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "missing_table"));
 
     // Assert
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
@@ -1717,7 +1717,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     verify(rdbEngineStrategy, never()).getTextColumnCollations(any(), anyString(), anyString());
@@ -7906,7 +7906,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
@@ -7944,7 +7944,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
 
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
     verify(statement, atLeastOnce()).execute(sql.capture());
@@ -8041,7 +8041,7 @@ public class JdbcAdminTest {
         "my_ns",
         "foo_table",
         metadata,
-        ImmutableMap.of(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, "source_table"));
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
     verify(rdbEngineStrategy, never()).getSchemaDefaultCollation(any(), anyString());

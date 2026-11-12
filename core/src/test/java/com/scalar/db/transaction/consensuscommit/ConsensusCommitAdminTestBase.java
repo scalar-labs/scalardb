@@ -1602,7 +1602,7 @@ public abstract class ConsensusCommitAdminTestBase {
             expectedTxMetadataTableMetadata,
             ImmutableMap.<String, String>builder()
                 .putAll(options)
-                .put(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, TABLE)
+                .put(JdbcAdmin.COLLATION_SOURCE_TABLE, TABLE)
                 .build());
     verify(distributedStorageAdmin)
         .createVirtualTable(
@@ -1646,9 +1646,9 @@ public abstract class ConsensusCommitAdminTestBase {
             any(TableMetadata.class),
             optionsCaptor.capture());
     assertThat(optionsCaptor.getValue())
-        .containsEntry(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, TABLE)
+        .containsEntry(JdbcAdmin.COLLATION_SOURCE_TABLE, TABLE)
         .containsEntry(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
-    assertThat(options).doesNotContainKey(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE);
+    assertThat(options).doesNotContainKey(JdbcAdmin.COLLATION_SOURCE_TABLE);
   }
 
   @Test

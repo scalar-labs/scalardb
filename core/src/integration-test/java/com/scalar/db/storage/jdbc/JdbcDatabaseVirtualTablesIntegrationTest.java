@@ -121,7 +121,7 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
                 .addColumn("col2", DataType.TEXT)
                 .addPartitionKey("pk")
                 .build(),
-            Collections.singletonMap(JdbcAdmin.KEY_COLLATION_SOURCE_TABLE, importedTableName));
+            Collections.singletonMap(JdbcAdmin.COLLATION_SOURCE_TABLE, importedTableName));
 
         // Create a virtual table that joins the above two source tables with different join types
         admin.createVirtualTable(

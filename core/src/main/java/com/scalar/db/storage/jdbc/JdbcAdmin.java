@@ -59,8 +59,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
    * collation from. ScalarDB sets this option on its own {@code createTable} calls. It is internal
    * and not for users: its meaning can change without notice.
    */
-  public static final String KEY_COLLATION_SOURCE_TABLE =
-      "scalardb.internal.key_collation_source_table";
+  public static final String COLLATION_SOURCE_TABLE = "scalardb.internal.collation_source_table";
 
   @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
   @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
@@ -278,7 +277,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       TableMetadata metadata,
       @Nullable Map<String, String> options)
       throws SQLException {
-    String sourceTable = options == null ? null : options.get(KEY_COLLATION_SOURCE_TABLE);
+    String sourceTable = options == null ? null : options.get(COLLATION_SOURCE_TABLE);
     if (sourceTable == null || !engineHasColumnCollations()) {
       return Collections.emptyMap();
     }
