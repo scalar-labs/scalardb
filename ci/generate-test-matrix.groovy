@@ -156,6 +156,6 @@ def static filterTestsByEnvVar(expandedTests) {
 
     // Filter tests to keep only those in the categories or labels to keep
     return expandedTests.findAll { test ->
-        testCategoriesToKeep.contains(test.test_category) || testLabelsToKeep.contains(test.label)
+        test.label.startsWith('tidb_')
     }
 }
