@@ -5576,6 +5576,7 @@ public class JdbcAdminTest {
    * key column "col", and returns the result set of {@link DatabaseMetaData#getColumns(String,
    * String, String, String)} so that the caller can stub the attributes of the columns.
    */
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
   private ResultSet prepareImportTableWithNonPrimaryKeyColumn(RdbEngineStrategy rdbEngineStrategy)
       throws SQLException {
     PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
