@@ -31,6 +31,10 @@ import org.slf4j.LoggerFactory;
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
   protected static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
+  // libc C.UTF-8 is left out of both sets: its order comes from the C library, and PostgreSQL
+  // warns that "the same locale name may have different behavior on different platforms when
+  // using the libc provider". The builtin C.UTF-8 orders by code point on every platform.
+  // https://www.postgresql.org/docs/18/locale.html
   private static final Set<String> BINARY_COLLATIONS =
       ImmutableSet.of(
           "\"pg_catalog\".\"C\"",
