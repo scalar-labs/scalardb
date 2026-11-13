@@ -168,6 +168,18 @@ class RdbEngineSqlServerTest {
   }
 
   @Test
+  void isFullUnicodeCharset_Utf16_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_100_CI_AS", "UTF-16");
+
+    // Act
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
   void isFullUnicodeCharset_CodePage_ShouldReturnFalse() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN2", "CP1252");
@@ -194,7 +206,6 @@ class RdbEngineSqlServerTest {
   @Test
   void isJoinCollationConflict_DifferentCollations_ShouldReturnTrue() {
     // Arrange
-    RdbEngineStrategy rdbEngine = new RdbEngineSqlServer();
     TextColumnCollation left = new TextColumnCollation("SQL_Latin1_General_CP1_CI_AS", "CP1252");
     TextColumnCollation right = new TextColumnCollation("Latin1_General_100_BIN2_UTF8", "UTF-8");
 

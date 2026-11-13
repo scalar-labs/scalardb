@@ -452,7 +452,9 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public boolean isFullUnicodeCharset(TextColumnCollation collation) {
-    return "UTF-8".equals(collation.getCharset());
+    String charset = collation.getCharset();
+    // nchar, nvarchar and ntext store UTF-16, with surrogate pairs beyond the BMP
+    return "UTF-8".equals(charset) || "UTF-16".equals(charset);
   }
 
   @Override
