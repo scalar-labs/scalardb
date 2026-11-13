@@ -116,11 +116,13 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns the collation that columns of the schema get when they declare none.
+   * Returns the collation that columns of the schema get when they declare none. It is read only
+   * when {@link #collationClauseRequiresExtendedStringSize()} returns {@code true}, so an engine
+   * overrides it together with that method.
    *
    * @param connection the connection to read the catalog with
    * @param namespace the schema to read the default collation of
-   * @return the default collation, or null when the engine has no schema-level collation
+   * @return the default collation, or null when the engine does not read it
    * @throws SQLException if the catalog query fails
    */
   @Nullable

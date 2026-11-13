@@ -56,8 +56,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   /**
    * The name of a table in the same namespace whose TEXT key columns the new table copies the
-   * collation from. ScalarDB sets this option on its own {@code createTable} calls. It is internal
-   * and not for users: its meaning can change without notice.
+   * collation from, so a join between the two tables on the key compares like collations. ScalarDB
+   * sets this option on its own {@code createTable} calls. It is internal and not for users: its
+   * meaning can change without notice.
    */
   public static final String COLLATION_SOURCE_TABLE = "scalardb.internal.collation_source_table";
 
@@ -876,11 +877,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (metadata.getColumnDataType(columnName) != DataType.TEXT) {
       return bareType;
     }
-    boolean isKey =
-        metadata.getPartitionKeyNames().contains(columnName)
-            || metadata.getClusteringKeyNames().contains(columnName);
     String clause =
-        isKey && keyCollationClauses.containsKey(columnName)
+        keyCollationClauses.containsKey(columnName)
             ? keyCollationClauses.get(columnName)
             : createdTextCollationClause;
     return rdbEngine.appendCollationClause(bareType, clause);
