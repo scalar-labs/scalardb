@@ -511,4 +511,59 @@ class RdbEngineOracleTest {
     // Assert
     assertThat(actual).isEqualTo("USING_NLS_COMP");
   }
+
+  private static Connection connectionWithCharacterSet(String charset) throws SQLException {
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(
+            "SELECT VALUE FROM NLS_DATABASE_PARAMETERS WHERE PARAMETER = ?"))
+        .thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn(charset);
+    return connection;
+  }
+
+  @Test
+  public void getDatabaseEncodingIssue_Al32utf8_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithCharacterSet("AL32UTF8");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  public void getDatabaseEncodingIssue_Cesu8_ShouldReturnUtf16CodeUnitOrder() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithCharacterSet("UTF8");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue("UTF8", DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER));
+  }
+
+  @Test
+  public void getDatabaseEncodingIssue_WesternEuropean_ShouldReturnPartialCharacterSet()
+      throws SQLException {
+    // Arrange
+    Connection connection = connectionWithCharacterSet("WE8MSWIN1252");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue(
+                "WE8MSWIN1252", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
+  }
 }

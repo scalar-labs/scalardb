@@ -160,12 +160,16 @@ class RdbEngineSqlite extends AbstractRdbEngine {
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
   @Nullable
-  public String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
     try (Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("PRAGMA encoding")) {
       if (rs.next()) {
         String encoding = rs.getString(1);
-        return "UTF-8".equalsIgnoreCase(encoding) ? null : encoding;
+        // The only other encodings are UTF-16LE and UTF-16BE, and the BINARY collation compares
+        // their bytes with memcmp
+        return "UTF-8".equalsIgnoreCase(encoding)
+            ? null
+            : new DatabaseEncodingIssue(encoding, DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER);
       }
       return null;
     }

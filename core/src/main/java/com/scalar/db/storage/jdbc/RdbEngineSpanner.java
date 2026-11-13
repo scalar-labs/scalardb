@@ -77,7 +77,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Override
   @Nullable
-  public String getNonUtf8DatabaseEncoding(Connection connection) {
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) {
     return null;
   }
 

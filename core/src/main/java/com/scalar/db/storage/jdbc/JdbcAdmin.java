@@ -733,12 +733,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private void warnAboutDatabaseTextSettings(
       Connection connection, String namespace, String table) {
     try {
-      String encoding = rdbEngine.getNonUtf8DatabaseEncoding(connection);
-      if (encoding != null) {
-        logger.warn(
-            "The database encoding is {}, not UTF-8, so TEXT columns of the {} table cannot store every character ScalarDB accepts",
-            encoding,
-            getFullTableName(namespace, table));
+      DatabaseEncodingIssue issue = rdbEngine.getDatabaseEncodingIssue(connection);
+      if (issue != null) {
+        logger.warn(buildDatabaseEncodingWarning(issue, getFullTableName(namespace, table)));
       }
     } catch (SQLException | RuntimeException e) {
       logger.debug("Reading the database encoding failed", e);
@@ -753,6 +750,22 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
     } catch (SQLException | RuntimeException e) {
       logger.debug("Reading the database collation failed", e);
+    }
+  }
+
+  @VisibleForTesting
+  static String buildDatabaseEncodingWarning(DatabaseEncodingIssue issue, String fullTableName) {
+    switch (issue.getKind()) {
+      case PARTIAL_CHARACTER_SET:
+        return String.format(
+            "The database encoding is %s, so TEXT columns of the %s table cannot store every Unicode character, and the database rejects or replaces a value that holds a character outside it",
+            issue.getEncoding(), fullTableName);
+      case UTF16_CODE_UNIT_ORDER:
+        return String.format(
+            "The database encoding is %s, so the database orders the TEXT values of the %s table by UTF-16 code unit, not by code point like ScalarDB",
+            issue.getEncoding(), fullTableName);
+      default:
+        throw new AssertionError();
     }
   }
 

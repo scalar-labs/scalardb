@@ -252,4 +252,19 @@ public class RdbEngineDb2Test {
     // Assert
     assertThat(actual).isNull();
   }
+
+  @Test
+  void getDatabaseEncodingIssue_Iso88591_ShouldReturnPartialCharacterSet() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("codeset", "ISO8859-1");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineDb2.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue(
+                "ISO8859-1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
+  }
 }

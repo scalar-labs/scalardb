@@ -455,14 +455,16 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
   @Nullable
-  public String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
     String sql =
         "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = current_database()";
     try (Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery(sql)) {
       if (rs.next()) {
         String encoding = rs.getString(1);
-        return "UTF8".equals(encoding) ? null : encoding;
+        return "UTF8".equals(encoding)
+            ? null
+            : new DatabaseEncodingIssue(encoding, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
       }
       return null;
     }

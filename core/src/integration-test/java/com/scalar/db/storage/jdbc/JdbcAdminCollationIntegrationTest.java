@@ -273,9 +273,10 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
-  void getNonUtf8DatabaseEncoding_CiDatabase_ShouldReturnNull() throws Exception {
+  void getDatabaseEncodingIssue_CiDatabase_ShouldReturnNull() throws Exception {
     // Arrange Act
-    String encoding = testUtils.withCatalogConnection(rdbEngine::getNonUtf8DatabaseEncoding);
+    DatabaseEncodingIssue encoding =
+        testUtils.withCatalogConnection(rdbEngine::getDatabaseEncodingIssue);
 
     // Assert
     assertThat(encoding).isNull();

@@ -548,9 +548,9 @@ class RdbEngineMysqlTest {
   }
 
   @Test
-  void getNonUtf8DatabaseEncoding_ShouldReturnNull() throws SQLException {
+  void getDatabaseEncodingIssue_ShouldReturnNull() throws SQLException {
     // Arrange Act
-    String actual = rdbEngineMysql.getNonUtf8DatabaseEncoding(mock(Connection.class));
+    DatabaseEncodingIssue actual = rdbEngineMysql.getDatabaseEncodingIssue(mock(Connection.class));
 
     // Assert
     assertThat(actual).isNull();

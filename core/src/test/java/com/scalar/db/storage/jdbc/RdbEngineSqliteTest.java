@@ -148,16 +148,16 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void getNonUtf8DatabaseEncoding_DefaultDatabase_ShouldReturnNull() throws SQLException {
+  void getDatabaseEncodingIssue_DefaultDatabase_ShouldReturnNull() throws SQLException {
     // Arrange Act
-    String encoding = rdbEngine.getNonUtf8DatabaseEncoding(connection);
+    DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(connection);
 
     // Assert
     assertThat(encoding).isNull();
   }
 
   @Test
-  void getNonUtf8DatabaseEncoding_Utf16Database_ShouldReturnEncoding()
+  void getDatabaseEncodingIssue_Utf16Database_ShouldReturnUtf16CodeUnitOrder()
       throws SQLException, IOException {
     // Arrange
     File utf16File = File.createTempFile(getClass().getName(), ".db");
@@ -169,10 +169,13 @@ class RdbEngineSqliteTest {
       }
 
       // Act
-      String encoding = rdbEngine.getNonUtf8DatabaseEncoding(utf16Connection);
+      DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(utf16Connection);
 
       // Assert
-      assertThat(encoding).isEqualTo("UTF-16le");
+      assertThat(encoding)
+          .isEqualTo(
+              new DatabaseEncodingIssue(
+                  "UTF-16le", DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER));
     } finally {
       assertTrue(utf16File.delete());
     }

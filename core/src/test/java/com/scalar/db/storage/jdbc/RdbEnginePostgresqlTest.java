@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -263,5 +264,26 @@ class RdbEnginePostgresqlTest {
 
     // Assert
     assertThat(actual).isFalse();
+  }
+
+  @Test
+  void getDatabaseEncodingIssue_Latin1_ShouldReturnPartialCharacterSet() throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(statement.executeQuery(anyString())).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn("LATIN1");
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngine.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue("LATIN1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
   }
 }

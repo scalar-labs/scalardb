@@ -498,7 +498,7 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
-  void getTextColumnCollationsAndGetNonUtf8DatabaseEncoding_ShouldNotQueryTheDatabase()
+  void getTextColumnCollationsAndGetDatabaseEncodingIssue_ShouldNotQueryTheDatabase()
       throws SQLException {
     // Arrange
     Connection connection = mock(Connection.class);
@@ -506,7 +506,7 @@ public class RdbEngineSpannerTest {
     // Act
     Map<String, TextColumnCollation> collations =
         rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
-    String encoding = rdbEngine.getNonUtf8DatabaseEncoding(connection);
+    DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(connection);
 
     // Assert
     assertThat(collations).isEmpty();

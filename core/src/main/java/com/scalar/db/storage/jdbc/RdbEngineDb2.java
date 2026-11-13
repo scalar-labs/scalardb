@@ -480,9 +480,11 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   @Nullable
-  public String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
     String codeset = readDatabaseSettings(connection).get("codeset");
-    return codeset == null || "UTF-8".equalsIgnoreCase(codeset) ? null : codeset;
+    return codeset == null || "UTF-8".equalsIgnoreCase(codeset)
+        ? null
+        : new DatabaseEncodingIssue(codeset, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
   }
 
   @Override

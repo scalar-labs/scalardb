@@ -163,14 +163,16 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns the database encoding when it is not UTF-8.
+   * Returns how the database encoding keeps TEXT columns from behaving as ScalarDB expects, on
+   * engines whose columns cannot choose their encoding.
    *
    * @param connection the connection to read the encoding with
-   * @return the encoding name, or null when it is UTF-8 or the engine does not read it
+   * @return the issue, or null when the encoding has none or the engine does not read it
    * @throws SQLException if the query fails
    */
   @Nullable
-  default String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+  default DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection)
+      throws SQLException {
     return null;
   }
 

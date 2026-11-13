@@ -1606,7 +1606,7 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act
@@ -1632,7 +1632,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     doReturn(
             ImmutableMap.of(
                 "pk", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4"),
@@ -1676,7 +1676,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     doReturn(Collections.emptyMap())
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), eq("my_ns"), eq("missing_table"));
@@ -1709,7 +1709,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
@@ -1731,7 +1731,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act
@@ -7834,20 +7834,54 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createTable_TextColumnOnNonUtf8Database_ShouldCallEncodingCheck()
+  public void createTable_TextColumnOnNonUnicodeDatabase_ShouldCallEncodingCheck()
       throws SQLException, ExecutionException {
     // Arrange
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn("latin1").when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(new DatabaseEncodingIssue("latin1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET))
+        .when(rdbEngineStrategy)
+        .getDatabaseEncodingIssue(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
     admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
 
     // Assert
-    verify(rdbEngineStrategy).getNonUtf8DatabaseEncoding(connection);
+    verify(rdbEngineStrategy).getDatabaseEncodingIssue(connection);
+  }
+
+  @Test
+  public void
+      buildDatabaseEncodingWarning_PartialCharacterSet_ShouldSayValuesAreRejectedOrReplaced() {
+    // Arrange
+    DatabaseEncodingIssue issue =
+        new DatabaseEncodingIssue("LATIN1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+
+    // Act
+    String actual = JdbcAdmin.buildDatabaseEncodingWarning(issue, "ns.tbl");
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            "The database encoding is LATIN1, so TEXT columns of the ns.tbl table cannot store every Unicode character, and the database rejects or replaces a value that holds a character outside it");
+  }
+
+  @Test
+  public void
+      buildDatabaseEncodingWarning_Utf16CodeUnitOrder_ShouldSayValuesAreOrderedByCodeUnit() {
+    // Arrange
+    DatabaseEncodingIssue issue =
+        new DatabaseEncodingIssue("UTF-16le", DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER);
+
+    // Act
+    String actual = JdbcAdmin.buildDatabaseEncodingWarning(issue, "ns.tbl");
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            "The database encoding is UTF-16le, so the database orders the TEXT values of the ns.tbl table by UTF-16 code unit, not by code point like ScalarDB");
   }
 
   @Test
@@ -7857,7 +7891,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     doReturn("UCA400_NO").when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
@@ -7876,7 +7910,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     doThrow(failure).when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
     TableMetadata metadata = textTableMetadata();
@@ -8000,7 +8034,7 @@ public class JdbcAdminTest {
   private RdbEngineStrategy oracleWithKeyCollationSource(
       String sourceCollation, String schemaDefault) throws SQLException {
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     doReturn(ImmutableMap.of("pk", new TextColumnCollation(sourceCollation, "AL32UTF8")))
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
@@ -8145,7 +8179,7 @@ public class JdbcAdminTest {
     admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
 
     // Assert
-    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
     verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
@@ -8219,7 +8253,7 @@ public class JdbcAdminTest {
 
     // Assert
     verify(statement).execute("ALTER TABLE `ns`.`table` ADD `c2` LONGTEXT");
-    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
     verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
@@ -8318,7 +8352,7 @@ public class JdbcAdminTest {
     admin.createTable("ns", "tbl", metadata, Collections.emptyMap());
 
     // Assert
-    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
     verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
@@ -8330,7 +8364,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doThrow(failure).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doThrow(failure).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
     TableMetadata metadata = textTableMetadata();
 
@@ -8367,14 +8401,16 @@ public class JdbcAdminTest {
     // Arrange
     prepareAddNewColumnToTable();
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn("latin1").when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(new DatabaseEncodingIssue("latin1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET))
+        .when(rdbEngineStrategy)
+        .getDatabaseEncodingIssue(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
     admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
 
     // Assert
-    verify(rdbEngineStrategy).getNonUtf8DatabaseEncoding(connection);
+    verify(rdbEngineStrategy).getDatabaseEncodingIssue(connection);
   }
 
   @Test
@@ -8383,7 +8419,7 @@ public class JdbcAdminTest {
     // Arrange
     prepareAddNewColumnToTable();
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getNonUtf8DatabaseEncoding(any());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
     doReturn("UCA400_NO").when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
@@ -8406,7 +8442,7 @@ public class JdbcAdminTest {
     admin.addNewColumnToTable("ns", "tbl", "c2", DataType.INT);
 
     // Assert
-    verify(rdbEngineStrategy, never()).getNonUtf8DatabaseEncoding(any());
+    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
     verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
   }
 
@@ -8418,7 +8454,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
     doThrow(new SQLException("catalog failure"))
         .when(rdbEngineStrategy)
-        .getNonUtf8DatabaseEncoding(any());
+        .getDatabaseEncodingIssue(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act

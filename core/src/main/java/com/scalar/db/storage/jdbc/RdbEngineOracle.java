@@ -549,9 +549,16 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   @Nullable
-  public String getNonUtf8DatabaseEncoding(Connection connection) throws SQLException {
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
     String charset = queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_CHARACTERSET");
-    return "AL32UTF8".equals(charset) ? null : charset;
+    if (charset == null || "AL32UTF8".equals(charset)) {
+      return null;
+    }
+    return new DatabaseEncodingIssue(
+        charset,
+        "UTF8".equals(charset)
+            ? DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER
+            : DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
   }
 
   @Override
