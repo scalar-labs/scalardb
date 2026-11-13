@@ -78,9 +78,8 @@ import com.scalar.db.exception.transaction.CrudException;
  * }</pre>
  *
  * <p>A process that also drives the outcome ends its own branch the same way, then drives the
- * transaction. Declaring {@code FAILURE} after a successful {@code SUCCESS} is a no-op, as is a
- * rollback after a commit, whether or not it succeeded (see {@link GlobalTransaction#commit()}), so
- * both cleanup calls can run whatever failed:
+ * transaction. Declaring {@code FAILURE} after a successful {@code SUCCESS} is a no-op, so a
+ * failure arising after the branch was ended needs no extra guard:
  *
  * <pre>{@code
  * // In a method that declares throws TransactionException.
