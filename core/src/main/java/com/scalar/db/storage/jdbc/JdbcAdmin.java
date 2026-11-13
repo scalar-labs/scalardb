@@ -783,7 +783,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnTypeForKey);
+    String columnType =
+        getTypeForRedefinition(
+            connection, namespace, table, columnName, dataType, columnTypeForKey);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
@@ -797,9 +800,43 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String columnType = rdbEngine.getDataTypeForEngine(dataType);
+    String columnType =
+        getTypeForRedefinition(
+            connection,
+            namespace,
+            table,
+            columnName,
+            dataType,
+            rdbEngine.getDataTypeForEngine(dataType));
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
+  }
+
+  private String getTypeForRedefinition(
+      Connection connection,
+      String namespace,
+      String table,
+      String columnName,
+      DataType dataType,
+      String bareType)
+      throws SQLException {
+    String sql = rdbEngine.textColumnCollationSql();
+    if (dataType != DataType.TEXT || sql == null) {
+      return bareType;
+    }
+    TextColumnCollation current =
+        executeQuery(
+            connection,
+            rdbEngine,
+            sql,
+            requiresExplicitCommit,
+            ps -> {
+              ps.setString(1, namespace);
+              ps.setString(2, table);
+              ps.setString(3, columnName);
+            },
+            rs -> rs.next() ? new TextColumnCollation(rs.getString(1), rs.getString(2)) : null);
+    return current == null ? bareType : bareType + " " + rdbEngine.getCollationClause(current);
   }
 
   @Override
@@ -1043,13 +1080,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
             TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
 
+            String columnType = getVendorDbColumnType(updatedTableMetadata, newColumnName);
+            if (rdbEngine.renameColumnRestatesType()) {
+              columnType =
+                  getTypeForRedefinition(
+                      connection,
+                      namespace,
+                      table,
+                      oldColumnName,
+                      currentTableMetadata.getColumnDataType(oldColumnName),
+                      columnType);
+            }
             String renameColumnStatement =
                 rdbEngine.renameColumnSql(
-                    namespace,
-                    table,
-                    oldColumnName,
-                    newColumnName,
-                    getVendorDbColumnType(updatedTableMetadata, newColumnName));
+                    namespace, table, oldColumnName, newColumnName, columnType);
             execute(connection, rdbEngine, renameColumnStatement, requiresExplicitCommit);
 
             if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {

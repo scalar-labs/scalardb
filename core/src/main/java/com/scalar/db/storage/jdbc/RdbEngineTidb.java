@@ -12,7 +12,7 @@ import java.sql.Connection;
 public class RdbEngineTidb extends RdbEngineMysql {
 
   RdbEngineTidb(JdbcConfig config) {
-    super(config);
+    super(config, false, true);
   }
 
   @Override

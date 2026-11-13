@@ -47,6 +47,12 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
     return JdbcDriver.class.getName();
   }
 
+  @Nullable
+  @Override
+  public String textColumnCollationSql() {
+    return null;
+  }
+
   @Override
   public String getDataTypeForEngine(DataType scalarDbDataType) {
     switch (scalarDbDataType) {

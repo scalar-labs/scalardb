@@ -155,6 +155,10 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     deleteAllRowsWithSql(namespace, table + "_tx_metadata");
   }
 
+  public void executeSql(String sql) throws SQLException {
+    execute(sql);
+  }
+
   private void execute(String sql) throws SQLException {
     withConnection(
         dataSource,
@@ -261,6 +265,69 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     requiresExplicitCommit,
                     ps -> ps.setString(1, namespace),
                     ResultSet::next));
+  }
+
+  /** Returns the collation that {@link RdbEngineStrategy#textColumnCollationSql} reads. */
+  @Nullable
+  public String readTextColumnCollation(String namespace, String table, String column)
+      throws SQLException {
+    String sql = rdbEngine.textColumnCollationSql();
+    if (sql == null) {
+      throw new UnsupportedOperationException();
+    }
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, String, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    rdbEngine,
+                    sql,
+                    requiresExplicitCommit,
+                    ps -> {
+                      ps.setString(1, namespace);
+                      ps.setString(2, table);
+                      ps.setString(3, column);
+                    },
+                    rs -> rs.next() ? rs.getString(1) : null));
+  }
+
+  /** Returns the collation the catalog records for a MySQL-family or PostgreSQL-family column. */
+  @Nullable
+  public String getColumnCollation(String namespace, String table, String column)
+      throws SQLException {
+    String sql;
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      sql =
+          "SELECT COLLATION_NAME FROM information_schema.COLUMNS"
+              + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      sql =
+          "SELECT c.collname FROM pg_attribute a"
+              + " JOIN pg_class t ON a.attrelid = t.oid"
+              + " JOIN pg_namespace n ON t.relnamespace = n.oid"
+              + " LEFT JOIN pg_collation c ON c.oid = a.attcollation"
+              + " WHERE n.nspname = ? AND t.relname = ? AND a.attname = ?";
+    } else {
+      throw new UnsupportedOperationException();
+    }
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, String, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    rdbEngine,
+                    sql,
+                    requiresExplicitCommit,
+                    ps -> {
+                      ps.setString(1, namespace);
+                      ps.setString(2, table);
+                      ps.setString(3, column);
+                    },
+                    rs -> rs.next() ? rs.getString(1) : null));
   }
 
   @Override

@@ -34,26 +34,34 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
       "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
-  private static final Pattern MYSQL_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
+  private static final Pattern MYSQL_VERSION_PATTERN =
+      Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
   private final boolean rowAliasSupported;
+  private final boolean renameColumnSupported;
 
   RdbEngineMysql(JdbcConfig config) {
-    this(config, false);
+    this(config, false, false);
   }
 
-  RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported) {
+  RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported, boolean renameColumnSupported) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     this.rowAliasSupported = rowAliasSupported;
+    this.renameColumnSupported = renameColumnSupported;
   }
 
   @VisibleForTesting
   RdbEngineMysql() {
+    this(false);
+  }
+
+  RdbEngineMysql(boolean renameColumnSupported) {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     rowAliasSupported = false;
+    this.renameColumnSupported = renameColumnSupported;
   }
 
   /**
@@ -62,14 +70,40 @@ class RdbEngineMysql extends AbstractRdbEngine {
    */
   static boolean supportsInsertRowAlias(DatabaseMetaData metaData) throws SQLException {
     String version = metaData.getDatabaseProductVersion();
+    return !version.contains("MariaDB") && isAtLeastMysql80(version, 19, false);
+  }
+
+  /**
+   * Returns whether the server accepts {@code ALTER TABLE ... RENAME COLUMN}, which is supported
+   * since MySQL 8.0.3. MariaDB and TiDB have their own engine classes that always support it.
+   *
+   * @see <a href="https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-3.html">MySQL 8.0.3
+   *     release notes</a>
+   */
+  static boolean supportsRenameColumn(DatabaseMetaData metaData) throws SQLException {
+    String version = metaData.getDatabaseProductVersion();
+    return !version.contains("MariaDB")
+        && !version.contains("TiDB")
+        && isAtLeastMysql80(version, 3, true);
+  }
+
+  /**
+   * Returns whether the version is MySQL 8.0.{@code minPatch} or later.
+   *
+   * @param missingPatchIsLatest how to read a version without a numeric patch, such as {@code
+   *     8.0.custom_build}: {@code true} reads it as the latest patch of its minor version, {@code
+   *     false} as unsupported
+   */
+  private static boolean isAtLeastMysql80(
+      String version, int minPatch, boolean missingPatchIsLatest) {
     Matcher matcher = MYSQL_VERSION_PATTERN.matcher(version);
-    if (version.contains("MariaDB") || !matcher.lookingAt()) {
+    if (!matcher.lookingAt() || (matcher.group(3) == null && !missingPatchIsLatest)) {
       return false;
     }
     int major = Integer.parseInt(matcher.group(1));
     int minor = Integer.parseInt(matcher.group(2));
-    int patch = Integer.parseInt(matcher.group(3));
-    return major > 8 || (major == 8 && (minor > 0 || patch >= 19));
+    int patch = matcher.group(3) == null ? Integer.MAX_VALUE : Integer.parseInt(matcher.group(3));
+    return major > 8 || (major == 8 && (minor > 0 || patch >= minPatch));
   }
 
   @Override
@@ -142,6 +176,9 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String oldColumnName,
       String newColumnName,
       String columnType) {
+    if (renameColumnSupported) {
+      return super.renameColumnSql(namespace, table, oldColumnName, newColumnName, columnType);
+    }
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
         + " CHANGE COLUMN "
@@ -150,6 +187,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
         + enclose(newColumnName)
         + " "
         + columnType;
+  }
+
+  @Override
+  public boolean renameColumnRestatesType() {
+    return !renameColumnSupported;
   }
 
   @Override
@@ -441,6 +483,25 @@ class RdbEngineMysql extends AbstractRdbEngine {
       default:
         throw new AssertionError();
     }
+  }
+
+  @Override
+  public String textColumnCollationSql() {
+    // A column type restated without a collation clause takes the table collation, so a column
+    // that already has it needs no clause.
+    return "SELECT c.COLLATION_NAME, c.CHARACTER_SET_NAME FROM information_schema.COLUMNS c"
+        + " JOIN information_schema.TABLES t"
+        + " ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME"
+        + " WHERE c.TABLE_SCHEMA = ? AND c.TABLE_NAME = ? AND c.COLUMN_NAME = ?"
+        + " AND c.COLLATION_NAME <> t.TABLE_COLLATION";
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    String charset = collation.getCharset();
+    return (charset == null ? "" : "CHARACTER SET " + charset + " ")
+        + "COLLATE "
+        + collation.getCollation();
   }
 
   @Override

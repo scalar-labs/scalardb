@@ -52,6 +52,15 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
+  void textColumnCollationSql_ShouldBeNull() {
+    // Arrange Act
+    String sql = rdbEngine.textColumnCollationSql();
+
+    // Assert
+    assertThat(sql).isNull();
+  }
+
+  @Test
   void getDriverClassName_ShouldReturnSpannerDriver() {
     assertThat(rdbEngine.getDriverClassName())
         .isEqualTo("com.google.cloud.spanner.jdbc.JdbcDriver");

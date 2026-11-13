@@ -371,6 +371,27 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
+  public String textColumnCollationSql() {
+    // A column type restated without a collation clause takes the default collation of the type,
+    // so a column on the database default (oid 100) needs no clause.
+    return "SELECT '\"' || replace(cn.nspname, '\"', '\"\"') || '\".\"'"
+        + " || replace(c.collname, '\"', '\"\"') || '\"', NULL"
+        + " FROM pg_attribute a"
+        + " JOIN pg_class t ON a.attrelid = t.oid"
+        + " JOIN pg_namespace n ON t.relnamespace = n.oid"
+        + " JOIN pg_collation c ON c.oid = a.attcollation"
+        + " JOIN pg_namespace cn ON cn.oid = c.collnamespace"
+        + " WHERE n.nspname = ? AND t.relname = ? AND a.attname = ?"
+        + " AND a.attnum > 0 AND NOT a.attisdropped AND a.attcollation <> 100"
+        + " AND a.atttypid IN ('text'::regtype, 'varchar'::regtype, 'bpchar'::regtype)";
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    return "COLLATE " + collation.getCollation();
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }

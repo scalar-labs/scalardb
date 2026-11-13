@@ -99,4 +99,17 @@ class RdbEnginePostgresqlTest {
     // Assert
     assertThat(rdbEngine.isConflict(new SQLException("no sql state"))).isFalse();
   }
+
+  @Test
+  void getCollationClause_SchemaQualifiedCollation_ShouldReturnItAsIs() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    String clause =
+        rdbEngine.getCollationClause(new TextColumnCollation("\"pg_catalog\".\"en_US\"", null));
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE \"pg_catalog\".\"en_US\"");
+  }
 }
