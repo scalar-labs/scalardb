@@ -763,7 +763,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       Map<String, TextColumnCollation> collations,
       RdbEngineStrategy rdbEngine) {
     List<String> nonBinary = new ArrayList<>();
-    List<String> nonUtf8 = new ArrayList<>();
+    List<String> partialCharset = new ArrayList<>();
     for (Map.Entry<String, TextColumnCollation> entry : collations.entrySet()) {
       if (metadata.getColumnDataType(entry.getKey()) != DataType.TEXT) {
         continue;
@@ -778,7 +778,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 + ")");
       }
       if (!rdbEngine.isFullUnicodeCharset(collation)) {
-        nonUtf8.add(entry.getKey() + " (" + collation.getCharset() + ")");
+        partialCharset.add(entry.getKey() + " (" + collation.getCharset() + ")");
       }
     }
     List<String> warnings = new ArrayList<>();
@@ -788,11 +788,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               "The %s table has TEXT columns whose collation is not binary, so the database can order and compare their values differently from ScalarDB: %s",
               fullTableName, String.join(", ", nonBinary)));
     }
-    if (!nonUtf8.isEmpty()) {
+    if (!partialCharset.isEmpty()) {
       warnings.add(
           String.format(
-              "The %s table has TEXT columns whose character set is not UTF-8, so they cannot store every character ScalarDB accepts: %s",
-              fullTableName, String.join(", ", nonUtf8)));
+              "The %s table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: %s",
+              fullTableName, String.join(", ", partialCharset)));
     }
     return warnings;
   }

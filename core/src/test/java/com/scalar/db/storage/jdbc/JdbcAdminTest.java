@@ -7707,6 +7707,43 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void buildImportTextColumnWarnings_MysqlLatin1_ShouldReturnBothWarnings() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("latin1_bin", "latin1"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation is not binary, so the database can order and compare their values differently from ScalarDB: pk (latin1_bin, latin1)",
+            "The ns.tbl table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: pk (latin1)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_MariaDbUtf16NopadBin_ShouldReturnEmpty() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("utf16_nopad_bin", "utf16"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMariaDB());
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
   public void buildImportTextColumnWarnings_NonTextColumnInMap_ShouldIgnoreIt() {
     // Arrange
     TableMetadata metadata =
