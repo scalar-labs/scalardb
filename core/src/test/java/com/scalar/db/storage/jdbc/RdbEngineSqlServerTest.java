@@ -155,6 +155,18 @@ class RdbEngineSqlServerTest {
   }
 
   @Test
+  void isBinaryCollation_Bin2OnUtf16Column_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_100_BIN2", "UTF-16");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
   void isFullUnicodeCharset_Utf8_ShouldReturnTrue() {
     // Arrange
     TextColumnCollation collation =

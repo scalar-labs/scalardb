@@ -447,7 +447,10 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public boolean isBinaryCollation(TextColumnCollation collation) {
-    return collation.getCollation().toUpperCase(Locale.ROOT).contains("_BIN2");
+    // Microsoft documents _BIN2 as code point order, but on nchar and nvarchar SQL Server 2025
+    // compares UTF-16 code units: U+1F600, stored as surrogates D83D DE00, sorts before U+E000.
+    return !"UTF-16".equals(collation.getCharset())
+        && collation.getCollation().toUpperCase(Locale.ROOT).contains("_BIN2");
   }
 
   @Override
