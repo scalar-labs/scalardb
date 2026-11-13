@@ -182,6 +182,8 @@ class RdbEngineMysqlTest {
     "8.0.45-0ubuntu0.22.04.1, true",
     "8.4.3, true",
     "9.1.0, true",
+    "8.0.custom_build, false",
+    "8.4.custom_build, false",
     "11.4.2-MariaDB, false",
     "'', false"
   })
