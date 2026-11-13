@@ -1665,40 +1665,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  // Tables created before and after the column collation setting existed can have keys with
-  // different collations. Some databases then fail the view creation with a vendor error, and
-  // PostgreSQL creates the view but fails every read.
-  private void throwIfKeyCollationsConflict(
-      Connection connection,
-      String leftSourceNamespace,
-      String leftSourceTable,
-      String rightSourceNamespace,
-      String rightSourceTable,
-      TableMetadata metadata)
-      throws SQLException {
-    if (!engineHasColumnCollations()) {
-      return;
-    }
-    Map<String, TextColumnCollation> leftCollations =
-        rdbEngine.getTextColumnCollations(connection, leftSourceNamespace, leftSourceTable);
-    Map<String, TextColumnCollation> rightCollations =
-        rdbEngine.getTextColumnCollations(connection, rightSourceNamespace, rightSourceTable);
-    for (String column :
-        Iterables.concat(metadata.getPartitionKeyNames(), metadata.getClusteringKeyNames())) {
-      TextColumnCollation left = leftCollations.get(column);
-      TextColumnCollation right = rightCollations.get(column);
-      if (left != null && right != null && rdbEngine.isJoinCollationConflict(left, right)) {
-        throw new IllegalArgumentException(
-            CoreError.JDBC_VIRTUAL_TABLE_SOURCE_KEY_COLLATIONS_CONFLICT.buildMessage(
-                column,
-                getFullTableName(leftSourceNamespace, leftSourceTable),
-                left.getCollation(),
-                getFullTableName(rightSourceNamespace, rightSourceTable),
-                right.getCollation()));
-      }
-    }
-  }
-
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createVirtualTableView(
       Connection connection,
@@ -1715,13 +1681,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     TableMetadata rightSourceTableMetadata =
         tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable);
     assert leftSourceTableMetadata != null && rightSourceTableMetadata != null;
-    throwIfKeyCollationsConflict(
-        connection,
-        leftSourceNamespace,
-        leftSourceTable,
-        rightSourceNamespace,
-        rightSourceTable,
-        leftSourceTableMetadata);
 
     StringBuilder createViewSql = new StringBuilder("CREATE VIEW ");
     createViewSql.append(encloseFullTableName(namespace, table));

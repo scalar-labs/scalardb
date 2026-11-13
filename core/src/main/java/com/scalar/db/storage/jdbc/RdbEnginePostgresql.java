@@ -467,16 +467,6 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     return BINARY_COLLATIONS.contains(name);
   }
 
-  // A non-default implicit collation wins over the default one. Two different non-default ones
-  // leave the comparison without a collation, which fails at run time, after the view exists.
-  // https://www.postgresql.org/docs/18/collation.html
-  @Override
-  public boolean isJoinCollationConflict(TextColumnCollation left, TextColumnCollation right) {
-    String l = left.getCollation();
-    String r = right.getCollation();
-    return !l.equals(r) && !l.equals("default") && !r.equals("default");
-  }
-
   @Override
   public boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return "UTF8".equals(collation.getCharset());

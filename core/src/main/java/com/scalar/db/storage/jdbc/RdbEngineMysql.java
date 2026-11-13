@@ -25,7 +25,6 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -575,27 +574,6 @@ class RdbEngineMysql extends AbstractRdbEngine {
   public boolean isBinaryCollation(TextColumnCollation collation) {
     String name = collation.getCollation();
     return CODE_POINT_NO_PAD_COLLATIONS.contains(name) || name.equals(binaryCollation);
-  }
-
-  // Between two columns of one character set, a _bin collation wins over a _ci or _cs one, and any
-  // other pair of different collations is an error. A character set mismatch is left to the
-  // server. https://dev.mysql.com/doc/refman/8.4/en/charset-collation-coercibility.html
-  @Override
-  public boolean isJoinCollationConflict(TextColumnCollation left, TextColumnCollation right) {
-    String l = left.getCollation();
-    String r = right.getCollation();
-    if (l.equals(r) || !Objects.equals(left.getCharset(), right.getCharset())) {
-      return false;
-    }
-    return !(isBinCollation(l) && isCaseCollation(r) || isBinCollation(r) && isCaseCollation(l));
-  }
-
-  private static boolean isBinCollation(String collation) {
-    return collation.endsWith("_bin");
-  }
-
-  private static boolean isCaseCollation(String collation) {
-    return collation.endsWith("_ci") || collation.endsWith("_cs");
   }
 
   @Override

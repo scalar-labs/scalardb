@@ -548,30 +548,4 @@ class RdbEngineMysqlTest {
     // Assert
     assertThat(actual).isNull();
   }
-
-  @ParameterizedTest
-  @CsvSource({
-    "utf8mb4_0900_ai_ci,utf8mb4,utf8mb4_0900_bin,utf8mb4,false",
-    "utf8mb4_0900_bin,utf8mb4,utf8mb4_0900_as_cs,utf8mb4,false",
-    "utf8mb4_0900_bin,utf8mb4,utf8mb4_0900_bin,utf8mb4,false",
-    "utf8mb4_0900_ai_ci,utf8mb4,utf8mb4_general_ci,utf8mb4,true",
-    "utf8mb4_bin,utf8mb4,utf8mb4_0900_bin,utf8mb4,true",
-    "utf8mb3_general_ci,utf8mb3,utf8mb4_0900_ai_ci,utf8mb4,false"
-  })
-  void isJoinCollationConflict_ShouldFollowMysqlCoercibilityRules(
-      String leftCollation,
-      String leftCharset,
-      String rightCollation,
-      String rightCharset,
-      boolean expected) {
-    // Arrange
-    TextColumnCollation left = new TextColumnCollation(leftCollation, leftCharset);
-    TextColumnCollation right = new TextColumnCollation(rightCollation, rightCharset);
-
-    // Act
-    boolean actual = rdbEngineMysql.isJoinCollationConflict(left, right);
-
-    // Assert
-    assertThat(actual).isEqualTo(expected);
-  }
 }

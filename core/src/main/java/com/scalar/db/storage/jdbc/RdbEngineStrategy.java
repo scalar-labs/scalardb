@@ -155,18 +155,6 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns whether the database cannot compare two columns with these collations, as the join of a
-   * virtual table view does.
-   *
-   * @param left a collation read by {@link #getTextColumnCollations}
-   * @param right a collation read by {@link #getTextColumnCollations}
-   * @return {@code true} if the database finds no collation to compare the columns with
-   */
-  default boolean isJoinCollationConflict(TextColumnCollation left, TextColumnCollation right) {
-    return !left.getCollation().equals(right.getCollation());
-  }
-
-  /**
    * Returns whether the character set of the collation can store every Unicode character, whatever
    * its encoding.
    *
