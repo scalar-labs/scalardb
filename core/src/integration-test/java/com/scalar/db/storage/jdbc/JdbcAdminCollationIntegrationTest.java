@@ -97,6 +97,51 @@ public class JdbcAdminCollationIntegrationTest {
 
   @Test
   @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  void textColumnCollationSql_ColumnWithDefaultCollation_ShouldReturnNoRow() throws Exception {
+    // Arrange
+    admin.createNamespace(NAMESPACE, true);
+    admin.createTable(
+        NAMESPACE,
+        TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(TEXT_PK, DataType.TEXT)
+            .addColumn(TEXT_PLAIN, DataType.TEXT)
+            .addPartitionKey(TEXT_PK)
+            .build(),
+        true);
+
+    // Act
+    String collation = testUtils.readTextColumnCollation(NAMESPACE, TABLE, TEXT_PLAIN);
+
+    // Assert
+    assertThat(collation).isNull();
+  }
+
+  @Test
+  @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  void createIndex_ColumnWithDefaultCollation_ShouldKeepCollation() throws Exception {
+    // Arrange
+    admin.createNamespace(NAMESPACE, true);
+    admin.createTable(
+        NAMESPACE,
+        TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(TEXT_PK, DataType.TEXT)
+            .addColumn(TEXT_PLAIN, DataType.TEXT)
+            .addPartitionKey(TEXT_PK)
+            .build(),
+        true);
+    String before = testUtils.getColumnCollation(NAMESPACE, TABLE, TEXT_PLAIN);
+
+    // Act
+    admin.createIndex(NAMESPACE, TABLE, TEXT_PLAIN, Collections.emptyMap());
+
+    // Assert
+    assertThat(testUtils.getColumnCollation(NAMESPACE, TABLE, TEXT_PLAIN)).isEqualTo(before);
+  }
+
+  @Test
+  @DisabledIf("isNotMysqlOrPostgresqlFamily")
   void createIndex_ColumnWithNonBinaryCollation_ShouldKeepCollation() throws Exception {
     // Arrange
     createTableWithNonBinaryCollationOnPlainColumn();

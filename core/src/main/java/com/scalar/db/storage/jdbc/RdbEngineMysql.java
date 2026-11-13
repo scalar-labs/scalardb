@@ -483,9 +483,13 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String textColumnCollationSql() {
-    return "SELECT COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLUMNS"
-        + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?"
-        + " AND COLLATION_NAME IS NOT NULL";
+    // A column type restated without a collation clause takes the table collation, so a column
+    // that already has it needs no clause.
+    return "SELECT c.COLLATION_NAME, c.CHARACTER_SET_NAME FROM information_schema.COLUMNS c"
+        + " JOIN information_schema.TABLES t"
+        + " ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME"
+        + " WHERE c.TABLE_SCHEMA = ? AND c.TABLE_NAME = ? AND c.COLUMN_NAME = ?"
+        + " AND c.COLLATION_NAME <> t.TABLE_COLLATION";
   }
 
   @Override
