@@ -190,4 +190,18 @@ class RdbEngineSqlServerTest {
     // Assert
     assertThat(clause).isEqualTo("COLLATE Japanese_BIN2");
   }
+
+  @Test
+  void isJoinCollationConflict_DifferentCollations_ShouldReturnTrue() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEngineSqlServer();
+    TextColumnCollation left = new TextColumnCollation("SQL_Latin1_General_CP1_CI_AS", "CP1252");
+    TextColumnCollation right = new TextColumnCollation("Latin1_General_100_BIN2_UTF8", "UTF-8");
+
+    // Act
+    boolean actual = rdbEngine.isJoinCollationConflict(left, right);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
 }

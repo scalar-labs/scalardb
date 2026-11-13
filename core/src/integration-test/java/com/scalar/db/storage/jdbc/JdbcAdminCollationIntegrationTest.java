@@ -6,11 +6,13 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -22,11 +24,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 public class JdbcAdminCollationIntegrationTest {
   private static final String NAMESPACE = "collation_ns";
@@ -35,6 +39,9 @@ public class JdbcAdminCollationIntegrationTest {
   private static final String TEXT_CK = "ck";
   private static final String TEXT_INDEX = "idx";
   private static final String TEXT_PLAIN = "plain";
+  private static final String OLD_SOURCE_TABLE = "old_source";
+  private static final String NEW_SOURCE_TABLE = "new_source";
+  private static final String VIRTUAL_TABLE = "virtual_tbl";
 
   private Properties properties;
   private RdbEngineStrategy rdbEngine;
@@ -50,6 +57,11 @@ public class JdbcAdminCollationIntegrationTest {
   @SuppressWarnings("unused")
   private static boolean isDb2SqliteOrSpanner() {
     return JdbcEnv.isDb2() || JdbcEnv.isSqlite() || JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
+  private static boolean isOracleOrSqlServer() {
+    return JdbcEnv.isOracle() || JdbcEnv.isSqlServer();
   }
 
   @SuppressWarnings("unused")
@@ -76,23 +88,26 @@ public class JdbcAdminCollationIntegrationTest {
     cleanUp();
   }
 
-  // With the column collation setting on, createTable declares a collation on every TEXT column
   private void createTableOnDefaultCollation() throws Exception {
+    createTableWithColumnCollationDisabled(
+        TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(TEXT_PK, DataType.TEXT)
+            .addColumn(TEXT_PLAIN, DataType.TEXT)
+            .addPartitionKey(TEXT_PK)
+            .build());
+  }
+
+  // With the column collation setting on, createTable declares a collation on every TEXT column
+  private void createTableWithColumnCollationDisabled(String table, TableMetadata metadata)
+      throws Exception {
     Properties props = new Properties();
     props.putAll(properties);
     props.setProperty(JdbcConfig.COLUMN_COLLATION_ENABLED, "false");
     DistributedStorageAdmin adminWithoutCollation = StorageFactory.create(props).getStorageAdmin();
     try {
       adminWithoutCollation.createNamespace(NAMESPACE, true);
-      adminWithoutCollation.createTable(
-          NAMESPACE,
-          TABLE,
-          TableMetadata.newBuilder()
-              .addColumn(TEXT_PK, DataType.TEXT)
-              .addColumn(TEXT_PLAIN, DataType.TEXT)
-              .addPartitionKey(TEXT_PK)
-              .build(),
-          true);
+      adminWithoutCollation.createTable(NAMESPACE, table, metadata, true);
     } finally {
       adminWithoutCollation.close();
     }
@@ -580,5 +595,108 @@ public class JdbcAdminCollationIntegrationTest {
 
     // Assert
     assertThat(thrown).isNull();
+  }
+
+  @Test
+  @EnabledIf("isOracleOrSqlServer")
+  void createVirtualTable_SourceTableCreatedWithColumnCollationDisabled_ShouldThrowConflict()
+      throws Exception {
+    // Arrange
+    createVirtualTableSources();
+    try {
+      // Act
+      Throwable thrown = catchThrowable(this::createVirtualTableOnSources);
+
+      // Assert
+      assertThat(thrown)
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining(
+              CoreError.JDBC_VIRTUAL_TABLE_SOURCE_KEY_COLLATIONS_CONFLICT.buildCode());
+      assertThat(admin.tableExists(NAMESPACE, VIRTUAL_TABLE)).isFalse();
+    } finally {
+      dropVirtualTableAndSources();
+    }
+  }
+
+  @Test
+  @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  void createVirtualTable_SourceTableCreatedWithColumnCollationDisabled_ShouldReadThroughView()
+      throws Exception {
+    // Arrange
+    createVirtualTableSources();
+    try (DistributedStorage storage = storageFactory.getStorage()) {
+      storage.put(
+          Put.newBuilder()
+              .namespace(NAMESPACE)
+              .table(OLD_SOURCE_TABLE)
+              .partitionKey(Key.ofText(TEXT_PK, "k"))
+              .intValue("a", 1)
+              .build());
+      storage.put(
+          Put.newBuilder()
+              .namespace(NAMESPACE)
+              .table(NEW_SOURCE_TABLE)
+              .partitionKey(Key.ofText(TEXT_PK, "k"))
+              .intValue("b", 2)
+              .build());
+
+      // Act
+      createVirtualTableOnSources();
+      Optional<Result> result =
+          storage.get(
+              Get.newBuilder()
+                  .namespace(NAMESPACE)
+                  .table(VIRTUAL_TABLE)
+                  .partitionKey(Key.ofText(TEXT_PK, "k"))
+                  .build());
+
+      // Assert
+      assertThat(result).isPresent();
+      assertThat(result.get().getInt("b")).isEqualTo(2);
+    } finally {
+      dropVirtualTableAndSources();
+    }
+  }
+
+  private void createVirtualTableSources() throws Exception {
+    createTableWithColumnCollationDisabled(
+        OLD_SOURCE_TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(TEXT_PK, DataType.TEXT)
+            .addColumn("a", DataType.INT)
+            .addPartitionKey(TEXT_PK)
+            .build());
+    admin.createTable(
+        NAMESPACE,
+        NEW_SOURCE_TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(TEXT_PK, DataType.TEXT)
+            .addColumn("b", DataType.INT)
+            .addPartitionKey(TEXT_PK)
+            .build(),
+        true);
+  }
+
+  private void createVirtualTableOnSources() throws ExecutionException {
+    admin.createVirtualTable(
+        NAMESPACE,
+        VIRTUAL_TABLE,
+        NAMESPACE,
+        OLD_SOURCE_TABLE,
+        NAMESPACE,
+        NEW_SOURCE_TABLE,
+        VirtualTableJoinType.INNER);
+  }
+
+  private void dropVirtualTableAndSources() throws Exception {
+    if (admin.tableExists(NAMESPACE, VIRTUAL_TABLE)) {
+      admin.dropTable(NAMESPACE, VIRTUAL_TABLE);
+    }
+    admin.dropTable(NAMESPACE, OLD_SOURCE_TABLE, true);
+    admin.dropTable(NAMESPACE, NEW_SOURCE_TABLE, true);
+    String metadataSchema = new JdbcConfig(new DatabaseConfig(properties)).getMetadataSchema();
+    if (testUtils.tableExists(metadataSchema, "virtual_tables")) {
+      testUtils.dropTable(metadataSchema, "virtual_tables");
+    }
   }
 }

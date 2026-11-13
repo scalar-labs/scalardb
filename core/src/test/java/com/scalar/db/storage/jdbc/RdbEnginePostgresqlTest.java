@@ -286,4 +286,24 @@ class RdbEnginePostgresqlTest {
         .isEqualTo(
             new DatabaseEncodingIssue("LATIN1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
   }
+
+  @ParameterizedTest
+  @CsvSource({
+    "default,'\"pg_catalog\".\"C\"',false",
+    "'\"pg_catalog\".\"C\"','\"pg_catalog\".\"C\"',false",
+    "'\"pg_catalog\".\"en-x-icu\"','\"pg_catalog\".\"C\"',true"
+  })
+  void isJoinCollationConflict_ShouldConflictOnDifferentNonDefaultCollationsOnly(
+      String left, String right, boolean expected) {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    boolean actual =
+        rdbEngine.isJoinCollationConflict(
+            new TextColumnCollation(left, "UTF8"), new TextColumnCollation(right, "UTF8"));
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
 }

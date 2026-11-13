@@ -168,8 +168,10 @@ public class JdbcAdminTest {
   }
 
   private JdbcAdmin createJdbcAdmin() {
-    // Arrange
-    RdbEngineStrategy st = RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL);
+    return createJdbcAdminWithMockedServicesFor(RdbEngine.createRdbEngineStrategy(RdbEngine.MYSQL));
+  }
+
+  private JdbcAdmin createJdbcAdminWithMockedServicesFor(RdbEngineStrategy st) {
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
       mocked.when(() -> RdbEngineFactory.create(any(JdbcConfig.class))).thenReturn(st);
       return new JdbcAdmin(
@@ -6930,10 +6932,107 @@ public class JdbcAdminTest {
         .hasMessageContainingAll("BLOB", "index");
   }
 
+  private void arrangeEmptyTextColumnCollations() throws SQLException {
+    PreparedStatement catalogPreparedStatement = mock(PreparedStatement.class);
+    when(catalogPreparedStatement.executeQuery()).thenReturn(mock(ResultSet.class));
+    when(connection.prepareStatement(anyString())).thenReturn(catalogPreparedStatement);
+  }
+
+  private Statement arrangeVirtualTableSourcesWithTextClusteringKey() throws SQLException {
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk1")
+            .addClusteringKey("ck1", Order.ASC)
+            .addColumn("pk1", DataType.INT)
+            .addColumn("ck1", DataType.TEXT)
+            .build();
+    when(tableMetadataService.getTableMetadata(any(Connection.class), eq("ns"), anyString()))
+        .thenReturn(metadata);
+    Statement statement = mock(Statement.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.createStatement()).thenReturn(statement);
+    return statement;
+  }
+
+  private RdbEngineStrategy mysqlEngineWithKeyCollations(String left, String right)
+      throws SQLException {
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(ImmutableMap.of("ck1", new TextColumnCollation(left, "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("ns"), eq("left_table"));
+    doReturn(ImmutableMap.of("ck1", new TextColumnCollation(right, "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("ns"), eq("right_table"));
+    return rdbEngineStrategy;
+  }
+
+  @Test
+  public void
+      createVirtualTable_SourceKeysWithConflictingCollations_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Statement statement = arrangeVirtualTableSourcesWithTextClusteringKey();
+    JdbcAdmin admin =
+        createJdbcAdminWithMockedServicesFor(
+            mysqlEngineWithKeyCollations("utf8mb4_0900_ai_ci", "utf8mb4_general_ci"));
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.createVirtualTable(
+                    "ns",
+                    "vtable",
+                    "ns",
+                    "left_table",
+                    "ns",
+                    "right_table",
+                    VirtualTableJoinType.INNER,
+                    Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining(
+            CoreError.JDBC_VIRTUAL_TABLE_SOURCE_KEY_COLLATIONS_CONFLICT.buildCode())
+        .hasMessageContaining("ck1");
+    verify(statement, never()).execute(anyString());
+    verify(virtualTableMetadataService, never())
+        .insertIntoVirtualTablesTable(
+            any(), any(), any(), any(), any(), any(), any(), any(), any());
+  }
+
+  @Test
+  public void createVirtualTable_SourceKeysWithBinAndCaseInsensitiveCollations_ShouldCreateView()
+      throws Exception {
+    // Arrange
+    Statement statement = arrangeVirtualTableSourcesWithTextClusteringKey();
+    JdbcAdmin admin =
+        spy(
+            createJdbcAdminWithMockedServicesFor(
+                mysqlEngineWithKeyCollations("utf8mb4_0900_ai_ci", "utf8mb4_0900_bin")));
+    doNothing().when(admin).createMetadataSchemaIfNotExists(any(Connection.class));
+
+    // Act
+    admin.createVirtualTable(
+        "ns",
+        "vtable",
+        "ns",
+        "left_table",
+        "ns",
+        "right_table",
+        VirtualTableJoinType.INNER,
+        Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute(startsWith("CREATE VIEW"));
+  }
+
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Test
   public void createVirtualTable_WithInnerJoin_ShouldCreateViewWithInnerJoin() throws Exception {
     // Arrange
+    arrangeEmptyTextColumnCollations();
     String namespace = "ns";
     String table = "vtable";
     String leftSourceNamespace = "ns";
@@ -7061,6 +7160,7 @@ public class JdbcAdminTest {
   public void createVirtualTable_WithLeftOuterJoin_ShouldCreateViewWithLeftOuterJoin()
       throws Exception {
     // Arrange
+    arrangeEmptyTextColumnCollations();
     String namespace = "ns";
     String table = "vtable";
     String leftSourceNamespace = "ns";
@@ -7187,6 +7287,7 @@ public class JdbcAdminTest {
   public void createVirtualTable_SQLExceptionThrown_ShouldThrowExecutionException()
       throws Exception {
     // Arrange
+    arrangeEmptyTextColumnCollations();
     String namespace = "ns";
     String table = "vtable";
     String leftSourceNamespace = "ns";
