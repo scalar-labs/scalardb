@@ -155,25 +155,25 @@ class RdbEngineSqlServerTest {
   }
 
   @Test
-  void isUtf8Charset_Utf8_ShouldReturnTrue() {
+  void isFullUnicodeCharset_Utf8_ShouldReturnTrue() {
     // Arrange
     TextColumnCollation collation =
         new TextColumnCollation("Latin1_General_100_BIN2_UTF8", "UTF-8");
 
     // Act
-    boolean actual = rdbEngine.isUtf8Charset(collation);
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isTrue();
   }
 
   @Test
-  void isUtf8Charset_CodePage_ShouldReturnFalse() {
+  void isFullUnicodeCharset_CodePage_ShouldReturnFalse() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN2", "CP1252");
 
     // Act
-    boolean actual = rdbEngine.isUtf8Charset(collation);
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isFalse();

@@ -233,7 +233,7 @@ public class JdbcAdminCollationIntegrationTest {
         .containsExactlyInAnyOrder(TEXT_PK, TEXT_CK, TEXT_INDEX, TEXT_PLAIN);
     for (Map.Entry<String, TextColumnCollation> entry : collations.entrySet()) {
       assertThat(rdbEngine.isBinaryCollation(entry.getValue())).as(entry.toString()).isTrue();
-      assertThat(rdbEngine.isUtf8Charset(entry.getValue())).as(entry.toString()).isTrue();
+      assertThat(rdbEngine.isFullUnicodeCharset(entry.getValue())).as(entry.toString()).isTrue();
     }
   }
 

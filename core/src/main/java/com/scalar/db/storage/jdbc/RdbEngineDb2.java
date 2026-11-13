@@ -474,7 +474,7 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isUtf8Charset(TextColumnCollation collation) {
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return "UTF-8".equalsIgnoreCase(collation.getCharset());
   }
 

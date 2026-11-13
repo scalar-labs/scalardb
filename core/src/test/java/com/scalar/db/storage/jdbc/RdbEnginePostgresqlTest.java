@@ -242,24 +242,24 @@ class RdbEnginePostgresqlTest {
   }
 
   @Test
-  void isUtf8Charset_Utf8_ShouldReturnTrue() {
+  void isFullUnicodeCharset_Utf8_ShouldReturnTrue() {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
 
     // Act
-    boolean actual = rdbEngine.isUtf8Charset(new TextColumnCollation("default", "UTF8"));
+    boolean actual = rdbEngine.isFullUnicodeCharset(new TextColumnCollation("default", "UTF8"));
 
     // Assert
     assertThat(actual).isTrue();
   }
 
   @Test
-  void isUtf8Charset_Latin1_ShouldReturnFalse() {
+  void isFullUnicodeCharset_Latin1_ShouldReturnFalse() {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
 
     // Act
-    boolean actual = rdbEngine.isUtf8Charset(new TextColumnCollation("default", "LATIN1"));
+    boolean actual = rdbEngine.isFullUnicodeCharset(new TextColumnCollation("default", "LATIN1"));
 
     // Assert
     assertThat(actual).isFalse();

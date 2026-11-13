@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class RdbEngineMysqlTest {
 
@@ -497,24 +498,50 @@ class RdbEngineMysqlTest {
   }
 
   @Test
-  void isUtf8Charset_Utf8mb4_ShouldReturnTrue() {
+  void isFullUnicodeCharset_Utf8mb4_ShouldReturnTrue() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4");
 
     // Act
-    boolean actual = rdbEngineMysql.isUtf8Charset(collation);
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isTrue();
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"utf16", "utf16le", "utf32"})
+  void isFullUnicodeCharset_OtherUnicodeEncoding_ShouldReturnTrue(String charset) {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation(charset + "_bin", charset);
+
+    // Act
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"ucs2", "latin1"})
+  void isFullUnicodeCharset_PartialCharset_ShouldReturnFalse(String charset) {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation(charset + "_bin", charset);
+
+    // Act
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
   @Test
-  void isUtf8Charset_Utf8mb3_ShouldReturnFalse() {
+  void isFullUnicodeCharset_Utf8mb3_ShouldReturnFalse() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb3_bin", "utf8mb3");
 
     // Act
-    boolean actual = rdbEngineMysql.isUtf8Charset(collation);
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isFalse();

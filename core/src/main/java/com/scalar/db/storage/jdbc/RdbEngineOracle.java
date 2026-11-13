@@ -537,8 +537,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isUtf8Charset(TextColumnCollation collation) {
-    return "AL32UTF8".equals(collation.getCharset());
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    return "AL32UTF8".equals(collation.getCharset()) || "UTF8".equals(collation.getCharset());
   }
 
   @Override

@@ -155,24 +155,24 @@ public class RdbEngineDb2Test {
   }
 
   @Test
-  void isUtf8Charset_Utf8InAnyCase_ShouldReturnTrue() {
+  void isFullUnicodeCharset_Utf8InAnyCase_ShouldReturnTrue() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
 
     // Act
-    boolean actual = rdbEngineDb2.isUtf8Charset(collation);
+    boolean actual = rdbEngineDb2.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isTrue();
   }
 
   @Test
-  void isUtf8Charset_Iso88591_ShouldReturnFalse() {
+  void isFullUnicodeCharset_Iso88591_ShouldReturnFalse() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("IDENTITY", "iso8859-1");
 
     // Act
-    boolean actual = rdbEngineDb2.isUtf8Charset(collation);
+    boolean actual = rdbEngineDb2.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isFalse();

@@ -71,7 +71,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public boolean isUtf8Charset(TextColumnCollation collation) {
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return true;
   }
 

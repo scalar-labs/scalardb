@@ -302,24 +302,36 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void isUtf8Charset_Al32utf8_ShouldReturnTrue() {
+  public void isFullUnicodeCharset_Al32utf8_ShouldReturnTrue() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY", "AL32UTF8");
 
     // Act
-    boolean actual = rdbEngineOracle.isUtf8Charset(collation);
+    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isTrue();
   }
 
   @Test
-  public void isUtf8Charset_Utf8Cesu_ShouldReturnFalse() {
+  public void isFullUnicodeCharset_Utf8Cesu_ShouldReturnTrue() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY", "UTF8");
 
     // Act
-    boolean actual = rdbEngineOracle.isUtf8Charset(collation);
+    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isFullUnicodeCharset_WesternEuropean_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "WE8MSWIN1252");
+
+    // Act
+    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isFalse();

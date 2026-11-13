@@ -448,7 +448,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isUtf8Charset(TextColumnCollation collation) {
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return "UTF8".equals(collation.getCharset());
   }
 

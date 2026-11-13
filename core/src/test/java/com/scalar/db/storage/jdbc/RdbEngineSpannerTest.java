@@ -486,12 +486,12 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
-  void isUtf8Charset_AnyCharset_ShouldReturnTrue() {
+  void isFullUnicodeCharset_AnyCharset_ShouldReturnTrue() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("default", "LATIN1");
 
     // Act
-    boolean actual = rdbEngine.isUtf8Charset(collation);
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
 
     // Assert
     assertThat(actual).isTrue();

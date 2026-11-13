@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -38,6 +39,9 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
       "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
+  // UTF-16 and UTF-32 cover all of Unicode as utf8mb4 does. utf8mb3 and ucs2 stop at the BMP.
+  private static final ImmutableSet<String> FULL_UNICODE_CHARSETS =
+      ImmutableSet.of("utf8mb4", "utf16", "utf16le", "utf32");
   private static final Pattern MYSQL_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
   private static final Pattern MYSQL_RENAME_COLUMN_VERSION_PATTERN =
       Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
@@ -561,8 +565,8 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isUtf8Charset(TextColumnCollation collation) {
-    return "utf8mb4".equals(collation.getCharset());
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    return FULL_UNICODE_CHARSETS.contains(collation.getCharset());
   }
 
   @Override

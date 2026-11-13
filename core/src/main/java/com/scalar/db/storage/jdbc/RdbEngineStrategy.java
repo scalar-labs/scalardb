@@ -151,7 +151,14 @@ public interface RdbEngineStrategy {
     return true;
   }
 
-  default boolean isUtf8Charset(TextColumnCollation collation) {
+  /**
+   * Returns whether the character set of the collation can store every Unicode character, whatever
+   * its encoding.
+   *
+   * @param collation a collation read by {@link #getTextColumnCollations}
+   * @return {@code true} if the character set covers all of Unicode
+   */
+  default boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return true;
   }
 
