@@ -12,6 +12,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class RdbEngineMariaDBTest {
 
@@ -77,6 +79,31 @@ class RdbEngineMariaDBTest {
   void isBinaryCollation_Utf8mb4Bin_ShouldReturnFalse() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"utf16", "utf16le", "utf32"})
+  void isBinaryCollation_OtherUnicodeEncodingNopadBin_ShouldReturnTrue(String charset) {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation(charset + "_nopad_bin", charset);
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_Utf16Bin_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf16_bin", "utf16");
 
     // Act
     boolean actual = rdbEngine.isBinaryCollation(collation);

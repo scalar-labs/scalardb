@@ -42,6 +42,15 @@ class RdbEngineMysql extends AbstractRdbEngine {
   // UTF-16 and UTF-32 cover all of Unicode as utf8mb4 does. utf8mb3 and ucs2 stop at the BMP.
   private static final ImmutableSet<String> FULL_UNICODE_CHARSETS =
       ImmutableSet.of("utf8mb4", "utf16", "utf16le", "utf32");
+  // utf8mb4_0900_bin is MySQL's. The nopad_bin ones are MariaDB's, which also order UTF-16 and
+  // UTF-32 by code point.
+  private static final ImmutableSet<String> CODE_POINT_NO_PAD_COLLATIONS =
+      ImmutableSet.of(
+          "utf8mb4_0900_bin",
+          "utf8mb4_nopad_bin",
+          "utf16_nopad_bin",
+          "utf16le_nopad_bin",
+          "utf32_nopad_bin");
   private static final Pattern MYSQL_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
   private static final Pattern MYSQL_RENAME_COLUMN_VERSION_PATTERN =
       Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
@@ -559,9 +568,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
   @Override
   public boolean isBinaryCollation(TextColumnCollation collation) {
     String name = collation.getCollation();
-    return name.equals("utf8mb4_0900_bin")
-        || name.equals("utf8mb4_nopad_bin")
-        || name.equals(binaryCollation);
+    return CODE_POINT_NO_PAD_COLLATIONS.contains(name) || name.equals(binaryCollation);
   }
 
   @Override

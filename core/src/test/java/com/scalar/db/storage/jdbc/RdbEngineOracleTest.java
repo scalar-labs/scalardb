@@ -387,6 +387,30 @@ class RdbEngineOracleTest {
   }
 
   @Test
+  public void isBinaryCollation_BinaryOnCesu8Charset_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_UsingNlsCompWithBinarySessionOnCesu8Charset_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "UTF8", "BINARY");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
   public void getCollationClause_ShouldReturnCollate() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY_CI", "AL32UTF8");
