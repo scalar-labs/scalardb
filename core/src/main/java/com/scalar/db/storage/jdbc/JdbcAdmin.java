@@ -1665,6 +1665,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  // The join needs source keys with compatible collations: SQL Server (Msg 468) and Oracle
+  // (ORA-43915) reject the view otherwise, and PostgreSQL creates it but fails every read. The view
+  // checks none, because its only caller, ConsensusCommitAdmin, creates both source tables in one
+  // createTable call or copies the key collations with COLLATION_SOURCE_TABLE.
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createVirtualTableView(
       Connection connection,
