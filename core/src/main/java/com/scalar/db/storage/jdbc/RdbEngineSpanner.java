@@ -54,6 +54,12 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
     return "";
   }
 
+  @Nullable
+  @Override
+  public String textColumnCollationSql() {
+    return null;
+  }
+
   @Override
   public Map<String, TextColumnCollation> getTextColumnCollations(
       Connection connection, String namespace, String table) {

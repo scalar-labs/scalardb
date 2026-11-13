@@ -186,6 +186,8 @@ class RdbEngineMysqlTest {
     "8.0.45-0ubuntu0.22.04.1, true",
     "8.4.3, true",
     "9.1.0, true",
+    "8.0.custom_build, false",
+    "8.4.custom_build, false",
     "11.4.2-MariaDB, false",
     "'', false"
   })
@@ -413,15 +415,6 @@ class RdbEngineMysqlTest {
             entry("c2", new TextColumnCollation("latin1_swedish_ci", "latin1")));
     verify(ps).setString(1, "ns");
     verify(ps).setString(2, "tbl");
-  }
-
-  @Test
-  void keepsCollationOnTypeRedefinition_ShouldReturnFalse() {
-    // Arrange Act
-    boolean actual = rdbEngineMysql.keepsCollationOnTypeRedefinition();
-
-    // Assert
-    assertThat(actual).isFalse();
   }
 
   @Test

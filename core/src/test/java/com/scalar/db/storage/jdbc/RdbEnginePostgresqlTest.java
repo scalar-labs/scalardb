@@ -156,7 +156,7 @@ class RdbEnginePostgresqlTest {
 
     // Act
     String clause =
-        rdbEngine.getCollationClause(new TextColumnCollation("\"pg_catalog\".\"en_US\"", "UTF8"));
+        rdbEngine.getCollationClause(new TextColumnCollation("\"pg_catalog\".\"en_US\"", null));
 
     // Assert
     assertThat(clause).isEqualTo("COLLATE \"pg_catalog\".\"en_US\"");

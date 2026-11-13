@@ -104,6 +104,7 @@ public class JdbcAdminTest {
 
   @Mock private HikariDataSource dataSource;
   @Mock private Connection connection;
+  @Mock private PreparedStatement catalogStatement;
   @Mock private JdbcConfig config;
   @Mock private TableMetadataService tableMetadataService;
   @Mock private NamespaceMetadataService namespaceMetadataService;
@@ -151,13 +152,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy strategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
     if (strategy instanceof RdbEngineMysql || strategy instanceof RdbEnginePostgresql) {
       strategy = spy(strategy);
-      try {
-        doReturn(Collections.emptyMap())
-            .when(strategy)
-            .getTextColumnCollations(any(), anyString(), anyString());
-      } catch (SQLException e) {
-        throw new AssertionError(e);
-      }
+      doReturn(null).when(strategy).textColumnCollationSql();
     }
     return createJdbcAdminFor(strategy);
   }
@@ -3344,9 +3339,7 @@ public class JdbcAdminTest {
         "SELECT `column_name`,`data_type`,`key_type`,`clustering_order`,`indexed` FROM `"
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
-        new String[] {
-          "ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin"
-        },
+        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` VARCHAR(128)"},
         "CREATE INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl` (`my_column`)",
         "UPDATE `"
             + METADATA_SCHEMA
@@ -3363,7 +3356,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         new String[] {
-          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE VARCHAR(10485760) COLLATE \"C\""
+          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE VARCHAR(10485760)"
         },
         "CREATE INDEX \"index_my_ns_my_tbl_my_column\" ON \"my_ns\".\"my_tbl\" (\"my_column\")",
         "UPDATE \""
@@ -3845,9 +3838,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "`.`metadata` WHERE `full_table_name`=? ORDER BY `ordinal_position` ASC",
         "DROP INDEX `index_my_ns_my_tbl_my_column` ON `my_ns`.`my_tbl`",
-        new String[] {
-          "ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin"
-        },
+        new String[] {"ALTER TABLE `my_ns`.`my_tbl` MODIFY `my_column` LONGTEXT"},
         "UPDATE `"
             + METADATA_SCHEMA
             + "`.`metadata` SET `indexed`=false WHERE `full_table_name`='my_ns.my_tbl' AND `column_name`='my_column'");
@@ -3862,9 +3853,7 @@ public class JdbcAdminTest {
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\"=? ORDER BY \"ordinal_position\" ASC",
         "DROP INDEX \"my_ns\".\"index_my_ns_my_tbl_my_column\"",
-        new String[] {
-          "ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE TEXT COLLATE \"C\""
-        },
+        new String[] {"ALTER TABLE \"my_ns\".\"my_tbl\" ALTER COLUMN \"my_column\" TYPE TEXT"},
         "UPDATE \""
             + METADATA_SCHEMA
             + "\".\"metadata\" SET \"indexed\"=false WHERE \"full_table_name\"='my_ns.my_tbl' AND \"column_name\"='my_column'");
@@ -4010,13 +3999,10 @@ public class JdbcAdminTest {
                 "c1", DataType.TEXT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    PreparedStatement catalogStatement = mock(PreparedStatement.class);
     ResultSet catalogResultSet = mock(ResultSet.class);
     when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
     when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString(1)).thenReturn("c1");
-    when(catalogResultSet.getString(2)).thenReturn(collation);
-    when(catalogResultSet.getString(3)).thenReturn("UTF8");
+    when(catalogResultSet.getString(1)).thenReturn(collation);
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
@@ -4030,7 +4016,7 @@ public class JdbcAdminTest {
   public void createIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
       throws SQLException, ExecutionException {
     // Arrange
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -4046,7 +4032,7 @@ public class JdbcAdminTest {
   public void dropIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
       throws SQLException, ExecutionException {
     // Arrange
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -4059,10 +4045,27 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createIndex_ForColumnMissingFromCatalog_ShouldUseBinaryCollation()
+  public void createIndex_MysqlTextColumn_ShouldReadTheCatalogForThatColumnOnly()
       throws SQLException, ExecutionException {
     // Arrange
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("other_column");
+    arrangeMysqlTextColumnWithCatalogCollation(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(catalogStatement).setString(1, "my_ns");
+    verify(catalogStatement).setString(2, "foo_table");
+    verify(catalogStatement).setString(3, "c1");
+  }
+
+  @Test
+  public void createIndex_MysqlCatalogReadHitsLockWaitTimeout_ShouldRetryAndKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    SQLException lockWaitTimeout = new SQLException("Lock wait timeout exceeded", "HY000", 1205);
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true, lockWaitTimeout);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -4071,11 +4074,25 @@ public class JdbcAdminTest {
     // Assert
     verify(statement)
         .execute(
-            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
   }
 
-  private Statement arrangeMysqlTextColumnWithCatalogCollation(String catalogColumn)
-      throws SQLException {
+  @Test
+  public void createIndex_ForColumnMissingFromCatalog_ShouldRestateBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(false);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128)");
+  }
+
+  private Statement arrangeMysqlTextColumnWithCatalogCollation(
+      boolean columnInCatalog, SQLException... catalogReadFailures) throws SQLException {
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
@@ -4090,13 +4107,17 @@ public class JdbcAdminTest {
                 "c1", DataType.TEXT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    PreparedStatement catalogStatement = mock(PreparedStatement.class);
     ResultSet catalogResultSet = mock(ResultSet.class);
-    when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
-    when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString("COLUMN_NAME")).thenReturn(catalogColumn);
-    when(catalogResultSet.getString("COLLATION_NAME")).thenReturn("utf8mb4_0900_ai_ci");
-    when(catalogResultSet.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4");
+    if (catalogReadFailures.length == 0) {
+      when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    } else {
+      when(catalogStatement.executeQuery())
+          .thenThrow(catalogReadFailures)
+          .thenReturn(catalogResultSet);
+    }
+    when(catalogResultSet.next()).thenReturn(columnInCatalog);
+    when(catalogResultSet.getString(1)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
@@ -4904,13 +4925,11 @@ public class JdbcAdminTest {
                 "c1", DataType.TEXT.toString(), null, null, indexed));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    PreparedStatement catalogStatement = mock(PreparedStatement.class);
     ResultSet catalogResultSet = mock(ResultSet.class);
     when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
     when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString("COLUMN_NAME")).thenReturn("c1");
-    when(catalogResultSet.getString("COLLATION_NAME")).thenReturn("utf8mb4_0900_ai_ci");
-    when(catalogResultSet.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4");
+    when(catalogResultSet.getString(1)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
@@ -5241,9 +5260,8 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void
-      alterColumnType_IntToTextOnEngineKeepingCollationOnRedefinition_ShouldUseBinaryCollation()
-          throws SQLException, ExecutionException {
+  public void alterColumnType_IntToTextOnEngineNotRestatingCollations_ShouldUseBinaryCollation()
+      throws SQLException, ExecutionException {
     // Arrange
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
@@ -5263,7 +5281,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEnginePostgresql());
-    doReturn(true).when(rdbEngineStrategy).keepsCollationOnTypeRedefinition();
+    doReturn(null).when(rdbEngineStrategy).textColumnCollationSql();
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
@@ -8293,7 +8311,7 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     // Arrange
     disableColumnCollation();
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -8306,28 +8324,11 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createIndex_BinaryCollationDisabledOnPostgresqlDefaultCollation_ShouldRestateIt()
-      throws SQLException, ExecutionException {
-    // Arrange
-    disableColumnCollation();
-    Statement statement = arrangePostgresqlTextColumnWithCollation("default");
-    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
-
-    // Act
-    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
-
-    // Assert
-    verify(statement)
-        .execute(
-            "ALTER TABLE \"my_ns\".\"foo_table\" ALTER COLUMN \"c1\" TYPE VARCHAR(10485760) COLLATE \"default\"");
-  }
-
-  @Test
   public void createIndex_BinaryCollationDisabledAndColumnMissingFromCatalog_ShouldUseBareType()
       throws SQLException, ExecutionException {
     // Arrange
     disableColumnCollation();
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("other_column");
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(false);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act

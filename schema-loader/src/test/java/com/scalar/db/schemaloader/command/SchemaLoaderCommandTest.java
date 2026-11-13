@@ -312,17 +312,54 @@ public class SchemaLoaderCommandTest {
   }
 
   @Test
-  public void call_forRepairingAllWithoutSchemaFile_ShouldThrowIllegalArgumentException() {
+  public void
+      call_WithProperArgumentsForRepairingAllWithCoordinatorArgumentWithoutSchemaFileArgument_ShouldCallRepairAllProperly() {
     // Arrange
     String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_BACKUP, noBackup.toString());
 
     // Act
     int exitCode =
         commandLine.execute("--repair-all", "--config", configFile, "--coordinator", "--no-backup");
 
     // Assert
-    Assertions.assertThat(exitCode).isEqualTo(1);
-    schemaLoaderMockedStatic.verifyNoInteractions();
+    Assertions.assertThat(exitCode).isEqualTo(0);
+    schemaLoaderMockedStatic.verify(
+        () -> SchemaLoader.repairAll(Paths.get(configFile), (Path) null, options, true, false));
+  }
+
+  @Test
+  public void
+      call_WithProperArgumentsForRepairingAllWithReplicationTablesArgumentWithoutSchemaFileArgument_ShouldCallRepairAllProperly() {
+    // Arrange
+    String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_BACKUP, noBackup.toString());
+
+    // Act
+    int exitCode =
+        commandLine.execute(
+            "--repair-all", "--config", configFile, "--replication-tables", "--no-backup");
+
+    // Assert
+    Assertions.assertThat(exitCode).isEqualTo(0);
+    schemaLoaderMockedStatic.verify(
+        () -> SchemaLoader.repairAll(Paths.get(configFile), (Path) null, options, false, true));
+  }
+
+  @Test
+  public void
+      call_WithProperArgumentsForRepairingAllWithoutAnyTargetArguments_ShouldCallRepairAllProperly() {
+    // Arrange
+    String configFile = "path_to_config_file";
+    Map<String, String> options = ImmutableMap.of(DynamoAdmin.NO_BACKUP, noBackup.toString());
+
+    // Act
+    int exitCode = commandLine.execute("--repair-all", "--config", configFile, "--no-backup");
+
+    // Assert
+    Assertions.assertThat(exitCode).isEqualTo(0);
+    schemaLoaderMockedStatic.verify(
+        () -> SchemaLoader.repairAll(Paths.get(configFile), (Path) null, options, false, false));
   }
 
   @Test

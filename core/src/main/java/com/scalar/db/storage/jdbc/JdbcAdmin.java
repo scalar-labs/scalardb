@@ -300,8 +300,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             && schemaDefault.equals(source.getCollation())) {
           clauses.put(columnName, "");
         } else {
-          clauses.put(
-              columnName, getCollationClauseOrCreated(rdbEngine, sourceCollations, columnName));
+          clauses.put(columnName, getCollationClauseOrCreated(sourceCollations, columnName));
         }
       }
     }
@@ -1053,17 +1052,29 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (currentType != DataType.TEXT) {
       return rdbEngine.appendCollationClause(bareType, createdTextCollationClause);
     }
-    if (rdbEngine.keepsCollationOnTypeRedefinition()) {
+    String sql = rdbEngine.textColumnCollationSql();
+    if (sql == null) {
       return bareType;
     }
-    Map<String, TextColumnCollation> collations =
-        rdbEngine.getTextColumnCollations(connection, namespace, table);
-    return rdbEngine.appendCollationClause(
-        bareType, getCollationClauseOrCreated(rdbEngine, collations, columnName));
+    TextColumnCollation current =
+        executeQuery(
+            connection,
+            rdbEngine,
+            sql,
+            requiresExplicitCommit,
+            ps -> {
+              ps.setString(1, namespace);
+              ps.setString(2, table);
+              ps.setString(3, columnName);
+            },
+            rs -> rs.next() ? new TextColumnCollation(rs.getString(1), rs.getString(2)) : null);
+    return current == null
+        ? bareType
+        : rdbEngine.appendCollationClause(bareType, rdbEngine.getCollationClause(current));
   }
 
   private String getCollationClauseOrCreated(
-      RdbEngineStrategy rdbEngine, Map<String, TextColumnCollation> collations, String columnName) {
+      Map<String, TextColumnCollation> collations, String columnName) {
     TextColumnCollation current = collations.get(columnName);
     return current == null ? createdTextCollationClause : rdbEngine.getCollationClause(current);
   }

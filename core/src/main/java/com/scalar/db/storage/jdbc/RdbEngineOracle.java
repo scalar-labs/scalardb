@@ -441,11 +441,12 @@ class RdbEngineOracle extends AbstractRdbEngine {
     }
   }
 
-  // MODIFY without COLLATE keeps the collation, see JdbcAdminCollationIntegrationTest
-  // dropIndex_ColumnWithNonBinaryCollation_ShouldKeepCollation.
+  // MODIFY without COLLATE keeps the collation, so a restated column needs no clause, see
+  // JdbcAdminCollationIntegrationTest dropIndex_ColumnWithNonBinaryCollation_ShouldKeepCollation.
+  @Nullable
   @Override
-  public boolean keepsCollationOnTypeRedefinition() {
-    return true;
+  public String textColumnCollationSql() {
+    return null;
   }
 
   @Override

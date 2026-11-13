@@ -6554,6 +6554,52 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   @ParameterizedTest
   @EnumSource(Isolation.class)
+  void scan_EmptyRangeBoundedByPutKeyGivenAndRecordCommitted_ShouldReturnEmptyResults(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 1, namespace1, TABLE_1)).intValue(BALANCE, 1).build());
+
+    // Act
+    // [1, 1)
+    Scan scan =
+        Scan.newBuilder(prepareScan(0, 1, 1, namespace1, TABLE_1))
+            .start(Key.ofInt(ACCOUNT_TYPE, 1), true)
+            .end(Key.ofInt(ACCOUNT_TYPE, 1), false)
+            .build();
+    List<Result> results = transaction.scan(scan);
+    transaction.rollback();
+
+    // Assert
+    assertThat(results).isEmpty();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_ReversedRangeBoundedByPutKeyGivenAndRecordCommitted_ShouldReturnEmptyResults(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 1, namespace1, TABLE_1)).intValue(BALANCE, 1).build());
+
+    // Act
+    // [1, 0]
+    Scan scan = prepareScan(0, 1, 0, namespace1, TABLE_1);
+    List<Result> results = transaction.scan(scan);
+    transaction.rollback();
+
+    // Assert
+    assertThat(results).isEmpty();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
   void scan_NonOverlappingPutGivenBefore_ShouldScan(Isolation isolation)
       throws TransactionException {
     // Arrange

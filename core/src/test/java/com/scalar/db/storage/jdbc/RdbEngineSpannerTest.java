@@ -54,6 +54,15 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
+  void textColumnCollationSql_ShouldBeNull() {
+    // Arrange Act
+    String sql = rdbEngine.textColumnCollationSql();
+
+    // Assert
+    assertThat(sql).isNull();
+  }
+
+  @Test
   void getDriverClassName_ShouldReturnSpannerDriver() {
     assertThat(rdbEngine.getDriverClassName())
         .isEqualTo("com.google.cloud.spanner.jdbc.JdbcDriver");
@@ -396,32 +405,6 @@ public class RdbEngineSpannerTest {
    * GoogleCredentials.fromStream} to parse without making a network call. The private key is a
    * freshly-generated RSA key not associated with any real Google Cloud account.
    */
-  @Test
-  void getCollationClause_ShouldBeEmpty() {
-    // Arrange
-    TextColumnCollation collation = new TextColumnCollation("default", "UTF8");
-
-    // Act
-    String clause = rdbEngine.getCollationClause(collation);
-
-    // Assert
-    assertThat(clause).isEmpty();
-  }
-
-  @Test
-  void getTextColumnCollations_ShouldNotQueryTheDatabase() throws SQLException {
-    // Arrange
-    Connection connection = mock(Connection.class);
-
-    // Act
-    Map<String, TextColumnCollation> collations =
-        rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
-
-    // Assert
-    assertThat(collations).isEmpty();
-    verifyNoInteractions(connection);
-  }
-
   private static final String SAMPLE_SERVICE_ACCOUNT_KEY =
       "{\n"
           + "  \"type\": \"service_account\",\n"

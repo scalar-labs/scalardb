@@ -5,7 +5,7 @@ import com.scalar.db.PomOnlyFilter
 
 plugins {
     id "com.diffplug.spotless" version "6.13.0"
-    id "org.jreleaser" version "1.26.0"
+    id "org.jreleaser" version "1.27.0"
     id "com.github.jk1.dependency-license-report"
 }
 
@@ -84,16 +84,16 @@ subprojects {
 
     ext {
         guiceVersion = '7.0.0'
-        guavaVersion = '33.7.2-jre'
+        guavaVersion = '33.8.0-jre'
         slf4jVersion = '1.7.36'
         cassandraDriverVersion = '3.13.0'
         azureCosmosVersion = '4.83.0'
-        azureBlobStorageVersion = '12.36.0'
+        azureBlobStorageVersion = '12.37.2'
         jooqVersion = '3.14.16'
         awssdkVersion = '2.57.2'
         hikariCpVersion = '4.0.3'
         postgresqlDriverVersion = '42.7.14'
-        oracleDriverVersion = '23.26.3.0.0'
+        oracleDriverVersion = '23.26.4.0.0'
         sqlserverDriverVersion = '13.6.0.jre8'
         sqliteDriverVersion = '3.54.1.0'
         yugabyteDriverVersion = '42.7.3-yb-4'
@@ -102,10 +102,10 @@ subprojects {
         // RdbEngineMysql too -- the AWS wrapper names its MariaDB dialect after the driver's major
         // version, and only defines one for v3.
         mariadDbDriverVersion = '3.5.11'
-        alloyDbJdbcConnectorVersion = '1.3.3'
-        googleCloudStorageVersion = '2.76.0'
-        spannerDriverVersion = '2.47.0'
-        awsAdvancedJdbcWrapperVersion = '4.5.0'
+        alloyDbJdbcConnectorVersion = '1.4.0'
+        googleCloudStorageVersion = '2.78.0'
+        spannerDriverVersion = '2.49.0'
+        awsAdvancedJdbcWrapperVersion = '4.6.0'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
         caffeineVersion = '2.9.3'
@@ -118,10 +118,10 @@ subprojects {
         // new version on all the storages whose libraries use it, by running their integration
         // tests (the pull request CI runs only some of them). See declaredFamilyExclusions in
         // core/build.gradle
-        jacksonVersion = '2.22.4'
-        nettyVersion = '4.1.139.Final'
+        jacksonVersion = '2.23.0'
+        nettyVersion = '4.2.20.Final'
         bouncycastleJdk18onVersion = '1.86'
-        micrometerVersion = '1.15.12'
+        micrometerVersion = '1.17.2'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'

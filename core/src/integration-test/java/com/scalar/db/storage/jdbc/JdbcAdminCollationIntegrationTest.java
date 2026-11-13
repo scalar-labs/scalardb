@@ -53,6 +53,15 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @SuppressWarnings("unused")
+  private static boolean isNotMysqlOrPostgresqlFamily() {
+    return JdbcEnv.isOracle()
+        || JdbcEnv.isSqlServer()
+        || JdbcEnv.isSqlite()
+        || JdbcEnv.isDb2()
+        || JdbcEnv.isSpanner();
+  }
+
+  @SuppressWarnings("unused")
   private static boolean isSqliteOrSpanner() {
     return JdbcEnv.isSqlite() || JdbcEnv.isSpanner();
   }
@@ -65,6 +74,28 @@ public class JdbcAdminCollationIntegrationTest {
     admin = storageFactory.getStorageAdmin();
     testUtils = new JdbcAdminTestUtils(properties);
     cleanUp();
+  }
+
+  // With the column collation setting on, createTable declares a collation on every TEXT column
+  private void createTableOnDefaultCollation() throws Exception {
+    Properties props = new Properties();
+    props.putAll(properties);
+    props.setProperty(JdbcConfig.COLUMN_COLLATION_ENABLED, "false");
+    DistributedStorageAdmin adminWithoutCollation = StorageFactory.create(props).getStorageAdmin();
+    try {
+      adminWithoutCollation.createNamespace(NAMESPACE, true);
+      adminWithoutCollation.createTable(
+          NAMESPACE,
+          TABLE,
+          TableMetadata.newBuilder()
+              .addColumn(TEXT_PK, DataType.TEXT)
+              .addColumn(TEXT_PLAIN, DataType.TEXT)
+              .addPartitionKey(TEXT_PK)
+              .build(),
+          true);
+    } finally {
+      adminWithoutCollation.close();
+    }
   }
 
   @AfterEach
@@ -344,6 +375,33 @@ public class JdbcAdminCollationIntegrationTest {
     for (String sql : rdbEngine.alterColumnTypeSql(NAMESPACE, TABLE, TEXT_PLAIN, type)) {
       testUtils.executeSql(sql);
     }
+  }
+
+  @Test
+  @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  void textColumnCollationSql_ColumnWithDefaultCollation_ShouldReturnNoRow() throws Exception {
+    // Arrange
+    createTableOnDefaultCollation();
+
+    // Act
+    String collation = testUtils.readTextColumnCollation(NAMESPACE, TABLE, TEXT_PLAIN);
+
+    // Assert
+    assertThat(collation).isNull();
+  }
+
+  @Test
+  @DisabledIf("isNotMysqlOrPostgresqlFamily")
+  void createIndex_ColumnWithDefaultCollation_ShouldKeepCollation() throws Exception {
+    // Arrange
+    createTableOnDefaultCollation();
+    String before = testUtils.getColumnCollation(NAMESPACE, TABLE, TEXT_PLAIN);
+
+    // Act
+    admin.createIndex(NAMESPACE, TABLE, TEXT_PLAIN, Collections.emptyMap());
+
+    // Assert
+    assertThat(testUtils.getColumnCollation(NAMESPACE, TABLE, TEXT_PLAIN)).isEqualTo(before);
   }
 
   @Test

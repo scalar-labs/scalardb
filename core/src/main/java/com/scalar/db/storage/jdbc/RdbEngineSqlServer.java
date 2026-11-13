@@ -433,6 +433,14 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  public String textColumnCollationSql() {
+    return "SELECT c.collation_name, NULL FROM sys.columns c"
+        + " JOIN sys.objects o ON c.object_id = o.object_id"
+        + " JOIN sys.schemas s ON o.schema_id = s.schema_id"
+        + " WHERE s.name = ? AND o.name = ? AND c.name = ? AND c.collation_name IS NOT NULL";
+  }
+
+  @Override
   public String getCollationClause(TextColumnCollation collation) {
     return "COLLATE " + collation.getCollation();
   }
