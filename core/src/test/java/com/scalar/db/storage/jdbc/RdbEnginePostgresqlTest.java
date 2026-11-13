@@ -115,7 +115,7 @@ class RdbEnginePostgresqlTest {
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
 
     // Act
-    String clause = rdbEngine.getCollationClause(new TextColumnCollation("default", "UTF8"));
+    String clause = rdbEngine.getCollationClause(new TextColumnCollation("default", null));
 
     // Assert
     assertThat(clause).isEqualTo("COLLATE \"default\"");
@@ -128,15 +128,14 @@ class RdbEnginePostgresqlTest {
 
     // Act
     String clause =
-        rdbEngine.getCollationClause(new TextColumnCollation("\"pg_catalog\".\"en_US\"", "UTF8"));
+        rdbEngine.getCollationClause(new TextColumnCollation("\"pg_catalog\".\"en_US\"", null));
 
     // Assert
     assertThat(clause).isEqualTo("COLLATE \"pg_catalog\".\"en_US\"");
   }
 
   @Test
-  void getTextColumnCollations_ShouldReturnCollationCharsetAndResolvedDefaultByColumnName()
-      throws SQLException {
+  void getTextColumnCollations_ShouldReturnCollationByColumnName() throws SQLException {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
     Connection connection = mock(Connection.class);
@@ -147,8 +146,6 @@ class RdbEnginePostgresqlTest {
     when(rs.next()).thenReturn(true, true, false);
     when(rs.getString(1)).thenReturn("c1", "c2");
     when(rs.getString(2)).thenReturn("default", "\"pg_catalog\".\"C\"");
-    when(rs.getString(3)).thenReturn("UTF8", "UTF8");
-    when(rs.getString(4)).thenReturn("libc:en_US.UTF-8", (String) null);
 
     // Act
     Map<String, TextColumnCollation> collations =
@@ -157,8 +154,8 @@ class RdbEnginePostgresqlTest {
     // Assert
     assertThat(collations)
         .containsOnly(
-            entry("c1", new TextColumnCollation("default", "UTF8", "libc:en_US.UTF-8")),
-            entry("c2", new TextColumnCollation("\"pg_catalog\".\"C\"", "UTF8", null)));
+            entry("c1", new TextColumnCollation("default", null)),
+            entry("c2", new TextColumnCollation("\"pg_catalog\".\"C\"", null)));
     verify(ps).setString(1, "ns");
     verify(ps).setString(2, "tbl");
   }

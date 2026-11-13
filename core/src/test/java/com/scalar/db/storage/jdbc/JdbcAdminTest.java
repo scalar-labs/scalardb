@@ -3874,7 +3874,6 @@ public class JdbcAdminTest {
     when(catalogResultSet.next()).thenReturn(true, false);
     when(catalogResultSet.getString(1)).thenReturn("c1");
     when(catalogResultSet.getString(2)).thenReturn("\"pg_catalog\".\"und-x-icu\"");
-    when(catalogResultSet.getString(3)).thenReturn("UTF8");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
