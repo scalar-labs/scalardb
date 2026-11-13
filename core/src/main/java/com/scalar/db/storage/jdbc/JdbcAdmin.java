@@ -259,7 +259,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 table,
                 metadata,
                 false,
-                getKeyCollationClauses(connection, namespace, metadata, options));
+                getSourceKeyCollationClauses(connection, namespace, metadata, options));
             addTableMetadata(connection, namespace, table, metadata, true, false);
             if (columnCollationEnabled
                 && metadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
@@ -272,7 +272,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private Map<String, String> getKeyCollationClauses(
+  private Map<String, String> getSourceKeyCollationClauses(
       Connection connection,
       String namespace,
       TableMetadata metadata,
@@ -326,7 +326,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String table,
       TableMetadata metadata,
       boolean ifNotExists,
-      Map<String, String> keyCollationClauses)
+      Map<String, String> sourceKeyCollationClauses)
       throws SQLException {
     rdbEngine.throwIfInvalidTableName(table);
 
@@ -345,7 +345,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 columnName ->
                     enclose(columnName)
                         + " "
-                        + getVendorDbColumnType(metadata, columnName, keyCollationClauses))
+                        + getVendorDbColumnType(metadata, columnName, sourceKeyCollationClauses))
             .collect(Collectors.joining(","));
 
     // Add primary key definition
@@ -872,14 +872,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   private String getVendorDbColumnType(
-      TableMetadata metadata, String columnName, Map<String, String> keyCollationClauses) {
+      TableMetadata metadata, String columnName, Map<String, String> sourceKeyCollationClauses) {
     String bareType = getBareVendorDbColumnType(metadata, columnName);
     if (metadata.getColumnDataType(columnName) != DataType.TEXT) {
       return bareType;
     }
     String clause =
-        keyCollationClauses.containsKey(columnName)
-            ? keyCollationClauses.get(columnName)
+        sourceKeyCollationClauses.containsKey(columnName)
+            ? sourceKeyCollationClauses.get(columnName)
             : createdTextCollationClause;
     return rdbEngine.appendCollationClause(bareType, clause);
   }
