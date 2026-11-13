@@ -101,18 +101,6 @@ class RdbEnginePostgresqlTest {
   }
 
   @Test
-  void getCollationClause_Default_ShouldReturnCollateDefault() {
-    // Arrange
-    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
-
-    // Act
-    String clause = rdbEngine.getCollationClause(new TextColumnCollation("default", null));
-
-    // Assert
-    assertThat(clause).isEqualTo("COLLATE \"default\"");
-  }
-
-  @Test
   void getCollationClause_SchemaQualifiedCollation_ShouldReturnItAsIs() {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();

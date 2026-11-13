@@ -267,6 +267,32 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     ResultSet::next));
   }
 
+  /** Returns the collation that {@link RdbEngineStrategy#textColumnCollationSql} reads. */
+  @Nullable
+  public String readTextColumnCollation(String namespace, String table, String column)
+      throws SQLException {
+    String sql = rdbEngine.textColumnCollationSql();
+    if (sql == null) {
+      throw new UnsupportedOperationException();
+    }
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, String, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    rdbEngine,
+                    sql,
+                    requiresExplicitCommit,
+                    ps -> {
+                      ps.setString(1, namespace);
+                      ps.setString(2, table);
+                      ps.setString(3, column);
+                    },
+                    rs -> rs.next() ? rs.getString(1) : null));
+  }
+
   /** Returns the collation the catalog records for a MySQL-family or PostgreSQL-family column. */
   @Nullable
   public String getColumnCollation(String namespace, String table, String column)
