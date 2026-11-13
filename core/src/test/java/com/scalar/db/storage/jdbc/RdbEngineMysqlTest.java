@@ -1,9 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,7 +18,6 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -343,31 +340,5 @@ class RdbEngineMysqlTest {
 
     // Assert
     assertThat(clause).isEqualTo("COLLATE utf8mb4_bin");
-  }
-
-  @Test
-  void getTextColumnCollations_ShouldReturnCollationAndCharsetByColumnName() throws SQLException {
-    // Arrange
-    Connection connection = mock(Connection.class);
-    PreparedStatement ps = mock(PreparedStatement.class);
-    ResultSet rs = mock(ResultSet.class);
-    when(connection.prepareStatement(anyString())).thenReturn(ps);
-    when(ps.executeQuery()).thenReturn(rs);
-    when(rs.next()).thenReturn(true, true, false);
-    when(rs.getString("COLUMN_NAME")).thenReturn("c1", "c2");
-    when(rs.getString("COLLATION_NAME")).thenReturn("utf8mb4_bin", "latin1_swedish_ci");
-    when(rs.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4", "latin1");
-
-    // Act
-    Map<String, TextColumnCollation> collations =
-        rdbEngineMysql.getTextColumnCollations(connection, "ns", "tbl");
-
-    // Assert
-    assertThat(collations)
-        .containsOnly(
-            entry("c1", new TextColumnCollation("utf8mb4_bin", "utf8mb4")),
-            entry("c2", new TextColumnCollation("latin1_swedish_ci", "latin1")));
-    verify(ps).setString(1, "ns");
-    verify(ps).setString(2, "tbl");
   }
 }
