@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -497,6 +500,52 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
     // method is used for filtering.
     return namespace;
+  }
+
+  @Override
+  public String importColumnAttributesSql() {
+    // MariaDB Connector/J, which we also use for MySQL and TiDB, decides IS_GENERATEDCOLUMN and
+    // IS_AUTOINCREMENT of DatabaseMetaData.getColumns() by an exact match on the EXTRA column, so
+    // it misses a column whose EXTRA has another attribute as well, e.g., "VIRTUAL GENERATED
+    // INVISIBLE" and "auto_increment INVISIBLE" for invisible columns. Therefore, we check the
+    // EXTRA column ourselves.
+    return "SELECT COLUMN_NAME, EXTRA FROM INFORMATION_SCHEMA.COLUMNS"
+        + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
+  }
+
+  @Override
+  public void validateImportColumnAttributes(ResultSet resultSet, String namespace, String table)
+      throws SQLException {
+    String columnName = resultSet.getString(1);
+    String extra = resultSet.getString(2);
+    if (extra == null) {
+      return;
+    }
+    String attributes = extra.toLowerCase(Locale.ROOT);
+
+    // Generated columns are "VIRTUAL GENERATED" or "STORED GENERATED" in MySQL, TiDB, and MariaDB
+    // 10.2 or later, and "VIRTUAL" or "PERSISTENT" in older MariaDB. Note that "DEFAULT_GENERATED"
+    // is not for a generated column but for a column with an expression default
+    if (attributes.contains("virtual")
+        || attributes.contains("stored generated")
+        || attributes.contains("persistent")) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage(
+              getFullTableName(namespace, table), columnName));
+    }
+    if (attributes.contains("auto_increment")) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+              getFullTableName(namespace, table), columnName));
+    }
+    if (attributes.contains("on update")) {
+      logger.warn(
+          "The column has the ON UPDATE attribute, so the underlying database updates its value "
+              + "whenever ScalarDB updates the record, including when ScalarDB commits, rolls "
+              + "back, or recovers a transaction: {} {}",
+          getFullTableName(namespace, table),
+          columnName);
+    }
   }
 
   @Override

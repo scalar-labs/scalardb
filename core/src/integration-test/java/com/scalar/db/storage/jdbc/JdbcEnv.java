@@ -49,6 +49,12 @@ public final class JdbcEnv {
     return properties;
   }
 
+  /** Returns true for MySQL, MariaDB, and TiDB, all of which {@link RdbEngineMysql} handles. */
+  public static boolean isMysql() {
+    return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:mysql:")
+        || System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:mariadb:");
+  }
+
   public static boolean isOracle() {
     return System.getProperty(PROP_JDBC_URL, DEFAULT_JDBC_URL).startsWith("jdbc:oracle:");
   }

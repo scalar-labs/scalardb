@@ -1133,6 +1133,18 @@ public enum CoreError implements ScalarDbError {
       "The condition is not properly specified. Table: %s; Expressions: %s",
       "",
       ""),
+  JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0305",
+      "Importing a table with a generated column is not supported. Table: %s; Column: %s",
+      "",
+      ""),
+  JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0306",
+      "Importing a table with an auto-increment column (e.g., AUTO_INCREMENT, IDENTITY, or AUTO_RANDOM) is not supported. Table: %s; Column: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

@@ -4,6 +4,8 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_SIZE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DATA_TYPE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DECIMAL_DIGITS;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_IS_AUTOINCREMENT;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_IS_GENERATEDCOLUMN;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_KEY_SEQ;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
@@ -64,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -5180,7 +5183,13 @@ public class JdbcAdminTest {
         .thenReturn("");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("NO");
     RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
+    ResultSet columnAttributeResults = mock(ResultSet.class);
+    when(columnAttributeResults.next()).thenReturn(true).thenReturn(false);
+    PreparedStatement columnAttributeStatement =
+        stubImportColumnAttributesQuery(rdbEngineStrategy, columnAttributeResults);
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -5205,6 +5214,12 @@ public class JdbcAdminTest {
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
     verifyConnectionSetToReadOnly(connection, rdbEngine);
+    if (columnAttributeStatement != null) {
+      verify(columnAttributeStatement, description(description)).setString(1, NAMESPACE);
+      verify(columnAttributeStatement, description(description)).setString(2, TABLE);
+      verify(rdbEngineStrategy, description(description))
+          .validateImportColumnAttributes(columnAttributeResults, NAMESPACE, TABLE);
+    }
     verify(rdbEngineStrategy)
         .getDataTypeForScalarDb(
             any(JDBCType.class),
@@ -5281,6 +5296,7 @@ public class JdbcAdminTest {
       when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
     }
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
@@ -5404,6 +5420,7 @@ public class JdbcAdminTest {
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
 
     RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -5423,6 +5440,190 @@ public class JdbcAdminTest {
     // Assert
     verify(connection, description(description)).prepareStatement(expectedCheckTableExistStatement);
     assertThat(thrown).as(description).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void
+      getImportTableMetadata_GeneratedColumnGivenForXBesidesSqlite_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO").thenReturn("YES");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("NO");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "col"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void
+      getImportTableMetadata_AutoIncrementColumnGivenForXBesidesSqlite_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("YES");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "pk"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void
+      getImportTableMetadata_GeneratedAndAutoIncrementColumnsNotDeterminedByJdbcMetadataForXBesidesSqlite_ShouldWorkProperly(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    // JDBC drivers return an empty string if they cannot determine whether a column is a generated
+    // column or an auto-increment column, and some drivers may return null
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn(null).thenReturn("");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn(null).thenReturn("");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap());
+
+    // Assert
+    assertThat(actual.getPartitionKeyNames()).containsExactly("pk");
+    assertThat(actual.getColumnNames()).containsExactly("pk", "col");
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"MYSQL", "MARIADB"})
+  public void
+      getImportTableMetadata_GeneratedColumnNotReportedByJdbcMetadataGivenForMysqlAndMariaDb_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("NO");
+    ResultSet columnAttributeResults = mock(ResultSet.class);
+    when(columnAttributeResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(columnAttributeResults.getString(1)).thenReturn("pk").thenReturn("col");
+    when(columnAttributeResults.getString(2))
+        .thenReturn("")
+        .thenReturn("VIRTUAL GENERATED INVISIBLE");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, columnAttributeResults);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "col"));
+  }
+
+  @Test
+  public void
+      getImportTableMetadata_IdentityColumnGivenForDb2_ShouldThrowIllegalArgumentExceptionForAutoIncrementColumn()
+          throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(RdbEngine.DB2);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    // The Db2 JDBC driver reports identity columns as generated columns as well
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("YES");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("YES");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "pk"));
+  }
+
+  /**
+   * Prepares the mocks for importing a table that has a primary key column "pk" and a non-primary
+   * key column "col", and returns the result set of {@link DatabaseMetaData#getColumns(String,
+   * String, String, String)} so that the caller can stub the attributes of the columns.
+   */
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
+  private ResultSet prepareImportTableWithNonPrimaryKeyColumn(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException {
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk").thenReturn("col");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+        .thenReturn(rdbEngineStrategy instanceof RdbEngineSpanner ? Types.NVARCHAR : Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
+    return columnResults;
+  }
+
+  /**
+   * Stubs the engine-specific query that checks the attributes of the columns of a table to import,
+   * if the engine has such a query. This must be called after stubbing {@code
+   * connection.prepareStatement(anyString())} since the last stubbing takes precedence.
+   *
+   * @return the statement for the query, or {@code null} if the engine does not have such a query
+   */
+  @Nullable
+  private PreparedStatement stubImportColumnAttributesQuery(
+      RdbEngineStrategy rdbEngineStrategy, ResultSet columnAttributeResults) throws SQLException {
+    String sql = rdbEngineStrategy.importColumnAttributesSql();
+    if (sql == null) {
+      return null;
+    }
+    PreparedStatement columnAttributeStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(sql)).thenReturn(columnAttributeStatement);
+    when(columnAttributeStatement.executeQuery()).thenReturn(columnAttributeResults);
+    return columnAttributeStatement;
   }
 
   @ParameterizedTest

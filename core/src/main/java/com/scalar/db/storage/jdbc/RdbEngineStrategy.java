@@ -215,6 +215,38 @@ public interface RdbEngineStrategy {
   default void throwIfImportNotSupported() {}
 
   /**
+   * Returns a SQL statement that retrieves the engine-specific attributes of the columns of a table
+   * to import, or {@code null} if the standard JDBC metadata ({@code IS_GENERATEDCOLUMN} and {@code
+   * IS_AUTOINCREMENT} of {@link java.sql.DatabaseMetaData#getColumns(String, String, String,
+   * String)}) is enough to detect the columns that prevent the table from being imported.
+   *
+   * <p>The statement takes two placeholders, the schema name and the table name in this order, and
+   * returns one row per column. Each row is passed to {@link
+   * #validateImportColumnAttributes(ResultSet, String, String)}.
+   *
+   * @return a SQL statement with {@code ?} placeholders, or {@code null} if the engine does not
+   *     need an engine-specific check
+   */
+  @Nullable
+  default String importColumnAttributesSql() {
+    return null;
+  }
+
+  /**
+   * Validates a row of the result set of {@link #importColumnAttributesSql()}, i.e., the
+   * engine-specific attributes of a column of a table to import.
+   *
+   * @param resultSet a result set positioned at the row to validate
+   * @param namespace the namespace of the table to import
+   * @param table the name of the table to import
+   * @throws IllegalArgumentException if the column prevents the table from being imported, e.g., a
+   *     generated column or an auto-increment column
+   * @throws SQLException if reading the result set fails
+   */
+  default void validateImportColumnAttributes(ResultSet resultSet, String namespace, String table)
+      throws SQLException {}
+
+  /**
    * Return properly-preprocessed like pattern for each underlying database.
    *
    * @param likeExpression A like conditional expression
