@@ -370,24 +370,4 @@ class RdbEngineMysqlTest {
     verify(ps).setString(1, "ns");
     verify(ps).setString(2, "tbl");
   }
-
-  @Test
-  void keepsCollationOnTypeRedefinition_ShouldReturnFalse() {
-    // Arrange Act
-    boolean actual = rdbEngineMysql.keepsCollationOnTypeRedefinition();
-
-    // Assert
-    assertThat(actual).isFalse();
-  }
-
-  @Test
-  void appendCollationClause_ShouldAppendNonEmptyClauseOnly() {
-    // Arrange Act
-    String withClause = rdbEngineMysql.appendCollationClause("VARCHAR(10)", "COLLATE c");
-    String withoutClause = rdbEngineMysql.appendCollationClause("VARCHAR(10)", "");
-
-    // Assert
-    assertThat(withClause).isEqualTo("VARCHAR(10) COLLATE c");
-    assertThat(withoutClause).isEqualTo("VARCHAR(10)");
-  }
 }

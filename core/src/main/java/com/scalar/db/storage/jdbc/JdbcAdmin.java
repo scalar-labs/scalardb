@@ -820,14 +820,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       DataType dataType,
       String bareType)
       throws SQLException {
-    if (dataType != DataType.TEXT || rdbEngine.keepsCollationOnTypeRedefinition()) {
+    if (dataType != DataType.TEXT) {
       return bareType;
     }
     TextColumnCollation current =
         rdbEngine.getTextColumnCollations(connection, namespace, table).get(columnName);
-    return current == null
-        ? bareType
-        : rdbEngine.appendCollationClause(bareType, rdbEngine.getCollationClause(current));
+    return current == null ? bareType : bareType + " " + rdbEngine.getCollationClause(current);
   }
 
   @Override
