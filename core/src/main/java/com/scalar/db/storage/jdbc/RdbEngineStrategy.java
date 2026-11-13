@@ -65,24 +65,22 @@ public interface RdbEngineStrategy {
   String getTextType(int charLength, boolean isKey);
 
   /**
-   * Returns the collation and charset of the character columns of a table, keyed by column name as
-   * stored. Columns that are not character columns are absent.
+   * Returns a query that reads the collation of the character columns of a table, or null when the
+   * engine does not restate column collations. The query binds the namespace and then the table,
+   * and returns one row per character column with its name as stored, its collation and its
+   * charset, the last of which may be null.
    *
-   * @param connection the connection to read the catalog with
-   * @param namespace the namespace of the table
-   * @param table the table name
-   * @return the collation of each character column, keyed by column name
-   * @throws SQLException if the catalog query fails
+   * @return the query, or null
    */
-  default Map<String, TextColumnCollation> getTextColumnCollations(
-      Connection connection, String namespace, String table) throws SQLException {
-    return Collections.emptyMap();
+  @Nullable
+  default String textColumnCollationsSql() {
+    return null;
   }
 
   /**
    * Returns the clause that declares the given collation on a column.
    *
-   * @param collation a collation read by {@link #getTextColumnCollations}
+   * @param collation a collation read by {@link #textColumnCollationsSql}
    * @return the clause, or "" when the engine has no column collation clause
    */
   default String getCollationClause(TextColumnCollation collation) {

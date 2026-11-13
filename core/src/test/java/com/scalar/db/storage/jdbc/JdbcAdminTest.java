@@ -146,13 +146,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy strategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
     if (strategy instanceof RdbEngineMysql || strategy instanceof RdbEnginePostgresql) {
       strategy = spy(strategy);
-      try {
-        doReturn(Collections.emptyMap())
-            .when(strategy)
-            .getTextColumnCollations(any(), anyString(), anyString());
-      } catch (SQLException e) {
-        throw new AssertionError(e);
-      }
+      doReturn(null).when(strategy).textColumnCollationsSql();
     }
     return createJdbcAdminFor(strategy);
   }
@@ -3916,6 +3910,23 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void createIndex_MysqlCatalogReadHitsLockWaitTimeout_ShouldRetryAndKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    SQLException lockWaitTimeout = new SQLException("Lock wait timeout exceeded", "HY000", 1205);
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1", lockWaitTimeout);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
   public void createIndex_ForColumnMissingFromCatalog_ShouldRestateBareType()
       throws SQLException, ExecutionException {
     // Arrange
@@ -3929,8 +3940,8 @@ public class JdbcAdminTest {
     verify(statement).execute("ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128)");
   }
 
-  private Statement arrangeMysqlTextColumnWithCatalogCollation(String catalogColumn)
-      throws SQLException {
+  private Statement arrangeMysqlTextColumnWithCatalogCollation(
+      String catalogColumn, SQLException... catalogReadFailures) throws SQLException {
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
@@ -3947,11 +3958,17 @@ public class JdbcAdminTest {
 
     PreparedStatement catalogStatement = mock(PreparedStatement.class);
     ResultSet catalogResultSet = mock(ResultSet.class);
-    when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    if (catalogReadFailures.length == 0) {
+      when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    } else {
+      when(catalogStatement.executeQuery())
+          .thenThrow(catalogReadFailures)
+          .thenReturn(catalogResultSet);
+    }
     when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString("COLUMN_NAME")).thenReturn(catalogColumn);
-    when(catalogResultSet.getString("COLLATION_NAME")).thenReturn("utf8mb4_0900_ai_ci");
-    when(catalogResultSet.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4");
+    when(catalogResultSet.getString(1)).thenReturn(catalogColumn);
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(3)).thenReturn("utf8mb4");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
@@ -4733,9 +4750,9 @@ public class JdbcAdminTest {
     ResultSet catalogResultSet = mock(ResultSet.class);
     when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
     when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString("COLUMN_NAME")).thenReturn("c1");
-    when(catalogResultSet.getString("COLLATION_NAME")).thenReturn("utf8mb4_0900_ai_ci");
-    when(catalogResultSet.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4");
+    when(catalogResultSet.getString(1)).thenReturn("c1");
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(3)).thenReturn("utf8mb4");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);

@@ -9,16 +9,11 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.JDBCType;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -375,34 +370,20 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     }
   }
 
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
-  public Map<String, TextColumnCollation> getTextColumnCollations(
-      Connection connection, String namespace, String table) throws SQLException {
-    String sql =
-        "SELECT a.attname,"
-            + " CASE WHEN a.attcollation = 100 THEN 'default'"
-            + " ELSE '\"' || replace(cn.nspname, '\"', '\"\"') || '\".\"'"
-            + " || replace(c.collname, '\"', '\"\"') || '\"' END"
-            + " FROM pg_attribute a"
-            + " JOIN pg_class t ON a.attrelid = t.oid"
-            + " JOIN pg_namespace n ON t.relnamespace = n.oid"
-            + " LEFT JOIN pg_collation c ON c.oid = a.attcollation"
-            + " LEFT JOIN pg_namespace cn ON cn.oid = c.collnamespace"
-            + " WHERE n.nspname = ? AND t.relname = ?"
-            + " AND a.attnum > 0 AND NOT a.attisdropped"
-            + " AND a.atttypid IN ('text'::regtype, 'varchar'::regtype, 'bpchar'::regtype)";
-    try (PreparedStatement ps = connection.prepareStatement(sql)) {
-      ps.setString(1, namespace);
-      ps.setString(2, table);
-      try (ResultSet rs = ps.executeQuery()) {
-        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
-        while (rs.next()) {
-          collations.put(rs.getString(1), new TextColumnCollation(rs.getString(2), null));
-        }
-        return collations;
-      }
-    }
+  public String textColumnCollationsSql() {
+    return "SELECT a.attname,"
+        + " CASE WHEN a.attcollation = 100 THEN 'default'"
+        + " ELSE '\"' || replace(cn.nspname, '\"', '\"\"') || '\".\"'"
+        + " || replace(c.collname, '\"', '\"\"') || '\"' END, NULL"
+        + " FROM pg_attribute a"
+        + " JOIN pg_class t ON a.attrelid = t.oid"
+        + " JOIN pg_namespace n ON t.relnamespace = n.oid"
+        + " LEFT JOIN pg_collation c ON c.oid = a.attcollation"
+        + " LEFT JOIN pg_namespace cn ON cn.oid = c.collnamespace"
+        + " WHERE n.nspname = ? AND t.relname = ?"
+        + " AND a.attnum > 0 AND NOT a.attisdropped"
+        + " AND a.atttypid IN ('text'::regtype, 'varchar'::regtype, 'bpchar'::regtype)";
   }
 
   @Override
