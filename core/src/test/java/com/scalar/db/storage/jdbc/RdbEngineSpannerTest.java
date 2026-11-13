@@ -52,9 +52,9 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
-  void textColumnCollationsSql_ShouldBeNull() {
+  void textColumnCollationSql_ShouldBeNull() {
     // Arrange Act
-    String sql = rdbEngine.textColumnCollationsSql();
+    String sql = rdbEngine.textColumnCollationSql();
 
     // Assert
     assertThat(sql).isNull();
