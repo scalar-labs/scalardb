@@ -529,8 +529,9 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public boolean isBinaryCollation(TextColumnCollation collation) {
-    // The UTF8 character set is CESU-8, whose binary order is the UTF-16 code unit order
-    if ("UTF8".equals(collation.getCharset())) {
+    // AL16UTF16 is UTF-16, and the UTF8 character set is CESU-8, which has the binary order of
+    // UTF-16. Both order by UTF-16 code unit, not by code point.
+    if ("UTF8".equals(collation.getCharset()) || "AL16UTF16".equals(collation.getCharset())) {
       return false;
     }
     String name = collation.getCollation();
@@ -542,7 +543,8 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public boolean isFullUnicodeCharset(TextColumnCollation collation) {
-    return "AL32UTF8".equals(collation.getCharset()) || "UTF8".equals(collation.getCharset());
+    String charset = collation.getCharset();
+    return "AL32UTF8".equals(charset) || "UTF8".equals(charset) || "AL16UTF16".equals(charset);
   }
 
   @Override

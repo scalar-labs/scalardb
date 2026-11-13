@@ -7684,11 +7684,11 @@ public class JdbcAdminTest {
     // Assert
     assertThat(actual)
         .containsExactly(
-            "The ns.tbl table has TEXT columns whose collation is not binary, so the database can order and compare their values differently from ScalarDB: pk (utf8mb4_bin)");
+            "The ns.tbl table has TEXT columns whose collation is not binary, so the database can order and compare their values differently from ScalarDB: pk (utf8mb4_bin, utf8mb4)");
   }
 
   @Test
-  public void buildImportTextColumnWarnings_OracleNclob_ShouldReturnCharsetWarning() {
+  public void buildImportTextColumnWarnings_OracleNclob_ShouldReturnCollationWarning() {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
@@ -7703,7 +7703,7 @@ public class JdbcAdminTest {
     // Assert
     assertThat(actual)
         .containsExactly(
-            "The ns.tbl table has TEXT columns whose character set is not UTF-8, so they cannot store every character ScalarDB accepts: pk (AL16UTF16)");
+            "The ns.tbl table has TEXT columns whose collation is not binary, so the database can order and compare their values differently from ScalarDB: pk (BINARY, AL16UTF16)");
   }
 
   @Test

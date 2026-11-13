@@ -770,7 +770,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       }
       TextColumnCollation collation = entry.getValue();
       if (!rdbEngine.isBinaryCollation(collation)) {
-        nonBinary.add(entry.getKey() + " (" + collation.getCollation() + ")");
+        nonBinary.add(
+            entry.getKey()
+                + " ("
+                + collation.getCollation()
+                + (collation.getCharset() == null ? "" : ", " + collation.getCharset())
+                + ")");
       }
       if (!rdbEngine.isFullUnicodeCharset(collation)) {
         nonUtf8.add(entry.getKey() + " (" + collation.getCharset() + ")");
