@@ -82,15 +82,15 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @VisibleForTesting
   RdbEngineMysql() {
-    this(false);
+    this(false, "utf8mb4_0900_bin");
   }
 
-  RdbEngineMysql(boolean renameColumnSupported) {
+  RdbEngineMysql(boolean renameColumnSupported, String binaryCollation) {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     rowAliasSupported = false;
     this.renameColumnSupported = renameColumnSupported;
-    binaryCollation = "utf8mb4_0900_bin";
+    this.binaryCollation = binaryCollation;
   }
 
   /**
