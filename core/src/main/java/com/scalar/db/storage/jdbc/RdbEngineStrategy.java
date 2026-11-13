@@ -64,20 +64,6 @@ public interface RdbEngineStrategy {
 
   String getTextType(int charLength, boolean isKey);
 
-  default String appendCollationClause(String type, String collationClause) {
-    return collationClause.isEmpty() ? type : type + " " + collationClause;
-  }
-
-  /**
-   * Returns whether a statement that restates the type of an existing column keeps its collation
-   * when the statement declares none.
-   *
-   * @return {@code true} if the collation survives a type restatement without a collation clause
-   */
-  default boolean keepsCollationOnTypeRedefinition() {
-    return false;
-  }
-
   /**
    * Returns the collation and charset of the character columns of a table, keyed by column name as
    * stored. Columns that are not character columns are absent.
