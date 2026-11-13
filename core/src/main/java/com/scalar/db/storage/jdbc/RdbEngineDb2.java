@@ -49,6 +49,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineDb2.class);
   private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypeDb2 timeTypeEngine;
+  // Db2 fixes both settings at CREATE DATABASE, so one read serves the engine's lifetime
+  @Nullable private volatile Map<String, String> databaseSettings;
   private final String keyColumnSize;
 
   public RdbEngineDb2(JdbcConfig config) {
@@ -454,8 +456,17 @@ class RdbEngineDb2 extends AbstractRdbEngine {
     }
   }
 
+  private Map<String, String> readDatabaseSettings(Connection connection) throws SQLException {
+    Map<String, String> settings = databaseSettings;
+    if (settings == null) {
+      settings = queryDatabaseSettings(connection);
+      databaseSettings = settings;
+    }
+    return settings;
+  }
+
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
-  private static Map<String, String> readDatabaseSettings(Connection connection)
+  private static Map<String, String> queryDatabaseSettings(Connection connection)
       throws SQLException {
     String sql = "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'db_collname')";
     try (Statement stmt = connection.createStatement();

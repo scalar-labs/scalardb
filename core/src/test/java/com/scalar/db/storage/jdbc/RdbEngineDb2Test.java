@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Scan;
@@ -266,5 +268,20 @@ public class RdbEngineDb2Test {
         .isEqualTo(
             new DatabaseEncodingIssue(
                 "ISO8859-1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_AfterEncodingCheck_ShouldReuseTheDatabaseSettings()
+      throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("db_collname", "UCA400_NO");
+    rdbEngineDb2.getDatabaseEncodingIssue(connection);
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isEqualTo("UCA400_NO");
+    verify(connection, times(1)).createStatement();
   }
 }
