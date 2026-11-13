@@ -103,60 +103,43 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Inject
   public JdbcAdmin(DatabaseConfig databaseConfig) {
-    JdbcConfig config = new JdbcConfig(databaseConfig);
-    rdbEngine = RdbEngineFactory.create(config);
-    columnCollationEnabled = config.isColumnCollationEnabled();
-    createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
-    dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-    metadataSchema = config.getMetadataSchema();
-    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
-    tableMetadataService =
-        new TableMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    virtualTableMetadataService =
-        new VirtualTableMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
+    this(new JdbcConfig(databaseConfig));
+  }
+
+  private JdbcAdmin(JdbcConfig config) {
+    this(config, RdbEngineFactory.create(config));
+  }
+
+  private JdbcAdmin(JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    this(config, rdbEngine, JdbcUtils.initDataSourceForAdmin(config, rdbEngine));
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config) {
-    rdbEngine = RdbEngineFactory.create(config);
-    columnCollationEnabled = config.isColumnCollationEnabled();
-    createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
-    this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema();
-    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
-    tableMetadataService =
-        new TableMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    virtualTableMetadataService =
-        new VirtualTableMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
+    this(config, RdbEngineFactory.create(config), dataSource);
+  }
+
+  private JdbcAdmin(JdbcConfig config, RdbEngineStrategy rdbEngine, HikariDataSource dataSource) {
+    this(
+        config,
+        rdbEngine,
+        dataSource,
+        JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine),
+        null,
+        null,
+        null);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config, boolean requiresExplicitCommit) {
-    rdbEngine = RdbEngineFactory.create(config);
-    columnCollationEnabled = config.isColumnCollationEnabled();
-    createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
-    this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema();
-    this.requiresExplicitCommit = requiresExplicitCommit;
-    tableMetadataService =
-        new TableMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    virtualTableMetadataService =
-        new VirtualTableMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
+    this(
+        config,
+        RdbEngineFactory.create(config),
+        dataSource,
+        requiresExplicitCommit,
+        null,
+        null,
+        null);
   }
 
   @VisibleForTesting
@@ -165,19 +148,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       JdbcConfig config,
       VirtualTableMetadataService virtualTableMetadataService,
       boolean requiresExplicitCommit) {
-    rdbEngine = RdbEngineFactory.create(config);
-    columnCollationEnabled = config.isColumnCollationEnabled();
-    createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
-    this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema();
-    this.requiresExplicitCommit = requiresExplicitCommit;
-    tableMetadataService =
-        new TableMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(
-            metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
-    this.virtualTableMetadataService = virtualTableMetadataService;
+    this(
+        config,
+        RdbEngineFactory.create(config),
+        dataSource,
+        requiresExplicitCommit,
+        null,
+        null,
+        virtualTableMetadataService);
   }
 
   @VisibleForTesting
@@ -188,20 +166,47 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       NamespaceMetadataService namespaceMetadataService,
       VirtualTableMetadataService virtualTableMetadataService,
       boolean requiresExplicitCommit) {
-    rdbEngine = RdbEngineFactory.create(config);
-    columnCollationEnabled = config.isColumnCollationEnabled();
-    createdTextCollationClause = getCreatedTextCollationClause(config, rdbEngine);
-    this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema();
-    this.tableMetadataService = tableMetadataService;
-    this.namespaceMetadataService = namespaceMetadataService;
-    this.virtualTableMetadataService = virtualTableMetadataService;
-    this.requiresExplicitCommit = requiresExplicitCommit;
+    this(
+        config,
+        RdbEngineFactory.create(config),
+        dataSource,
+        requiresExplicitCommit,
+        tableMetadataService,
+        namespaceMetadataService,
+        virtualTableMetadataService);
   }
 
-  private static String getCreatedTextCollationClause(
-      JdbcConfig config, RdbEngineStrategy rdbEngine) {
-    return config.isColumnCollationEnabled() ? rdbEngine.getBinaryTextCollationClause() : "";
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  private JdbcAdmin(
+      JdbcConfig config,
+      RdbEngineStrategy rdbEngine,
+      HikariDataSource dataSource,
+      boolean requiresExplicitCommit,
+      @Nullable TableMetadataService tableMetadataService,
+      @Nullable NamespaceMetadataService namespaceMetadataService,
+      @Nullable VirtualTableMetadataService virtualTableMetadataService) {
+    this.rdbEngine = rdbEngine;
+    columnCollationEnabled = config.isColumnCollationEnabled();
+    createdTextCollationClause =
+        columnCollationEnabled ? rdbEngine.getBinaryTextCollationClause() : "";
+    this.dataSource = dataSource;
+    metadataSchema = config.getMetadataSchema();
+    this.requiresExplicitCommit = requiresExplicitCommit;
+    this.tableMetadataService =
+        tableMetadataService != null
+            ? tableMetadataService
+            : new TableMetadataService(
+                metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
+    this.namespaceMetadataService =
+        namespaceMetadataService != null
+            ? namespaceMetadataService
+            : new NamespaceMetadataService(
+                metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
+    this.virtualTableMetadataService =
+        virtualTableMetadataService != null
+            ? virtualTableMetadataService
+            : new VirtualTableMetadataService(
+                metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
   }
 
   private static boolean hasDescClusteringOrder(TableMetadata metadata) {
