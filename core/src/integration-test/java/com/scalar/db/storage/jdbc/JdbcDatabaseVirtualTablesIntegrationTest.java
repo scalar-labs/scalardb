@@ -109,7 +109,10 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
         // Import the left source table
         admin.importTable(namespace, importedTableName, Collections.emptyMap());
 
-        // Create a right source table
+        // Create a right source table whose TEXT key takes the collation of the imported table's
+        // key. On Oracle 23, joining a USING_NLS_COMP key to a BINARY key failed with ORA-43915,
+        // "unable to determine collation: arguments have conflicting collations", see
+        // https://docs.oracle.com/en/error-help/db/ora-43915/
         admin.createTable(
             namespace,
             anotherTableName,
@@ -117,7 +120,8 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
                 .addColumn("pk", dataType)
                 .addColumn("col2", DataType.TEXT)
                 .addPartitionKey("pk")
-                .build());
+                .build(),
+            Collections.singletonMap(JdbcAdmin.COLLATION_SOURCE_TABLE, importedTableName));
 
         // Create a virtual table that joins the above two source tables with different join types
         admin.createVirtualTable(

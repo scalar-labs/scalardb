@@ -38,6 +38,10 @@ public interface RdbEngineStrategy {
 
   boolean isDuplicateTableError(SQLException e);
 
+  default boolean isExtendedMaxStringSizeRequiredError(SQLException e) {
+    return false;
+  }
+
   boolean isDuplicateKeyError(SQLException e);
 
   boolean isConflict(SQLException e);
@@ -65,6 +69,19 @@ public interface RdbEngineStrategy {
   String getTextType(int charLength, boolean isKey);
 
   /**
+   * Returns the clause that makes a TEXT column compare and sort by UTF-8 bytes.
+   *
+   * @return the clause, or "" when the engine has no column collation clause
+   */
+  default String getBinaryTextCollationClause() {
+    return "";
+  }
+
+  default String appendCollationClause(String type, String collationClause) {
+    return collationClause.isEmpty() ? type : type + " " + collationClause;
+  }
+
+  /**
    * Returns a query that reads the collation of a character column, or null when the engine does
    * not restate column collations. The query binds the namespace, the table and the column, and
    * returns at most one row with the collation and the charset, the latter of which may be null.
@@ -77,13 +94,102 @@ public interface RdbEngineStrategy {
   }
 
   /**
+   * Returns the collation and charset of the character columns of a table, keyed by column name as
+   * stored. Columns that are not character columns are absent.
+   *
+   * @param connection the connection to read the catalog with
+   * @param namespace the namespace of the table
+   * @param table the table name
+   * @return the collation of each character column, keyed by column name
+   * @throws SQLException if the catalog query fails
+   */
+  default Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Returns whether any collation clause on a column needs a database-level setting.
+   *
+   * @return {@code true} if a column collation clause depends on a database-level setting
+   */
+  default boolean collationClauseRequiresExtendedStringSize() {
+    return false;
+  }
+
+  /**
+   * Returns the collation that columns of the schema get when they declare none. It is read only
+   * when {@link #collationClauseRequiresExtendedStringSize()} returns {@code true}, so an engine
+   * overrides it together with that method.
+   *
+   * @param connection the connection to read the catalog with
+   * @param namespace the schema to read the default collation of
+   * @return the default collation, or null when the engine does not read it
+   * @throws SQLException if the catalog query fails
+   */
+  @Nullable
+  default String getSchemaDefaultCollation(Connection connection, String namespace)
+      throws SQLException {
+    return null;
+  }
+
+  /**
    * Returns the clause that declares the given collation on a column.
    *
-   * @param collation a collation read by {@link #textColumnCollationSql}
+   * @param collation a collation read by {@link #textColumnCollationSql} or {@link
+   *     #getTextColumnCollations}
    * @return the clause, or "" when the engine has no column collation clause
    */
   default String getCollationClause(TextColumnCollation collation) {
     return "";
+  }
+
+  /**
+   * Returns whether the collation compares and sorts by code point.
+   *
+   * @param collation a collation read by {@link #getTextColumnCollations}
+   * @return {@code true} if the collation is binary
+   */
+  default boolean isBinaryCollation(TextColumnCollation collation) {
+    return true;
+  }
+
+  /**
+   * Returns whether the character set of the collation can store every Unicode character, whatever
+   * its encoding.
+   *
+   * @param collation a collation read by {@link #getTextColumnCollations}
+   * @return {@code true} if the character set covers all of Unicode
+   */
+  default boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    return true;
+  }
+
+  /**
+   * Returns how the database encoding keeps TEXT columns from behaving as ScalarDB expects, on
+   * engines whose columns cannot choose their encoding.
+   *
+   * @param connection the connection to read the encoding with
+   * @return the issue, or null when the encoding has none or the engine does not read it
+   * @throws SQLException if the query fails
+   */
+  @Nullable
+  default DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection)
+      throws SQLException {
+    return null;
+  }
+
+  /**
+   * Returns the database collation when it is not binary, on engines whose columns cannot declare
+   * their own collation.
+   *
+   * @param connection the connection to read the collation with
+   * @return the collation name, or null when it is binary or the engine does not read it
+   * @throws SQLException if the query fails
+   */
+  @Nullable
+  default String getNonBinaryDatabaseCollation(Connection connection) throws SQLException {
+    return null;
   }
 
   String computeBooleanValue(boolean value);

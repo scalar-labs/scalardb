@@ -18,9 +18,11 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -480,13 +482,18 @@ public class ConsensusCommitAdmin implements DistributedTransactionAdmin {
       TableMetadata dataTableMetadata = admin.getTableMetadata(namespace, table);
       assert dataTableMetadata != null;
 
+      // The virtual table joins the two tables on the key, so the metadata table's TEXT keys must
+      // use the collations of the imported table's keys
+      Map<String, String> metadataTableOptions = new HashMap<>(options);
+      metadataTableOptions.put(JdbcAdmin.COLLATION_SOURCE_TABLE, table);
+
       // create a transaction metadata table
       admin.createTable(
           namespace,
           txMetadataTableName,
           ConsensusCommitUtils.buildTransactionMetadataTableMetadata(
               dataTableMetadata, isIndexEventuallyConsistentReadEnabled),
-          options);
+          metadataTableOptions);
 
       // create a virtual table based on the data table and the transaction metadata table
       admin.createVirtualTable(

@@ -1133,6 +1133,12 @@ public enum CoreError implements ScalarDbError {
       "The condition is not properly specified. Table: %s; Expressions: %s",
       "",
       ""),
+  JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED(
+      Category.USER_ERROR,
+      "0305",
+      "Oracle accepts a column collation only when the MAX_STRING_SIZE initialization parameter is EXTENDED. ScalarDB declares the BINARY collation on every TEXT column, so set MAX_STRING_SIZE to EXTENDED, or set the property scalar.db.jdbc.column_collation.enabled to false",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

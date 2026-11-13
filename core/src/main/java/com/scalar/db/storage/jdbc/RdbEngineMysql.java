@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -10,9 +11,11 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -20,6 +23,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,34 +39,67 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
       "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
+  // UTF-16 and UTF-32 cover all of Unicode as utf8mb4 does. utf8mb3 and ucs2 stop at the BMP.
+  private static final ImmutableSet<String> FULL_UNICODE_CHARSETS =
+      ImmutableSet.of("utf8mb4", "utf16", "utf16le", "utf32");
+  // utf8mb4_0900_bin is MySQL's. The nopad_bin ones are MariaDB's, which also order UTF-16 and
+  // UTF-32 by code point.
+  private static final ImmutableSet<String> CODE_POINT_NO_PAD_COLLATIONS =
+      ImmutableSet.of(
+          "utf8mb4_0900_bin",
+          "utf8mb4_nopad_bin",
+          "utf16_nopad_bin",
+          "utf16le_nopad_bin",
+          "utf32_nopad_bin");
   private static final Pattern MYSQL_VERSION_PATTERN =
       Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
   private final boolean rowAliasSupported;
   private final boolean renameColumnSupported;
+  private final String binaryCollation;
 
   RdbEngineMysql(JdbcConfig config) {
     this(config, false, false);
   }
 
   RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported, boolean renameColumnSupported) {
+    this(config, rowAliasSupported, renameColumnSupported, "utf8mb4_bin");
+  }
+
+  RdbEngineMysql(
+      JdbcConfig config,
+      boolean rowAliasSupported,
+      boolean renameColumnSupported,
+      String binaryCollation) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     this.rowAliasSupported = rowAliasSupported;
     this.renameColumnSupported = renameColumnSupported;
+    this.binaryCollation = binaryCollation;
   }
 
   @VisibleForTesting
   RdbEngineMysql() {
-    this(false);
+    this(false, "utf8mb4_0900_bin");
   }
 
-  RdbEngineMysql(boolean renameColumnSupported) {
+  RdbEngineMysql(boolean renameColumnSupported, String binaryCollation) {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     rowAliasSupported = false;
     this.renameColumnSupported = renameColumnSupported;
+    this.binaryCollation = binaryCollation;
+  }
+
+  /**
+   * Returns the binary utf8mb4 collation to declare on TEXT columns. {@code utf8mb4_0900_bin} (NO
+   * PAD, so trailing spaces are significant) exists since MySQL 8.0.17.
+   */
+  static String selectMysqlBinaryCollation(String productVersion) {
+    return !productVersion.contains("MariaDB") && isAtLeastMysql80(productVersion, 17, false)
+        ? "utf8mb4_0900_bin"
+        : "utf8mb4_bin";
   }
 
   /**
@@ -486,6 +524,34 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "CHARACTER SET utf8mb4 COLLATE " + binaryCollation;
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    String sql =
+        "SELECT COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLUMNS"
+            + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLLATION_NAME IS NOT NULL";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          collations.put(
+              rs.getString("COLUMN_NAME"),
+              new TextColumnCollation(
+                  rs.getString("COLLATION_NAME"), rs.getString("CHARACTER_SET_NAME")));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @Override
   public String textColumnCollationSql() {
     // A column type restated without a collation clause takes the table collation, so a column
     // that already has it needs no clause.
@@ -502,6 +568,17 @@ class RdbEngineMysql extends AbstractRdbEngine {
     return (charset == null ? "" : "CHARACTER SET " + charset + " ")
         + "COLLATE "
         + collation.getCollation();
+  }
+
+  @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    String name = collation.getCollation();
+    return CODE_POINT_NO_PAD_COLLATIONS.contains(name) || name.equals(binaryCollation);
+  }
+
+  @Override
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    return FULL_UNICODE_CHARSETS.contains(collation.getCharset());
   }
 
   @Override

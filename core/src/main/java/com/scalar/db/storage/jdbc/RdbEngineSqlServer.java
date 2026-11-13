@@ -10,8 +10,10 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -19,7 +21,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -389,6 +393,71 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
       default:
         throw new AssertionError();
     }
+  }
+
+  @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE Latin1_General_100_BIN2_UTF8";
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    String sql =
+        "SELECT c.name, c.collation_name, TYPE_NAME(c.user_type_id),"
+            + " COLLATIONPROPERTY(c.collation_name, 'CodePage')"
+            + " FROM sys.columns c"
+            + " JOIN sys.objects o ON c.object_id = o.object_id"
+            + " JOIN sys.schemas s ON o.schema_id = s.schema_id"
+            + " WHERE s.name = ? AND o.name = ? AND c.collation_name IS NOT NULL";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          String type = rs.getString(3);
+          int codePage = rs.getInt(4);
+          String charset;
+          if (type.equals("nchar") || type.equals("nvarchar") || type.equals("ntext")) {
+            charset = "UTF-16";
+          } else {
+            charset = codePage == 65001 ? "UTF-8" : "CP" + codePage;
+          }
+          collations.put(rs.getString(1), new TextColumnCollation(rs.getString(2), charset));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @Override
+  public String textColumnCollationSql() {
+    return "SELECT c.collation_name, NULL FROM sys.columns c"
+        + " JOIN sys.objects o ON c.object_id = o.object_id"
+        + " JOIN sys.schemas s ON o.schema_id = s.schema_id"
+        + " WHERE s.name = ? AND o.name = ? AND c.name = ? AND c.collation_name IS NOT NULL";
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    return "COLLATE " + collation.getCollation();
+  }
+
+  @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    // Microsoft documents _BIN2 as code point order, but on nchar and nvarchar SQL Server 2025
+    // compares UTF-16 code units: U+1F600, stored as surrogates D83D DE00, sorts before U+E000.
+    return !"UTF-16".equals(collation.getCharset())
+        && collation.getCollation().toUpperCase(Locale.ROOT).contains("_BIN2");
+  }
+
+  @Override
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    String charset = collation.getCharset();
+    // nchar, nvarchar and ntext store UTF-16, with surrogate pairs beyond the BMP
+    return "UTF-8".equals(charset) || "UTF-16".equals(charset);
   }
 
   @Override

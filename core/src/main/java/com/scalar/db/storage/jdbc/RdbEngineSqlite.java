@@ -19,6 +19,7 @@ import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -148,6 +149,29 @@ class RdbEngineSqlite extends AbstractRdbEngine {
         return Types.BLOB;
       default:
         throw new AssertionError();
+    }
+  }
+
+  @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE BINARY";
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  @Nullable
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery("PRAGMA encoding")) {
+      if (rs.next()) {
+        String encoding = rs.getString(1);
+        // The only other encodings are UTF-16LE and UTF-16BE, and the BINARY collation compares
+        // their bytes with memcmp
+        return "UTF-8".equalsIgnoreCase(encoding)
+            ? null
+            : new DatabaseEncodingIssue(encoding, DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER);
+      }
+      return null;
     }
   }
 

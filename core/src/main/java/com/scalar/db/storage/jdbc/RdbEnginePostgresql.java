@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.JdbcUtils.shortenIndexNameIfNeeded;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
@@ -9,11 +10,18 @@ import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -23,6 +31,18 @@ import org.slf4j.LoggerFactory;
 class RdbEnginePostgresql extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEnginePostgresql.class);
   protected static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
+  // libc C.UTF-8 is left out of both sets: its order comes from the C library, and PostgreSQL
+  // warns that "the same locale name may have different behavior on different platforms when
+  // using the libc provider". The builtin C.UTF-8 orders by code point on every platform.
+  // https://www.postgresql.org/docs/18/locale.html
+  private static final Set<String> BINARY_COLLATIONS =
+      ImmutableSet.of(
+          "\"pg_catalog\".\"C\"",
+          "\"pg_catalog\".\"POSIX\"",
+          "\"pg_catalog\".\"ucs_basic\"",
+          "\"pg_catalog\".\"pg_c_utf8\"");
+  private static final Set<String> BINARY_DATABASE_COLLATIONS =
+      ImmutableSet.of("libc:C", "libc:POSIX", "builtin:C", "builtin:C.UTF-8");
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
 
   public RdbEnginePostgresql() {
@@ -371,6 +391,52 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE \"C\"";
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    // pg_database.datlocprovider and datlocale only exist on newer versions, hence to_jsonb.
+    String sql =
+        "SELECT a.attname,"
+            + " CASE WHEN a.attcollation = 100 THEN 'default'"
+            + " ELSE '\"' || replace(cn.nspname, '\"', '\"\"') || '\".\"'"
+            + " || replace(c.collname, '\"', '\"\"') || '\"' END,"
+            + " pg_encoding_to_char(d.encoding),"
+            + " CASE WHEN a.attcollation <> 100 THEN NULL"
+            + " WHEN to_jsonb(d) ->> 'datlocprovider' = 'b'"
+            + " THEN 'builtin:' || (to_jsonb(d) ->> 'datlocale')"
+            + " WHEN to_jsonb(d) ->> 'datlocprovider' = 'i'"
+            + " THEN 'icu:' || coalesce(to_jsonb(d) ->> 'datlocale', to_jsonb(d) ->> 'daticulocale')"
+            + " ELSE 'libc:' || d.datcollate END"
+            + " FROM pg_attribute a"
+            + " JOIN pg_class t ON a.attrelid = t.oid"
+            + " JOIN pg_namespace n ON t.relnamespace = n.oid"
+            + " LEFT JOIN pg_collation c ON c.oid = a.attcollation"
+            + " LEFT JOIN pg_namespace cn ON cn.oid = c.collnamespace"
+            + " CROSS JOIN pg_database d"
+            + " WHERE n.nspname = ? AND t.relname = ? AND d.datname = current_database()"
+            + " AND a.attnum > 0 AND NOT a.attisdropped"
+            + " AND a.atttypid IN ('text'::regtype, 'varchar'::regtype, 'bpchar'::regtype)";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          collations.put(
+              rs.getString(1),
+              new TextColumnCollation(rs.getString(2), rs.getString(3), rs.getString(4)));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @Override
   public String textColumnCollationSql() {
     // A column type restated without a collation clause takes the default collation of the type,
     // so a column on the database default (oid 100) needs no clause.
@@ -388,7 +454,40 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
 
   @Override
   public String getCollationClause(TextColumnCollation collation) {
-    return "COLLATE " + collation.getCollation();
+    String name = collation.getCollation();
+    return name.equals("default") ? "COLLATE \"default\"" : "COLLATE " + name;
+  }
+
+  @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    String name = collation.getCollation();
+    if (name.equals("default")) {
+      return BINARY_DATABASE_COLLATIONS.contains(collation.getResolvedDefault());
+    }
+    return BINARY_COLLATIONS.contains(name);
+  }
+
+  @Override
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    return "UTF8".equals(collation.getCharset());
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  @Nullable
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+    String sql =
+        "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = current_database()";
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+      if (rs.next()) {
+        String encoding = rs.getString(1);
+        return "UTF8".equals(encoding)
+            ? null
+            : new DatabaseEncodingIssue(encoding, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+      }
+      return null;
+    }
   }
 
   @Override

@@ -117,4 +117,101 @@ class RdbEngineSqlServerTest {
     // Assert
     assertThat(properties).containsEntry("sendStringParametersAsUnicode", "false");
   }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnBin2Utf8Collation() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE Latin1_General_100_BIN2_UTF8");
+  }
+
+  @Test
+  void isBinaryCollation_Bin_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN", "CP1252");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isBinaryCollation_Bin2_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_Bin2", "CP1252");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_Bin2OnUtf16Column_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_100_BIN2", "UTF-16");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isFullUnicodeCharset_Utf8_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation =
+        new TextColumnCollation("Latin1_General_100_BIN2_UTF8", "UTF-8");
+
+    // Act
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isFullUnicodeCharset_Utf16_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_100_CI_AS", "UTF-16");
+
+    // Act
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isFullUnicodeCharset_CodePage_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN2", "CP1252");
+
+    // Act
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void getCollationClause_ShouldReturnCollate() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Japanese_BIN2", "CP932");
+
+    // Act
+    String clause = rdbEngine.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE Japanese_BIN2");
+  }
 }

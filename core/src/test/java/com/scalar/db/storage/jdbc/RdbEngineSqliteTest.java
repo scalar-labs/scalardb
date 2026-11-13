@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
@@ -132,5 +133,51 @@ class RdbEngineSqliteTest {
       throwIfInvalidTableName_WhenContainsNamespaceSeparator_ShouldThrowIllegalArgumentException() {
     assertThatThrownBy(() -> rdbEngine.throwIfInvalidTableName("a$b"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnCollateBinary() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE BINARY");
+  }
+
+  @Test
+  void getDatabaseEncodingIssue_DefaultDatabase_ShouldReturnNull() throws SQLException {
+    // Arrange Act
+    DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(encoding).isNull();
+  }
+
+  @Test
+  void getDatabaseEncodingIssue_Utf16Database_ShouldReturnUtf16CodeUnitOrder()
+      throws SQLException, IOException {
+    // Arrange
+    File utf16File = File.createTempFile(getClass().getName(), ".db");
+    try (Connection utf16Connection =
+        DriverManager.getConnection("jdbc:sqlite:" + utf16File.getAbsolutePath())) {
+      try (Statement stmt = utf16Connection.createStatement()) {
+        stmt.execute("PRAGMA encoding = 'UTF-16le'");
+        stmt.execute("CREATE TABLE t (c TEXT)");
+      }
+
+      // Act
+      DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(utf16Connection);
+
+      // Assert
+      assertThat(encoding)
+          .isEqualTo(
+              new DatabaseEncodingIssue(
+                  "UTF-16le", DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER));
+    } finally {
+      assertTrue(utf16File.delete());
+    }
   }
 }

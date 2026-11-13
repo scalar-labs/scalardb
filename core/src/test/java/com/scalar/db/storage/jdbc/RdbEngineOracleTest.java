@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionBuilder;
@@ -13,6 +14,9 @@ import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
@@ -259,5 +263,307 @@ class RdbEngineOracleTest {
 
     // Assert
     assertThat(result).isFalse();
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnCollateBinary() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngineOracle;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE BINARY");
+  }
+
+  @Test
+  public void isExtendedMaxStringSizeRequiredError_Ora43929_ShouldReturnTrue() {
+    // Arrange
+    SQLException e = new SQLException("ORA-43929", "99999", 43929);
+
+    // Act
+    boolean actual = rdbEngineOracle.isExtendedMaxStringSizeRequiredError(e);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isExtendedMaxStringSizeRequiredError_OtherCode_ShouldReturnFalse() {
+    // Arrange
+    SQLException e = new SQLException("ORA-00942", "42000", 942);
+
+    // Act
+    boolean actual = rdbEngineOracle.isExtendedMaxStringSizeRequiredError(e);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isFullUnicodeCharset_Al32utf8_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL32UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isFullUnicodeCharset_Utf8Cesu_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isFullUnicodeCharset_Al16utf16_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL16UTF16");
+
+    // Act
+    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isFullUnicodeCharset_WesternEuropean_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "WE8MSWIN1252");
+
+    // Act
+    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_Binary_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL32UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isBinaryCollation_BinaryCi_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY_CI", "AL32UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_UsingNlsCompWithBinarySession_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "BINARY");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isBinaryCollation_UsingNlsCompWithLinguisticSession_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation =
+        new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "LINGUISTIC");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_BinaryOnCesu8Charset_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "UTF8");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_BinaryOnAl16utf16Charset_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL16UTF16");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void isBinaryCollation_UsingNlsCompWithBinarySessionOnCesu8Charset_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "UTF8", "BINARY");
+
+    // Act
+    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void getCollationClause_ShouldReturnCollate() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("BINARY_CI", "AL32UTF8");
+
+    // Act
+    String clause = rdbEngineOracle.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE BINARY_CI");
+  }
+
+  @Test
+  public void collationClauseRequiresExtendedStringSize_ShouldReturnTrue() {
+    // Act
+    boolean actual = rdbEngineOracle.collationClauseRequiresExtendedStringSize();
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void getSchemaDefaultCollation_ShouldQueryAllUsersWithNamespaceAsUsername()
+      throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement("SELECT DEFAULT_COLLATION FROM ALL_USERS WHERE USERNAME = ?"))
+        .thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn("BINARY_CI");
+
+    // Act
+    String actual = rdbEngineOracle.getSchemaDefaultCollation(connection, "MyNs");
+
+    // Assert
+    assertThat(actual).isEqualTo("BINARY_CI");
+    verify(ps).setString(1, "MyNs");
+  }
+
+  @Test
+  public void getSchemaDefaultCollation_WithNoRow_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(org.mockito.ArgumentMatchers.anyString())).thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(false);
+
+    // Act
+    String actual = rdbEngineOracle.getSchemaDefaultCollation(connection, "ns");
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  public void getSchemaDefaultCollation_WithNullDefaultCollation_ShouldReturnUsingNlsComp()
+      throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(org.mockito.ArgumentMatchers.anyString())).thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn(null);
+
+    // Act
+    String actual = rdbEngineOracle.getSchemaDefaultCollation(connection, "ns");
+
+    // Assert
+    assertThat(actual).isEqualTo("USING_NLS_COMP");
+  }
+
+  private static Connection connectionWithCharacterSet(String charset) throws SQLException {
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(
+            "SELECT VALUE FROM NLS_DATABASE_PARAMETERS WHERE PARAMETER = ?"))
+        .thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn(charset);
+    return connection;
+  }
+
+  @Test
+  public void getDatabaseEncodingIssue_Al32utf8_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithCharacterSet("AL32UTF8");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  public void getDatabaseEncodingIssue_Cesu8_ShouldReturnUtf16CodeUnitOrder() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithCharacterSet("UTF8");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue("UTF8", DatabaseEncodingIssue.Kind.UTF16_CODE_UNIT_ORDER));
+  }
+
+  @Test
+  public void getDatabaseEncodingIssue_WesternEuropean_ShouldReturnPartialCharacterSet()
+      throws SQLException {
+    // Arrange
+    Connection connection = connectionWithCharacterSet("WE8MSWIN1252");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue(
+                "WE8MSWIN1252", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
   }
 }

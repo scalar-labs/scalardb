@@ -1,12 +1,25 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class RdbEnginePostgresqlTest {
 
@@ -101,6 +114,42 @@ class RdbEnginePostgresqlTest {
   }
 
   @Test
+  void getBinaryTextCollationClause_ForPostgresql_ShouldReturnCCollation() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE \"C\"");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ForYugabyte_ShouldReturnCCollation() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEngineYugabyte();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE \"C\"");
+  }
+
+  @Test
+  void getCollationClause_Default_ShouldReturnCollateDefault() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    String clause = rdbEngine.getCollationClause(new TextColumnCollation("default", "UTF8"));
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE \"default\"");
+  }
+
+  @Test
   void getCollationClause_SchemaQualifiedCollation_ShouldReturnItAsIs() {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
@@ -111,5 +160,130 @@ class RdbEnginePostgresqlTest {
 
     // Assert
     assertThat(clause).isEqualTo("COLLATE \"pg_catalog\".\"en_US\"");
+  }
+
+  @Test
+  void getTextColumnCollations_ShouldReturnCollationCharsetAndResolvedDefaultByColumnName()
+      throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(anyString())).thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true, true, false);
+    when(rs.getString(1)).thenReturn("c1", "c2");
+    when(rs.getString(2)).thenReturn("default", "\"pg_catalog\".\"C\"");
+    when(rs.getString(3)).thenReturn("UTF8", "UTF8");
+    when(rs.getString(4)).thenReturn("libc:en_US.UTF-8", (String) null);
+
+    // Act
+    Map<String, TextColumnCollation> collations =
+        rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
+
+    // Assert
+    assertThat(collations)
+        .containsOnly(
+            entry("c1", new TextColumnCollation("default", "UTF8", "libc:en_US.UTF-8")),
+            entry("c2", new TextColumnCollation("\"pg_catalog\".\"C\"", "UTF8", null)));
+    verify(ps).setString(1, "ns");
+    verify(ps).setString(2, "tbl");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"C", "POSIX", "ucs_basic", "pg_c_utf8"})
+  void isBinaryCollation_BinaryPgCatalogCollation_ShouldReturnTrue(String name) {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    TextColumnCollation collation =
+        new TextColumnCollation("\"pg_catalog\".\"" + name + "\"", "UTF8");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_CollationNamedCInAnotherSchema_ShouldReturnFalse() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    TextColumnCollation collation = new TextColumnCollation("\"app\".\"C\"", "UTF8");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "libc:C,true",
+    "libc:POSIX,true",
+    "builtin:C,true",
+    "builtin:C.UTF-8,true",
+    "libc:C.UTF-8,false",
+    "libc:en_US.UTF-8,false",
+    "icu:en-US,false"
+  })
+  void isBinaryCollation_DefaultCollation_ShouldFollowDatabaseCollation(
+      String databaseCollation, boolean expected) {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+    TextColumnCollation collation = new TextColumnCollation("default", "UTF8", databaseCollation);
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  void isFullUnicodeCharset_Utf8_ShouldReturnTrue() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    boolean actual = rdbEngine.isFullUnicodeCharset(new TextColumnCollation("default", "UTF8"));
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isFullUnicodeCharset_Latin1_ShouldReturnFalse() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    boolean actual = rdbEngine.isFullUnicodeCharset(new TextColumnCollation("default", "LATIN1"));
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void getDatabaseEncodingIssue_Latin1_ShouldReturnPartialCharacterSet() throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(statement.executeQuery(anyString())).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn("LATIN1");
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngine.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue("LATIN1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
   }
 }
