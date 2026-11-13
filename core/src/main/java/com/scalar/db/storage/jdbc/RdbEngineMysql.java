@@ -34,8 +34,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
       "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
-  private static final Pattern MYSQL_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
-  private static final Pattern MYSQL_RENAME_COLUMN_VERSION_PATTERN =
+  private static final Pattern MYSQL_VERSION_PATTERN =
       Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
@@ -71,14 +70,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
    */
   static boolean supportsInsertRowAlias(DatabaseMetaData metaData) throws SQLException {
     String version = metaData.getDatabaseProductVersion();
-    Matcher matcher = MYSQL_VERSION_PATTERN.matcher(version);
-    if (version.contains("MariaDB") || !matcher.lookingAt()) {
-      return false;
-    }
-    int major = Integer.parseInt(matcher.group(1));
-    int minor = Integer.parseInt(matcher.group(2));
-    int patch = Integer.parseInt(matcher.group(3));
-    return major > 8 || (major == 8 && (minor > 0 || patch >= 19));
+    return !version.contains("MariaDB") && isAtLeastMysql80(version, 19, false);
   }
 
   /**
@@ -90,16 +82,28 @@ class RdbEngineMysql extends AbstractRdbEngine {
    */
   static boolean supportsRenameColumn(DatabaseMetaData metaData) throws SQLException {
     String version = metaData.getDatabaseProductVersion();
-    Matcher matcher = MYSQL_RENAME_COLUMN_VERSION_PATTERN.matcher(version);
-    if (version.contains("MariaDB") || version.contains("TiDB") || !matcher.lookingAt()) {
+    return !version.contains("MariaDB")
+        && !version.contains("TiDB")
+        && isAtLeastMysql80(version, 3, true);
+  }
+
+  /**
+   * Returns whether the version is MySQL 8.0.{@code minPatch} or later.
+   *
+   * @param missingPatchIsLatest how to read a version without a numeric patch, such as {@code
+   *     8.0.custom_build}: {@code true} reads it as the latest patch of its minor version, {@code
+   *     false} as unsupported
+   */
+  private static boolean isAtLeastMysql80(
+      String version, int minPatch, boolean missingPatchIsLatest) {
+    Matcher matcher = MYSQL_VERSION_PATTERN.matcher(version);
+    if (!matcher.lookingAt() || (matcher.group(3) == null && !missingPatchIsLatest)) {
       return false;
     }
     int major = Integer.parseInt(matcher.group(1));
     int minor = Integer.parseInt(matcher.group(2));
-    // A version string without a numeric patch is read as the latest patch of its minor version.
-    boolean hasPatch = matcher.group(3) != null;
-    int patch = hasPatch ? Integer.parseInt(matcher.group(3)) : Integer.MAX_VALUE;
-    return major > 8 || (major == 8 && (minor > 0 || patch >= 3));
+    int patch = matcher.group(3) == null ? Integer.MAX_VALUE : Integer.parseInt(matcher.group(3));
+    return major > 8 || (major == 8 && (minor > 0 || patch >= minPatch));
   }
 
   @Override
