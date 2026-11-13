@@ -8533,6 +8533,25 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void addNewColumnToTable_TwoTextColumnsOnSameTable_ShouldCheckDatabaseSettingsOnce()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
+    prepareAddNewColumnToTable();
+
+    // Act
+    admin.addNewColumnToTable("ns", "tbl", "c3", DataType.TEXT);
+
+    // Assert
+    verify(rdbEngineStrategy, times(1)).getDatabaseEncodingIssue(any());
+    verify(rdbEngineStrategy, times(1)).getNonBinaryDatabaseCollation(any());
+  }
+
+  @Test
   public void addNewColumnToTable_IntColumn_ShouldNotCallEncodingCheck()
       throws SQLException, ExecutionException {
     // Arrange

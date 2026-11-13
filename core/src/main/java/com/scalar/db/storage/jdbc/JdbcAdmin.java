@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -90,6 +91,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   private final RdbEngineStrategy rdbEngine;
   private final boolean columnCollationEnabled;
   private final String createdTextCollationClause;
+  // The settings belong to the database, and importTable adds its TEXT transaction metadata
+  // columns one by one, so each table is checked once per admin.
+  private final Set<String> tablesCheckedForDatabaseTextSettings = ConcurrentHashMap.newKeySet();
   private final HikariDataSource dataSource;
   private final String metadataSchema;
   private final TableMetadataService tableMetadataService;
@@ -731,6 +735,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   private void warnAboutDatabaseTextSettings(
       Connection connection, String namespace, String table) {
+    if (!tablesCheckedForDatabaseTextSettings.add(getFullTableName(namespace, table))) {
+      return;
+    }
     try {
       DatabaseEncodingIssue issue = rdbEngine.getDatabaseEncodingIssue(connection);
       if (issue != null) {
