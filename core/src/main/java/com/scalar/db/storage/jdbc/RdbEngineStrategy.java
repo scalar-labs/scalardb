@@ -65,22 +65,21 @@ public interface RdbEngineStrategy {
   String getTextType(int charLength, boolean isKey);
 
   /**
-   * Returns a query that reads the collation of the character columns of a table, or null when the
-   * engine does not restate column collations. The query binds the namespace and then the table,
-   * and returns one row per character column with its name as stored, its collation and its
-   * charset, the last of which may be null.
+   * Returns a query that reads the collation of a character column, or null when the engine does
+   * not restate column collations. The query binds the namespace, the table and the column, and
+   * returns at most one row with the collation and the charset, the latter of which may be null.
    *
    * @return the query, or null
    */
   @Nullable
-  default String textColumnCollationsSql() {
+  default String textColumnCollationSql() {
     return null;
   }
 
   /**
    * Returns the clause that declares the given collation on a column.
    *
-   * @param collation a collation read by {@link #textColumnCollationsSql}
+   * @param collation a collation read by {@link #textColumnCollationSql}
    * @return the clause, or "" when the engine has no column collation clause
    */
   default String getCollationClause(TextColumnCollation collation) {

@@ -482,9 +482,10 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public String textColumnCollationsSql() {
-    return "SELECT COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLUMNS"
-        + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLLATION_NAME IS NOT NULL";
+  public String textColumnCollationSql() {
+    return "SELECT COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLUMNS"
+        + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+        + " AND COLLATION_NAME IS NOT NULL";
   }
 
   @Override

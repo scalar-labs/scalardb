@@ -371,9 +371,8 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public String textColumnCollationsSql() {
-    return "SELECT a.attname,"
-        + " CASE WHEN a.attcollation = 100 THEN 'default'"
+  public String textColumnCollationSql() {
+    return "SELECT CASE WHEN a.attcollation = 100 THEN 'default'"
         + " ELSE '\"' || replace(cn.nspname, '\"', '\"\"') || '\".\"'"
         + " || replace(c.collname, '\"', '\"\"') || '\"' END, NULL"
         + " FROM pg_attribute a"
@@ -381,7 +380,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
         + " JOIN pg_namespace n ON t.relnamespace = n.oid"
         + " LEFT JOIN pg_collation c ON c.oid = a.attcollation"
         + " LEFT JOIN pg_namespace cn ON cn.oid = c.collnamespace"
-        + " WHERE n.nspname = ? AND t.relname = ?"
+        + " WHERE n.nspname = ? AND t.relname = ? AND a.attname = ?"
         + " AND a.attnum > 0 AND NOT a.attisdropped"
         + " AND a.atttypid IN ('text'::regtype, 'varchar'::regtype, 'bpchar'::regtype)";
   }

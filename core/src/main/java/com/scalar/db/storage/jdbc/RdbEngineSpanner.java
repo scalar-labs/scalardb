@@ -49,7 +49,7 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
 
   @Nullable
   @Override
-  public String textColumnCollationsSql() {
+  public String textColumnCollationSql() {
     return null;
   }
 

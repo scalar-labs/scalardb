@@ -100,6 +100,7 @@ public class JdbcAdminTest {
 
   @Mock private HikariDataSource dataSource;
   @Mock private Connection connection;
+  @Mock private PreparedStatement catalogStatement;
   @Mock private JdbcConfig config;
   @Mock private TableMetadataService tableMetadataService;
   @Mock private NamespaceMetadataService namespaceMetadataService;
@@ -146,7 +147,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy strategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
     if (strategy instanceof RdbEngineMysql || strategy instanceof RdbEnginePostgresql) {
       strategy = spy(strategy);
-      doReturn(null).when(strategy).textColumnCollationsSql();
+      doReturn(null).when(strategy).textColumnCollationSql();
     }
     return createJdbcAdminFor(strategy);
   }
@@ -3862,12 +3863,10 @@ public class JdbcAdminTest {
                 "c1", DataType.TEXT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    PreparedStatement catalogStatement = mock(PreparedStatement.class);
     ResultSet catalogResultSet = mock(ResultSet.class);
     when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
     when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString(1)).thenReturn("c1");
-    when(catalogResultSet.getString(2)).thenReturn("\"pg_catalog\".\"und-x-icu\"");
+    when(catalogResultSet.getString(1)).thenReturn("\"pg_catalog\".\"und-x-icu\"");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
@@ -3881,7 +3880,7 @@ public class JdbcAdminTest {
   public void createIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
       throws SQLException, ExecutionException {
     // Arrange
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -3897,7 +3896,7 @@ public class JdbcAdminTest {
   public void dropIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
       throws SQLException, ExecutionException {
     // Arrange
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1");
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -3910,11 +3909,27 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void createIndex_MysqlTextColumn_ShouldReadTheCatalogForThatColumnOnly()
+      throws SQLException, ExecutionException {
+    // Arrange
+    arrangeMysqlTextColumnWithCatalogCollation(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(catalogStatement).setString(1, "my_ns");
+    verify(catalogStatement).setString(2, "foo_table");
+    verify(catalogStatement).setString(3, "c1");
+  }
+
+  @Test
   public void createIndex_MysqlCatalogReadHitsLockWaitTimeout_ShouldRetryAndKeepCollation()
       throws SQLException, ExecutionException {
     // Arrange
     SQLException lockWaitTimeout = new SQLException("Lock wait timeout exceeded", "HY000", 1205);
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("c1", lockWaitTimeout);
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true, lockWaitTimeout);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -3930,7 +3945,7 @@ public class JdbcAdminTest {
   public void createIndex_ForColumnMissingFromCatalog_ShouldRestateBareType()
       throws SQLException, ExecutionException {
     // Arrange
-    Statement statement = arrangeMysqlTextColumnWithCatalogCollation("other_column");
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(false);
     JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
 
     // Act
@@ -3941,7 +3956,7 @@ public class JdbcAdminTest {
   }
 
   private Statement arrangeMysqlTextColumnWithCatalogCollation(
-      String catalogColumn, SQLException... catalogReadFailures) throws SQLException {
+      boolean columnInCatalog, SQLException... catalogReadFailures) throws SQLException {
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
@@ -3956,7 +3971,6 @@ public class JdbcAdminTest {
                 "c1", DataType.TEXT.toString(), null, null, false));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    PreparedStatement catalogStatement = mock(PreparedStatement.class);
     ResultSet catalogResultSet = mock(ResultSet.class);
     if (catalogReadFailures.length == 0) {
       when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
@@ -3965,10 +3979,9 @@ public class JdbcAdminTest {
           .thenThrow(catalogReadFailures)
           .thenReturn(catalogResultSet);
     }
-    when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString(1)).thenReturn(catalogColumn);
-    when(catalogResultSet.getString(2)).thenReturn("utf8mb4_0900_ai_ci");
-    when(catalogResultSet.getString(3)).thenReturn("utf8mb4");
+    when(catalogResultSet.next()).thenReturn(columnInCatalog);
+    when(catalogResultSet.getString(1)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
@@ -4746,13 +4759,11 @@ public class JdbcAdminTest {
                 "c1", DataType.TEXT.toString(), null, null, indexed));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
 
-    PreparedStatement catalogStatement = mock(PreparedStatement.class);
     ResultSet catalogResultSet = mock(ResultSet.class);
     when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
     when(catalogResultSet.next()).thenReturn(true, false);
-    when(catalogResultSet.getString(1)).thenReturn("c1");
-    when(catalogResultSet.getString(2)).thenReturn("utf8mb4_0900_ai_ci");
-    when(catalogResultSet.getString(3)).thenReturn("utf8mb4");
+    when(catalogResultSet.getString(1)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4");
 
     when(connection.prepareStatement(any()))
         .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
