@@ -800,6 +800,9 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             entry.getKey()
                 + " (collation "
                 + collation.getCollation()
+                + (collation.getResolvedDefault() == null
+                    ? ""
+                    : " resolved to " + collation.getResolvedDefault())
                 + (collation.getCharset() == null
                     ? ""
                     : ", character set " + collation.getCharset())

@@ -7725,6 +7725,46 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void
+      buildImportTextColumnWarnings_PostgresqlDefaultOnIcuDatabase_ShouldNameResolvedLocale() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("default", "UTF8", "icu:en-US"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEnginePostgresql());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation default resolved to icu:en-US, character set UTF8)");
+  }
+
+  @Test
+  public void
+      buildImportTextColumnWarnings_OracleUsingNlsCompLinguistic_ShouldNameResolvedNlsComp() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "LINGUISTIC"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineOracle());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation USING_NLS_COMP resolved to LINGUISTIC, character set AL32UTF8)");
+  }
+
+  @Test
   public void buildImportTextColumnWarnings_MysqlLatin1_ShouldReturnBothWarnings() {
     // Arrange
     TableMetadata metadata =
