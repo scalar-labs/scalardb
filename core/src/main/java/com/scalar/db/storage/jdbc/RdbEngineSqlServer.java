@@ -16,6 +16,7 @@ import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -429,6 +430,28 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
         }
         return collations;
       }
+    }
+  }
+
+  // With sendStringParametersAsUnicode set to false, the driver encodes String parameters in the
+  // code page of the database default collation, whatever the collation of the target column
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  @Nullable
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+    String sql =
+        "SELECT COLLATIONPROPERTY(CONVERT(NVARCHAR(128),"
+            + " DATABASEPROPERTYEX(DB_NAME(), 'Collation')), 'CodePage')";
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+      if (rs.next()) {
+        int codePage = rs.getInt(1);
+        return codePage == 65001
+            ? null
+            : new DatabaseEncodingIssue(
+                "CP" + codePage, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+      }
+      return null;
     }
   }
 

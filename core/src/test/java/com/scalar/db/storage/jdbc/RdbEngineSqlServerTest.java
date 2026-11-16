@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -12,8 +13,10 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -189,5 +192,42 @@ class RdbEngineSqlServerTest {
 
     // Assert
     assertThat(clause).isEqualTo("COLLATE Japanese_BIN2");
+  }
+
+  @Test
+  void getDatabaseEncodingIssue_Cp1252_ShouldReturnPartialCharacterSet() throws SQLException {
+    // Arrange
+    Connection connection = mockDatabaseCodePage(1252);
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngine.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue("CP1252", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
+  }
+
+  @Test
+  void getDatabaseEncodingIssue_Utf8_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = mockDatabaseCodePage(65001);
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngine.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  private static Connection mockDatabaseCodePage(int codePage) throws SQLException {
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(statement.executeQuery(anyString())).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getInt(1)).thenReturn(codePage);
+    return connection;
   }
 }
