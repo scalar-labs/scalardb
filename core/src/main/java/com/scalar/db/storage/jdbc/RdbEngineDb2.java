@@ -19,11 +19,14 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -31,6 +34,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,6 +49,8 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineDb2.class);
   private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
   private final RdbEngineTimeTypeDb2 timeTypeEngine;
+  // Db2 fixes both settings at CREATE DATABASE, so one read serves the engine's lifetime
+  @Nullable private volatile Map<String, String> databaseSettings;
   private final String keyColumnSize;
 
   public RdbEngineDb2(JdbcConfig config) {
@@ -421,6 +428,81 @@ class RdbEngineDb2 extends AbstractRdbEngine {
       default:
         return null;
     }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    Map<String, String> settings = readDatabaseSettings(connection);
+    // A missing value is deliberately non-binary, so the import warns rather than stays silent
+    String collation = settings.getOrDefault("db_collname", "UNKNOWN");
+    String charset = settings.get("codeset");
+    String sql =
+        "SELECT COLNAME FROM SYSCAT.COLUMNS WHERE TABSCHEMA = ? AND TABNAME = ?"
+            + " AND TYPESCHEMA = 'SYSIBM'"
+            + " AND TYPENAME IN ('VARCHAR', 'CHARACTER', 'LONG VARCHAR', 'CLOB')"
+            + " AND CODEPAGE <> 0";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          collations.put(rs.getString(1), new TextColumnCollation(collation, charset));
+        }
+        return collations;
+      }
+    }
+  }
+
+  private Map<String, String> readDatabaseSettings(Connection connection) throws SQLException {
+    Map<String, String> settings = databaseSettings;
+    if (settings == null) {
+      settings = queryDatabaseSettings(connection);
+      databaseSettings = settings;
+    }
+    return settings;
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  private static Map<String, String> queryDatabaseSettings(Connection connection)
+      throws SQLException {
+    String sql = "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'db_collname')";
+    try (Statement stmt = connection.createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+      Map<String, String> settings = new HashMap<>();
+      while (rs.next()) {
+        settings.put(rs.getString(1), rs.getString(2));
+      }
+      return settings;
+    }
+  }
+
+  @Override
+  public boolean isBinaryCollation(TextColumnCollation collation) {
+    return "IDENTITY".equals(collation.getCollation());
+  }
+
+  @Override
+  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    return "UTF-8".equalsIgnoreCase(collation.getCharset());
+  }
+
+  @Override
+  @Nullable
+  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+    String codeset = readDatabaseSettings(connection).get("codeset");
+    return codeset == null || "UTF-8".equalsIgnoreCase(codeset)
+        ? null
+        : new DatabaseEncodingIssue(codeset, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+  }
+
+  @Override
+  @Nullable
+  public String getNonBinaryDatabaseCollation(Connection connection) throws SQLException {
+    String collation = readDatabaseSettings(connection).get("db_collname");
+    return collation == null || "IDENTITY".equals(collation) ? null : collation;
   }
 
   @Override

@@ -201,6 +201,23 @@ jdbc:
     create_test_user: |
       # Oracle connection endpoint depends on the Oracle version used
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+      # ScalarDB declares COLLATE BINARY on TEXT columns, which requires MAX_STRING_SIZE=EXTENDED
+      # (ORA-43929). The parameter is PDB-scoped and irreversible. OPEN UPGRADE and utl32k are SYSDBA
+      # operations, and the first close has to come from outside the PDB, so the migration runs on its
+      # own SYSDBA connection to the CDB root.
+      echo "WHENEVER SQLERROR EXIT FAILURE
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} OPEN UPGRADE;
+      ALTER SESSION SET CONTAINER=${PDB[%VERSION%]};
+      ALTER SYSTEM SET MAX_STRING_SIZE=EXTENDED;
+      @?/rdbms/admin/utl32k.sql
+      @?/rdbms/admin/utlrp.sql
+      -- utl32k.sql ends by setting WHENEVER SQLERROR CONTINUE, so re-arm the directive before the
+      -- statements below; otherwise a failure here leaves the PDB unusable and still exits zero.
+      WHENEVER SQLERROR EXIT FAILURE
+      ALTER PLUGGABLE DATABASE CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE OPEN;
+      EXIT" | docker exec -i oracle sqlplus -s "/ as sysdba"
       echo "CREATE USER test IDENTIFIED BY test;
       ALTER USER test QUOTA UNLIMITED ON USERS;
       GRANT CREATE SESSION TO test;

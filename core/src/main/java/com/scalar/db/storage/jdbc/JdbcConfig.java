@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.config.ConfigUtils.getBoolean;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
@@ -76,6 +77,8 @@ public class JdbcConfig {
       PREFIX + "db2.time_column.default_date_component";
   public static final String SPANNER_TIME_COLUMN_DEFAULT_DATE_COMPONENT =
       PREFIX + "spanner.time_column.default_date_component";
+  public static final String COLUMN_COLLATION_ENABLED = PREFIX + "column_collation.enabled";
+  public static final boolean DEFAULT_COLUMN_COLLATION_ENABLED = true;
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
 
@@ -139,6 +142,8 @@ public class JdbcConfig {
   @Nullable private final Long connectionPoolKeepaliveTimeMillis;
 
   @Nullable private final Isolation isolation;
+
+  private final boolean columnCollationEnabled;
 
   private final String metadataSchema;
 
@@ -325,6 +330,12 @@ public class JdbcConfig {
         LocalDate.parse(
             spannerTimeColumnDefaultDateComponentString, DateTimeFormatter.ISO_LOCAL_DATE);
 
+    columnCollationEnabled =
+        getBoolean(
+            databaseConfig.getProperties(),
+            COLUMN_COLLATION_ENABLED,
+            DEFAULT_COLUMN_COLLATION_ENABLED);
+
     if (databaseConfig.getProperties().containsKey(TABLE_METADATA_SCHEMA)) {
       logger.warn(
           "The configuration property \""
@@ -383,6 +394,10 @@ public class JdbcConfig {
 
   public Optional<Isolation> getIsolation() {
     return Optional.ofNullable(isolation);
+  }
+
+  public boolean isColumnCollationEnabled() {
+    return columnCollationEnabled;
   }
 
   public String getMetadataSchema() {
