@@ -465,7 +465,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
     String sql =
         "SELECT COLUMN_NAME, DATA_TYPE, COLLATION FROM ALL_TAB_COLS"
             + " WHERE OWNER = ? AND TABLE_NAME = ? AND HIDDEN_COLUMN = 'NO'"
-            + " AND DATA_TYPE IN ('VARCHAR2', 'CHAR', 'CLOB', 'NVARCHAR2', 'NCHAR', 'NCLOB')";
+            + " AND DATA_TYPE IN ('VARCHAR2', 'CHAR', 'CLOB', 'LONG', 'NVARCHAR2', 'NCHAR', 'NCLOB')";
     try (PreparedStatement ps = connection.prepareStatement(sql)) {
       ps.setString(1, namespace);
       ps.setString(2, table);
