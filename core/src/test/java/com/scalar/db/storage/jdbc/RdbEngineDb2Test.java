@@ -1,13 +1,21 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,5 +106,182 @@ public class RdbEngineDb2Test {
                     scanAll, metadata))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("blob_column1");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnEmpty() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngineDb2;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("");
+  }
+
+  @Test
+  void getCollationClause_ShouldReturnEmpty() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    String clause = rdbEngineDb2.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEmpty();
+  }
+
+  @Test
+  void isBinaryCollation_Identity_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isBinaryCollation_UcaCollation_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("UCA400_NO", "utf-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isFullUnicodeCharset_Utf8InAnyCase_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isFullUnicodeCharset_Iso88591_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "iso8859-1");
+
+    // Act
+    boolean actual = rdbEngineDb2.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isBinaryCollation_Identity16Bit_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY_16BIT", "UTF-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isBinaryCollation_Unknown_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("UNKNOWN", "UTF-8");
+
+    // Act
+    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  private static Connection connectionWithDatabaseSettings(String name, String value)
+      throws SQLException {
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    ResultSet resultSet = mock(ResultSet.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(statement.executeQuery(
+            "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'db_collname')"))
+        .thenReturn(resultSet);
+    when(resultSet.next()).thenReturn(true, false);
+    when(resultSet.getString(1)).thenReturn(name);
+    when(resultSet.getString(2)).thenReturn(value);
+    return connection;
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_Identity_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("db_collname", "IDENTITY");
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_UcaCollation_ShouldReturnCollation() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("db_collname", "UCA400_NO");
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isEqualTo("UCA400_NO");
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_SettingNotReadable_ShouldReturnNull() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("codeset", "UTF-8");
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isNull();
+  }
+
+  @Test
+  void getDatabaseEncodingIssue_Iso88591_ShouldReturnPartialCharacterSet() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("codeset", "ISO8859-1");
+
+    // Act
+    DatabaseEncodingIssue actual = rdbEngineDb2.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            new DatabaseEncodingIssue(
+                "ISO8859-1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
+  }
+
+  @Test
+  void getNonBinaryDatabaseCollation_AfterEncodingCheck_ShouldReuseTheDatabaseSettings()
+      throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("db_collname", "UCA400_NO");
+    rdbEngineDb2.getDatabaseEncodingIssue(connection);
+
+    // Act
+    String actual = rdbEngineDb2.getNonBinaryDatabaseCollation(connection);
+
+    // Assert
+    assertThat(actual).isEqualTo("UCA400_NO");
+    verify(connection, times(1)).createStatement();
   }
 }

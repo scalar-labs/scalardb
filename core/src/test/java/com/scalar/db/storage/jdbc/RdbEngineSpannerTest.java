@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
@@ -32,6 +33,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -441,4 +443,57 @@ public class RdbEngineSpannerTest {
           + "  \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n"
           + "  \"token_uri\": \"https://oauth2.googleapis.com/token\"\n"
           + "}";
+
+  @Test
+  void getBinaryTextCollationClause_ShouldBeEmpty() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("");
+  }
+
+  @Test
+  void isBinaryCollation_AnyCollation_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("default", "LATIN1");
+
+    // Act
+    boolean actual = rdbEngine.isBinaryCollation(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void isFullUnicodeCharset_AnyCharset_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("default", "LATIN1");
+
+    // Act
+    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void getTextColumnCollationsAndGetDatabaseEncodingIssue_ShouldNotQueryTheDatabase()
+      throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+
+    // Act
+    Map<String, TextColumnCollation> collations =
+        rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
+    DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(connection);
+
+    // Assert
+    assertThat(collations).isEmpty();
+    assertThat(encoding).isNull();
+    verifyNoInteractions(connection);
+  }
 }

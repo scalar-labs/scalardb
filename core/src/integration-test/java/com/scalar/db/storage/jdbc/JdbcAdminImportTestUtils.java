@@ -210,6 +210,87 @@ public class JdbcAdminImportTestUtils {
         });
   }
 
+  /**
+   * Creates a table whose {@code c} TEXT column carries a collation that is not binary, where the
+   * engine lets a column choose one. Primary key {@code pk} is a plain TEXT column.
+   */
+  public void createTableWithNonBinaryTextColumn(String namespace, String table)
+      throws SQLException {
+    String columnDefinition;
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
+      columnDefinition = "VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine) || JdbcTestUtils.isYugabyte(rdbEngine)) {
+      columnDefinition = "VARCHAR(64) COLLATE \"und-x-icu\"";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      columnDefinition = "VARCHAR2(64) COLLATE BINARY_CI";
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      columnDefinition = "VARCHAR(64) COLLATE SQL_Latin1_General_CP1_CI_AS";
+    } else {
+      columnDefinition = "VARCHAR(64)";
+    }
+    execute(rdbEngine.createSchemaIfNotExistsSqls(namespace));
+    execute(
+        "CREATE TABLE "
+            + rdbEngine.encloseFullTableName(namespace, table)
+            + "("
+            + rdbEngine.enclose("pk")
+            + " VARCHAR(64) NOT NULL PRIMARY KEY, "
+            + rdbEngine.enclose("c")
+            + " "
+            + columnDefinition
+            + ")");
+  }
+
+  /**
+   * Returns a non-binary collation that a TEXT primary key can carry, as the catalog reports it, or
+   * null when the engine has no per-column collation.
+   */
+  @Nullable
+  public String getNonBinaryTextKeyCollation() {
+    if (JdbcTestUtils.isTidb(rdbEngine)) {
+      return "utf8mb4_general_ci";
+    } else if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
+      return JdbcTestUtils.isMysql(rdbEngine)
+              && rdbEngine.getBinaryTextCollationClause().endsWith("utf8mb4_0900_bin")
+          ? "utf8mb4_0900_ai_ci"
+          : "utf8mb4_unicode_ci";
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      return "und-x-icu";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      return "BINARY_CI";
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      return "Latin1_General_100_CI_AS_SC_UTF8";
+    }
+    return null;
+  }
+
+  /** Creates a table with a BIGINT column {@code col} and a TEXT primary key {@code pk}. */
+  public void createTableWithTextKey(String namespace, String table, String collation)
+      throws SQLException {
+    String keyDefinition;
+    if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
+      keyDefinition = "VARCHAR(64) CHARACTER SET utf8mb4 COLLATE " + collation;
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      keyDefinition = "VARCHAR(64) COLLATE \"" + collation + "\"";
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      keyDefinition = "VARCHAR2(64) COLLATE " + collation;
+    } else {
+      keyDefinition = "VARCHAR(64) COLLATE " + collation;
+    }
+    execute(rdbEngine.createSchemaIfNotExistsSqls(namespace));
+    execute(
+        "CREATE TABLE "
+            + rdbEngine.encloseFullTableName(namespace, table)
+            + "("
+            + rdbEngine.enclose("pk")
+            + " "
+            + keyDefinition
+            + " NOT NULL PRIMARY KEY, "
+            + rdbEngine.enclose("col")
+            + (JdbcTestUtils.isOracle(rdbEngine) ? " NUMBER(18)" : " BIGINT")
+            + ")");
+  }
+
   public void execute(String[] sqls) throws SQLException {
     withConnection(
         dataSource,
