@@ -7702,7 +7702,7 @@ public class JdbcAdminTest {
     // Assert
     assertThat(actual)
         .containsExactly(
-            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (utf8mb4_bin, utf8mb4)");
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation utf8mb4_bin, character set utf8mb4)");
   }
 
   @Test
@@ -7721,7 +7721,7 @@ public class JdbcAdminTest {
     // Assert
     assertThat(actual)
         .containsExactly(
-            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (BINARY, AL16UTF16)");
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation BINARY, character set AL16UTF16)");
   }
 
   @Test
@@ -7740,8 +7740,8 @@ public class JdbcAdminTest {
     // Assert
     assertThat(actual)
         .containsExactly(
-            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (latin1_bin, latin1)",
-            "The ns.tbl table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: pk (latin1)");
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation latin1_bin, character set latin1)",
+            "The ns.tbl table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: pk (character set latin1)");
   }
 
   @Test
@@ -7760,8 +7760,8 @@ public class JdbcAdminTest {
     // Assert
     assertThat(actual)
         .containsExactly(
-            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (Latin1_General_100_BIN2, CP1252)",
-            "The ns.tbl table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: pk (CP1252)");
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation Latin1_General_100_BIN2, character set CP1252)",
+            "The ns.tbl table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: pk (character set CP1252)");
   }
 
   @Test
