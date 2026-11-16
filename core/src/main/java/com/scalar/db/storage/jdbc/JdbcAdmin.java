@@ -798,13 +798,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       if (!fullUnicode || !rdbEngine.isBinaryCollation(collation)) {
         nonBinary.add(
             entry.getKey()
-                + " ("
+                + " (collation "
                 + collation.getCollation()
-                + (collation.getCharset() == null ? "" : ", " + collation.getCharset())
+                + (collation.getCharset() == null
+                    ? ""
+                    : ", character set " + collation.getCharset())
                 + ")");
       }
       if (!fullUnicode) {
-        partialCharset.add(entry.getKey() + " (" + collation.getCharset() + ")");
+        partialCharset.add(entry.getKey() + " (character set " + collation.getCharset() + ")");
       }
     }
     List<String> warnings = new ArrayList<>();
