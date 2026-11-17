@@ -6,9 +6,9 @@ on:
       - speed-up-unit-test-bench
 
 jobs:
-  bench:
+  bench-forks:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
         with:
@@ -32,35 +32,27 @@ jobs:
       - name: Run benchmarks
         run: |
           set -u
-          declare -A SHA=(
-            [0-master]=5063d9e93
-            [1-timeout]=133ab4c63
-            [2-forks]=dffb19f46
-            [3-forks-parallel]=53dda1229
-          )
-          for s in "${!SHA[@]}"; do git worktree add -q "../$s" "${SHA[$s]}"; done
-          for s in 0-master 1-timeout 2-forks 3-forks-parallel; do
-            (cd "../$s" && ./gradlew check buildSrc:check > "$RUNNER_TEMP/warmup-$s.log" 2>&1)
-            echo "warm-up $s exit $?"
-          done
-          echo "| round | setup | scenario | seconds | exit |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          for round in 1 2; do
-            for s in 0-master 1-timeout 2-forks 3-forks-parallel; do
-              for scenario in tests-only main-code; do
-                if [ "$scenario" = tests-only ]; then
-                  args="check buildSrc:check test --rerun"
-                else
-                  args="clean check buildSrc:check --no-build-cache"
-                fi
-                start=$(date +%s)
-                (cd "../$s" && ./gradlew $args > "$RUNNER_TEMP/$round-$s-$scenario.log" 2>&1)
-                rc=$?
-                end=$(date +%s)
-                line="| $round | $s | $scenario | $((end - start)) | $rc |"
-                echo "$line"
-                echo "$line" >> "$GITHUB_STEP_SUMMARY"
-              done
+          git worktree add -q ../forks dffb19f46
+          cat > "$RUNNER_TEMP/forks.gradle" <<'GRADLE'
+          gradle.projectsEvaluated {
+            def n = Integer.parseInt(System.getProperty('benchForks'))
+            allprojects { tasks.matching { it.name == 'test' && it instanceof Test }.configureEach { maxParallelForks = n } }
+          }
+          GRADLE
+          cd ../forks
+          ./gradlew check buildSrc:check > "$RUNNER_TEMP/warmup.log" 2>&1
+          echo "warm-up exit $?"
+          echo "| round | forks | seconds | exit |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          for round in 1 2 3; do
+            for n in 1 2 3 4; do
+              start=$(date +%s)
+              ./gradlew check buildSrc:check test --rerun --init-script "$RUNNER_TEMP/forks.gradle" -DbenchForks=$n > "$RUNNER_TEMP/$round-forks-$n.log" 2>&1
+              rc=$?
+              end=$(date +%s)
+              line="| $round | $n | $((end - start)) | $rc |"
+              echo "$line"
+              echo "$line" >> "$GITHUB_STEP_SUMMARY"
             done
           done
 
@@ -68,5 +60,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: bench-logs
+          name: bench-forks-logs
           path: ${{ runner.temp }}/*.log
