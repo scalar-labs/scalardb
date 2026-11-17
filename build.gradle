@@ -90,7 +90,7 @@ subprojects {
         azureCosmosVersion = '4.83.0'
         azureBlobStorageVersion = '12.37.2'
         jooqVersion = '3.14.16'
-        awssdkVersion = '2.57.2'
+        awssdkVersion = '2.58.0'
         hikariCpVersion = '4.0.3'
         postgresqlDriverVersion = '42.7.14'
         oracleDriverVersion = '23.26.4.0.0'
@@ -102,7 +102,7 @@ subprojects {
         // RdbEngineMysql too -- the AWS wrapper names its MariaDB dialect after the driver's major
         // version, and only defines one for v3.
         mariadDbDriverVersion = '3.5.11'
-        alloyDbJdbcConnectorVersion = '1.4.0'
+        alloyDbJdbcConnectorVersion = '1.4.1'
         googleCloudStorageVersion = '2.78.0'
         spannerDriverVersion = '2.49.0'
         awsAdvancedJdbcWrapperVersion = '4.6.0'
@@ -111,7 +111,7 @@ subprojects {
         caffeineVersion = '2.9.3'
         protobufVersion = '4.36.2'
         junitVersion = '5.14.4'
-        commonsLangVersion = '3.21.0'
+        commonsLangVersion = '3.22.0'
         // jacksonVersion, nettyVersion, bouncycastleJdk18onVersion, and micrometerVersion control
         // the versions that the libraries ScalarDB depends on use internally. ScalarDB itself uses
         // only Jackson directly. Before upgrading any of them, confirm that ScalarDB works with the
@@ -120,7 +120,7 @@ subprojects {
         // core/build.gradle
         jacksonVersion = '2.23.0'
         nettyVersion = '4.2.20.Final'
-        bouncycastleJdk18onVersion = '1.86'
+        bouncycastleJdk18onVersion = '1.87'
         micrometerVersion = '1.17.2'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'
