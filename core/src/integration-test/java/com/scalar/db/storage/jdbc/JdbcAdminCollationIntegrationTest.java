@@ -17,7 +17,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.service.StorageFactory;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -314,10 +316,24 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
-  void isBinaryCollation_PostgresqlColumnOnDefaultCollation_ShouldResolveDatabaseCollation()
+  void isBinaryCollation_PostgresqlColumnOnDefaultCollation_ShouldResolveDatabaseLibcLocale()
       throws Exception {
     // Arrange
     assumeTrue(JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcTestUtils.isSpanner(rdbEngine));
+    String[] databaseLocale =
+        testUtils.withCatalogConnection(
+            connection -> {
+              try (Statement statement = connection.createStatement();
+                  ResultSet resultSet =
+                      statement.executeQuery(
+                          "SELECT to_jsonb(d) ->> 'datlocprovider', d.datcollate FROM pg_database d"
+                              + " WHERE d.datname = current_database()")) {
+                resultSet.next();
+                return new String[] {resultSet.getString(1), resultSet.getString(2)};
+              }
+            });
+    // Versions before PostgreSQL 15 have no datlocprovider and always use libc
+    assumeTrue(databaseLocale[0] == null || databaseLocale[0].equals("c"));
     admin.createNamespace(NAMESPACE, true);
     testUtils.executeSql(
         "CREATE TABLE "
@@ -331,7 +347,9 @@ public class JdbcAdminCollationIntegrationTest {
 
       // Assert
       assertThat(collations.get("pk").getCollation()).isEqualTo("default");
-      assertThat(rdbEngine.isBinaryCollation(collations.get("pk"))).isTrue();
+      assertThat(collations.get("pk").getResolvedDefault()).isEqualTo("libc:" + databaseLocale[1]);
+      assertThat(rdbEngine.isBinaryCollation(collations.get("pk")))
+          .isEqualTo(Arrays.asList("C", "POSIX").contains(databaseLocale[1]));
     } finally {
       // The table has no ScalarDB metadata, so the admin cannot drop it.
       testUtils.dropTable(NAMESPACE, TABLE);
