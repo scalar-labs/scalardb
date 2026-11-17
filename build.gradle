@@ -146,6 +146,11 @@ subprojects {
         testLogging.showStandardStreams = true
     }
 
+    // Integration tests share one database, so only unit tests are forked in parallel.
+    tasks.named('test') {
+        maxParallelForks = Math.max(1, Runtime.runtime.availableProcessors().intdiv(2))
+    }
+
     group = projectGroup
 
     java {
