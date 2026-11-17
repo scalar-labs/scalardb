@@ -180,6 +180,16 @@ public interface RdbEngineStrategy {
   }
 
   /**
+   * Returns whether importing a table also checks the database encoding, on engines whose column
+   * character sets do not reflect the encoding that string parameters go through.
+   *
+   * @return {@code true} if {@link #getDatabaseEncodingIssue} applies to imported tables
+   */
+  default boolean checksDatabaseEncodingOnImport() {
+    return false;
+  }
+
+  /**
    * Returns the database collation when it is not binary, on engines whose columns cannot declare
    * their own collation.
    *

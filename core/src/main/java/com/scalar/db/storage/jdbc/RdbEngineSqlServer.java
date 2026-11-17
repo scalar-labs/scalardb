@@ -479,6 +479,11 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   }
 
   @Override
+  public boolean checksDatabaseEncodingOnImport() {
+    return true;
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }

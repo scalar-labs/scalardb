@@ -713,6 +713,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             TableMetadata tableMetadata = builder.build();
             if (columnCollationEnabled) {
               warnAboutImportedTextColumns(connection, namespace, table, tableMetadata);
+              if (rdbEngine.checksDatabaseEncodingOnImport()
+                  && tableMetadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
+                warnAboutDatabaseTextSettings(connection, namespace, table);
+              }
             }
             return tableMetadata;
           });
