@@ -7903,6 +7903,66 @@ public class JdbcAdminTest {
             eq(false));
   }
 
+  private void importSingleTextColumnTable(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException, ExecutionException {
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("varchar");
+    when(metadata.getPrimaryKeys(any(), any(), eq(TABLE))).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(any(), any(), eq(TABLE), eq("%"))).thenReturn(columnResults);
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    doNothing().when(adminSpy).createMetadataSchemaIfNotExists(any());
+    doNothing().when(adminSpy).createNamespacesTableIfNotExists(any());
+    doNothing().when(adminSpy).upsertIntoNamespacesTable(any(), anyString());
+    doNothing()
+        .when(adminSpy)
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+  }
+
+  @Test
+  public void importTable_ForSqlServer_ShouldCheckDatabaseEncoding()
+      throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineSqlServer());
+
+    // Act
+    importSingleTextColumnTable(rdbEngineStrategy);
+
+    // Assert
+    verify(rdbEngineStrategy).getDatabaseEncodingIssue(connection);
+  }
+
+  @Test
+  public void importTable_ForMysql_ShouldNotCheckDatabaseEncoding()
+      throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+
+    // Act
+    importSingleTextColumnTable(rdbEngineStrategy);
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
+  }
+
   private TableMetadata textTableMetadata() {
     return TableMetadata.newBuilder()
         .addPartitionKey("pk")
