@@ -1,0 +1,72 @@
+name: Bench unit tests
+
+on:
+  push:
+    branches:
+      - speed-up-unit-test-bench
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v6.2.0
+        with:
+          java-version: 8
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.4.1
+
+      - name: Runner info
+        run: |
+          nproc
+          lscpu | grep -E "Model name|^CPU\(s\)"
+          free -g
+
+      - name: Run benchmarks
+        run: |
+          set -u
+          declare -A SHA=(
+            [0-master]=5063d9e93
+            [1-timeout]=133ab4c63
+            [2-forks]=dffb19f46
+            [3-forks-parallel]=53dda1229
+          )
+          for s in "${!SHA[@]}"; do git worktree add -q "../$s" "${SHA[$s]}"; done
+          for s in 0-master 1-timeout 2-forks 3-forks-parallel; do
+            (cd "../$s" && ./gradlew check buildSrc:check > "$RUNNER_TEMP/warmup-$s.log" 2>&1)
+            echo "warm-up $s exit $?"
+          done
+          echo "| round | setup | scenario | seconds | exit |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          for round in 1 2; do
+            for s in 0-master 1-timeout 2-forks 3-forks-parallel; do
+              for scenario in tests-only main-code; do
+                if [ "$scenario" = tests-only ]; then
+                  args="check buildSrc:check test --rerun"
+                else
+                  args="clean check buildSrc:check --no-build-cache"
+                fi
+                start=$(date +%s)
+                (cd "../$s" && ./gradlew $args > "$RUNNER_TEMP/$round-$s-$scenario.log" 2>&1)
+                rc=$?
+                end=$(date +%s)
+                line="| $round | $s | $scenario | $((end - start)) | $rc |"
+                echo "$line"
+                echo "$line" >> "$GITHUB_STEP_SUMMARY"
+              done
+            done
+          done
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-logs
+          path: ${{ runner.temp }}/*.log
