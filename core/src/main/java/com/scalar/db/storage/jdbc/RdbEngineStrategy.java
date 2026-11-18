@@ -38,8 +38,18 @@ public interface RdbEngineStrategy {
 
   boolean isDuplicateTableError(SQLException e);
 
-  default boolean isExtendedMaxStringSizeRequiredError(SQLException e) {
+  default boolean isCollationClauseRejectedError(SQLException e) {
     return false;
+  }
+
+  /**
+   * Throws if the exception is caused by the database rejecting a column collation clause.
+   *
+   * @param e the exception that a DDL statement raised
+   * @throws SQLException if the database rejected a column collation clause
+   */
+  default void throwIfCollationClauseRejectedError(SQLException e) throws SQLException {
+    // Do nothing
   }
 
   boolean isDuplicateKeyError(SQLException e);
@@ -113,25 +123,24 @@ public interface RdbEngineStrategy {
    *
    * @return {@code true} if a column collation clause depends on a database-level setting
    */
-  default boolean collationClauseRequiresExtendedStringSize() {
+  default boolean collationClauseNeedsDatabaseSetting() {
     return false;
   }
 
   /**
-   * Returns whether the database rejects every column collation clause, as Oracle does when
-   * MAX_STRING_SIZE is STANDARD.
+   * Throws an exception if the database rejects every column collation clause.
    *
    * @param connection the connection to read the database setting with
-   * @return {@code true} if a column collation clause fails on this database
-   * @throws SQLException if reading the database setting fails
+   * @throws SQLException if a column collation clause fails on this database, or if reading the
+   *     database setting fails
    */
-  default boolean rejectsCollationClauses(Connection connection) throws SQLException {
-    return false;
+  default void throwIfCollationClausesRejected(Connection connection) throws SQLException {
+    // Do nothing
   }
 
   /**
    * Returns the collation that columns of the schema get when they declare none. It is read only
-   * when {@link #collationClauseRequiresExtendedStringSize()} returns {@code true}, so an engine
+   * when {@link #collationClauseNeedsDatabaseSetting()} returns {@code true}, so an engine
    * overrides it together with that method.
    *
    * @param connection the connection to read the catalog with

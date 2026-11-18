@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +14,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,8 +23,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -280,24 +280,24 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void isExtendedMaxStringSizeRequiredError_Ora43929_ShouldReturnTrue() {
+  public void isCollationClauseRejectedError_Ora43929_ShouldReturnTrue() {
     // Arrange
     SQLException e = new SQLException("ORA-43929", "99999", 43929);
 
     // Act
-    boolean actual = rdbEngineOracle.isExtendedMaxStringSizeRequiredError(e);
+    boolean actual = rdbEngineOracle.isCollationClauseRejectedError(e);
 
     // Assert
     assertThat(actual).isTrue();
   }
 
   @Test
-  public void isExtendedMaxStringSizeRequiredError_OtherCode_ShouldReturnFalse() {
+  public void isCollationClauseRejectedError_OtherCode_ShouldReturnFalse() {
     // Arrange
     SQLException e = new SQLException("ORA-00942", "42000", 942);
 
     // Act
-    boolean actual = rdbEngineOracle.isExtendedMaxStringSizeRequiredError(e);
+    boolean actual = rdbEngineOracle.isCollationClauseRejectedError(e);
 
     // Assert
     assertThat(actual).isFalse();
@@ -449,19 +449,42 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void collationClauseRequiresExtendedStringSize_ShouldReturnTrue() {
+  public void collationClauseNeedsDatabaseSetting_ShouldReturnTrue() {
     // Act
-    boolean actual = rdbEngineOracle.collationClauseRequiresExtendedStringSize();
+    boolean actual = rdbEngineOracle.collationClauseNeedsDatabaseSetting();
 
     // Assert
     assertThat(actual).isTrue();
   }
 
-  @ParameterizedTest
-  @CsvSource({"STANDARD,true", "EXTENDED,false"})
-  public void rejectsCollationClauses_ShouldReadMaxStringSizeFromDatabaseProperties(
-      String maxStringSize, boolean expected) throws SQLException {
+  @Test
+  public void throwIfCollationClausesRejected_MaxStringSizeStandard_ShouldThrowMaxStringSizeError()
+      throws SQLException {
     // Arrange
+    Connection connection = mockMaxStringSize("STANDARD");
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> rdbEngineOracle.throwIfCollationClausesRejected(connection));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+  }
+
+  @Test
+  public void throwIfCollationClausesRejected_MaxStringSizeExtended_ShouldNotThrow()
+      throws SQLException {
+    // Arrange
+    Connection connection = mockMaxStringSize("EXTENDED");
+
+    // Act Assert
+    assertThatCode(() -> rdbEngineOracle.throwIfCollationClausesRejected(connection))
+        .doesNotThrowAnyException();
+  }
+
+  private Connection mockMaxStringSize(String maxStringSize) throws SQLException {
     Connection connection = mock(Connection.class);
     PreparedStatement ps = mock(PreparedStatement.class);
     ResultSet rs = mock(ResultSet.class);
@@ -471,12 +494,33 @@ class RdbEngineOracleTest {
     when(ps.executeQuery()).thenReturn(rs);
     when(rs.next()).thenReturn(true);
     when(rs.getString(1)).thenReturn(maxStringSize);
+    return connection;
+  }
+
+  @Test
+  public void throwIfCollationClauseRejectedError_Ora43929_ShouldThrowMaxStringSizeError() {
+    // Arrange
+    SQLException e = new SQLException("ORA-43929", "99999", 43929);
 
     // Act
-    boolean actual = rdbEngineOracle.rejectsCollationClauses(connection);
+    Throwable thrown = catchThrowable(() -> rdbEngineOracle.throwIfCollationClauseRejectedError(e));
 
     // Assert
-    assertThat(actual).isEqualTo(expected);
+    assertThat(thrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage())
+        .hasCause(e);
+    assertThat(((SQLException) thrown).getErrorCode()).isEqualTo(43929);
+  }
+
+  @Test
+  public void throwIfCollationClauseRejectedError_OtherCode_ShouldNotThrow() {
+    // Arrange
+    SQLException e = new SQLException("ORA-00942", "42000", 942);
+
+    // Act Assert
+    assertThatCode(() -> rdbEngineOracle.throwIfCollationClauseRejectedError(e))
+        .doesNotThrowAnyException();
   }
 
   @Test

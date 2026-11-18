@@ -219,9 +219,20 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isExtendedMaxStringSizeRequiredError(SQLException e) {
+  public boolean isCollationClauseRejectedError(SQLException e) {
     // ORA-43929: Collation cannot be used in the current MAX_STRING_SIZE setting
     return e.getErrorCode() == 43929;
+  }
+
+  @Override
+  public void throwIfCollationClauseRejectedError(SQLException e) throws SQLException {
+    if (isCollationClauseRejectedError(e)) {
+      throw new SQLException(
+          CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage(),
+          e.getSQLState(),
+          e.getErrorCode(),
+          e);
+    }
   }
 
   @Override
@@ -499,19 +510,22 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean collationClauseRequiresExtendedStringSize() {
+  public boolean collationClauseNeedsDatabaseSetting() {
     return true;
   }
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
-  public boolean rejectsCollationClauses(Connection connection) throws SQLException {
+  public void throwIfCollationClausesRejected(Connection connection) throws SQLException {
     // Every user can read DATABASE_PROPERTIES, unlike V$PARAMETER
     String sql =
         "SELECT PROPERTY_VALUE FROM DATABASE_PROPERTIES WHERE PROPERTY_NAME = 'MAX_STRING_SIZE'";
     try (PreparedStatement ps = connection.prepareStatement(sql);
         ResultSet rs = ps.executeQuery()) {
-      return rs.next() && "STANDARD".equals(rs.getString(1));
+      if (rs.next() && "STANDARD".equals(rs.getString(1))) {
+        throw new SQLException(
+            CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+      }
     }
   }
 
