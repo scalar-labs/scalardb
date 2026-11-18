@@ -21,7 +21,6 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -35,14 +34,14 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   // warns that "the same locale name may have different behavior on different platforms when
   // using the libc provider". The builtin C.UTF-8 and PG_UNICODE_FAST locales order by code point
   // on every platform. https://www.postgresql.org/docs/18/locale.html
-  private static final Set<String> BINARY_COLLATIONS =
+  private static final ImmutableSet<String> BINARY_COLLATIONS =
       ImmutableSet.of(
           "\"pg_catalog\".\"C\"",
           "\"pg_catalog\".\"POSIX\"",
           "\"pg_catalog\".\"ucs_basic\"",
           "\"pg_catalog\".\"pg_c_utf8\"",
           "\"pg_catalog\".\"pg_unicode_fast\"");
-  private static final Set<String> BINARY_DATABASE_COLLATIONS =
+  private static final ImmutableSet<String> BINARY_DATABASE_COLLATIONS =
       ImmutableSet.of(
           "libc:C", "libc:POSIX", "builtin:C", "builtin:C.UTF-8", "builtin:PG_UNICODE_FAST");
   private final RdbEngineTimeTypePostgresql timeTypeEngine;
@@ -499,7 +498,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
 
   @Override
   public String computeBooleanValue(boolean value) {
-    return value ? "true" : "false";
+    return Boolean.toString(value);
   }
 
   @Override
