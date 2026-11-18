@@ -7980,7 +7980,11 @@ public class JdbcAdminTest {
       throws SQLException, ExecutionException {
     // Arrange
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
-    doReturn(true).when(rdbEngineStrategy).rejectsCollationClauses(any());
+    doThrow(
+            new SQLException(
+                CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage()))
+        .when(rdbEngineStrategy)
+        .throwIfCollationClausesRejected(any());
     JdbcAdmin adminSpy = spyAdminForSingleTextColumnImport(rdbEngineStrategy);
 
     // Act Assert
@@ -8001,14 +8005,18 @@ public class JdbcAdminTest {
     // Arrange
     when(config.isColumnCollationEnabled()).thenReturn(false);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
-    doReturn(true).when(rdbEngineStrategy).rejectsCollationClauses(any());
+    doThrow(
+            new SQLException(
+                CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage()))
+        .when(rdbEngineStrategy)
+        .throwIfCollationClausesRejected(any());
     JdbcAdmin adminSpy = spyAdminForSingleTextColumnImport(rdbEngineStrategy);
 
     // Act
     adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
 
     // Assert
-    verify(rdbEngineStrategy, never()).rejectsCollationClauses(any());
+    verify(rdbEngineStrategy, never()).throwIfCollationClausesRejected(any());
     verify(adminSpy).addTableMetadata(any(), eq(NAMESPACE), eq(TABLE), any(), eq(true), eq(false));
   }
 

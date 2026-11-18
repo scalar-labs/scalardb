@@ -296,7 +296,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     // A COLLATE clause needs MAX_STRING_SIZE=EXTENDED on Oracle, so a key that already gets the
     // schema's default collation declares none when the setting is off.
     String schemaDefault =
-        !columnCollationEnabled && rdbEngine.collationClauseRequiresExtendedStringSize()
+        !columnCollationEnabled && rdbEngine.collationClauseNeedsDatabaseSetting()
             ? rdbEngine.getSchemaDefaultCollation(connection, namespace)
             : null;
     ImmutableMap.Builder<String, String> clauses = ImmutableMap.builder();
@@ -850,9 +850,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           connection -> {
             // The transaction admin adds a TEXT column right after the import, and a registered
             // table cannot be imported again, so the import fails before registering the table
-            if (columnCollationEnabled && rdbEngine.rejectsCollationClauses(connection)) {
-              throw new SQLException(
-                  CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+            if (columnCollationEnabled) {
+              rdbEngine.throwIfCollationClausesRejected(connection);
             }
             createMetadataSchemaIfNotExists(connection);
             createNamespacesTableIfNotExists(connection);
@@ -1910,7 +1909,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       if (rdbEngine.isDuplicateTableError(e)) {
         return;
       }
-      if (rdbEngine.isExtendedMaxStringSizeRequiredError(e)
+      if (rdbEngine.isCollationClauseRejectedError(e)
           && internalTableExists(connection, rdbEngine, schema, table, requiresExplicitCommit)) {
         return;
       }
@@ -2029,13 +2028,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               return null;
             });
       } catch (SQLException e) {
-        if (rdbEngine.isExtendedMaxStringSizeRequiredError(e)) {
-          throw new SQLException(
-              CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage(),
-              e.getSQLState(),
-              e.getErrorCode(),
-              e);
-        }
+        rdbEngine.throwIfCollationClauseRejectedError(e);
         throw e;
       }
 
