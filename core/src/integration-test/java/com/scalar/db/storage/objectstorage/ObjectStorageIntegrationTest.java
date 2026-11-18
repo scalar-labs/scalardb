@@ -1,8 +1,11 @@
 package com.scalar.db.storage.objectstorage;
 
 import com.scalar.db.api.DistributedStorageIntegrationTestBase;
+import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.Disabled;
@@ -31,6 +34,11 @@ public class ObjectStorageIntegrationTest extends DistributedStorageIntegrationT
   @Override
   protected Map<String, String> getCreationOptions() {
     return ObjectStorageEnv.getCreationOptions();
+  }
+
+  @Override
+  protected void putRecords(List<Put> puts) throws ExecutionException {
+    ObjectStorageTestUtils.putRecordsPerPartition(storage, puts);
   }
 
   @Override

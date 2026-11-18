@@ -71,6 +71,12 @@ public class ConditionChecker implements MutationConditionVisitor {
     // A condition without expressions is rejected rather than read as an existence check
     isValid = !expressions.isEmpty();
     for (ConditionalExpression expression : expressions) {
+      if (expression.getOperator() == Operator.LIKE
+          || expression.getOperator() == Operator.NOT_LIKE) {
+        // No storage evaluates pattern matching in a conditional write.
+        isValid = false;
+        break;
+      }
       if (expression.getOperator() == Operator.IS_NULL
           || expression.getOperator() == Operator.IS_NOT_NULL) {
         // the value must be null if the operator is 'is null' or `is not null`

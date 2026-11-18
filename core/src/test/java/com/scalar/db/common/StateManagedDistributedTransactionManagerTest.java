@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -290,6 +291,17 @@ public class StateManagedDistributedTransactionManagerTest {
     }
 
     @Test
+    public void commit_AfterCommitFailed_ShouldThrowIllegalStateException()
+        throws TransactionException {
+      // Arrange
+      doThrow(CommitException.class).when(wrappedTransaction).commit();
+      assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
+
+      // Act Assert
+      assertThatThrownBy(() -> transaction.commit()).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     public void commit_AfterRollback_ShouldThrowIllegalStateException() throws RollbackException {
       // Arrange
       transaction.rollback();
@@ -307,24 +319,30 @@ public class StateManagedDistributedTransactionManagerTest {
     }
 
     @Test
-    public void rollback_AfterCommitFailed_ShouldNotThrowAnyException()
-        throws CommitException, UnknownTransactionStatusException {
+    public void
+        rollback_AfterCommitFailed_ShouldNotThrowAnyExceptionAndNotCallWrappedTransactionRollback()
+            throws TransactionException {
       // Arrange
       doThrow(CommitException.class).when(wrappedTransaction).commit();
       assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
 
       // Act Assert
       assertThatCode(() -> transaction.rollback()).doesNotThrowAnyException();
+
+      verify(wrappedTransaction, never()).rollback();
     }
 
     @Test
-    public void rollback_AfterCommit_ShouldThrowIllegalStateException()
-        throws CommitException, UnknownTransactionStatusException {
+    public void
+        rollback_AfterCommit_ShouldNotThrowAnyExceptionAndNotCallWrappedTransactionRollback()
+            throws TransactionException {
       // Arrange
       transaction.commit();
 
       // Act Assert
-      assertThatThrownBy(() -> transaction.rollback()).isInstanceOf(IllegalStateException.class);
+      assertThatCode(() -> transaction.rollback()).doesNotThrowAnyException();
+
+      verify(wrappedTransaction, never()).rollback();
     }
 
     @Test
@@ -348,24 +366,29 @@ public class StateManagedDistributedTransactionManagerTest {
     }
 
     @Test
-    public void abort_AfterCommitFailed_ShouldNotThrowAnyException()
-        throws CommitException, UnknownTransactionStatusException {
+    public void
+        abort_AfterCommitFailed_ShouldNotThrowAnyExceptionAndNotCallWrappedTransactionAbort()
+            throws TransactionException {
       // Arrange
       doThrow(CommitException.class).when(wrappedTransaction).commit();
       assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
 
       // Act Assert
       assertThatCode(() -> transaction.abort()).doesNotThrowAnyException();
+
+      verify(wrappedTransaction, never()).abort();
     }
 
     @Test
-    public void abort_AfterCommit_ShouldThrowIllegalStateException()
-        throws CommitException, UnknownTransactionStatusException {
+    public void abort_AfterCommit_ShouldNotThrowAnyExceptionAndNotCallWrappedTransactionAbort()
+        throws TransactionException {
       // Arrange
       transaction.commit();
 
       // Act Assert
-      assertThatThrownBy(() -> transaction.abort()).isInstanceOf(IllegalStateException.class);
+      assertThatCode(() -> transaction.abort()).doesNotThrowAnyException();
+
+      verify(wrappedTransaction, never()).abort();
     }
 
     @Test

@@ -185,7 +185,7 @@ class KeyUtilsTest {
   /** Tests that creating a clustering key from an empty set returns an empty Optional. */
   @Test
   void createClusteringKeyFromSource_withEmptyClusteringKeySet_shouldReturnEmpty() {
-    Optional<Key> key = KeyUtils.createClusteringKeyFromSource(Collections.EMPTY_SET, null, null);
+    Optional<Key> key = KeyUtils.createClusteringKeyFromSource(Collections.emptySet(), null, null);
     assertEquals(Optional.empty(), key);
   }
 

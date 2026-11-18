@@ -1,7 +1,9 @@
 package com.scalar.db.common;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -14,6 +16,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.RollbackException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -53,8 +56,7 @@ class GlobalTransactionBackedDistributedTransactionTest {
   }
 
   @Test
-  void commit_WhenEndingTheBranchConflicts_ShouldThrowCommitConflictAndNotCommit()
-      throws Exception {
+  void commit_WhenEndingTheBranchConflicts_ShouldRollBackAndThrowCommitConflict() throws Exception {
     CrudConflictException cause = new CrudConflictException("conflict", TX_ID);
     doThrow(cause).when(branch).end(BranchTransaction.Status.SUCCESS);
 
@@ -63,10 +65,11 @@ class GlobalTransactionBackedDistributedTransactionTest {
         .isInstanceOf(CommitConflictException.class)
         .hasCause(cause);
     verify(global, never()).commit();
+    verify(global).rollback();
   }
 
   @Test
-  void commit_WhenEndingTheBranchFails_ShouldThrowCommitExceptionAndNotCommit() throws Exception {
+  void commit_WhenEndingTheBranchFails_ShouldRollBackAndThrowCommitException() throws Exception {
     CrudException cause = new CrudException("failed", TX_ID);
     doThrow(cause).when(branch).end(BranchTransaction.Status.SUCCESS);
 
@@ -75,6 +78,36 @@ class GlobalTransactionBackedDistributedTransactionTest {
         .isNotInstanceOf(CommitConflictException.class)
         .hasCause(cause);
     verify(global, never()).commit();
+    verify(global).rollback();
+  }
+
+  @Test
+  void commit_WhenEndingTheBranchThrowsIllegalState_ShouldRollBackAndRethrow() throws Exception {
+    IllegalStateException cause = new IllegalStateException("A scanner is still open");
+    doThrow(cause).when(branch).end(BranchTransaction.Status.SUCCESS);
+
+    // A commit ends the transaction whatever its outcome, and a rollback after it does nothing, so
+    // the failed commit ends the branch with FAILURE and rolls the transaction back itself.
+    assertThatThrownBy(transaction::commit).isSameAs(cause);
+    InOrder inOrder = inOrder(branch, global);
+    inOrder.verify(branch).end(BranchTransaction.Status.SUCCESS);
+    inOrder.verify(branch).end(BranchTransaction.Status.FAILURE);
+    inOrder.verify(global).rollback();
+    verify(global, never()).commit();
+  }
+
+  @Test
+  void commit_WhenEndingTheBranchAndRollingBackFail_ShouldThrowWithRollbackFailureSuppressed()
+      throws Exception {
+    CrudException cause = new CrudException("failed", TX_ID);
+    RollbackException rollbackFailure = new RollbackException("rollback failed", TX_ID);
+    doThrow(cause).when(branch).end(BranchTransaction.Status.SUCCESS);
+    doThrow(rollbackFailure).when(global).rollback();
+
+    // The rollback's failure is attached to the commit's failure rather than displacing it.
+    Throwable thrown = catchThrowable(transaction::commit);
+    assertThat(thrown).isInstanceOf(CommitException.class).hasCause(cause);
+    assertThat(thrown.getSuppressed()).containsExactly(rollbackFailure);
   }
 
   @Test

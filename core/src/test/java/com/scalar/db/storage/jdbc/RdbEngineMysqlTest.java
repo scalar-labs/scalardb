@@ -5,13 +5,40 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.Column;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextColumn;
+import com.scalar.db.storage.jdbc.query.QueryBuilder;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class RdbEngineMysqlTest {
+
+  private static final TableMetadata ROW_ALIAS_TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn("p1", DataType.TEXT)
+          .addColumn("c1", DataType.TEXT)
+          .addColumn("v1", DataType.TEXT)
+          .addColumn("v2", DataType.TEXT)
+          .addPartitionKey("p1")
+          .addClusteringKey("c1")
+          .build();
 
   private RdbEngineMysql rdbEngineMysql;
 
@@ -145,5 +172,99 @@ class RdbEngineMysqlTest {
     String result = rdbEngineMysql.adjustJdbcUrl("jdbc:mysql://localhost:3306/");
     assertThat(result).isEqualTo("jdbc:mysql://localhost:3306/?permitMysqlScheme=true");
     assertThat(result).doesNotContain("wrapperTargetDriverDialect");
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "5.7.44, false",
+    "8.0.18, false",
+    "8.0.19, true",
+    "8.0.45-0ubuntu0.22.04.1, true",
+    "8.4.3, true",
+    "9.1.0, true",
+    "11.4.2-MariaDB, false",
+    "'', false"
+  })
+  void supportsInsertRowAlias_ShouldBeTrueFromMysql8019AndFalseForMariaDb(
+      String productVersion, boolean expected) throws SQLException {
+    // Arrange
+    DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+    when(metaData.getDatabaseProductVersion()).thenReturn(productVersion);
+
+    // Act Assert
+    assertThat(RdbEngineMysql.supportsInsertRowAlias(metaData)).isEqualTo(expected);
+  }
+
+  @Test
+  void buildUpsertQuery_WithRowAliasSupported_ShouldReadRowAliasAndBindEachValueOnce()
+      throws SQLException {
+    // Arrange
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    Map<String, Column<?>> columns = new LinkedHashMap<>();
+    columns.put("v1", TextColumn.of("v1", "v1Value"));
+    columns.put("v2", TextColumn.of("v2", "v2Value"));
+
+    // Act
+    UpsertQuery query =
+        new QueryBuilder(engine)
+            .upsertInto("ns", "tbl", ROW_ALIAS_TABLE_METADATA)
+            .values(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")), columns)
+            .build();
+    query.bind(preparedStatement);
+
+    // Assert
+    assertThat(query.sql())
+        .isEqualTo(
+            "INSERT INTO `ns`.`tbl` (`p1`,`c1`,`v1`,`v2`) VALUES (?,?,?,?) AS `new`"
+                + " ON DUPLICATE KEY UPDATE `v1`=`new`.`v1`,`v2`=`new`.`v2`");
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v1Value");
+    verify(preparedStatement).setString(4, "v2Value");
+    verifyNoMoreInteractions(preparedStatement);
+  }
+
+  @Test
+  void buildUpsertQuery_WithRowAliasSupportedAndTableNamedNew_ShouldUseAnotherRowAlias() {
+    // Arrange
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+
+    // Act
+    String sql =
+        new QueryBuilder(engine)
+            .upsertInto("ns", "NEW", ROW_ALIAS_TABLE_METADATA)
+            .values(
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
+                Collections.singletonMap("v1", TextColumn.of("v1", "v1Value")))
+            .build()
+            .sql();
+
+    // Assert
+    assertThat(sql)
+        .isEqualTo(
+            "INSERT INTO `ns`.`NEW` (`p1`,`c1`,`v1`) VALUES (?,?,?) AS `new_row`"
+                + " ON DUPLICATE KEY UPDATE `v1`=`new_row`.`v1`");
+  }
+
+  @Test
+  void buildUpsertQuery_WithRowAliasSupportedAndNoValueColumns_ShouldInsertIgnore() {
+    // Arrange
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+
+    // Act
+    String sql =
+        new QueryBuilder(engine)
+            .upsertInto("ns", "tbl", ROW_ALIAS_TABLE_METADATA)
+            .values(
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
+                Collections.emptyMap())
+            .build()
+            .sql();
+
+    // Assert
+    assertThat(sql).isEqualTo("INSERT IGNORE INTO `ns`.`tbl` (`p1`,`c1`) VALUES (?,?)");
   }
 }

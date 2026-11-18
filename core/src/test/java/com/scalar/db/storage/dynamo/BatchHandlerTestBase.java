@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -176,5 +177,19 @@ public abstract class BatchHandlerTestBase {
         .isEqualTo(getFullTableName());
     assertThat(capturedRequest.transactItems().get(1).delete().tableName())
         .isEqualTo(getFullTableName());
+  }
+
+  @Test
+  void handle_SdkClientExceptionThrown_ShouldThrowExecutionException() {
+    // Arrange
+    SdkClientException toThrow = SdkClientException.create("message");
+    doThrow(toThrow).when(client).transactWriteItems(any(TransactWriteItemsRequest.class));
+    Put put1 = preparePut();
+    Put put2 = preparePut();
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(toThrow);
   }
 }

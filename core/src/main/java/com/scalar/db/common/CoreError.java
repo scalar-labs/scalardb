@@ -222,12 +222,6 @@ public enum CoreError implements ScalarDbError {
       Category.USER_ERROR, "0042", "Invalid ID specified. ID: %d", "", ""),
   TRANSACTION_NOT_ACTIVE(
       Category.USER_ERROR, "0043", "The transaction is not active. Status: %s", "", ""),
-  TRANSACTION_ALREADY_COMMITTED(
-      Category.USER_ERROR,
-      "0044",
-      "The transaction has already been committed. Status: %s",
-      "",
-      ""),
   TRANSACTION_NOT_PREPARED(
       Category.USER_ERROR, "0045", "The transaction has not been prepared. Status: %s", "", ""),
   TRANSACTION_NOT_PREPARED_OR_VALIDATED(
@@ -1507,6 +1501,12 @@ public enum CoreError implements ScalarDbError {
       Category.INTERNAL_ERROR,
       "0069",
       "Recovering the record failed. Table: %s; Partition Key: %s; Clustering Key: %s; Details: %s",
+      "",
+      ""),
+  DYNAMO_MUTATION_OUTCOME_UNKNOWN_AFTER_RETRY(
+      Category.INTERNAL_ERROR,
+      "0070",
+      "The mutation may have been applied because the AWS SDK retried the request, so its outcome is unknown. Details: %s",
       "",
       ""),
 

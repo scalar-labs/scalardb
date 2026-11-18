@@ -152,12 +152,10 @@ public class StateManagedDistributedTransactionManager
 
     @Override
     public void rollback() throws RollbackException {
-      if (status == Status.ROLLED_BACK) {
+      // A commit ends the transaction whatever its outcome, so only an active transaction has
+      // anything to roll back
+      if (status != Status.ACTIVE) {
         return;
-      }
-      if (status == Status.COMMITTED) {
-        throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED.buildMessage(status));
       }
       try {
         super.rollback();
@@ -168,12 +166,10 @@ public class StateManagedDistributedTransactionManager
 
     @Override
     public void abort() throws AbortException {
-      if (status == Status.ROLLED_BACK) {
+      // A commit ends the transaction whatever its outcome, so only an active transaction has
+      // anything to abort
+      if (status != Status.ACTIVE) {
         return;
-      }
-      if (status == Status.COMMITTED) {
-        throw new IllegalStateException(
-            CoreError.TRANSACTION_ALREADY_COMMITTED.buildMessage(status));
       }
       try {
         super.abort();

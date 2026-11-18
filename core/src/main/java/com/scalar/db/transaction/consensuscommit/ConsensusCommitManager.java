@@ -31,6 +31,7 @@ import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -104,10 +105,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
-    commit = createCommitHandler(config, storageInfoProvider);
-    isolation = config.getIsolation();
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    commit = createCommitHandler(config, storageInfoProvider, virtualTableInfoManager);
+    isolation = config.getIsolation();
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager,
@@ -145,10 +146,10 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             config.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
     StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
-    commit = createCommitHandler(config, storageInfoProvider);
-    isolation = config.getIsolation();
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
+    commit = createCommitHandler(config, storageInfoProvider, virtualTableInfoManager);
+    isolation = config.getIsolation();
     operationChecker =
         new ConsensusCommitOperationChecker(
             tableMetadataManager,
@@ -203,7 +204,9 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
 
   // `groupCommitter` must be set before calling this method.
   private CommitHandler createCommitHandler(
-      ConsensusCommitConfig config, StorageInfoProvider storageInfoProvider) {
+      ConsensusCommitConfig config,
+      StorageInfoProvider storageInfoProvider,
+      VirtualTableInfoManager virtualTableInfoManager) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(storageInfoProvider);
     if (isGroupCommitEnabled()) {
       return new CommitHandlerWithGroupCommit(
@@ -211,6 +214,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
@@ -223,6 +227,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
@@ -417,17 +422,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           throw e;
         }
 
-        try {
-          transaction.commit();
-        } catch (CommitConflictException e) {
-          rollbackTransaction(transaction);
-          throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
-        } catch (UnknownTransactionStatusException e) {
-          throw e;
-        } catch (TransactionException e) {
-          rollbackTransaction(transaction);
-          throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
-        }
+        commitTransaction(transaction);
       }
     };
   }
@@ -544,20 +539,30 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
       throws CrudException, UnknownTransactionStatusException {
     DistributedTransaction transaction = beginOneOperation(readOnly, attributes);
 
+    R result;
     try {
-      R result = throwableFunction.apply(transaction);
-      transaction.commit();
-      return result;
+      result = throwableFunction.apply(transaction);
     } catch (CrudException e) {
       rollbackTransaction(transaction);
       throw e;
-    } catch (CommitConflictException e) {
-      rollbackTransaction(transaction);
-      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
-    } catch (UnknownTransactionStatusException e) {
-      throw e;
     } catch (TransactionException e) {
       rollbackTransaction(transaction);
+      throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    }
+
+    commitTransaction(transaction);
+    return result;
+  }
+
+  private void commitTransaction(DistributedTransaction transaction)
+      throws CrudException, UnknownTransactionStatusException {
+    // A commit ends the transaction whatever its outcome, so a failed commit leaves nothing to
+    // roll back
+    try {
+      transaction.commit();
+    } catch (CommitConflictException e) {
+      throw new CrudConflictException(e.getMessage(), e, e.getTransactionId().orElse(null));
+    } catch (CommitException e) {
       throw new CrudException(e.getMessage(), e, e.getTransactionId().orElse(null));
     }
   }

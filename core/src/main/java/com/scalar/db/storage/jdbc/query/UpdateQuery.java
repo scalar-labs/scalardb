@@ -53,9 +53,30 @@ public class UpdateQuery implements Query {
   }
 
   private String makeSetSqlString() {
+    if (columns.isEmpty()) {
+      // A conditional put that specifies only primary key values has no column to set, but an
+      // UPDATE statement needs at least one assignment. Assign a column to itself so that the
+      // statement leaves the values unchanged and is still a write to the matched row
+      String column = rdbEngine.enclose(getSelfAssignmentColumnName());
+      return column + "=" + column;
+    }
     return columns.keySet().stream()
         .map(n -> rdbEngine.enclose(n) + "=?")
         .collect(Collectors.joining(","));
+  }
+
+  private String getSelfAssignmentColumnName() {
+    // Prefer a non-primary-key column because some databases restrict or specially handle updates
+    // to primary key columns. For example, Spanner rejects an update to a primary key column even
+    // when the value does not change. A primary key column is used only when the table has no
+    // other column
+    for (String columnName : tableMetadata.getColumnNames()) {
+      if (!tableMetadata.getPartitionKeyNames().contains(columnName)
+          && !tableMetadata.getClusteringKeyNames().contains(columnName)) {
+        return columnName;
+      }
+    }
+    return tableMetadata.getPartitionKeyNames().iterator().next();
   }
 
   private String makeConditionSqlString() {

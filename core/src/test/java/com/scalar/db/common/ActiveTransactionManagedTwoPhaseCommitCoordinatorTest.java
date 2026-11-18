@@ -2,17 +2,16 @@ package com.scalar.db.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -205,41 +204,27 @@ class ActiveTransactionManagedTwoPhaseCommitCoordinatorTest {
   }
 
   @Test
-  void sweep_WhenProbeThrowsError_ShouldAbortThePassAndKeepEntries() throws Exception {
-    // An Error is deliberately not mapped to a liveness answer: it aborts the current pass. The
-    // entries stay registered - nothing is reaped or leaked - and the scheduler wrapper is the
-    // one to log it and retry on the next interval.
-    when(participant.hasTransactionContext(TX)).thenThrow(new LinkageError("boom"));
-    coordinator.begin(null, false, Collections.emptyMap());
-    coordinator.enlist(TX, participant);
-    forceExpire(TX);
-
-    assertThatThrownBy(coordinator::sweep).isInstanceOf(LinkageError.class);
-
-    verify(delegate, never()).releaseTransactionContext(any());
-    assertThat(registry.get(TX)).isPresent();
-  }
-
-  @Test
-  void sweepSafely_WhenProbeThrowsError_ShouldNotPropagateAndKeepEntriesForRetry()
+  void sweepSafely_WhenReleasingContextThrows_ShouldNotPropagateAndKeepEntriesForRetry()
       throws Exception {
-    // The scheduler's safety net: anything escaping a scheduled task suppresses every future run
-    // silently, so the wrapper must swallow even an Error, leaving the entries registered for the
-    // next interval's retry. Narrowing its catch to Exception would break exactly this.
-    when(participant.hasTransactionContext(TX)).thenThrow(new LinkageError("boom"));
+    // The scheduler's safety net: an exception escaping a scheduled task suppresses every future
+    // run silently, so the wrapper must swallow it, leaving the entries registered for the next
+    // interval's retry.
+    when(participant.hasTransactionContext(TX)).thenReturn(false);
+    doThrow(new IllegalStateException("boom"))
+        .doNothing()
+        .when(delegate)
+        .releaseTransactionContext(TX);
     coordinator.begin(null, false, Collections.emptyMap());
     coordinator.enlist(TX, participant);
     forceExpire(TX);
 
     assertThatCode(coordinator::sweepSafely).doesNotThrowAnyException();
-    verify(delegate, never()).releaseTransactionContext(any());
     assertThat(registry.get(TX)).isPresent();
 
-    // The entry is still expired (the aborted pass extended nothing), so the next pass retries
-    // the probe; the participant now answers definitively and the transaction is reaped.
-    doReturn(false).when(participant).hasTransactionContext(TX);
+    // The entry is still expired (the failed pass extended nothing), so the next pass retries and
+    // reaps the transaction.
     coordinator.sweepSafely();
-    verify(delegate).releaseTransactionContext(TX);
+    verify(delegate, times(2)).releaseTransactionContext(TX);
     assertThat(registry.get(TX)).isEmpty();
   }
 

@@ -2,23 +2,39 @@ package com.scalar.db.storage.objectstorage.s3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.storage.objectstorage.ConflictOccurredException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperException;
 import com.scalar.db.storage.objectstorage.ObjectStorageWrapperResponse;
 import com.scalar.db.storage.objectstorage.PreconditionFailedException;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -39,8 +55,10 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
 public class S3WrapperTest {
@@ -236,7 +254,7 @@ public class S3WrapperTest {
   public void insert_S3ExceptionWith412Thrown_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(412).build());
+    failedFuture.completeExceptionally(s3Exception(412, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -249,7 +267,7 @@ public class S3WrapperTest {
   public void insert_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    failedFuture.completeExceptionally(s3Exception(409, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -295,7 +313,7 @@ public class S3WrapperTest {
   public void update_S3ExceptionWith412Thrown_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(412).build());
+    failedFuture.completeExceptionally(s3Exception(412, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -308,7 +326,7 @@ public class S3WrapperTest {
   public void update_S3ExceptionWith404Thrown_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(404).build());
+    failedFuture.completeExceptionally(s3Exception(404, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -321,7 +339,7 @@ public class S3WrapperTest {
   public void update_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<PutObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    failedFuture.completeExceptionally(s3Exception(409, 1));
     when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
         .thenReturn(failedFuture);
 
@@ -364,7 +382,7 @@ public class S3WrapperTest {
   public void delete_NonExistingObjectKeyGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(404).build());
+    failedFuture.completeExceptionally(s3Exception(404, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -376,7 +394,7 @@ public class S3WrapperTest {
   public void delete_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    failedFuture.completeExceptionally(s3Exception(409, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -419,7 +437,7 @@ public class S3WrapperTest {
       delete_WithVersion_NonExistingObjectKeyGiven_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(404).build());
+    failedFuture.completeExceptionally(s3Exception(404, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -431,7 +449,7 @@ public class S3WrapperTest {
   public void delete_WithVersion_S3ExceptionWith412Thrown_ShouldThrowPreconditionFailedException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(412).build());
+    failedFuture.completeExceptionally(s3Exception(412, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -443,7 +461,7 @@ public class S3WrapperTest {
   public void delete_WithVersion_S3ExceptionWith409Thrown_ShouldThrowConflictOccurredException() {
     // Arrange
     CompletableFuture<DeleteObjectResponse> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(409).build());
+    failedFuture.completeExceptionally(s3Exception(409, 1));
     when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture);
 
     // Act & Assert
@@ -464,39 +482,241 @@ public class S3WrapperTest {
   }
 
   @Test
+  public void
+      insert_S3ExceptionWith412ThrownWithoutNumAttempts_ShouldThrowPreconditionFailedException() {
+    // Arrange
+    S3Exception toThrow =
+        (S3Exception) S3Exception.builder().message("message").statusCode(412).build();
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isInstanceOf(PreconditionFailedException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      insert_S3ExceptionWith412ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(412, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      insert_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.insert(ANY_OBJECT_KEY, ANY_DATA))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      update_S3ExceptionWith412ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(412, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      update_S3ExceptionWith404ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(404, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      update_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.update(ANY_OBJECT_KEY, ANY_DATA, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_S3ExceptionWith404ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(404, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_S3ExceptionWith404ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(404, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_S3ExceptionWith412ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(412, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
+  public void
+      delete_WithVersion_S3ExceptionWith409ThrownAfterResent_ShouldThrowObjectStorageWrapperExceptionForUnknownOutcome() {
+    // Arrange
+    S3Exception toThrow = s3Exception(409, 2);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act & Assert
+    assertThatCode(() -> wrapper.delete(ANY_OBJECT_KEY, ANY_ETAG))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasCause(toThrow);
+  }
+
+  @Test
   public void deleteByPrefix_PrefixGiven_ShouldDeleteAllObjectsWithThePrefix() throws Exception {
     // Arrange
     String objectKey1 = ANY_PREFIX + "test1/object1";
     String objectKey2 = ANY_PREFIX + "test1/object2";
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey1, objectKey2)));
+
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
+
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
+
+    // Assert
+    ArgumentCaptor<ListObjectsV2Request> listRequestCaptor =
+        ArgumentCaptor.forClass(ListObjectsV2Request.class);
+    verify(client).listObjectsV2(listRequestCaptor.capture());
+    assertThat(listRequestCaptor.getValue().bucket()).isEqualTo(BUCKET);
+    assertThat(listRequestCaptor.getValue().prefix()).isEqualTo(ANY_PREFIX);
+    assertThat(listRequestCaptor.getValue().continuationToken()).isNull();
+
+    ArgumentCaptor<DeleteObjectsRequest> deleteRequestCaptor =
+        ArgumentCaptor.forClass(DeleteObjectsRequest.class);
+    verify(client).deleteObjects(deleteRequestCaptor.capture());
+    assertThat(deleteRequestCaptor.getValue().bucket()).isEqualTo(BUCKET);
+    assertThat(deleteRequestCaptor.getValue().delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly(objectKey1, objectKey2);
+  }
+
+  @Test
+  public void deleteByPrefix_MultiplePagesGiven_ShouldDeleteObjectsPageByPage() throws Exception {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
     String objectKey3 = ANY_PREFIX + "test2/object3";
+    String continuationToken = "token";
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                listResponse(continuationToken, objectKey1, objectKey2)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey3)));
 
-    S3Object s3Object1 = mock(S3Object.class);
-    S3Object s3Object2 = mock(S3Object.class);
-    S3Object s3Object3 = mock(S3Object.class);
-    when(s3Object1.key()).thenReturn(objectKey1);
-    when(s3Object2.key()).thenReturn(objectKey2);
-    when(s3Object3.key()).thenReturn(objectKey3);
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
 
-    // Mock paginated responses with 2 pages
-    ListObjectsV2Response response1 = mock(ListObjectsV2Response.class);
-    ListObjectsV2Response response2 = mock(ListObjectsV2Response.class);
-    when(response1.contents()).thenReturn(Arrays.asList(s3Object1, s3Object2));
-    when(response2.contents()).thenReturn(Collections.singletonList(s3Object3));
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
 
-    // Mock the paginator
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
+    // Assert
+    ArgumentCaptor<ListObjectsV2Request> listRequestCaptor =
+        ArgumentCaptor.forClass(ListObjectsV2Request.class);
+    verify(client, times(2)).listObjectsV2(listRequestCaptor.capture());
+    assertThat(listRequestCaptor.getAllValues())
+        .extracting(
+            ListObjectsV2Request::bucket,
+            ListObjectsV2Request::prefix,
+            ListObjectsV2Request::continuationToken)
+        .containsExactly(
+            tuple(BUCKET, ANY_PREFIX, null), tuple(BUCKET, ANY_PREFIX, continuationToken));
 
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer))
-        .thenAnswer(
-            invocation -> {
-              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
-              actualConsumer.accept(response1);
-              actualConsumer.accept(response2);
-              return CompletableFuture.completedFuture(null);
-            });
+    ArgumentCaptor<DeleteObjectsRequest> deleteRequestCaptor =
+        ArgumentCaptor.forClass(DeleteObjectsRequest.class);
+    verify(client, times(2)).deleteObjects(deleteRequestCaptor.capture());
+    List<DeleteObjectsRequest> deleteRequests = deleteRequestCaptor.getAllValues();
+    assertThat(deleteRequests.get(0).delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly(objectKey1, objectKey2);
+    assertThat(deleteRequests.get(1).delete().objects())
+        .extracting(ObjectIdentifier::key)
+        .containsExactly(objectKey3);
+  }
+
+  @Test
+  public void deleteByPrefix_ObjectsMoreThanBatchDeleteSizeLimitGiven_ShouldDeleteThemInBatches()
+      throws Exception {
+    // Arrange
+    String[] objectKeys = new String[S3Wrapper.BATCH_DELETE_SIZE_LIMIT + 1];
+    for (int i = 0; i < objectKeys.length; i++) {
+      objectKeys[i] = ANY_PREFIX + "object" + i;
+    }
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKeys)));
 
     DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
     when(client.deleteObjects(any(DeleteObjectsRequest.class)))
@@ -508,72 +728,125 @@ public class S3WrapperTest {
     // Assert
     ArgumentCaptor<DeleteObjectsRequest> requestCaptor =
         ArgumentCaptor.forClass(DeleteObjectsRequest.class);
-    verify(client, org.mockito.Mockito.times(2)).deleteObjects(requestCaptor.capture());
-
-    // Verify that all objects were deleted across the two calls
-    List<DeleteObjectsRequest> capturedRequests = requestCaptor.getAllValues();
-    assertThat(capturedRequests).hasSize(2);
-
-    // First page: should delete object1 and object2
-    DeleteObjectsRequest firstRequest = capturedRequests.get(0);
-    assertThat(firstRequest.bucket()).isEqualTo(BUCKET);
-    assertThat(firstRequest.delete().objects()).hasSize(2);
-    assertThat(firstRequest.delete().objects())
+    verify(client, times(2)).deleteObjects(requestCaptor.capture());
+    List<DeleteObjectsRequest> requests = requestCaptor.getAllValues();
+    assertThat(requests.get(0).delete().objects())
         .extracting(ObjectIdentifier::key)
-        .containsExactlyInAnyOrder(objectKey1, objectKey2);
-
-    // Second page: should delete object3
-    DeleteObjectsRequest secondRequest = capturedRequests.get(1);
-    assertThat(secondRequest.bucket()).isEqualTo(BUCKET);
-    assertThat(secondRequest.delete().objects()).hasSize(1);
-    assertThat(secondRequest.delete().objects())
+        .containsExactly(Arrays.copyOfRange(objectKeys, 0, S3Wrapper.BATCH_DELETE_SIZE_LIMIT));
+    assertThat(requests.get(1).delete().objects())
         .extracting(ObjectIdentifier::key)
-        .containsExactly(objectKey3);
+        .containsExactly(objectKeys[S3Wrapper.BATCH_DELETE_SIZE_LIMIT]);
+  }
+
+  @Test
+  public void deleteByPrefix_ListingCompletedOnThreadOfAwsSdk_ShouldNotWaitForDeletionOnIt()
+      throws Exception {
+    // The single thread plays the role of the threads of the AWS SDK, so waiting for the deletion
+    // on it never ends
+    ExecutorService sdkExecutor = Executors.newSingleThreadExecutor();
+    try {
+      // Arrange
+      ListObjectsV2Response response = listResponse(null, ANY_PREFIX + "test1/object1");
+      when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+          .thenAnswer(invocation -> CompletableFuture.supplyAsync(() -> response, sdkExecutor));
+
+      DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+      when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+          .thenAnswer(
+              invocation ->
+                  CompletableFuture.supplyAsync(() -> deleteObjectsResponse, sdkExecutor));
+
+      // Act Assert
+      assertTimeoutPreemptively(Duration.ofSeconds(10), () -> wrapper.deleteByPrefix(ANY_PREFIX));
+      verify(client).deleteObjects(any(DeleteObjectsRequest.class));
+    } finally {
+      sdkExecutor.shutdownNow();
+    }
   }
 
   @Test
   public void deleteByPrefix_NoObjectsWithPrefix_ShouldDoNothing() throws Exception {
     // Arrange
-    // Mock paginated response with no objects
-    ListObjectsV2Response response = mock(ListObjectsV2Response.class);
-    when(response.contents()).thenReturn(Collections.emptyList());
-
-    // Mock the paginator
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
-
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer))
-        .thenAnswer(
-            invocation -> {
-              Consumer<ListObjectsV2Response> actualConsumer = invocation.getArgument(0);
-              actualConsumer.accept(response);
-              return CompletableFuture.completedFuture(null);
-            });
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null)));
 
     // Act
     wrapper.deleteByPrefix(ANY_PREFIX);
 
     // Assert
-    verify(client, org.mockito.Mockito.never()).deleteObjects(any(DeleteObjectsRequest.class));
+    verify(client, never()).deleteObjects(any(DeleteObjectsRequest.class));
+  }
+
+  @Test
+  public void deleteByPrefix_DeletionFailedForSomeObjects_ShouldRetryThemIndividually()
+      throws Exception {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey1, objectKey2)));
+
+    // The request succeeds, but the deletion of object2 fails
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(deleteObjectsResponse.errors())
+        .thenReturn(
+            Collections.singletonList(
+                S3Error.builder().key(objectKey2).code("SlowDown").message("Any Error").build()));
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
+
+    when(client.deleteObject(any(DeleteObjectRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(DeleteObjectResponse.builder().build()));
+
+    // Act
+    wrapper.deleteByPrefix(ANY_PREFIX);
+
+    // Assert
+    ArgumentCaptor<DeleteObjectRequest> requestCaptor =
+        ArgumentCaptor.forClass(DeleteObjectRequest.class);
+    verify(client).deleteObject(requestCaptor.capture());
+    assertThat(requestCaptor.getValue().bucket()).isEqualTo(BUCKET);
+    assertThat(requestCaptor.getValue().key()).isEqualTo(objectKey2);
+    assertThat(requestCaptor.getValue().ifMatch()).isNull();
+  }
+
+  @Test
+  public void
+      deleteByPrefix_RetryOfFailedDeletionFailed_ShouldThrowObjectStorageWrapperException() {
+    // Arrange
+    String objectKey1 = ANY_PREFIX + "test1/object1";
+    String objectKey2 = ANY_PREFIX + "test1/object2";
+    when(client.listObjectsV2(any(ListObjectsV2Request.class)))
+        .thenReturn(CompletableFuture.completedFuture(listResponse(null, objectKey1, objectKey2)));
+
+    // The request succeeds, but the deletion of object2 fails
+    DeleteObjectsResponse deleteObjectsResponse = mock(DeleteObjectsResponse.class);
+    when(deleteObjectsResponse.errors())
+        .thenReturn(
+            Collections.singletonList(
+                S3Error.builder().key(objectKey2).code("SlowDown").message("Any Error").build()));
+    when(client.deleteObjects(any(DeleteObjectsRequest.class)))
+        .thenReturn(CompletableFuture.completedFuture(deleteObjectsResponse));
+
+    S3Exception toThrow = s3Exception(403, 1);
+    when(client.deleteObject(any(DeleteObjectRequest.class))).thenReturn(failedFuture(toThrow));
+
+    // Act Assert
+    assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX))
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasRootCause(toThrow);
   }
 
   @Test
   public void deleteByPrefix_S3ExceptionThrown_ShouldThrowObjectStorageWrapperException() {
     // Arrange
-    ListObjectsV2Publisher paginator = mock(ListObjectsV2Publisher.class);
-    when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class))).thenReturn(paginator);
-
-    CompletableFuture<Void> failedFuture = new CompletableFuture<>();
-    failedFuture.completeExceptionally(S3Exception.builder().statusCode(500).build());
-    @SuppressWarnings("unchecked")
-    Consumer<ListObjectsV2Response> consumer = any(Consumer.class);
-    when(paginator.subscribe(consumer)).thenReturn(failedFuture);
+    S3Exception toThrow = s3Exception(500, 1);
+    when(client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(failedFuture(toThrow));
 
     // Act & Assert
     assertThatCode(() -> wrapper.deleteByPrefix(ANY_PREFIX))
-        .isInstanceOf(ObjectStorageWrapperException.class);
+        .isExactlyInstanceOf(ObjectStorageWrapperException.class)
+        .hasRootCause(toThrow);
   }
 
   @Test
@@ -585,5 +858,123 @@ public class S3WrapperTest {
 
     // Assert
     verify(client).close();
+  }
+
+  @Test
+  public void buildMultipartConfiguration_MultipartUploadOptionsGiven_ShouldBuildProperly() {
+    // Arrange
+    when(config.getMultipartUploadPartSizeBytes()).thenReturn(Optional.of(5242880L));
+    when(config.getMultipartUploadThresholdSizeBytes()).thenReturn(Optional.of(10485760L));
+    when(config.getMultipartUploadMaxConcurrency()).thenReturn(Optional.of(4));
+
+    // Act
+    MultipartConfiguration multipartConfiguration = S3Wrapper.buildMultipartConfiguration(config);
+
+    // Assert
+    assertThat(multipartConfiguration.minimumPartSizeInBytes()).isEqualTo(5242880L);
+    assertThat(multipartConfiguration.thresholdInBytes()).isEqualTo(10485760L);
+    assertThat(multipartConfiguration.parallelConfiguration()).isNotNull();
+    assertThat(multipartConfiguration.parallelConfiguration().maxInFlightParts()).isEqualTo(4);
+  }
+
+  @Test
+  public void buildMultipartConfiguration_NoMultipartUploadOptionsGiven_ShouldLeaveThemUnset() {
+    // Arrange
+    when(config.getMultipartUploadPartSizeBytes()).thenReturn(Optional.empty());
+    when(config.getMultipartUploadThresholdSizeBytes()).thenReturn(Optional.empty());
+    when(config.getMultipartUploadMaxConcurrency()).thenReturn(Optional.empty());
+
+    // Act
+    MultipartConfiguration multipartConfiguration = S3Wrapper.buildMultipartConfiguration(config);
+
+    // Assert
+    assertThat(multipartConfiguration.minimumPartSizeInBytes()).isNull();
+    assertThat(multipartConfiguration.thresholdInBytes()).isNull();
+    assertThat(multipartConfiguration.parallelConfiguration()).isNull();
+  }
+
+  @Test
+  public void get_MultipartUploadMaxConcurrencyGiven_ShouldNotLimitConcurrencyOfGets()
+      throws Exception {
+    // Arrange
+    int getCount = 4;
+    when(config.getUsername()).thenReturn("username");
+    when(config.getPassword()).thenReturn("password");
+    // Set it to 1 so that the gets would be sent one by one if this option limited the whole
+    // HTTP client
+    when(config.getMultipartUploadMaxConcurrency()).thenReturn(Optional.of(1));
+
+    // A fake S3 server that holds each get until it is released
+    CountDownLatch allGetsArrived = new CountDownLatch(getCount);
+    CountDownLatch release = new CountDownLatch(1);
+    HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+    ExecutorService serverExecutor = Executors.newCachedThreadPool();
+    server.setExecutor(serverExecutor);
+    server.createContext(
+        "/",
+        exchange -> {
+          allGetsArrived.countDown();
+          Uninterruptibles.awaitUninterruptibly(release);
+          exchange.getResponseHeaders().add("ETag", "\"" + ANY_ETAG + "\"");
+          exchange.sendResponseHeaders(200, -1);
+          exchange.close();
+        });
+    server.start();
+
+    ExecutorService clientExecutor = Executors.newFixedThreadPool(getCount);
+    S3Wrapper s3Wrapper =
+        new S3Wrapper(
+            config,
+            S3Wrapper.createClient(
+                config, URI.create("http://localhost:" + server.getAddress().getPort())));
+    try {
+      // Act
+      List<Future<Optional<ObjectStorageWrapperResponse>>> futures = new ArrayList<>();
+      for (int i = 0; i < getCount; i++) {
+        futures.add(clientExecutor.submit(() -> s3Wrapper.get(ANY_OBJECT_KEY)));
+      }
+
+      // Assert
+      // All the gets can arrive at the server at the same time only if they are not limited
+      assertThat(allGetsArrived.await(10, TimeUnit.SECONDS)).isTrue();
+      release.countDown();
+      for (Future<Optional<ObjectStorageWrapperResponse>> future : futures) {
+        assertThat(future.get(10, TimeUnit.SECONDS)).isPresent();
+      }
+    } finally {
+      release.countDown();
+      clientExecutor.shutdownNow();
+      s3Wrapper.close();
+      server.stop(0);
+      serverExecutor.shutdownNow();
+    }
+  }
+
+  private static S3Exception s3Exception(int statusCode, int numAttempts) {
+    return (S3Exception)
+        S3Exception.builder()
+            .message("message")
+            .statusCode(statusCode)
+            .numAttempts(numAttempts)
+            .build();
+  }
+
+  private static <T> CompletableFuture<T> failedFuture(Throwable throwable) {
+    CompletableFuture<T> future = new CompletableFuture<>();
+    future.completeExceptionally(throwable);
+    return future;
+  }
+
+  private static ListObjectsV2Response listResponse(
+      @Nullable String nextContinuationToken, String... objectKeys) {
+    List<S3Object> contents = new ArrayList<>();
+    for (String objectKey : objectKeys) {
+      contents.add(S3Object.builder().key(objectKey).build());
+    }
+    return ListObjectsV2Response.builder()
+        .contents(contents)
+        .isTruncated(nextContinuationToken != null)
+        .nextContinuationToken(nextContinuationToken)
+        .build();
   }
 }

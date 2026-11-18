@@ -82,7 +82,7 @@ class SplitByDataChunkImportLoggerTest {
           Collections.singletonList(
               ImportTaskResult.builder()
                   .rowNumber(i)
-                  .targets(Collections.EMPTY_LIST)
+                  .targets(Collections.emptyList())
                   .rawRecord(OBJECT_MAPPER.createObjectNode())
                   .build());
       ImportTransactionBatchResult result =

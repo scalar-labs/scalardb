@@ -161,6 +161,7 @@ public class MutationConditionsValidatorTest {
     assertWithSingleConditionForPutIfAndDeleteIf(Operator.EQ, -1, false, false);
     assertWithSingleConditionForPutIfAndDeleteIf(Operator.NE, 0, false, false);
     assertWithSingleConditionForPutIfAndDeleteIf(Operator.NE, -1, false, true);
+    assertWithSingleConditionForPutIfAndDeleteIf(Operator.NE, -1, true, false);
     assertWithSingleConditionForPutIfAndDeleteIf(Operator.GT, null, true, false);
     assertWithSingleConditionForPutIfAndDeleteIf(Operator.GT, -1, false, false);
     assertWithSingleConditionForPutIfAndDeleteIf(Operator.GT, 0, false, false);
@@ -223,7 +224,8 @@ public class MutationConditionsValidatorTest {
     for (Mutation mutation : prepareMutationOperations(ImmutableList.of(conditionalExpression))) {
       if (isExistingRecordColumnNull) {
         when(existingRecordColumn.hasNullValue()).thenReturn(true);
-      } else if (compareResult != null) {
+      }
+      if (compareResult != null) {
         // mock the comparison between the existing record column and the condition column
         when(existingRecordColumn.compareTo(any())).thenReturn(compareResult);
       }

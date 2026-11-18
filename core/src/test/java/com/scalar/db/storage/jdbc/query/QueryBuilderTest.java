@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc.query;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionBuilder;
@@ -23,6 +24,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -1163,6 +1166,100 @@ public class QueryBuilderTest {
 
   @ParameterizedTest
   @EnumSource(RdbEngine.class)
+  public void updateQueryTest_WithoutColumnsToSet_ShouldAssignNonPrimaryKeyColumnToItself(
+      RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    UpdateQuery query;
+    PreparedStatement preparedStatement;
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, TABLE_METADATA)
+            .set(Collections.emptyMap())
+            .where(Key.ofText("p1", "p1Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("UPDATE n1.t1 SET v1=v1 WHERE p1=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verifyNoMoreInteractions(preparedStatement);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, TABLE_METADATA)
+            .set(Collections.emptyMap())
+            .where(
+                Key.of("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(Key.of("c1", "c1Value", "c2", "c2Value")))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql("UPDATE n1.t1 SET v1=v1 WHERE p1=? AND p2=? AND c1=? AND c2=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verifyNoMoreInteractions(preparedStatement);
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, TABLE_METADATA)
+            .set(Collections.emptyMap())
+            .where(
+                Key.ofText("p1", "p1Value"),
+                Optional.of(Key.ofText("c1", "c1Value")),
+                Arrays.asList(
+                    ConditionBuilder.column("v2").isEqualToText("v2ConditionValue"),
+                    ConditionBuilder.column("v3").isNullText()))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "UPDATE n1.t1 SET v1=v1 WHERE p1=? AND c1=? AND v2=? AND v3 IS NULL", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v2ConditionValue");
+    verifyNoMoreInteractions(preparedStatement);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void
+      updateQueryTest_WithoutColumnsToSetForTableWithOnlyPrimaryKeyColumns_ShouldAssignPartitionKeyColumnToItself(
+          RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("p1", DataType.TEXT)
+            .addColumn("c1", DataType.TEXT)
+            .addPartitionKey("p1")
+            .addClusteringKey("c1")
+            .build();
+
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    UpdateQuery query =
+        queryBuilder
+            .update(NAMESPACE, TABLE, tableMetadata)
+            .set(Collections.emptyMap())
+            .where(Key.ofText("p1", "p1Value"), Optional.of(Key.ofText("c1", "c1Value")))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("UPDATE n1.t1 SET p1=p1 WHERE p1=? AND c1=?", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verifyNoMoreInteractions(preparedStatement);
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
   public void deleteQueryTest(RdbEngine rdbEngineType) throws SQLException {
     RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
@@ -1291,14 +1388,10 @@ public class QueryBuilderTest {
       case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"
-                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
+                + " ON DUPLICATE KEY UPDATE v1=VALUES(v1),v2=VALUES(v2),v3=VALUES(v3)";
         break;
       case POSTGRESQL:
       case YUGABYTE:
-        expectedQuery =
-            "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?) "
-                + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
-        break;
       case SPANNER:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?) "
@@ -1306,26 +1399,29 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? v1,? v2,? v3 FROM DUAL) t2 "
+                + "ON (t1.p1=t2.p1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3 "
+                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (t2.p1,t2.v1,t2.v2,t2.v3)";
         break;
       case DB2:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM SYSIBM.DUAL) t2 ON (t1.p1=t2.p1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? v1,? v2,? v3 FROM SYSIBM.DUAL) t2 "
+                + "ON (t1.p1=t2.p1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3 "
+                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (t2.p1,t2.v1,t2.v2,t2.v3)";
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?);";
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? v1,? v2,? v3) t2 "
+                + "ON (t1.p1=t2.p1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3 "
+                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (t2.p1,t2.v1,t2.v2,t2.v3);";
         break;
       case SQLITE:
         expectedQuery =
             "INSERT INTO \"n1$t1\" (p1,v1,v2,v3) VALUES (?,?,?,?) "
-                + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
+                + "ON CONFLICT (p1) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3";
         break;
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
@@ -1337,41 +1433,11 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQLITE:
-      case YUGABYTE:
-      case MARIADB:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "v1Value");
-        verify(preparedStatement).setString(3, "v2Value");
-        verify(preparedStatement).setString(4, "v3Value");
-        verify(preparedStatement).setString(5, "v1Value");
-        verify(preparedStatement).setString(6, "v2Value");
-        verify(preparedStatement).setString(7, "v3Value");
-        break;
-      case SPANNER:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "v1Value");
-        verify(preparedStatement).setString(3, "v2Value");
-        verify(preparedStatement).setString(4, "v3Value");
-        break;
-      case ORACLE:
-      case SQL_SERVER:
-      case DB2:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "v1Value");
-        verify(preparedStatement).setString(3, "v2Value");
-        verify(preparedStatement).setString(4, "v3Value");
-        verify(preparedStatement).setString(5, "p1Value");
-        verify(preparedStatement).setString(6, "v1Value");
-        verify(preparedStatement).setString(7, "v2Value");
-        verify(preparedStatement).setString(8, "v3Value");
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "v1Value");
+    verify(preparedStatement).setString(3, "v2Value");
+    verify(preparedStatement).setString(4, "v3Value");
+    verifyNoMoreInteractions(preparedStatement);
 
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
@@ -1379,14 +1445,10 @@ public class QueryBuilderTest {
       case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"
-                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
+                + " ON DUPLICATE KEY UPDATE v1=VALUES(v1),v2=VALUES(v2),v3=VALUES(v3)";
         break;
       case POSTGRESQL:
       case YUGABYTE:
-        expectedQuery =
-            "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
-                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
-        break;
       case SPANNER:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
@@ -1394,29 +1456,32 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1,? v1,? v2,? v3 FROM DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3 "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) "
+                + "VALUES (t2.p1,t2.c1,t2.v1,t2.v2,t2.v3)";
         break;
       case DB2:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM SYSIBM.DUAL) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1,? v1,? v2,? v3 FROM SYSIBM.DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3 "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) "
+                + "VALUES (t2.p1,t2.c1,t2.v1,t2.v2,t2.v3)";
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1,? v1,? v2,? v3) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?);";
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3 "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) "
+                + "VALUES (t2.p1,t2.c1,t2.v1,t2.v2,t2.v3);";
         break;
       case SQLITE:
         expectedQuery =
             "INSERT INTO \"n1$t1\" (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
-                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
+                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3";
         break;
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
@@ -1428,45 +1493,12 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQLITE:
-      case YUGABYTE:
-      case MARIADB:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "c1Value");
-        verify(preparedStatement).setString(3, "v1Value");
-        verify(preparedStatement).setString(4, "v2Value");
-        verify(preparedStatement).setString(5, "v3Value");
-        verify(preparedStatement).setString(6, "v1Value");
-        verify(preparedStatement).setString(7, "v2Value");
-        verify(preparedStatement).setString(8, "v3Value");
-        break;
-      case SPANNER:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "c1Value");
-        verify(preparedStatement).setString(3, "v1Value");
-        verify(preparedStatement).setString(4, "v2Value");
-        verify(preparedStatement).setString(5, "v3Value");
-        break;
-      case ORACLE:
-      case SQL_SERVER:
-      case DB2:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "c1Value");
-        verify(preparedStatement).setString(3, "v1Value");
-        verify(preparedStatement).setString(4, "v2Value");
-        verify(preparedStatement).setString(5, "v3Value");
-        verify(preparedStatement).setString(6, "p1Value");
-        verify(preparedStatement).setString(7, "c1Value");
-        verify(preparedStatement).setString(8, "v1Value");
-        verify(preparedStatement).setString(9, "v2Value");
-        verify(preparedStatement).setString(10, "v3Value");
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v1Value");
+    verify(preparedStatement).setString(4, "v2Value");
+    verify(preparedStatement).setString(5, "v3Value");
+    verifyNoMoreInteractions(preparedStatement);
 
     columns.put("v4", TextColumn.of("v4", "v4Value"));
     preparedStatement = mock(PreparedStatement.class);
@@ -1475,14 +1507,11 @@ public class QueryBuilderTest {
       case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)"
-                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?";
+                + " ON DUPLICATE KEY UPDATE "
+                + "v1=VALUES(v1),v2=VALUES(v2),v3=VALUES(v3),v4=VALUES(v4)";
         break;
       case POSTGRESQL:
       case YUGABYTE:
-        expectedQuery =
-            "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
-                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
-        break;
       case SPANNER:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
@@ -1490,31 +1519,32 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2,? v1,? v2,? v3,? v4 FROM DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3,v4=t2.v4 "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) "
-                + "VALUES (?,?,?,?,?,?,?,?)";
+                + "VALUES (t2.p1,t2.p2,t2.c1,t2.c2,t2.v1,t2.v2,t2.v3,t2.v4)";
         break;
       case DB2:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM SYSIBM.DUAL) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2,? v1,? v2,? v3,? v4 FROM SYSIBM.DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3,v4=t2.v4 "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) "
-                + "VALUES (?,?,?,?,?,?,?,?)";
+                + "VALUES (t2.p1,t2.p2,t2.c1,t2.c2,t2.v1,t2.v2,t2.v3,t2.v4)";
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2,? v1,? v2,? v3,? v4) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?);";
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3,v4=t2.v4 "
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) "
+                + "VALUES (t2.p1,t2.p2,t2.c1,t2.c2,t2.v1,t2.v2,t2.v3,t2.v4);";
         break;
       case SQLITE:
         expectedQuery =
             "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
-                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3,v4=excluded.v4";
         break;
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
@@ -1529,58 +1559,15 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQLITE:
-      case YUGABYTE:
-      case MARIADB:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        verify(preparedStatement).setString(5, "v1Value");
-        verify(preparedStatement).setString(6, "v2Value");
-        verify(preparedStatement).setString(7, "v3Value");
-        verify(preparedStatement).setString(8, "v4Value");
-        verify(preparedStatement).setString(9, "v1Value");
-        verify(preparedStatement).setString(10, "v2Value");
-        verify(preparedStatement).setString(11, "v3Value");
-        verify(preparedStatement).setString(12, "v4Value");
-        break;
-      case SPANNER:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        verify(preparedStatement).setString(5, "v1Value");
-        verify(preparedStatement).setString(6, "v2Value");
-        verify(preparedStatement).setString(7, "v3Value");
-        verify(preparedStatement).setString(8, "v4Value");
-        break;
-      case ORACLE:
-      case SQL_SERVER:
-      case DB2:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        verify(preparedStatement).setString(5, "v1Value");
-        verify(preparedStatement).setString(6, "v2Value");
-        verify(preparedStatement).setString(7, "v3Value");
-        verify(preparedStatement).setString(8, "v4Value");
-        verify(preparedStatement).setString(9, "p1Value");
-        verify(preparedStatement).setString(10, "p2Value");
-        verify(preparedStatement).setString(11, "c1Value");
-        verify(preparedStatement).setString(12, "c2Value");
-        verify(preparedStatement).setString(13, "v1Value");
-        verify(preparedStatement).setString(14, "v2Value");
-        verify(preparedStatement).setString(15, "v3Value");
-        verify(preparedStatement).setString(16, "v4Value");
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verify(preparedStatement).setString(5, "v1Value");
+    verify(preparedStatement).setString(6, "v2Value");
+    verify(preparedStatement).setString(7, "v3Value");
+    verify(preparedStatement).setString(8, "v4Value");
+    verifyNoMoreInteractions(preparedStatement);
 
     columns.put("v5", TextColumn.ofNull("v5"));
     preparedStatement = mock(PreparedStatement.class);
@@ -1589,14 +1576,11 @@ public class QueryBuilderTest {
       case MARIADB:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?)"
-                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?,v5=?";
+                + " ON DUPLICATE KEY UPDATE "
+                + "v1=VALUES(v1),v2=VALUES(v2),v3=VALUES(v3),v4=VALUES(v4),v5=VALUES(v5)";
         break;
       case POSTGRESQL:
       case YUGABYTE:
-        expectedQuery =
-            "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
-                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
-        break;
       case SPANNER:
         expectedQuery =
             "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
@@ -1604,32 +1588,32 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2,? v1,? v2,? v3,? v4,? v5 FROM DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=? "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3,v4=t2.v4,v5=t2.v5 "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
-                + "VALUES (?,?,?,?,?,?,?,?,?)";
+                + "VALUES (t2.p1,t2.p2,t2.c1,t2.c2,t2.v1,t2.v2,t2.v3,t2.v4,t2.v5)";
         break;
       case DB2:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM SYSIBM.DUAL) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2,? v1,? v2,? v3,? v4,? v5 FROM SYSIBM.DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=? "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3,v4=t2.v4,v5=t2.v5 "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
-                + "VALUES (?,?,?,?,?,?,?,?,?)";
+                + "VALUES (t2.p1,t2.p2,t2.c1,t2.c2,t2.v1,t2.v2,t2.v3,t2.v4,t2.v5)";
         break;
       case SQL_SERVER:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2,? v1,? v2,? v3,? v4,? v5) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=? "
+                + "WHEN MATCHED THEN UPDATE SET v1=t2.v1,v2=t2.v2,v3=t2.v3,v4=t2.v4,v5=t2.v5 "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4,v5) "
-                + "VALUES (?,?,?,?,?,?,?,?,?);";
+                + "VALUES (t2.p1,t2.p2,t2.c1,t2.c2,t2.v1,t2.v2,t2.v3,t2.v4,t2.v5);";
         break;
       case SQLITE:
         expectedQuery =
             "INSERT INTO \"n1$t1\" (p1,p2,c1,c2,v1,v2,v3,v4,v5) VALUES (?,?,?,?,?,?,?,?,?) "
-                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?,v5=?";
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=excluded.v1,v2=excluded.v2,v3=excluded.v3,v4=excluded.v4,v5=excluded.v5";
         break;
       default:
         throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
@@ -1644,63 +1628,42 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQLITE:
-      case YUGABYTE:
-      case MARIADB:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        verify(preparedStatement).setString(5, "v1Value");
-        verify(preparedStatement).setString(6, "v2Value");
-        verify(preparedStatement).setString(7, "v3Value");
-        verify(preparedStatement).setString(8, "v4Value");
-        verify(preparedStatement).setNull(9, Types.VARCHAR);
-        verify(preparedStatement).setString(10, "v1Value");
-        verify(preparedStatement).setString(11, "v2Value");
-        verify(preparedStatement).setString(12, "v3Value");
-        verify(preparedStatement).setString(13, "v4Value");
-        verify(preparedStatement).setNull(14, Types.VARCHAR);
-        break;
-      case SPANNER:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        verify(preparedStatement).setString(5, "v1Value");
-        verify(preparedStatement).setString(6, "v2Value");
-        verify(preparedStatement).setString(7, "v3Value");
-        verify(preparedStatement).setString(8, "v4Value");
-        verify(preparedStatement).setNull(9, Types.VARCHAR);
-        break;
-      case ORACLE:
-      case SQL_SERVER:
-      case DB2:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        verify(preparedStatement).setString(5, "v1Value");
-        verify(preparedStatement).setString(6, "v2Value");
-        verify(preparedStatement).setString(7, "v3Value");
-        verify(preparedStatement).setString(8, "v4Value");
-        verify(preparedStatement).setNull(9, Types.VARCHAR);
-        verify(preparedStatement).setString(10, "p1Value");
-        verify(preparedStatement).setString(11, "p2Value");
-        verify(preparedStatement).setString(12, "c1Value");
-        verify(preparedStatement).setString(13, "c2Value");
-        verify(preparedStatement).setString(14, "v1Value");
-        verify(preparedStatement).setString(15, "v2Value");
-        verify(preparedStatement).setString(16, "v3Value");
-        verify(preparedStatement).setString(17, "v4Value");
-        verify(preparedStatement).setNull(18, Types.VARCHAR);
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verify(preparedStatement).setString(5, "v1Value");
+    verify(preparedStatement).setString(6, "v2Value");
+    verify(preparedStatement).setString(7, "v3Value");
+    verify(preparedStatement).setString(8, "v4Value");
+    verify(preparedStatement).setNull(9, Types.VARCHAR);
+    verifyNoMoreInteractions(preparedStatement);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"POSTGRESQL", "YUGABYTE", "SPANNER"})
+  public void upsertQuery_ForTableNamedExcluded_ShouldAliasTargetTable(RdbEngine rdbEngineType) {
+    // Arrange
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+
+    // Act
+    String sql =
+        new QueryBuilder(rdbEngine)
+            .upsertInto(NAMESPACE, "excluded", TABLE_METADATA)
+            .values(
+                Key.ofText("p1", "p1Value"),
+                Optional.empty(),
+                Collections.singletonMap("v1", TextColumn.of("v1", "v1Value")))
+            .build()
+            .sql();
+
+    // Assert
+    assertThat(sql)
+        .isEqualTo(
+            "INSERT INTO \"n1\".\"excluded\" AS t1 (\"p1\",\"v1\") VALUES (?,?) "
+                + "ON CONFLICT (\"p1\") DO UPDATE SET \"v1\"=excluded.\"v1\"");
   }
 
   @ParameterizedTest
@@ -1727,17 +1690,17 @@ public class QueryBuilderTest {
       case ORACLE:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
+                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (t2.p1)";
         break;
       case DB2:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM SYSIBM.DUAL) t2 ON (t1.p1=t2.p1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
+                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (t2.p1)";
         break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
+                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (t2.p1);";
         break;
       case SQLITE:
         expectedQuery = "INSERT INTO \"n1$t1\" (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
@@ -1752,24 +1715,8 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQLITE:
-      case YUGABYTE:
-      case SPANNER:
-      case MARIADB:
-        verify(preparedStatement).setString(1, "p1Value");
-        break;
-      case ORACLE:
-      case SQL_SERVER:
-      case DB2:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p1Value");
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
+    verify(preparedStatement).setString(1, "p1Value");
+    verifyNoMoreInteractions(preparedStatement);
 
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
@@ -1786,19 +1733,19 @@ public class QueryBuilderTest {
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (t2.p1,t2.c1)";
         break;
       case DB2:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM SYSIBM.DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (t2.p1,t2.c1)";
         break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?);";
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (t2.p1,t2.c1);";
         break;
       case SQLITE:
         expectedQuery = "INSERT INTO \"n1$t1\" (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
@@ -1816,27 +1763,9 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQLITE:
-      case YUGABYTE:
-      case SPANNER:
-      case MARIADB:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "c1Value");
-        break;
-      case ORACLE:
-      case SQL_SERVER:
-      case DB2:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "c1Value");
-        verify(preparedStatement).setString(3, "p1Value");
-        verify(preparedStatement).setString(4, "c1Value");
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verifyNoMoreInteractions(preparedStatement);
 
     preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngineType) {
@@ -1855,19 +1784,19 @@ public class QueryBuilderTest {
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (t2.p1,t2.p2,t2.c1,t2.c2)";
         break;
       case DB2:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM SYSIBM.DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (t2.p1,t2.p2,t2.c1,t2.c2)";
         break;
       case SQL_SERVER:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?);";
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (t2.p1,t2.p2,t2.c1,t2.c2);";
         break;
       case SQLITE:
         expectedQuery =
@@ -1887,36 +1816,28 @@ public class QueryBuilderTest {
             .build();
     assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery, rdbEngine));
     query.bind(preparedStatement);
-    switch (rdbEngineType) {
-      case MYSQL:
-      case POSTGRESQL:
-      case SQLITE:
-      case YUGABYTE:
-      case SPANNER:
-      case MARIADB:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        break;
-      case ORACLE:
-      case SQL_SERVER:
-      case DB2:
-        verify(preparedStatement).setString(1, "p1Value");
-        verify(preparedStatement).setString(2, "p2Value");
-        verify(preparedStatement).setString(3, "c1Value");
-        verify(preparedStatement).setString(4, "c2Value");
-        verify(preparedStatement).setString(5, "p1Value");
-        verify(preparedStatement).setString(6, "p2Value");
-        verify(preparedStatement).setString(7, "c1Value");
-        verify(preparedStatement).setString(8, "c2Value");
-        break;
-      default:
-        throw new AssertionError("Unsupported rdbEngine " + rdbEngine);
-    }
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verifyNoMoreInteractions(preparedStatement);
   }
 
   private String encloseSql(String sql, RdbEngineStrategy rdbEngine) {
+    int orderByIndex = sql.indexOf(" ORDER BY ");
+    if (orderByIndex != -1) {
+      Matcher matcher =
+          Pattern.compile("\\b(p1|p2|c1|c2|v1|v2|v3|v4|v5)\\b")
+              .matcher(sql.substring(orderByIndex));
+      StringBuffer orderBy = new StringBuffer();
+      while (matcher.find()) {
+        matcher.appendReplacement(
+            orderBy,
+            Matcher.quoteReplacement(rdbEngine.getOrderingColumnSql("n1", "t1", matcher.group())));
+      }
+      matcher.appendTail(orderBy);
+      return encloseSql(sql.substring(0, orderByIndex), rdbEngine) + orderBy;
+    }
     return sql.replace("n1.t1", rdbEngine.encloseFullTableName("n1", "t1"))
         .replace("p1", rdbEngine.enclose("p1"))
         .replace("p2", rdbEngine.enclose("p2"))

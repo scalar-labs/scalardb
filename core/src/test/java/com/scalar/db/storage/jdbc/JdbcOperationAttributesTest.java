@@ -13,14 +13,14 @@ public class JdbcOperationAttributesTest {
 
   @Test
   public void
-      isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled_WithoutAttribute_ShouldReturnTrue() {
+      isLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled_WithoutAttribute_ShouldReturnTrue() {
     // Arrange
     Put put =
         Put.newBuilder().namespace("ns").table("tbl").partitionKey(Key.ofInt("pk", 1)).build();
 
     // Act
     boolean result =
-        JdbcOperationAttributes.isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
+        JdbcOperationAttributes.isLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
             put);
 
     // Assert
@@ -29,10 +29,10 @@ public class JdbcOperationAttributesTest {
 
   @Test
   public void
-      isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled_WithTrueAttribute_ShouldReturnTrue() {
+      isLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled_WithTrueAttribute_ShouldReturnTrue() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    JdbcOperationAttributes.setLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
+    JdbcOperationAttributes.setLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
         attributes, true);
 
     Put put =
@@ -45,7 +45,7 @@ public class JdbcOperationAttributesTest {
 
     // Act
     boolean result =
-        JdbcOperationAttributes.isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
+        JdbcOperationAttributes.isLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
             put);
 
     // Assert
@@ -54,10 +54,10 @@ public class JdbcOperationAttributesTest {
 
   @Test
   public void
-      isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled_WithFalseAttribute_ShouldReturnFalse() {
+      isLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled_WithFalseAttribute_ShouldReturnFalse() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
-    JdbcOperationAttributes.setLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
+    JdbcOperationAttributes.setLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
         attributes, false);
 
     Put put =
@@ -70,7 +70,7 @@ public class JdbcOperationAttributesTest {
 
     // Act
     boolean result =
-        JdbcOperationAttributes.isLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
+        JdbcOperationAttributes.isLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
             put);
 
     // Assert
@@ -79,19 +79,19 @@ public class JdbcOperationAttributesTest {
 
   @Test
   public void
-      setLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled_ShouldSetAttributeProperly() {
+      setLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled_ShouldSetAttributeProperly() {
     // Arrange
     Map<String, String> attributes = new HashMap<>();
 
     // Act
-    JdbcOperationAttributes.setLeftOuterVirtualTablePutIfIsNullOnRightColumnsConversionEnabled(
+    JdbcOperationAttributes.setLeftOuterVirtualTablePutTreatingAllNullRightRecordAsAbsentEnabled(
         attributes, false);
 
     // Assert
     assertThat(attributes)
         .containsEntry(
             JdbcOperationAttributes
-                .LEFT_OUTER_VIRTUAL_TABLE_PUT_IF_IS_NULL_ON_RIGHT_COLUMNS_CONVERSION_ENABLED,
+                .LEFT_OUTER_VIRTUAL_TABLE_PUT_TREATING_ALL_NULL_RIGHT_RECORD_AS_ABSENT_ENABLED,
             "false");
   }
 

@@ -29,7 +29,7 @@ public class DataLoaderObjectMapper extends ObjectMapper {
    */
   public DataLoaderObjectMapper() {
     super();
-    this.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    this.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
     this.registerModule(new JavaTimeModule());
   }
 }

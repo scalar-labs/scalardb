@@ -113,4 +113,26 @@ public class TextColumnTest {
     assertThat(column.compareTo(TextColumn.of("col", "aa"))).isGreaterThan(0);
     assertThat(column.compareTo(TextColumn.ofNull("col"))).isGreaterThan(0);
   }
+
+  @Test
+  public void compareTo_SupplementaryCharacterAndCharacterAboveSurrogates_ShouldOrderByCodePoint() {
+    // Arrange
+    TextColumn supplementary = TextColumn.of("col", "\uD83D\uDE00"); // U+1F600
+    TextColumn aboveSurrogates = TextColumn.of("col", "\uFF61"); // U+FF61
+
+    // Act Assert
+    assertThat(supplementary.compareTo(aboveSurrogates)).isGreaterThan(0);
+    assertThat(aboveSurrogates.compareTo(supplementary)).isLessThan(0);
+  }
+
+  @Test
+  public void compareTo_SupplementaryCharacterAndUnpairedHighSurrogate_ShouldOrderByCodePoint() {
+    // Arrange
+    TextColumn supplementary = TextColumn.of("col", "\uD83D\uDE00"); // U+1F600
+    TextColumn unpairedHighSurrogate = TextColumn.of("col", "\uD83D\uE000"); // U+D83D U+E000
+
+    // Act Assert
+    assertThat(supplementary.compareTo(unpairedHighSurrogate)).isGreaterThan(0);
+    assertThat(unpairedHighSurrogate.compareTo(supplementary)).isLessThan(0);
+  }
 }

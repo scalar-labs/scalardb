@@ -69,17 +69,23 @@ public interface DistributedTransaction extends TransactionCrudOperable {
   /**
    * Commits a transaction.
    *
+   * <p>A commit ends the transaction whatever its outcome, including when it throws an exception.
+   * You do not need to roll the transaction back after a failed commit, and a {@link #rollback()}
+   * or {@link #abort()} after a commit does nothing.
+   *
    * @throws CommitConflictException if the transaction fails to commit due to transient faults
    *     (e.g., a conflict error). You can retry the transaction from the beginning
    * @throws CommitException if the transaction fails to commit due to transient or nontransient
    *     faults. You can try retrying the transaction from the beginning, but the transaction may
    *     still fail if the cause is nontransient
-   * @throws UnknownTransactionStatusException if the status of the commit is unknown
+   * @throws UnknownTransactionStatusException if the status of the commit is unknown. The
+   *     transaction has still ended; determine the outcome before deciding how to proceed
    */
   void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
 
   /**
-   * Rolls back a transaction.
+   * Rolls back a transaction. Rolling back a transaction that has already ended, by a commit
+   * whether or not it succeeded, or by a rollback, does nothing.
    *
    * @throws RollbackException if the transaction fails to roll back due to transient or
    *     nontransient faults

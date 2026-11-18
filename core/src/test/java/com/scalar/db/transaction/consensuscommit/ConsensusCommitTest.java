@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -679,7 +681,8 @@ public class ConsensusCommitTest {
     TransactionResult result2 = mock(TransactionResult.class);
     TransactionResult result3 = mock(TransactionResult.class);
 
-    when(crud.get(get, context)).thenReturn(Optional.of(result1));
+    when(crud.batchGet(Collections.singletonList(get), context))
+        .thenReturn(Collections.singletonList(Optional.of(result1)));
     when(crud.scan(scan, context)).thenReturn(Arrays.asList(result2, result3));
 
     // Act
@@ -713,7 +716,7 @@ public class ConsensusCommitTest {
             .enableImplicitPreRead()
             .build();
 
-    verify(crud).get(get, context);
+    verify(crud).batchGet(Collections.singletonList(get), context);
     verify(crud).scan(scan, context);
     verify(crud).put(put, context);
     verify(crud).put(expectedPutFromInsert, context);
@@ -735,6 +738,42 @@ public class ConsensusCommitTest {
     assertThat(results.get(4).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPSERT);
     assertThat(results.get(5).getType()).isEqualTo(CrudOperable.BatchResult.Type.UPDATE);
     assertThat(results.get(6).getType()).isEqualTo(CrudOperable.BatchResult.Type.DELETE);
+  }
+
+  @Test
+  public void batch_ConsecutiveGetsGiven_ShouldCallCrudHandlerBatchGetWithThem()
+      throws CrudException, ExecutionException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_3)).build();
+    Scan scan = prepareScan();
+    Get get3 = Get.newBuilder(get1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4)).build();
+
+    TransactionResult result1 = mock(TransactionResult.class);
+    TransactionResult result2 = mock(TransactionResult.class);
+    TransactionResult result3 = mock(TransactionResult.class);
+
+    when(crud.batchGet(Arrays.asList(get1, get2), context))
+        .thenReturn(Arrays.asList(Optional.of(result1), Optional.empty()));
+    when(crud.scan(scan, context)).thenReturn(Collections.singletonList(result2));
+    when(crud.batchGet(Collections.singletonList(get3), context))
+        .thenReturn(Collections.singletonList(Optional.of(result3)));
+
+    // Act
+    List<CrudOperable.BatchResult> results = consensus.batch(Arrays.asList(get1, get2, scan, get3));
+
+    // Assert
+    verify(crud).batchGet(Arrays.asList(get1, get2), context);
+    verify(crud).scan(scan, context);
+    verify(crud).batchGet(Collections.singletonList(get3), context);
+    verify(operationChecker).check(get1, context);
+    verify(operationChecker).check(get2, context);
+    verify(operationChecker).check(get3, context);
+    assertThat(results).hasSize(4);
+    assertThat(results.get(0).getGetResult()).hasValue(result1);
+    assertThat(results.get(1).getGetResult()).isEmpty();
+    assertThat(results.get(2).getScanResult()).containsExactly(result2);
+    assertThat(results.get(3).getGetResult()).hasValue(result3);
   }
 
   @Test
@@ -966,5 +1005,173 @@ public class ConsensusCommitTest {
     verify(scanner).discard();
     verify(scanner, never()).close();
     verify(groupCommitter).remove(fullKey);
+  }
+
+  private ConsensusCommit createConsensusCommitWithReservedGroupCommitSlot(
+      CoordinatorGroupCommitter groupCommitter) {
+    context =
+        spy(
+            new TransactionContext(
+                ANY_ID,
+                snapshot,
+                Isolation.SNAPSHOT,
+                false,
+                false,
+                /* groupCommitSlotReserved= */ true));
+    return new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
+  }
+
+  @Test
+  public void
+      commit_CrudConflictExceptionThrownByImplicitPreRead_WithReservedSlot_ShouldThrowCommitConflictExceptionAndReleaseResources()
+          throws CrudException {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+    CrudConflictException crudConflictException = mock(CrudConflictException.class);
+    when(crudConflictException.getMessage()).thenReturn("error");
+    doThrow(crudConflictException).when(crud).readIfImplicitPreReadEnabled(context);
+
+    // Act Assert
+    assertThatThrownBy(consensusWithGroupCommit::commit)
+        .isInstanceOf(CommitConflictException.class);
+    verify(context).closeScanners();
+    verify(groupCommitter).remove(ANY_ID);
+  }
+
+  @Test
+  public void
+      commit_CrudExceptionThrownByWaitForRecoveryCompletion_WithReservedSlot_ShouldThrowCommitExceptionAndReleaseResources()
+          throws CrudException {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+    CrudException crudException = mock(CrudException.class);
+    when(crudException.getMessage()).thenReturn("error");
+    doThrow(crudException).when(crud).waitForRecoveryCompletionIfNecessary(context);
+
+    // Act Assert
+    assertThatThrownBy(consensusWithGroupCommit::commit).isInstanceOf(CommitException.class);
+    verify(context).closeScanners();
+    verify(groupCommitter).remove(ANY_ID);
+  }
+
+  @Test
+  public void
+      commit_ScannerNotClosed_WithReservedSlot_ShouldThrowIllegalStateExceptionAndReleaseResources() {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+    ConsensusCommitScanner scanner = mock(ConsensusCommitScanner.class);
+    when(scanner.isClosed()).thenReturn(false);
+    context.scanners.add(scanner);
+
+    // Act Assert
+    assertThatThrownBy(consensusWithGroupCommit::commit).isInstanceOf(IllegalStateException.class);
+    verify(scanner).discard();
+    verify(groupCommitter).remove(ANY_ID);
+  }
+
+  @Test
+  public void
+      commit_CommitExceptionThrownByCommitHandler_WithReservedSlot_ShouldThrowCommitExceptionAndReleaseResources()
+          throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+    CommitException commitException = mock(CommitException.class);
+    doThrow(commitException).when(commit).commit(context);
+
+    // Act Assert
+    assertThatThrownBy(consensusWithGroupCommit::commit).isSameAs(commitException);
+    verify(context).closeScanners();
+    verify(groupCommitter).remove(ANY_ID);
+  }
+
+  @Test
+  public void
+      commit_UnknownTransactionStatusExceptionThrownByCommitHandler_WithReservedSlot_ShouldThrowUnknownTransactionStatusExceptionAndReleaseResources()
+          throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+    UnknownTransactionStatusException unknownTransactionStatusException =
+        mock(UnknownTransactionStatusException.class);
+    doThrow(unknownTransactionStatusException).when(commit).commit(context);
+
+    // Act Assert
+    assertThatThrownBy(consensusWithGroupCommit::commit)
+        .isSameAs(unknownTransactionStatusException);
+    verify(context).closeScanners();
+    verify(groupCommitter).remove(ANY_ID);
+  }
+
+  @Test
+  public void
+      commit_CommitExceptionThrownByCommitHandlerAndGroupCommitterRemoveFails_ShouldThrowOriginalException()
+          throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+    CommitException commitException = mock(CommitException.class);
+    doThrow(commitException).when(commit).commit(context);
+    doThrow(RuntimeException.class).when(groupCommitter).remove(ANY_ID);
+
+    // Act Assert
+    assertThatThrownBy(consensusWithGroupCommit::commit).isSameAs(commitException);
+  }
+
+  @Test
+  public void
+      commit_CommitExceptionThrownByCommitHandler_WithoutReservedSlot_ShouldNotRemoveTxFromGroupCommitter()
+          throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        new ConsensusCommit(context, crud, commit, operationChecker, groupCommitter);
+    doThrow(CommitException.class).when(commit).commit(context);
+
+    // Act Assert
+    assertThatThrownBy(consensusWithGroupCommit::commit).isInstanceOf(CommitException.class);
+    verify(context).closeScanners();
+    verify(groupCommitter, never()).remove(anyString());
+  }
+
+  @Test
+  public void commit_Succeeded_WithReservedSlot_ShouldNotReleaseResources()
+      throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+
+    // Act
+    consensusWithGroupCommit.commit();
+
+    // Assert
+    verify(context, never()).closeScanners();
+    verify(groupCommitter, never()).remove(anyString());
+  }
+
+  @Test
+  public void rollback_WithReservedSlot_ShouldReleaseSlotBeforeDiscardingScanners() {
+    // Arrange
+    CoordinatorGroupCommitter groupCommitter = mock(CoordinatorGroupCommitter.class);
+    ConsensusCommit consensusWithGroupCommit =
+        createConsensusCommitWithReservedGroupCommitSlot(groupCommitter);
+
+    // Act
+    consensusWithGroupCommit.rollback();
+
+    // Assert
+    InOrder inOrder = inOrder(groupCommitter, context);
+    inOrder.verify(groupCommitter).remove(ANY_ID);
+    inOrder.verify(context).closeScanners();
   }
 }

@@ -217,6 +217,33 @@ public class DynamoMutationTest {
   }
 
   @Test
+  public void getConditionBindMap_PutWithNotEqualConditionGiven_ShouldBindNullValueOnce() {
+    // Arrange
+    PutIf conditions =
+        ConditionBuilder.putIf(ConditionBuilder.column(ANY_NAME_3).isNotEqualToInt(ANY_INT_3))
+            .and(ConditionBuilder.column(ANY_NAME_4).isNotEqualToInt(ANY_INT_3))
+            .build();
+    Put put = Put.newBuilder(preparePut()).condition(conditions).build();
+    Map<String, AttributeValue> expected = new HashMap<>();
+    expected.put(
+        DynamoOperation.CONDITION_VALUE_ALIAS + "0",
+        AttributeValue.builder().n(String.valueOf(ANY_INT_3)).build());
+    expected.put(
+        DynamoOperation.CONDITION_VALUE_ALIAS + "1",
+        AttributeValue.builder().n(String.valueOf(ANY_INT_3)).build());
+    expected.put(
+        DynamoOperation.CONDITION_NULL_VALUE_ALIAS, AttributeValue.builder().nul(true).build());
+
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
+
+    // Act
+    Map<String, AttributeValue> actual = dynamoMutation.getConditionBindMap();
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
   public void getValueBindMap_PutWithPutIfExistsGiven_ShouldReturnBindMap() {
     // Arrange
     Put put = Put.newBuilder(preparePut()).condition(ConditionBuilder.putIfExists()).build();

@@ -8,11 +8,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
+import com.scalar.db.io.Key;
+import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
@@ -178,6 +185,78 @@ class RdbEngineFactoryTest {
       // Assert
       assertThat(engine).isInstanceOf(RdbEngineTidb.class);
     }
+  }
+
+  @Test
+  void create_GivenMysqlUrlAndMysql8019OrLaterServer_ShouldBuildUpsertsWithRowAlias()
+      throws SQLException {
+    // Arrange Act
+    RdbEngineStrategy engine = createWithServerVersion("jdbc:mysql://localhost:3306/", "8.0.19");
+
+    // Assert
+    assertThat(upsertSql(engine))
+        .isEqualTo(
+            "INSERT INTO `ns`.`tbl` (`p1`,`v1`) VALUES (?,?) AS `new`"
+                + " ON DUPLICATE KEY UPDATE `v1`=`new`.`v1`");
+  }
+
+  @Test
+  void create_GivenMysqlUrlAndMysqlServerBefore8019_ShouldBuildUpsertsWithValuesFunction()
+      throws SQLException {
+    // Arrange Act
+    RdbEngineStrategy engine = createWithServerVersion("jdbc:mysql://localhost:3306/", "8.0.18");
+
+    // Assert
+    assertThat(upsertSql(engine))
+        .isEqualTo(
+            "INSERT INTO `ns`.`tbl` (`p1`,`v1`) VALUES (?,?)"
+                + " ON DUPLICATE KEY UPDATE `v1`=VALUES(`v1`)");
+  }
+
+  @Test
+  void create_GivenMysqlUrlAndTidbServerReportingMysql8_ShouldBuildUpsertsWithValuesFunction()
+      throws SQLException {
+    // Arrange Act
+    RdbEngineStrategy engine =
+        createWithServerVersion("jdbc:mysql://localhost:4000/", "8.0.11-TiDB-v8.5.0");
+
+    // Assert
+    assertThat(engine).isInstanceOf(RdbEngineTidb.class);
+    assertThat(upsertSql(engine)).endsWith("ON DUPLICATE KEY UPDATE `v1`=VALUES(`v1`)");
+  }
+
+  private static RdbEngineStrategy createWithServerVersion(String jdbcUrl, String productVersion)
+      throws SQLException {
+    JdbcConfig config = configWithUrl(jdbcUrl);
+    HikariDataSource dataSource = mock(HikariDataSource.class);
+    Connection connection = mock(Connection.class);
+    DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.getMetaData()).thenReturn(metaData);
+    when(metaData.getDatabaseProductVersion()).thenReturn(productVersion);
+    try (MockedStatic<JdbcUtils> mocked = mockStatic(JdbcUtils.class)) {
+      mocked
+          .when(() -> JdbcUtils.initDataSourceForAdmin(any(JdbcConfig.class), any()))
+          .thenReturn(dataSource);
+      return RdbEngineFactory.create(config);
+    }
+  }
+
+  private static String upsertSql(RdbEngineStrategy engine) {
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn("p1", DataType.INT)
+            .addColumn("v1", DataType.INT)
+            .addPartitionKey("p1")
+            .build();
+    return new QueryBuilder(engine)
+        .upsertInto("ns", "tbl", metadata)
+        .values(
+            Key.ofInt("p1", 1),
+            Optional.empty(),
+            Collections.singletonMap("v1", IntColumn.of("v1", 1)))
+        .build()
+        .sql();
   }
 
   @Test

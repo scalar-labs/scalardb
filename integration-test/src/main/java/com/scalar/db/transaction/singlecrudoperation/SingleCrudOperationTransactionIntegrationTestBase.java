@@ -231,6 +231,11 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override
   @Test
+  public void batch_ManyGetsGiven_ShouldReturnTheirResultsInOrder() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
   public void
       get_GetWithProjectionOnNonPrimaryKeyColumnsForGivenForCommittedRecord_ShouldReturnOnlyProjectedColumns() {}
 
@@ -427,6 +432,24 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   public void
       update_withUpdateIfWithNonVerifiedCondition_shouldThrowUnsatisfiedConditionException() {}
 
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      put_withPutIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      update_withUpdateIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void
+      delete_withDeleteIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException() {}
+
   @Disabled("Single CRUD operation transactions don't support getState()")
   @Override
   @Test
@@ -446,6 +469,16 @@ public abstract class SingleCrudOperationTransactionIntegrationTestBase
   @Override
   @Test
   public void rollback_forOngoingTransaction_ShouldRollbackCorrectly() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void rollback_AfterCommit_ShouldDoNothing() {}
+
+  @Disabled("Single CRUD operation transactions don't support beginning a transaction")
+  @Override
+  @Test
+  public void abort_AfterCommit_ShouldDoNothing() {}
 
   @Disabled("Single CRUD operation transactions don't support beginning a transaction")
   @Override

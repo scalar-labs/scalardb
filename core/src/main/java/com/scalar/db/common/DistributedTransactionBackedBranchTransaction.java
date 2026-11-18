@@ -30,8 +30,8 @@ import javax.annotation.concurrent.NotThreadSafe;
  * shares (see {@link DistributedTransactionBackedGlobalTransactionManager} for the concurrency
  * implications); the commit/rollback outcome is driven by the owning {@link
  * com.scalar.db.api.GlobalTransaction}. {@link #end(BranchTransaction.Status)} triggers no backing
- * action for this backing — it only marks the branch ended, after which CRUD (or another {@code
- * end}) is rejected with {@link IllegalStateException}.
+ * action for this backing — it only marks the branch ended; see {@link
+ * BranchTransaction#end(BranchTransaction.Status)} for what an ended branch accepts.
  *
  * <p>Operations must be fully qualified with their namespace and table; this handle carries no
  * default target. See {@link DistributedTransactionBackedGlobalTransactionManager} for how the
@@ -57,6 +57,13 @@ public class DistributedTransactionBackedBranchTransaction implements BranchTran
 
   @Override
   public String getId() {
+    // Nothing identifies a branch on its own, so this returns the ID of the global transaction,
+    // the same as getGlobalTransactionId().
+    return transaction.getId();
+  }
+
+  @Override
+  public String getGlobalTransactionId() {
     return transaction.getId();
   }
 
@@ -184,7 +191,8 @@ public class DistributedTransactionBackedBranchTransaction implements BranchTran
       // original failure. An already-ended branch is a no-op, and an open scanner is left as-is:
       // closing it here would write into the snapshot's scan/scanner sets, which are re-validated
       // at commit, so one branch's cleanup could abort the whole transaction. A scanner left open
-      // is closed by the owning transaction's rollback (or reclaimed by idle expiry).
+      // is closed when the owning transaction ends, by a rollback or a failed commit (or reclaimed
+      // by idle expiry).
       ended = true;
       return;
     }

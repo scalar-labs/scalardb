@@ -2,6 +2,8 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.common.AbstractScanner;
+import com.scalar.db.common.CoreError;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.dynamo.request.PaginatedRequest;
 import com.scalar.db.storage.dynamo.request.PaginatedRequestResponse;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -13,6 +15,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 @NotThreadSafe
@@ -45,7 +48,7 @@ public class QueryScanner extends AbstractScanner {
 
   @Override
   @Nonnull
-  public Optional<Result> one() {
+  public Optional<Result> one() throws ExecutionException {
     if (!hasNext()) {
       return Optional.empty();
     }
@@ -53,7 +56,7 @@ public class QueryScanner extends AbstractScanner {
     return Optional.of(resultInterpreter.interpret(itemsIterator.next()));
   }
 
-  private boolean hasNext() {
+  private boolean hasNext() throws ExecutionException {
     if (itemsIterator.hasNext()) {
       return true;
     }
@@ -62,7 +65,12 @@ public class QueryScanner extends AbstractScanner {
     }
 
     int nextFetchSize = remainingLimit != null ? Math.min(fetchSize, remainingLimit) : fetchSize;
-    handleResponse(request.execute(lastEvaluatedKey, nextFetchSize));
+    try {
+      handleResponse(request.execute(lastEvaluatedKey, nextFetchSize));
+    } catch (SdkException e) {
+      throw new ExecutionException(
+          CoreError.DYNAMO_ERROR_OCCURRED_IN_SELECTION.buildMessage(e.getMessage()), e);
+    }
     return itemsIterator.hasNext();
   }
 
@@ -80,7 +88,7 @@ public class QueryScanner extends AbstractScanner {
 
   @Override
   @Nonnull
-  public List<Result> all() {
+  public List<Result> all() throws ExecutionException {
     List<Result> results = new ArrayList<>();
     Optional<Result> next;
     while ((next = one()).isPresent()) {

@@ -140,6 +140,12 @@ public abstract class DistributedStorageIntegrationTestBase {
     return 5000;
   }
 
+  protected void putRecords(List<Put> puts) throws ExecutionException {
+    for (Put put : puts) {
+      storage.put(put);
+    }
+  }
+
   protected Map<String, String> getCreationOptions() {
     return Collections.emptyMap();
   }
@@ -1893,9 +1899,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Arrange
     Key partitionKey = Key.ofInt(getColumnName1(), 1);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < recordCount; i++) {
       Key clusteringKey = Key.ofInt(getColumnName4(), i);
-      storage.put(
+      puts.add(
           Put.newBuilder()
               .namespace(namespace)
               .table(getTableName())
@@ -1904,6 +1911,7 @@ public abstract class DistributedStorageIntegrationTestBase {
               .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
+    putRecords(puts);
 
     Scan scan =
         Scan.newBuilder()
@@ -1931,9 +1939,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Arrange
     Key partitionKey = Key.ofInt(getColumnName1(), 1);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < recordCount; i++) {
       Key clusteringKey = Key.ofInt(getColumnName4(), i);
-      storage.put(
+      puts.add(
           Put.newBuilder()
               .namespace(namespace)
               .table(getTableName())
@@ -1942,6 +1951,7 @@ public abstract class DistributedStorageIntegrationTestBase {
               .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
+    putRecords(puts);
 
     Scan scanAsc =
         Scan.newBuilder()
@@ -1997,9 +2007,10 @@ public abstract class DistributedStorageIntegrationTestBase {
     int limit = 234;
 
     Key partitionKey = Key.ofInt(getColumnName1(), 1);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < recordCount; i++) {
       Key clusteringKey = Key.ofInt(getColumnName4(), i);
-      storage.put(
+      puts.add(
           Put.newBuilder()
               .namespace(namespace)
               .table(getTableName())
@@ -2008,6 +2019,7 @@ public abstract class DistributedStorageIntegrationTestBase {
               .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
+    putRecords(puts);
     Scan scan =
         Scan.newBuilder()
             .namespace(namespace)
@@ -2182,10 +2194,11 @@ public abstract class DistributedStorageIntegrationTestBase {
   public void scan_ScanAllWithLargeData_ShouldRetrieveExpectedValues()
       throws ExecutionException, IOException {
     // Arrange
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < 345; i++) {
       Key partitionKey = Key.ofInt(getColumnName1(), i % 4);
       Key clusteringKey = Key.ofInt(getColumnName4(), i);
-      storage.put(
+      puts.add(
           Put.newBuilder()
               .namespace(namespace)
               .table(getTableName())
@@ -2194,6 +2207,7 @@ public abstract class DistributedStorageIntegrationTestBase {
               .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
+    putRecords(puts);
     Scan scan = Scan.newBuilder().namespace(namespace).table(getTableName()).all().build();
 
     // Act
@@ -2324,9 +2338,10 @@ public abstract class DistributedStorageIntegrationTestBase {
 
     // Arrange
     Key clusteringKey = Key.ofInt(getColumnName4(), 1);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < recordCount; i++) {
       Key partitionKey = Key.ofInt(getColumnName1(), i);
-      storage.put(
+      puts.add(
           Put.newBuilder()
               .namespace(namespace)
               .table(getTableName())
@@ -2335,6 +2350,7 @@ public abstract class DistributedStorageIntegrationTestBase {
               .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
+    putRecords(puts);
 
     Scan scanAll = Scan.newBuilder().namespace(namespace).table(getTableName()).all().build();
 
@@ -2361,9 +2377,10 @@ public abstract class DistributedStorageIntegrationTestBase {
     int limit = 234;
 
     Key clusteringKey = Key.ofInt(getColumnName4(), 1);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < recordCount; i++) {
       Key partitionKey = Key.ofInt(getColumnName1(), i);
-      storage.put(
+      puts.add(
           Put.newBuilder()
               .namespace(namespace)
               .table(getTableName())
@@ -2372,6 +2389,7 @@ public abstract class DistributedStorageIntegrationTestBase {
               .blobValue(getColumnName6(), new byte[getLargeDataSizeInBytes()])
               .build());
     }
+    putRecords(puts);
 
     Scan scan =
         Scan.newBuilder().namespace(namespace).table(getTableName()).all().limit(limit).build();
@@ -2392,8 +2410,7 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   private void populateRecords() {
-    List<Put> puts = preparePuts();
-    puts.forEach(p -> assertThatCode(() -> storage.put(p)).doesNotThrowAnyException());
+    assertThatCode(() -> putRecords(preparePuts())).doesNotThrowAnyException();
   }
 
   protected Get prepareGet(int pKey, int cKey) {

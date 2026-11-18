@@ -93,6 +93,8 @@ public abstract class TwoPhaseCommitBackedConsensusCommitGlobalTransactionTestBa
    * healthy long-running global transaction is silent from the coordinator's point of view for its
    * whole lifetime, and only the expiry-time participant probe keeps it from being reaped as
    * abandoned.
+   *
+   * @throws Exception if an error occurs
    */
   @Test
   public void

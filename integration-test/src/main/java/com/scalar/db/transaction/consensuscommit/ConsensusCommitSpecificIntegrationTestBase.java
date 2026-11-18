@@ -44,6 +44,7 @@ import com.scalar.db.api.Update;
 import com.scalar.db.api.Upsert;
 import com.scalar.db.common.DecoratedDistributedTransaction;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -3678,6 +3679,9 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
    * <p>Returns {@code true} by default; subclasses override it to {@code false} for the engines
    * that cannot support such a write. The Get variants are unaffected because a point Get releases
    * its connection immediately.
+   *
+   * @return {@code true} if the storage engine allows a concurrent write to a row that an open scan
+   *     cursor is still reading
    */
   protected boolean isConcurrentWriteToRowUnderOpenScanSupported() {
     return true;
@@ -5589,6 +5593,54 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
         isolation, namespace1, TABLE_1, namespace2, TABLE_2);
   }
 
+  @Test
+  void rollbackAndAbort_AfterCommitConflicted_ShouldNotThrowAnyException()
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction =
+        prepareTransfer(manager, 0, namespace1, TABLE_1, NUM_TYPES, namespace1, TABLE_1, 100);
+    prepareTransfer(
+            manager, NUM_TYPES, namespace1, TABLE_1, NUM_TYPES * 2, namespace1, TABLE_1, 200)
+        .commit();
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // Act Assert
+    // The failed commit has already ended the transaction
+    assertThatCode(transaction::rollback).doesNotThrowAnyException();
+    assertThatCode(transaction::abort).doesNotThrowAnyException();
+  }
+
+  @Test
+  void begin_AfterCommitConflictedWithoutRollback_ShouldCommitNewTransaction()
+      throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(Isolation.SNAPSHOT);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction =
+        prepareTransfer(manager, 0, namespace1, TABLE_1, NUM_TYPES, namespace1, TABLE_1, 100);
+    prepareTransfer(
+            manager, NUM_TYPES, namespace1, TABLE_1, NUM_TYPES * 2, namespace1, TABLE_1, 200)
+        .commit();
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // Act
+    // Retry the same transfer in a new transaction without rolling back the failed one
+    prepareTransfer(manager, 0, namespace1, TABLE_1, NUM_TYPES, namespace1, TABLE_1, 100).commit();
+
+    // Assert
+    List<Get> gets = prepareGets(namespace1, TABLE_1);
+    DistributedTransaction another = manager.beginReadOnly();
+    Optional<Result> fromResult = another.get(gets.get(0));
+    Optional<Result> toResult = another.get(gets.get(NUM_TYPES));
+    another.commit();
+    assertThat(fromResult).isPresent();
+    assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE - 100);
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(INITIAL_BALANCE - 200 + 100);
+  }
+
   private void commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth(
       Isolation isolation, String namespace1, String table1, String namespace2, String table2)
       throws TransactionException {
@@ -6498,6 +6550,52 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_EmptyRangeBoundedByPutKeyGivenAndRecordCommitted_ShouldReturnEmptyResults(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 1, namespace1, TABLE_1)).intValue(BALANCE, 1).build());
+
+    // Act
+    // [1, 1)
+    Scan scan =
+        Scan.newBuilder(prepareScan(0, 1, 1, namespace1, TABLE_1))
+            .start(Key.ofInt(ACCOUNT_TYPE, 1), true)
+            .end(Key.ofInt(ACCOUNT_TYPE, 1), false)
+            .build();
+    List<Result> results = transaction.scan(scan);
+    transaction.rollback();
+
+    // Assert
+    assertThat(results).isEmpty();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  void scan_ReversedRangeBoundedByPutKeyGivenAndRecordCommitted_ShouldReturnEmptyResults(
+      Isolation isolation) throws TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    DistributedTransaction transaction = manager.begin();
+    transaction.put(
+        Put.newBuilder(preparePut(0, 1, namespace1, TABLE_1)).intValue(BALANCE, 1).build());
+
+    // Act
+    // [1, 0]
+    Scan scan = prepareScan(0, 1, 0, namespace1, TABLE_1);
+    List<Result> results = transaction.scan(scan);
+    transaction.rollback();
+
+    // Assert
+    assertThat(results).isEmpty();
   }
 
   @ParameterizedTest
@@ -11992,12 +12090,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       @Nullable CoordinatorGroupCommitter groupCommitter,
       boolean onePhaseCommitEnabled) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    VirtualTableInfoManager virtualTableInfoManager = new VirtualTableInfoManager(admin, -1);
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
@@ -12010,6 +12110,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,

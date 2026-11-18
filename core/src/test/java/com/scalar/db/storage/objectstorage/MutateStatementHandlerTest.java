@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -256,6 +257,111 @@ public class MutateStatementHandlerTest {
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(put))
         .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_PutGiven_WhenWrapperInsertThrowsPreconditionFailedException_ShouldThrowRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Put put = preparePut();
+    setupNonExistentPartition();
+    PreconditionFailedException exception =
+        new PreconditionFailedException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).insert(anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_PutGiven_WhenWrapperInsertThrowsConflictOccurredException_ShouldThrowRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Put put = preparePut();
+    setupNonExistentPartition();
+    ConflictOccurredException exception =
+        new ConflictOccurredException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).insert(anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_PutGiven_WhenWrapperInsertThrowsObjectStorageWrapperException_ShouldThrowNonRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Put put = preparePut();
+    setupNonExistentPartition();
+    ObjectStorageWrapperException exception =
+        new ObjectStorageWrapperException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).insert(anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isExactlyInstanceOf(ExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_PutGiven_WhenWrapperUpdateThrowsPreconditionFailedException_ShouldThrowRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Put put = preparePut();
+    ObjectStorageMutation mutation = new ObjectStorageMutation(put, metadata);
+    setupPartitionWithRecord(mutation.getRecordId());
+    PreconditionFailedException exception =
+        new PreconditionFailedException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).update(anyString(), anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_PutGiven_WhenWrapperUpdateThrowsConflictOccurredException_ShouldThrowRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Put put = preparePut();
+    ObjectStorageMutation mutation = new ObjectStorageMutation(put, metadata);
+    setupPartitionWithRecord(mutation.getRecordId());
+    ConflictOccurredException exception =
+        new ConflictOccurredException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).update(anyString(), anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_PutGiven_WhenWrapperUpdateThrowsObjectStorageWrapperException_ShouldThrowNonRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Put put = preparePut();
+    ObjectStorageMutation mutation = new ObjectStorageMutation(put, metadata);
+    setupPartitionWithRecord(mutation.getRecordId());
+    ObjectStorageWrapperException exception =
+        new ObjectStorageWrapperException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).update(anyString(), anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(put))
+        .isExactlyInstanceOf(ExecutionException.class)
         .hasCause(exception);
   }
 
@@ -560,6 +666,60 @@ public class MutateStatementHandlerTest {
     // Act & Assert
     assertThatThrownBy(() -> handler.handle(delete))
         .isInstanceOf(ExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_DeleteGiven_WhenWrapperDeleteThrowsPreconditionFailedException_ShouldThrowRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Delete delete = prepareDelete();
+    ObjectStorageMutation mutation = new ObjectStorageMutation(delete, metadata);
+    setupPartitionWithRecord(mutation.getRecordId());
+    PreconditionFailedException exception =
+        new PreconditionFailedException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).delete(anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_DeleteGiven_WhenWrapperDeleteThrowsConflictOccurredException_ShouldThrowRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Delete delete = prepareDelete();
+    ObjectStorageMutation mutation = new ObjectStorageMutation(delete, metadata);
+    setupPartitionWithRecord(mutation.getRecordId());
+    ConflictOccurredException exception =
+        new ConflictOccurredException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).delete(anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isInstanceOf(RetriableExecutionException.class)
+        .hasCause(exception);
+  }
+
+  @Test
+  public void
+      handle_DeleteGiven_WhenWrapperDeleteThrowsObjectStorageWrapperException_ShouldThrowNonRetriableExecutionException()
+          throws Exception {
+    // Arrange
+    Delete delete = prepareDelete();
+    ObjectStorageMutation mutation = new ObjectStorageMutation(delete, metadata);
+    setupPartitionWithRecord(mutation.getRecordId());
+    ObjectStorageWrapperException exception =
+        new ObjectStorageWrapperException("Test error", new RuntimeException());
+    doThrow(exception).when(wrapper).delete(anyString(), anyString());
+
+    // Act & Assert
+    assertThatThrownBy(() -> handler.handle(delete))
+        .isExactlyInstanceOf(ExecutionException.class)
         .hasCause(exception);
   }
 

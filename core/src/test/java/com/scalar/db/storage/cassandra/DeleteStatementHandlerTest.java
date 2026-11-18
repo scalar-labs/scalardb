@@ -241,7 +241,23 @@ public class DeleteStatementHandlerTest {
                   "IF",
                   ANY_NAME_3 + "=?",
                   "AND",
-                  ANY_NAME_4 + "=?;"
+                  ANY_NAME_4 + "=?",
+                  "AND",
+                  ANY_NAME_3 + "!=?",
+                  "AND",
+                  ANY_NAME_3 + "!=null",
+                  "AND",
+                  ANY_NAME_3 + ">?",
+                  "AND",
+                  ANY_NAME_3 + ">=?",
+                  "AND",
+                  ANY_NAME_3 + "<?",
+                  "AND",
+                  ANY_NAME_3 + "<=?",
+                  "AND",
+                  ANY_NAME_3 + "=?",
+                  "AND",
+                  ANY_NAME_3 + "!=?;"
                 });
     configureBehavior(expected);
     del =
@@ -250,6 +266,13 @@ public class DeleteStatementHandlerTest {
                 ConditionBuilder.deleteIf(
                         ConditionBuilder.column(ANY_NAME_3).isEqualToInt(ANY_INT_1))
                     .and(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3))
+                    .and(ConditionBuilder.column(ANY_NAME_3).isNotEqualToInt(ANY_INT_1))
+                    .and(ConditionBuilder.column(ANY_NAME_3).isGreaterThanInt(ANY_INT_1))
+                    .and(ConditionBuilder.column(ANY_NAME_3).isGreaterThanOrEqualToInt(ANY_INT_1))
+                    .and(ConditionBuilder.column(ANY_NAME_3).isLessThanInt(ANY_INT_1))
+                    .and(ConditionBuilder.column(ANY_NAME_3).isLessThanOrEqualToInt(ANY_INT_1))
+                    .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
+                    .and(ConditionBuilder.column(ANY_NAME_3).isNotNullInt())
                     .build())
             .build();
 
@@ -328,6 +351,34 @@ public class DeleteStatementHandlerTest {
     verify(bound).setString(1, ANY_TEXT_2);
     verify(bound).setInt(2, ANY_INT_1);
     verify(bound).setString(3, ANY_TEXT_3);
+  }
+
+  @Test
+  public void
+      bind_DeleteOperationWithNotEqualAndNullConditionsGiven_ShouldBindOneValuePerCondition() {
+    // Arrange
+    configureBehavior(null);
+    del =
+        Delete.newBuilder(prepareDeleteWithClusteringKey())
+            .condition(
+                ConditionBuilder.deleteIf(
+                        ConditionBuilder.column(ANY_NAME_3).isNotEqualToInt(ANY_INT_1))
+                    .and(ConditionBuilder.column(ANY_NAME_4).isEqualToText(ANY_TEXT_3))
+                    .and(ConditionBuilder.column(ANY_NAME_3).isNullInt())
+                    .and(ConditionBuilder.column(ANY_NAME_4).isNotNullText())
+                    .build())
+            .build();
+
+    // Act
+    handler.bind(prepared, del);
+
+    // Assert
+    verify(bound).setString(0, ANY_TEXT_1);
+    verify(bound).setString(1, ANY_TEXT_2);
+    verify(bound).setInt(2, ANY_INT_1);
+    verify(bound).setString(3, ANY_TEXT_3);
+    verify(bound).setToNull(4);
+    verify(bound).setToNull(5);
   }
 
   @Test

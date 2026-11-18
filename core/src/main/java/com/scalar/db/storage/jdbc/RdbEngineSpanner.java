@@ -13,12 +13,11 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
-import com.scalar.db.storage.jdbc.query.InsertOnConflictDoUpdateQuery;
-import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import com.zaxxer.hikari.HikariConfig;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -222,11 +221,6 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public UpsertQuery buildUpsertQuery(UpsertQuery.Builder builder) {
-    return new InsertOnConflictDoUpdateQuery(builder, true);
-  }
-
-  @Override
   public DateColumn parseDateColumn(ResultSet resultSet, String columnName) throws SQLException {
     // Reading the column directly as a `LocalDate` returns a value offset by 10 days for dates
     // around the Julian-to-Gregorian calendar transition (October 1582). Read it as a String and
@@ -285,6 +279,11 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
+  public boolean isPrimaryKeyColumnAssignableInUpdate() {
+    return false;
+  }
+
+  @Override
   public String[] dropTableInternalSqlsBeforeDropTable(
       String schema, String table, TableMetadata metadata) {
     // Indexes must be dropped explicitly before dropping the table.
@@ -302,5 +301,12 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
                   CLUSTERING_ORDER_INDEX_NAME_PREFIX)));
     }
     return sqls.toArray(new String[0]);
+  }
+
+  @Override
+  public int getMinimumIsolationLevelForConsistentVirtualTableRead() {
+    // Spanner supports only the REPEATABLE READ and SERIALIZABLE isolation levels, and both
+    // guarantee consistent reads
+    return Connection.TRANSACTION_REPEATABLE_READ;
   }
 }

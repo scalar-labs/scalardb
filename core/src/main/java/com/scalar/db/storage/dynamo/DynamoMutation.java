@@ -1,6 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.ConditionalExpression;
+import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
@@ -162,7 +163,14 @@ public class DynamoMutation extends DynamoOperation {
         .getCondition()
         .ifPresent(c -> c.getExpressions().forEach(e -> e.getColumn().accept(binder)));
 
-    return binder.build();
+    Map<String, AttributeValue> ret = binder.build();
+    // DynamoDB rejects an expression attribute value that the condition expression doesn't use
+    if (mutation.getCondition().isPresent()
+        && mutation.getCondition().get().getExpressions().stream()
+            .anyMatch(e -> e.getOperator() == Operator.NE)) {
+      ret.put(CONDITION_NULL_VALUE_ALIAS, AttributeValue.builder().nul(true).build());
+    }
+    return ret;
   }
 
   @Nonnull

@@ -113,7 +113,7 @@ class SingleFileImportLoggerTest {
               ImportTaskResult.builder()
                   .rowNumber(i)
                   .rawRecord(OBJECT_MAPPER.createObjectNode())
-                  .targets(Collections.EMPTY_LIST)
+                  .targets(Collections.emptyList())
                   .build());
       ImportTransactionBatchResult result =
           ImportTransactionBatchResult.builder()

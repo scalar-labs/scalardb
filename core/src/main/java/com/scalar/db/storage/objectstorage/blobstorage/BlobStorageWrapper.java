@@ -22,6 +22,7 @@ import com.scalar.db.storage.objectstorage.PreconditionFailedException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -37,6 +38,7 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
         new BlobServiceClientBuilder()
             .endpoint(config.getEndpoint())
             .credential(new StorageSharedKeyCredential(config.getUsername(), config.getPassword()))
+            .addPolicy(new ConditionalRequestAttemptCounter())
             .buildClient()
             .getBlobContainerClient(config.getBucket()));
   }
@@ -94,14 +96,25 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
 
   @Override
   public void insert(String key, String object) throws ObjectStorageWrapperException {
+    AtomicInteger attempts = new AtomicInteger();
     try {
       BlobClient blobClient = client.getBlobClient(key);
       BlobParallelUploadOptions options =
           new BlobParallelUploadOptions(BinaryData.fromString(object))
               .setRequestConditions(new BlobRequestConditions().setIfNoneMatch("*"))
               .setParallelTransferOptions(parallelTransferOptions);
-      blobClient.uploadWithResponse(options, requestTimeoutSecs, null);
+      blobClient.uploadWithResponse(
+          options, requestTimeoutSecs, ConditionalRequestAttemptCounter.newContext(attempts));
     } catch (BlobStorageException e) {
+      // A resent request can fail because of its own earlier, applied attempt, so the write must
+      // not be reported as not applied
+      if (earlierAttemptMayHaveBeenApplied(attempts)) {
+        throw new ObjectStorageWrapperException(
+            String.format(
+                "The object with key '%s' may have been inserted because the Azure SDK retried the request, so the outcome is unknown",
+                key),
+            e);
+      }
       if (e.getErrorCode().equals(BlobErrorCode.BLOB_ALREADY_EXISTS)) {
         throw new PreconditionFailedException(
             String.format(
@@ -119,14 +132,23 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   @Override
   public void update(String key, String object, String version)
       throws ObjectStorageWrapperException {
+    AtomicInteger attempts = new AtomicInteger();
     try {
       BlobClient blobClient = client.getBlobClient(key);
       BlobParallelUploadOptions options =
           new BlobParallelUploadOptions(BinaryData.fromString(object))
               .setRequestConditions(new BlobRequestConditions().setIfMatch(version))
               .setParallelTransferOptions(parallelTransferOptions);
-      blobClient.uploadWithResponse(options, requestTimeoutSecs, null);
+      blobClient.uploadWithResponse(
+          options, requestTimeoutSecs, ConditionalRequestAttemptCounter.newContext(attempts));
     } catch (BlobStorageException e) {
+      if (earlierAttemptMayHaveBeenApplied(attempts)) {
+        throw new ObjectStorageWrapperException(
+            String.format(
+                "The object with key '%s' may have been updated because the Azure SDK retried the request, so the outcome is unknown",
+                key),
+            e);
+      }
       if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)
           || e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
         throw new PreconditionFailedException(
@@ -164,11 +186,22 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
 
   @Override
   public void delete(String key, String version) throws ObjectStorageWrapperException {
+    AtomicInteger attempts = new AtomicInteger();
     try {
       BlobClient blobClient = client.getBlobClient(key);
       blobClient.deleteWithResponse(
-          null, new BlobRequestConditions().setIfMatch(version), requestTimeoutSecs, null);
+          null,
+          new BlobRequestConditions().setIfMatch(version),
+          requestTimeoutSecs,
+          ConditionalRequestAttemptCounter.newContext(attempts));
     } catch (BlobStorageException e) {
+      if (earlierAttemptMayHaveBeenApplied(attempts)) {
+        throw new ObjectStorageWrapperException(
+            String.format(
+                "The object with key '%s' may have been deleted because the Azure SDK retried the request, so the outcome is unknown",
+                key),
+            e);
+      }
       if (e.getErrorCode().equals(BlobErrorCode.CONDITION_NOT_MET)
           || e.getErrorCode().equals(BlobErrorCode.BLOB_NOT_FOUND)) {
         throw new PreconditionFailedException(
@@ -208,5 +241,19 @@ public class BlobStorageWrapper implements ObjectStorageWrapper {
   @Override
   public void close() {
     // BlobContainerClient does not have a close method
+  }
+
+  /**
+   * Returns whether an earlier attempt of the failed conditional request may have been applied. The
+   * Azure SDK resends a request after a lost response or a server error, and a conditional write
+   * request carries no idempotency token, so a resent conditional write can fail because of its own
+   * earlier, applied attempt.
+   *
+   * @param attempts the number of attempts of the conditional requests counted by {@link
+   *     ConditionalRequestAttemptCounter}
+   * @return whether an earlier attempt of the request may have been applied
+   */
+  private static boolean earlierAttemptMayHaveBeenApplied(AtomicInteger attempts) {
+    return attempts.get() > 1;
   }
 }

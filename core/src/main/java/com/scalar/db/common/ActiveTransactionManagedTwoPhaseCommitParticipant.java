@@ -39,20 +39,21 @@ import javax.annotation.concurrent.ThreadSafe;
  * performing any storage rollback, even when the records are prepared. The records left behind are
  * recovered lazily by the usual recovery path.
  *
- * <p>This decorator is intended to be the outermost participant decorator so that the reap
- * traverses the inner decorators via {@code releaseTransactionContext}. It is the participant-side
- * counterpart of {@link ActiveTransactionManagedTwoPhaseCommitCoordinator}.
+ * <p>This decorator is intended to wrap every participant decorator that holds per-transaction
+ * resources, so that the reap traverses them via {@code releaseTransactionContext}. A decorator
+ * that can fail a record-level step or {@code releaseTransactionContext} without passing it on goes
+ * outside this decorator instead: this decorator removes the transaction when {@link
+ * #commitRecords}, {@link #rollbackRecords}, or {@link #releaseTransactionContext} completes, even
+ * when it fails, so a call rejected before it reached the wrapped participant would leave a context
+ * that nothing releases. It is the participant-side counterpart of {@link
+ * ActiveTransactionManagedTwoPhaseCommitCoordinator}.
  *
  * <p>By default the reaper releases the context by calling {@link
- * TwoPhaseCommitParticipant#releaseTransactionContext} directly on the wrapped participant. An
- * embedder that interposes a cross-cutting decorator between this decorator and the wrapped
- * participant — for example, an authorization decorator that credential-checks every call — may
- * need the reap-driven release to run in a different execution context, because the reaper runs on
- * an internal timer thread that carries no caller credentials. The {@linkplain
- * #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommitParticipant, long, int,
- * ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} lets such an embedder
- * substitute the reap-driven release action — typically by wrapping {@link #defaultDisposalHandler}
- * in a privileged mode — while leaving every other path untouched, mirroring the seam {@link
+ * TwoPhaseCommitParticipant#releaseTransactionContext} directly on the wrapped participant. The
+ * {@linkplain #ActiveTransactionManagedTwoPhaseCommitParticipant(TwoPhaseCommitParticipant, long,
+ * int, ActiveTransactionRegistry.DisposalHandler) disposal-handler constructor} lets an embedder
+ * substitute the reap-driven release action, for example to run it in a particular execution
+ * context, while leaving every other path untouched, mirroring the seam {@link
  * ActiveTransactionManagedDistributedTransactionManager} exposes for its 1PC reaper.
  *
  * <p>A write-less participant does not always reach {@link #commitRecords}: the Coordinator skips
@@ -113,12 +114,11 @@ public class ActiveTransactionManagedTwoPhaseCommitParticipant
    * disposalHandler} with the transaction ID, instead of releasing the context directly on the
    * wrapped participant.
    *
-   * <p>Use this when the reap-driven release must run in a special execution context — for example,
-   * when a cross-cutting decorator would reject a call made from the credential-less reaper thread
-   * (see the class documentation). The handler is invoked for both idle expiry and cap eviction,
-   * and it fully replaces the default action: an embedder that still wants the default release
-   * semantics composes {@link #defaultDisposalHandler} inside its wrapper rather than
-   * re-implementing the release and its not-found handling.
+   * <p>Use this when the reap-driven release must run in a special execution context (see the class
+   * documentation). The handler is invoked for both idle expiry and cap eviction, and it fully
+   * replaces the default action: an embedder that still wants the default release semantics
+   * composes {@link #defaultDisposalHandler} inside its wrapper rather than re-implementing the
+   * release and its not-found handling.
    *
    * @param participant the wrapped participant
    * @param expirationTimeMillis the idle expiration time in milliseconds

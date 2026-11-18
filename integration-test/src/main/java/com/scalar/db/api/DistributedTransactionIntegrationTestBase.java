@@ -1028,6 +1028,33 @@ public abstract class DistributedTransactionIntegrationTestBase {
   }
 
   @Test
+  public void batch_ManyGetsGiven_ShouldReturnTheirResultsInOrder() throws TransactionException {
+    // Arrange
+    populateRecords();
+    List<Get> gets = new ArrayList<>();
+    for (int i = 0; i < NUM_ACCOUNTS; i++) {
+      for (int j = 0; j < NUM_TYPES; j++) {
+        gets.add(prepareGet(i, j));
+      }
+    }
+    gets.add(prepareGet(1, 2)); // A record that another Get of the batch also reads
+    gets.add(prepareGet(NUM_ACCOUNTS, 0)); // A record that does not exist
+
+    // Act
+    DistributedTransaction tx = manager.start();
+    List<CrudOperable.BatchResult> results = tx.batch(gets);
+    tx.commit();
+
+    // Assert
+    assertThat(results).hasSize(gets.size());
+    for (int i = 0; i < NUM_ACCOUNTS * NUM_TYPES; i++) {
+      assertResult(i / NUM_TYPES, i % NUM_TYPES, results.get(i).getGetResult());
+    }
+    assertResult(1, 2, results.get(NUM_ACCOUNTS * NUM_TYPES).getGetResult());
+    assertThat(results.get(NUM_ACCOUNTS * NUM_TYPES + 1).getGetResult()).isEmpty();
+  }
+
+  @Test
   public void batch_ShouldBatchProperly() throws TransactionException {
     // Arrange
     populateRecords();
@@ -1198,6 +1225,44 @@ public abstract class DistributedTransactionIntegrationTestBase {
     // Assert
     TransactionState state = manager.getState(transaction.getId());
     assertThat(state).isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  public void rollback_AfterCommit_ShouldDoNothing() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0));
+    transaction.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
+    transaction.commit();
+
+    // Act Assert
+    assertThatCode(transaction::rollback).doesNotThrowAnyException();
+
+    // The commit stays in effect
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0));
+    another.commit();
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(1);
+  }
+
+  @Test
+  public void abort_AfterCommit_ShouldDoNothing() throws TransactionException {
+    // Arrange
+    DistributedTransaction transaction = manager.begin();
+    transaction.get(prepareGet(0, 0));
+    transaction.put(Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, 1).build());
+    transaction.commit();
+
+    // Act Assert
+    assertThatCode(transaction::abort).doesNotThrowAnyException();
+
+    // The commit stays in effect
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result = another.get(prepareGet(0, 0));
+    another.commit();
+    assertThat(result).isPresent();
+    assertThat(result.get().getInt(BALANCE)).isEqualTo(1);
   }
 
   @Test
@@ -2311,6 +2376,92 @@ public abstract class DistributedTransactionIntegrationTestBase {
     Result result = optResult.get();
     assertThat(result.getInt(ACCOUNT_ID)).isEqualTo(0);
     assertThat(result.getInt(ACCOUNT_TYPE)).isEqualTo(0);
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void
+      put_withPutIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Put putIf =
+        Put.newBuilder(initialData)
+            .intValue(BALANCE, 2)
+            .condition(
+                ConditionBuilder.putIf(ConditionBuilder.column(SOME_COLUMN).isNotEqualToInt(1))
+                    .build())
+            .enableImplicitPreRead()
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> put(putIf)).isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void
+      update_withUpdateIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Update updateIf =
+        Update.newBuilder()
+            .namespace(namespace)
+            .table(TABLE)
+            .partitionKey(Key.ofInt(ACCOUNT_ID, 0))
+            .clusteringKey(Key.ofInt(ACCOUNT_TYPE, 0))
+            .intValue(BALANCE, 2)
+            .condition(
+                ConditionBuilder.updateIf(ConditionBuilder.column(SOME_COLUMN).isNotEqualToInt(1))
+                    .build())
+            .build();
+
+    DistributedTransaction transaction = manager.start();
+
+    // Act Assert
+    assertThatThrownBy(() -> transaction.update(updateIf))
+        .isInstanceOf(UnsatisfiedConditionException.class);
+    transaction.rollback();
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
+    assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(result.isNull(SOME_COLUMN)).isTrue();
+  }
+
+  @Test
+  public void
+      delete_withDeleteIfWithNotEqualConditionOnNullColumn_shouldThrowUnsatisfiedConditionException()
+          throws TransactionException {
+    // Arrange
+    Put initialData = Put.newBuilder(preparePut(0, 0)).intValue(BALANCE, INITIAL_BALANCE).build();
+    put(initialData);
+
+    Delete deleteIf =
+        Delete.newBuilder(prepareDelete(0, 0))
+            .condition(
+                ConditionBuilder.deleteIf(ConditionBuilder.column(SOME_COLUMN).isNotEqualToInt(1))
+                    .build())
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> delete(deleteIf)).isInstanceOf(UnsatisfiedConditionException.class);
+
+    Optional<Result> optResult = get(prepareGet(0, 0));
+    assertThat(optResult.isPresent()).isTrue();
+    Result result = optResult.get();
     assertThat(result.getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
     assertThat(result.isNull(SOME_COLUMN)).isTrue();
   }

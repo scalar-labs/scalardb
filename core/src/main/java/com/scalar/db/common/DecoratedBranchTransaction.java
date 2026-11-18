@@ -37,6 +37,11 @@ public abstract class DecoratedBranchTransaction implements BranchTransaction {
   }
 
   @Override
+  public String getGlobalTransactionId() {
+    return branchTransaction.getGlobalTransactionId();
+  }
+
+  @Override
   public Optional<Result> get(Get get) throws CrudException {
     return branchTransaction.get(get);
   }

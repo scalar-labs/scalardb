@@ -23,9 +23,11 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.BigIntColumn;
 import com.scalar.db.io.Column;
@@ -125,6 +127,11 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
   @BeforeEach
   public void setUp() throws Exception {
     dropTables();
+    manager = createConsensusCommitManager(consensusCommitConfig.getIsolation(), false);
+  }
+
+  private ConsensusCommitManager createConsensusCommitManager(
+      Isolation isolation, boolean onePhaseCommitEnabled) {
     storage = spy(originalStorage);
     coordinator = spy(new CoordinatorStateAccessor(storage, consensusCommitConfig));
     TransactionTableMetadataManager tableMetadataManager =
@@ -140,33 +147,36 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
             parallelExecutor);
-    CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
-    manager =
-        new ConsensusCommitManager(
-            storage,
-            admin,
-            consensusCommitConfig,
-            databaseConfig,
-            coordinator,
-            parallelExecutor,
-            asyncExecutor,
-            recoveryExecutor,
-            crud,
-            commit,
-            consensusCommitConfig.getIsolation(),
-            groupCommitter);
+    CommitHandler commit =
+        spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
+    return new ConsensusCommitManager(
+        storage,
+        admin,
+        consensusCommitConfig,
+        databaseConfig,
+        coordinator,
+        parallelExecutor,
+        asyncExecutor,
+        recoveryExecutor,
+        crud,
+        commit,
+        isolation,
+        groupCommitter);
   }
 
   private CommitHandler createCommitHandler(
       TransactionTableMetadataManager tableMetadataManager,
-      @Nullable CoordinatorGroupCommitter groupCommitter) {
+      @Nullable CoordinatorGroupCommitter groupCommitter,
+      boolean onePhaseCommitEnabled) {
     MutationsGrouper mutationsGrouper = new MutationsGrouper(new StorageInfoProvider(admin));
+    VirtualTableInfoManager virtualTableInfoManager = new VirtualTableInfoManager(admin, -1);
     if (groupCommitter != null) {
       return new CommitHandlerWithGroupCommit(
           storage,
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
@@ -179,11 +189,12 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
           recoveryExecutor,
           coordinator,
           tableMetadataManager,
+          virtualTableInfoManager,
           parallelExecutor,
           asyncExecutor,
           mutationsGrouper,
           true,
-          false);
+          onePhaseCommitEnabled);
     }
   }
 
@@ -216,6 +227,10 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
 
   protected String getImportedTableName() {
     return TABLE;
+  }
+
+  private boolean isGroupCommitEnabled() {
+    return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
   }
 
   private void prepareImportedTableAndRecords() throws Exception {
@@ -274,6 +289,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             .value(IntColumn.of(Attribute.BEFORE_VERSION, 0))
             .value(BigIntColumn.ofNull(Attribute.BEFORE_PREPARED_AT))
             .value(BigIntColumn.ofNull(Attribute.BEFORE_COMMITTED_AT))
+            .value(createBalanceColumn(INITIAL_BALANCE).copyWith(Attribute.BEFORE_PREFIX + BALANCE))
             .build();
 
     // When using Oracle, a RetriableExecutionException may occur even without any conflicts. So, we
@@ -391,6 +407,47 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     assertThat(result.getColumns()).containsKey(BALANCE);
     assertThat(result.getColumns().get(BALANCE).hasNullValue()).isFalse();
     return result.getColumns().get(BALANCE).getIntValue();
+  }
+
+  /**
+   * Asserts that no transaction metadata is stored for the record, as for a record that no
+   * transaction has written since the table was imported.
+   *
+   * @param storage the storage to read the record with
+   * @param id the account ID of the record
+   * @throws ExecutionException if reading the record fails
+   */
+  protected void assertTransactionMetadataNotStored(DistributedStorage storage, int id)
+      throws ExecutionException {
+    Optional<Result> result =
+        storage.get(
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(TABLE)
+                .partitionKey(createPartitionKey(id))
+                .build());
+    assertThat(result).isPresent();
+    for (String columnName : result.get().getContainedColumnNames()) {
+      if (columnName.equals(ACCOUNT_ID) || columnName.equals(BALANCE)) {
+        continue;
+      }
+      assertThat(result.get().isNull(columnName)).describedAs(columnName).isTrue();
+    }
+  }
+
+  private void rollBackPreparedRecordByLazyRecovery() throws Exception {
+    prepareImportedTableAndPreparedRecordWithNullAndCoordinatorStateRecord(
+        TransactionState.PREPARED, 0, TransactionState.ABORTED);
+    DistributedTransaction transaction = manager.begin();
+    Optional<Result> result = transaction.get(prepareGet(0));
+    transaction.commit();
+
+    // Wait for the recovery to complete
+    ((ConsensusCommit) transaction).waitForRecoveryCompletion();
+
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
   }
 
   private DistributedTransaction prepareTransfer(int fromId, int toId, int amount)
@@ -1003,5 +1060,205 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     DistributedTransaction another = manager.begin();
     assertThat(another.get(get).isPresent()).isFalse();
     another.commit();
+  }
+
+  @Test
+  public void commit_DeleteGivenForExistingAfterReadWithOnePhaseCommit_ShouldDeleteRecord()
+      throws Exception {
+    if (isGroupCommitEnabled()) {
+      // Enabling both one-phase commit and group commit is not supported
+      return;
+    }
+
+    // Arrange
+    prepareImportedTableAndRecords();
+    ConsensusCommitManager onePhaseCommitManager =
+        createConsensusCommitManager(Isolation.SNAPSHOT, true);
+    DistributedTransaction transaction = onePhaseCommitManager.begin();
+
+    // Act
+    Optional<Result> result = transaction.get(prepareGet(0));
+    transaction.delete(prepareDelete(0));
+    transaction.commit();
+
+    // Assert
+    assertThat(result).isPresent();
+    DistributedTransaction another = onePhaseCommitManager.begin();
+    assertThat(another.get(prepareGet(0))).isEmpty();
+    another.commit();
+    assertThat(
+            originalStorage.get(
+                Get.newBuilder()
+                    .namespace(namespace)
+                    .table(TABLE)
+                    .partitionKey(createPartitionKey(0))
+                    .build()))
+        .isEmpty();
+  }
+
+  @Test
+  public void putAndCommit_PutGivenForRecordRolledBackByLazyRecovery_ShouldUpdateRecord()
+      throws Exception {
+    // Arrange
+    rollBackPreparedRecordByLazyRecovery();
+    assertTransactionMetadataNotStored(originalStorage, 0);
+
+    // Act
+    DistributedTransaction transaction = manager.begin();
+    Optional<Result> result = transaction.get(prepareGet(0));
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    int expected = INITIAL_BALANCE + 100;
+    transaction.put(preparePut(0, expected));
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    Optional<Result> r = another.get(prepareGet(0));
+    another.commit();
+    assertThat(r).isPresent();
+    assertThat(getBalance(r.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void deleteAndCommit_DeleteGivenForRecordRolledBackByLazyRecovery_ShouldDeleteRecord()
+      throws Exception {
+    // Arrange
+    rollBackPreparedRecordByLazyRecovery();
+    assertTransactionMetadataNotStored(originalStorage, 0);
+
+    // Act
+    DistributedTransaction transaction = manager.begin();
+    assertThat(transaction.get(prepareGet(0))).isPresent();
+    transaction.delete(prepareDelete(0));
+    transaction.commit();
+
+    // Assert
+    DistributedTransaction another = manager.begin();
+    assertThat(another.get(prepareGet(0))).isEmpty();
+    another.commit();
+  }
+
+  @Test
+  public void putAndCommit_PutGivenForRecordRolledBackAfterCommitConflict_ShouldUpdateRecord()
+      throws Exception {
+    // Arrange
+    prepareImportedTableAndRecords();
+    DistributedTransaction transaction = manager.begin();
+    assertThat(transaction.get(prepareGet(0))).isPresent();
+    transaction.put(preparePut(0, INITIAL_BALANCE + 100));
+
+    // Abort the transaction so that writing its COMMITTED state conflicts, which rolls back the
+    // prepared record
+    coordinator.forceAbort(transaction.getId());
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+    assertTransactionMetadataNotStored(originalStorage, 0);
+
+    // Act
+    DistributedTransaction another = manager.begin();
+    Optional<Result> result = another.get(prepareGet(0));
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
+    int expected = INITIAL_BALANCE + 200;
+    another.put(preparePut(0, expected));
+    another.commit();
+
+    // Assert
+    DistributedTransaction third = manager.begin();
+    Optional<Result> r = third.get(prepareGet(0));
+    third.commit();
+    assertThat(r).isPresent();
+    assertThat(getBalance(r.get())).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      putAndCommit_PutGivenForRecordDeletedByAnotherTransactionAfterRead_ShouldThrowCommitConflictException()
+          throws Exception {
+    // Arrange
+    prepareImportedTableAndRecords();
+    DistributedTransaction transaction = manager.begin();
+    assertThat(transaction.get(prepareGet(0))).isPresent();
+
+    DistributedTransaction another = manager.begin();
+    assertThat(another.get(prepareGet(0))).isPresent();
+    another.delete(prepareDelete(0));
+    another.commit();
+
+    // Act
+    transaction.put(preparePut(0, INITIAL_BALANCE + 100));
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    DistributedTransaction third = manager.begin();
+    assertThat(third.get(prepareGet(0))).isEmpty();
+    third.commit();
+    assertThat(
+            originalStorage.get(
+                Get.newBuilder()
+                    .namespace(namespace)
+                    .table(TABLE)
+                    .partitionKey(createPartitionKey(0))
+                    .build()))
+        .isEmpty();
+  }
+
+  @Test
+  public void
+      deleteAndCommit_DeleteGivenForRecordDeletedByAnotherTransactionAfterRead_ShouldThrowCommitConflictException()
+          throws Exception {
+    // Arrange
+    prepareImportedTableAndRecords();
+    DistributedTransaction transaction = manager.begin();
+    assertThat(transaction.get(prepareGet(0))).isPresent();
+
+    DistributedTransaction another = manager.begin();
+    assertThat(another.get(prepareGet(0))).isPresent();
+    another.delete(prepareDelete(0));
+    another.commit();
+
+    // Act
+    transaction.delete(prepareDelete(0));
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    DistributedTransaction third = manager.begin();
+    assertThat(third.get(prepareGet(0))).isEmpty();
+    third.commit();
+    assertThat(
+            originalStorage.get(
+                Get.newBuilder()
+                    .namespace(namespace)
+                    .table(TABLE)
+                    .partitionKey(createPartitionKey(0))
+                    .build()))
+        .isEmpty();
+  }
+
+  @Test
+  public void
+      putAndCommit_PutGivenForRecordUpdatedByAnotherTransactionAfterRead_ShouldThrowCommitConflictException()
+          throws Exception {
+    // Arrange
+    prepareImportedTableAndRecords();
+    DistributedTransaction transaction = manager.begin();
+    assertThat(transaction.get(prepareGet(0))).isPresent();
+
+    int expected = INITIAL_BALANCE + 200;
+    DistributedTransaction another = manager.begin();
+    assertThat(another.get(prepareGet(0))).isPresent();
+    another.put(preparePut(0, expected));
+    another.commit();
+
+    // Act
+    transaction.put(preparePut(0, INITIAL_BALANCE + 100));
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    DistributedTransaction third = manager.begin();
+    Optional<Result> r = third.get(prepareGet(0));
+    third.commit();
+    assertThat(r).isPresent();
+    assertThat(getBalance(r.get())).isEqualTo(expected);
   }
 }

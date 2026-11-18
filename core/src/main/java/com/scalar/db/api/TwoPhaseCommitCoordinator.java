@@ -137,6 +137,9 @@ public interface TwoPhaseCommitCoordinator extends AutoCloseable {
    * unnecessary for a given transaction (for example, for a read-only or write-less transaction it
    * may skip steps that would have nothing to do).
    *
+   * <p>A commit ends the transaction whatever its outcome, including when this throws an exception,
+   * so the caller does not roll it back afterwards.
+   *
    * <p>The prepare and validate phases are internal to this method, so their failures are not
    * surfaced as {@link PreparationException} or {@link ValidationException}. On such a failure the
    * Coordinator drives the rollback internally—rolling back the PREPARED records on every enlisted

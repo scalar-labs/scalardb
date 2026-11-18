@@ -70,13 +70,18 @@ public interface DistributedStorageAdmin extends Admin, AutoCloseable {
    *       <ul>
    *         <li>{@code INNER}: only keys present in both sources.
    *         <li>{@code LEFT_OUTER}: all keys from the left; for left-only keys, the right-side
-   *             columns appear as {@code NULL}.
+   *             columns appear as {@code NULL}. Because a right-side record whose non-key columns
+   *             are all {@code NULL} looks the same as no right-side record, the two are treated as
+   *             the same, and whether such a right-side record exists in the right source is
+   *             unspecified.
    *       </ul>
    *   <li>Column order: [primary key columns] + [left non-key columns] + [right non-key columns].
    *   <li>No non-key column name conflicts between sources are allowed.
    *   <li>Both sources must reside within the atomicity unit of the underlying storage, meaning
    *       that the atomicity unit must be at least at the namespace level.
    *   <li>Currently, using virtual tables as sources is not supported.
+   *   <li>Currently, for {@code LEFT_OUTER}, a {@code DeleteIf} whose conditions on the right-side
+   *       columns are all {@code IS_NULL} is not supported.
    * </ul>
    *
    * <p>Note: This feature is primarily for internal use. Breaking changes can and will be
@@ -246,9 +251,8 @@ public interface DistributedStorageAdmin extends Admin, AutoCloseable {
    * @param namespace the namespace
    * @param table the table
    * @return the virtual table information or {@code Optional.empty()} if the table is not a virtual
-   *     table
+   *     table or does not exist
    * @throws ExecutionException if the operation fails
-   * @throws IllegalArgumentException if the table does not exist
    */
   Optional<VirtualTableInfo> getVirtualTableInfo(String namespace, String table)
       throws ExecutionException;

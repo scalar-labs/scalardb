@@ -47,8 +47,13 @@ class ActiveTransactionRegistryTest {
     assertThatCode(() -> assertThat(registry.add("b", "b")).isTrue()).doesNotThrowAnyException();
 
     // Assert: the throwing handler ran for the evicted entry and the registry is back within the
-    // cap (exactly one of the two entries remains).
-    awaitUntil(() -> disposed.get() == 1);
+    // cap (exactly one of the two entries remains). Without an expiration time, the eviction can
+    // stay pending until the registry is accessed again, so the wait keeps accessing it.
+    awaitUntil(
+        () -> {
+          registry.get("a");
+          return disposed.get() == 1;
+        });
     long present = 0;
     if (registry.get("a").isPresent()) {
       present++;

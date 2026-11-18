@@ -5,20 +5,25 @@ import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithTop;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import microsoft.sql.DateTimeOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -296,10 +301,14 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
         return DataType.FLOAT;
       case DOUBLE:
         return DataType.DOUBLE;
-      case CHAR:
       case NCHAR:
-      case VARCHAR:
       case NVARCHAR:
+        // Ordered by UTF-16 code unit, which breaks the code point order of TEXT
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
+      case CHAR:
+      case VARCHAR:
         if (typeName.equalsIgnoreCase("uniqueidentifier")) {
           throw new IllegalArgumentException(
               CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
@@ -312,12 +321,10 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
         return DataType.TEXT;
       case LONGVARCHAR:
       case LONGNVARCHAR:
-        if (typeName.equalsIgnoreCase("xml")) {
-          throw new IllegalArgumentException(
-              CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
-                  typeName, columnDescription));
-        }
-        return DataType.TEXT;
+        // text and ntext cannot use a UTF-8 collation, and xml is not a text type
+        throw new IllegalArgumentException(
+            CoreError.JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED.buildMessage(
+                typeName, columnDescription));
       case BINARY:
       case VARBINARY:
         if (!typeName.equalsIgnoreCase("binary") && !typeName.equalsIgnoreCase("varbinary")) {
@@ -432,13 +439,68 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   public Map<String, String> getConnectionProperties(JdbcConfig config) {
     // Needed to keep the microsecond precision when sending the value of ScalarDB TIME type.
     // It is being considered setting to it to false by default in a future driver release.
-    return ImmutableMap.of("sendTimeAsDatetime", "false");
+    return ImmutableMap.of(
+        "sendTimeAsDatetime",
+        "false",
+        // The driver sends String parameters as NVARCHAR by default, and SQL Server then compares
+        // a VARCHAR column against them in UTF-16 code unit order, which breaks range scans.
+        "sendStringParametersAsUnicode",
+        "false");
   }
 
   @Override
-  public RdbEngineTimeTypeStrategy<String, LocalTime, String, DateTimeOffset>
-      getTimeTypeStrategy() {
+  public RdbEngineTimeTypeStrategy<String, LocalTime, String, String> getTimeTypeStrategy() {
     return timeTypeEngine;
+  }
+
+  @Override
+  public String getProjectionsSqlForSelectQuery(
+      TableMetadata metadata, List<String> originalProjections) {
+    // When selecting a TIMESTAMPTZ column, special handling is required. See
+    // RdbEngineSqlServer#getProjection().
+    if (originalProjections.isEmpty()
+        && !metadata.getColumnDataTypes().containsValue(DataType.TIMESTAMPTZ)) {
+      return "*";
+    }
+    Collection<String> projections =
+        originalProjections.isEmpty() ? metadata.getColumnNames() : originalProjections;
+
+    return projections.stream()
+        .map(columnName -> getProjection(columnName, metadata.getColumnDataType(columnName)))
+        .collect(Collectors.joining(","));
+  }
+
+  private String getProjection(String columnName, DataType dataType) {
+    if (dataType == DataType.TIMESTAMPTZ) {
+      // The driver decodes DATETIMEOFFSET values with a Julian-Gregorian hybrid calendar, which
+      // shifts the dates between October 5, 1582, and October 14, 1582, by 10 days. DATETIME2
+      // values are decoded with the proleptic Gregorian calendar, so we read the value as a UTC
+      // DATETIME2. An imported DATETIMEOFFSET column can have up to 7 fractional digits, and a
+      // narrower DATETIME2 would round them.
+      return "CAST(SWITCHOFFSET("
+          + enclose(columnName)
+          + ", '+00:00') AS DATETIME2(7)) AS "
+          + enclose(columnName);
+    }
+    return enclose(columnName);
+  }
+
+  @Override
+  public String getOrderingColumnSql(String schema, String table, String columnName) {
+    // ORDER BY resolves an unqualified name to the select list alias, which is a cast expression
+    // for TIMESTAMPTZ columns (see getProjection()). Ordering by the expression prevents using the
+    // index order, so qualify the name to bind it to the table column.
+    return enclose(table) + "." + enclose(columnName);
+  }
+
+  @Override
+  public TimestampTZColumn parseTimestampTZColumn(ResultSet resultSet, String columnName)
+      throws SQLException {
+    LocalDateTime utcDateTime = resultSet.getObject(columnName, LocalDateTime.class);
+    if (utcDateTime == null) {
+      return TimestampTZColumn.ofNull(columnName);
+    }
+    return TimestampTZColumn.ofStrict(columnName, utcDateTime.toInstant(ZoneOffset.UTC));
   }
 
   @Override

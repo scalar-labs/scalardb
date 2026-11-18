@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
@@ -28,9 +30,12 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.VirtualTableInfo;
+import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.ResultImpl;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.common.StorageInfoProvider;
+import com.scalar.db.common.VirtualTableInfoManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -53,6 +58,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,6 +98,7 @@ class ParticipantCommitHandlerTest {
   @Mock private DistributedStorage storage;
   @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
+  @Mock private VirtualTableInfoManager virtualTableInfoManager;
   @Mock private StorageInfoProvider storageInfoProvider;
   @Mock private ConsensusCommitConfig config;
 
@@ -121,6 +128,7 @@ class ParticipantCommitHandlerTest {
         storage,
         recoveryExecutor,
         tableMetadataManager,
+        virtualTableInfoManager,
         parallelExecutor,
         asyncExecutor,
         mutationsGrouper,
@@ -303,6 +311,43 @@ class ParticipantCommitHandlerTest {
     Snapshot snapshot = prepareSnapshot();
     snapshot.putIntoGetSet(prepareGet(), Optional.empty());
     return snapshot;
+  }
+
+  // A record that no transaction has written since it was imported, which has no transaction
+  // metadata
+  private TransactionResult prepareRecordDeemedAsCommitted(
+      String partitionKeyValue, String clusteringKeyValue) {
+    return new TransactionResult(
+        new ResultImpl(
+            ImmutableMap.<String, Column<?>>builder()
+                .put(ANY_NAME_1, TextColumn.of(ANY_NAME_1, partitionKeyValue))
+                .put(ANY_NAME_2, TextColumn.of(ANY_NAME_2, clusteringKeyValue))
+                .put(ANY_NAME_3, IntColumn.of(ANY_NAME_3, ANY_INT_1))
+                .put(Attribute.ID, TextColumn.ofNull(Attribute.ID))
+                .put(Attribute.STATE, IntColumn.ofNull(Attribute.STATE))
+                .put(Attribute.VERSION, IntColumn.ofNull(Attribute.VERSION))
+                .build(),
+            TABLE_METADATA));
+  }
+
+  private Snapshot prepareSnapshotWithDeleteOfRecord(TransactionResult result) {
+    Snapshot snapshot = prepareSnapshot();
+    Delete delete = prepareDelete2();
+    snapshot.putIntoDeleteSet(new Snapshot.Key(delete), delete);
+    snapshot.putIntoReadSet(new Snapshot.Key(delete), Optional.of(result));
+    return snapshot;
+  }
+
+  // Stubs whether the table is a virtual table, and its join type if it is
+  private void stubVirtualTableInfo(@Nullable VirtualTableJoinType joinType)
+      throws ExecutionException {
+    VirtualTableInfo virtualTableInfo = null;
+    if (joinType != null) {
+      virtualTableInfo = mock(VirtualTableInfo.class);
+      when(virtualTableInfo.getJoinType()).thenReturn(joinType);
+    }
+    when(virtualTableInfoManager.getVirtualTableInfo(ANY_NAMESPACE_NAME, ANY_TABLE_NAME))
+        .thenReturn(virtualTableInfo);
   }
 
   private TransactionContext createTransactionContext(Snapshot snapshot, Isolation isolation) {
@@ -504,6 +549,7 @@ class ParticipantCommitHandlerTest {
             storage,
             recoveryExecutor,
             tableMetadataManager,
+            virtualTableInfoManager,
             parallelExecutor,
             enabledAsyncExecutor,
             mutationsGrouper,
@@ -564,6 +610,7 @@ class ParticipantCommitHandlerTest {
             storage,
             recoveryExecutor,
             tableMetadataManager,
+            virtualTableInfoManager,
             spiedParallelExecutor,
             asyncExecutor,
             mutationsGrouper,
@@ -625,6 +672,7 @@ class ParticipantCommitHandlerTest {
             storage,
             recoveryExecutor,
             tableMetadataManager,
+            virtualTableInfoManager,
             parallelExecutor,
             enabledAsyncExecutor,
             mutationsGrouper,
@@ -1098,6 +1146,124 @@ class ParticipantCommitHandlerTest {
     ParticipantCommitHandler enabled = newHandler(/* onePhaseCommitEnabled= */ true);
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     doThrow(ExecutionException.class).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThatThrownBy(() -> enabled.canOnePhaseCommit(context))
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(ExecutionException.class);
+  }
+
+  @Test
+  void
+      canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInLeftOuterVirtualTable_ShouldReturnFalse()
+          throws Exception {
+    // The record has no transaction metadata, possibly because the right-side record does not
+    // exist, so the one-phase commit cannot check it with a delete
+    // Arrange
+    ParticipantCommitHandler enabled = newHandler(/* onePhaseCommitEnabled= */ true);
+    Snapshot snapshot =
+        prepareSnapshotWithDeleteOfRecord(prepareRecordDeemedAsCommitted(ANY_TEXT_3, ANY_TEXT_4));
+    stubVirtualTableInfo(VirtualTableJoinType.LEFT_OUTER);
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThat(enabled.canOnePhaseCommit(context)).isFalse();
+    verify(mutationsGrouper, never()).canBeGroupedAltogether(anyList());
+  }
+
+  @Test
+  void canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInInnerVirtualTable_ShouldReturnTrue()
+      throws Exception {
+    // Arrange
+    ParticipantCommitHandler enabled = newHandler(/* onePhaseCommitEnabled= */ true);
+    Snapshot snapshot =
+        prepareSnapshotWithDeleteOfRecord(prepareRecordDeemedAsCommitted(ANY_TEXT_3, ANY_TEXT_4));
+    stubVirtualTableInfo(VirtualTableJoinType.INNER);
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThat(enabled.canOnePhaseCommit(context)).isTrue();
+  }
+
+  @Test
+  void canOnePhaseCommit_WhenDeleteOfRecordDeemedAsCommittedInNonVirtualTable_ShouldReturnTrue()
+      throws Exception {
+    // Arrange
+    ParticipantCommitHandler enabled = newHandler(/* onePhaseCommitEnabled= */ true);
+    Snapshot snapshot =
+        prepareSnapshotWithDeleteOfRecord(prepareRecordDeemedAsCommitted(ANY_TEXT_3, ANY_TEXT_4));
+    stubVirtualTableInfo(null);
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThat(enabled.canOnePhaseCommit(context)).isTrue();
+  }
+
+  @Test
+  void
+      canOnePhaseCommit_WhenDeleteOfRecordWithTransactionIdInLeftOuterVirtualTable_ShouldReturnTrue()
+          throws Exception {
+    // Arrange
+    ParticipantCommitHandler enabled = newHandler(/* onePhaseCommitEnabled= */ true);
+    Snapshot snapshot =
+        prepareSnapshotWithDeleteOfRecord(
+            new TransactionResult(
+                prepareRecordPreparedBy(
+                    ANY_ID_2, ANY_TEXT_3, ANY_TEXT_4, TransactionState.COMMITTED, false)));
+    stubVirtualTableInfo(VirtualTableJoinType.LEFT_OUTER);
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThat(enabled.canOnePhaseCommit(context)).isTrue();
+    verify(virtualTableInfoManager, never()).getVirtualTableInfo(anyString(), anyString());
+  }
+
+  @Test
+  void canOnePhaseCommit_WhenPutToRecordDeemedAsCommittedInLeftOuterVirtualTable_ShouldReturnTrue()
+      throws Exception {
+    // Arrange
+    ParticipantCommitHandler enabled = newHandler(/* onePhaseCommitEnabled= */ true);
+    Snapshot snapshot = prepareSnapshotWithPut1();
+    snapshot.putIntoReadSet(
+        new Snapshot.Key(preparePut1()),
+        Optional.of(prepareRecordDeemedAsCommitted(ANY_TEXT_1, ANY_TEXT_2)));
+    stubVirtualTableInfo(VirtualTableJoinType.LEFT_OUTER);
+    doReturn(true).when(mutationsGrouper).canBeGroupedAltogether(anyList());
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThat(enabled.canOnePhaseCommit(context)).isTrue();
+    verify(virtualTableInfoManager, never()).getVirtualTableInfo(anyString(), anyString());
+  }
+
+  @Test
+  void
+      canOnePhaseCommit_WhenOnePhaseCommitDisabledWithDeleteOfRecordDeemedAsCommitted_ShouldNotGetVirtualTableInfo()
+          throws Exception {
+    // Arrange — default handler has onePhaseCommitEnabled = false.
+    Snapshot snapshot =
+        prepareSnapshotWithDeleteOfRecord(prepareRecordDeemedAsCommitted(ANY_TEXT_3, ANY_TEXT_4));
+    TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
+
+    // Act Assert
+    assertThat(handler.canOnePhaseCommit(context)).isFalse();
+    verify(virtualTableInfoManager, never()).getVirtualTableInfo(anyString(), anyString());
+  }
+
+  @Test
+  void canOnePhaseCommit_WhenGettingVirtualTableInfoFails_ShouldThrowCommitException()
+      throws Exception {
+    // Arrange
+    ParticipantCommitHandler enabled = newHandler(/* onePhaseCommitEnabled= */ true);
+    Snapshot snapshot =
+        prepareSnapshotWithDeleteOfRecord(prepareRecordDeemedAsCommitted(ANY_TEXT_3, ANY_TEXT_4));
+    doThrow(ExecutionException.class)
+        .when(virtualTableInfoManager)
+        .getVirtualTableInfo(ANY_NAMESPACE_NAME, ANY_TABLE_NAME);
     TransactionContext context = createTransactionContext(snapshot, Isolation.SNAPSHOT);
 
     // Act Assert

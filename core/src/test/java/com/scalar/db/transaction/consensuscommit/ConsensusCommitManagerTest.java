@@ -53,6 +53,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -664,7 +665,7 @@ public class ConsensusCommitManagerTest {
 
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
-    verify(transaction).rollback();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -689,6 +690,7 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -712,6 +714,7 @@ public class ConsensusCommitManagerTest {
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(transaction).get(get);
     verify(transaction).commit();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -1065,7 +1068,7 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      getScannerAndScannerClose_CommitConflictExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudConflictException()
+      getScannerAndScannerClose_CommitConflictExceptionThrownByTransactionCommit_ShouldThrowCrudConflictExceptionWithoutRollingBack()
           throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1092,7 +1095,7 @@ public class ConsensusCommitManagerTest {
 
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(scanner).close();
-    verify(transaction).rollback();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -1128,7 +1131,7 @@ public class ConsensusCommitManagerTest {
 
   @Test
   public void
-      getScannerAndScannerClose_CommitExceptionThrownByTransactionCommit_ShouldRollbackTransactionAndThrowCrudException()
+      getScannerAndScannerClose_CommitExceptionThrownByTransactionCommit_ShouldThrowCrudExceptionWithoutRollingBack()
           throws TransactionException {
     // Arrange
     DistributedTransaction transaction = mock(DistributedTransaction.class);
@@ -1155,7 +1158,7 @@ public class ConsensusCommitManagerTest {
 
     verify(spied).begin(anyString(), eq(Isolation.SNAPSHOT), eq(true), eq(true));
     verify(scanner).close();
-    verify(transaction).rollback();
+    verify(transaction, never()).rollback();
   }
 
   @Test
@@ -2260,7 +2263,8 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(recovered).isTrue();
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
   }
 
   @Test
@@ -2278,7 +2282,8 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(recovered).isTrue();
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
   }
 
   @Test
@@ -2299,7 +2304,8 @@ public class ConsensusCommitManagerTest {
     // Assert
     assertThat(recovered).isTrue();
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
   }
 
   @Test
@@ -2340,7 +2346,8 @@ public class ConsensusCommitManagerTest {
     // The record could not be read, so neither the coordinator nor the recovery executor is
     // touched.
     verify(coordinator, never()).getState(anyString());
-    verify(recoveryExecutor, never()).executeSynchronously(any(), any(), any(Optional.class));
+    verify(recoveryExecutor, never())
+        .executeSynchronously(any(), any(), ArgumentMatchers.<Optional<State>>any());
     verify(coordinator, never()).deleteState(anyString());
   }
 

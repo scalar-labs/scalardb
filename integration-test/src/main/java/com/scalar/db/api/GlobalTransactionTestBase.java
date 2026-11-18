@@ -85,10 +85,16 @@ public abstract class GlobalTransactionTestBase {
    * {@link #manager1}, and both are driven by the same {@link GlobalTransaction#commit()} / {@link
    * GlobalTransaction#rollback()}. They may be the same instance (single-phase backing) or two
    * distinct instances sharing a coordinator (two-phase-commit backing).
+   *
+   * @throws Exception if an error occurs
    */
   protected abstract void setUpManagers() throws Exception;
 
-  /** Releases the resources set up in {@link #setUpManagers()}. */
+  /**
+   * Releases the resources set up in {@link #setUpManagers()}.
+   *
+   * @throws Exception if an error occurs
+   */
   protected abstract void tearDownManagers() throws Exception;
 
   protected String getNamespaceBaseName() {
@@ -348,8 +354,8 @@ public abstract class GlobalTransactionTestBase {
     BranchTransaction branch2 = manager2.beginBranch(global.getId());
 
     // Assert: every branch is keyed by the global transaction ID.
-    assertThat(branch1.getId()).isEqualTo(global.getId());
-    assertThat(branch2.getId()).isEqualTo(global.getId());
+    assertThat(branch1.getGlobalTransactionId()).isEqualTo(global.getId());
+    assertThat(branch2.getGlobalTransactionId()).isEqualTo(global.getId());
     branch1.end(BranchTransaction.Status.FAILURE);
     branch2.end(BranchTransaction.Status.FAILURE);
     global.rollback();

@@ -7,12 +7,15 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.util.ScalarDbUtils;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -36,7 +39,8 @@ public class ParallelExecutor {
         || config.isParallelValidationEnabled()
         || config.isParallelCommitEnabled()
         || config.isParallelRollbackEnabled()
-        || config.isParallelImplicitPreReadEnabled()) {
+        || config.isParallelImplicitPreReadEnabled()
+        || config.isParallelBatchGetEnabled()) {
       parallelExecutorService =
           Executors.newFixedThreadPool(
               config.getParallelExecutorCount(),
@@ -147,6 +151,95 @@ public class ParallelExecutor {
     } catch (ExecutionException | ValidationConflictException e) {
       throw new AssertionError(
           "Tasks for implicit pre-read should not throw ExecutionException and ValidationConflictException",
+          e);
+    }
+  }
+
+  public boolean isParallelBatchGetEnabled() {
+    return config.isParallelBatchGetEnabled();
+  }
+
+  /**
+   * Runs the tasks of a batch Get on at most {@link
+   * ConsensusCommitConfig#getParallelBatchGetMaxConcurrencyPerBatch()} threads, the calling thread
+   * and threads of the parallel executor, each of which runs the next task not started yet until
+   * none is left. This waits for the workers that have started even if some of the tasks fail, so
+   * that none of them is left running on the transaction after this returns, but not for the
+   * workers still queued in the parallel executor, which return without running any task.
+   */
+  public void executeBatchGets(List<ParallelExecutorTask> tasks, String transactionId) {
+    try {
+      if (tasks.size() == 1 || !config.isParallelBatchGetEnabled()) {
+        executeTasksSerially(tasks, false);
+        return;
+      }
+
+      int workerCount =
+          Math.min(tasks.size(), Math.max(1, config.getParallelBatchGetMaxConcurrencyPerBatch()));
+      AtomicInteger next = new AtomicInteger();
+      ParallelExecutorTask worker =
+          () -> {
+            for (int j = next.getAndIncrement(); j < tasks.size(); j = next.getAndIncrement()) {
+              tasks.get(j).run();
+            }
+          };
+
+      // The calling thread runs one of the workers, so that a batch hands one worker fewer to the
+      // pool. Each submitted worker runs only if it claims itself before the calling thread does,
+      // so that the calling thread doesn't have to wait for workers still queued in the pool
+      assert parallelExecutorService != null;
+      List<AtomicBoolean> claims = new ArrayList<>(workerCount - 1);
+      List<Future<Void>> futures = new ArrayList<>(workerCount - 1);
+      Throwable throwable = null;
+      try {
+        for (int i = 1; i < workerCount; i++) {
+          AtomicBoolean claim = new AtomicBoolean();
+          futures.add(
+              parallelExecutorService.submit(
+                  () -> {
+                    if (claim.compareAndSet(false, true)) {
+                      worker.run();
+                    }
+                    return null;
+                  }));
+          claims.add(claim);
+        }
+
+        worker.run();
+      } catch (Throwable t) {
+        // When a submission fails, e.g., because the parallel executor is shut down, the calling
+        // thread doesn't run its worker, but still takes care of the workers already submitted
+        throwable = t;
+      }
+
+      // Wait for the other workers that have started even on failure, since they use the
+      // transaction context too. A worker that hasn't started returns without running any task
+      for (int i = 0; i < futures.size(); i++) {
+        if (claims.get(i).compareAndSet(false, true)) {
+          // Cancel it so that the parallel executor doesn't keep the tasks and the transaction
+          // context while it is queued
+          futures.get(i).cancel(false);
+          continue;
+        }
+        try {
+          Uninterruptibles.getUninterruptibly(futures.get(i));
+        } catch (java.util.concurrent.ExecutionException e) {
+          if (throwable == null) {
+            throwable = e.getCause();
+          } else {
+            throwable.addSuppressed(e.getCause());
+          }
+        }
+      }
+
+      if (throwable != null) {
+        logger.warn(
+            "Failed to run executeBatchGets tasks. Transaction ID: {}", transactionId, throwable);
+        rethrow(throwable);
+      }
+    } catch (ExecutionException | ValidationConflictException | CrudException e) {
+      throw new AssertionError(
+          "Tasks for batch gets should not throw ExecutionException, ValidationConflictException, and CrudException",
           e);
     }
   }

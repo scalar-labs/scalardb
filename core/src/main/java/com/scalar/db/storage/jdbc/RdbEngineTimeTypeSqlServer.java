@@ -5,10 +5,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import microsoft.sql.DateTimeOffset;
 
 public class RdbEngineTimeTypeSqlServer
-    implements RdbEngineTimeTypeStrategy<String, LocalTime, String, DateTimeOffset> {
+    implements RdbEngineTimeTypeStrategy<String, LocalTime, String, String> {
 
   @Override
   public String convert(LocalDate date) {
@@ -30,9 +29,10 @@ public class RdbEngineTimeTypeSqlServer
   }
 
   @Override
-  public DateTimeOffset convert(OffsetDateTime timestampTZ) {
-    // When using SQLServer DATETIMEOFFSET data type, we should use the SQLServer JDBC driver's
-    // microsoft.sql.DateTimeOffset class for encoding the value.
-    return DateTimeOffset.valueOf(timestampTZ);
+  public String convert(OffsetDateTime timestampTZ) {
+    // Pass the timestamptz value as text otherwise the driver encodes the dates before the Julian
+    // to Gregorian Calendar transition (October 15, 1582) with the Julian calendar, storing them
+    // up to 10 days off.
+    return timestampTZ.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
   }
 }
