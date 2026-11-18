@@ -6,6 +6,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -35,7 +36,6 @@ import java.sql.Statement;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -288,8 +288,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       @Nullable Map<String, String> options)
       throws SQLException {
     String sourceTable = options == null ? null : options.get(COLLATION_SOURCE_TABLE);
-    if (sourceTable == null || !engineHasColumnCollations()) {
-      return Collections.emptyMap();
+    if (sourceTable == null || engineLacksColumnCollations()) {
+      return ImmutableMap.of();
     }
     Map<String, TextColumnCollation> sourceCollations =
         rdbEngine.getTextColumnCollations(connection, namespace, sourceTable);
@@ -299,7 +299,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         !columnCollationEnabled && rdbEngine.collationClauseRequiresExtendedStringSize()
             ? rdbEngine.getSchemaDefaultCollation(connection, namespace)
             : null;
-    Map<String, String> clauses = new HashMap<>();
+    ImmutableMap.Builder<String, String> clauses = ImmutableMap.builder();
     for (String columnName :
         Iterables.concat(metadata.getPartitionKeyNames(), metadata.getClusteringKeyNames())) {
       if (metadata.getColumnDataType(columnName) == DataType.TEXT) {
@@ -313,7 +313,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         }
       }
     }
-    return clauses;
+    return clauses.build();
   }
 
   @VisibleForTesting
@@ -925,11 +925,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (metadata.getColumnDataType(columnName) != DataType.TEXT) {
       return bareType;
     }
-    String clause =
-        sourceKeyCollationClauses.containsKey(columnName)
-            ? sourceKeyCollationClauses.get(columnName)
-            : createdTextCollationClause;
-    return rdbEngine.appendCollationClause(bareType, clause);
+    return rdbEngine.appendCollationClause(
+        bareType, sourceKeyCollationClauses.getOrDefault(columnName, createdTextCollationClause));
   }
 
   private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
@@ -1064,8 +1061,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   // Reads the engine's own clause, not the created-column clause, so that turning off the column
   // collation setting keeps copying source key collations and restating a redefined column's
   // collation.
-  private boolean engineHasColumnCollations() {
-    return !rdbEngine.getBinaryTextCollationClause().isEmpty();
+  private boolean engineLacksColumnCollations() {
+    return rdbEngine.getBinaryTextCollationClause().isEmpty();
   }
 
   private String getColumnDefinitionForRedefinition(
@@ -1077,7 +1074,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       DataType newType,
       String bareType)
       throws SQLException {
-    if (newType != DataType.TEXT || !engineHasColumnCollations()) {
+    if (newType != DataType.TEXT || engineLacksColumnCollations()) {
       return bareType;
     }
     if (currentType != DataType.TEXT) {
