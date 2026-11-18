@@ -187,15 +187,15 @@ def static validateTestGroupsCoverage(test, File repositoryRoot) {
     }
 }
 
-// A test class is a concrete class that declares @Test methods or extends a class whose name ends
-// with "Test" or "TestBase". Helper classes such as JdbcEnv or JdbcAdminTestUtils are neither.
+// Test class names contain "Test", while helper class names end with "Utils", such as JdbcTestUtils,
+// or have no "Test", such as JdbcEnv. Matching names rather than test annotations catches test
+// classes that only inherit their test methods.
 def static isTestClass(File javaFile) {
     def className = javaFile.name - ".java"
-    def matcher = javaFile.text =~ /((?:\w+\s+)*)class\s+${className}\b([^{]*)\{/
-    if (!matcher.find() || matcher.group(1).contains("abstract")) {
+    if (!className.contains("Test") || className.endsWith("Utils")) {
         return false
     }
-    return javaFile.text =~ /(?m)^\s*@Test\b/ || matcher.group(2) =~ /extends\s+\w*(Test|TestBase)\b/
+    return !(javaFile.text =~ /\babstract\s+(?:\w+\s+)*class\s+${className}\b/)
 }
 
 static def exitWithError(String message) {
