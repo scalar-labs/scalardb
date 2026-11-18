@@ -1,0 +1,425 @@
+# How the Database Update Monitor works
+
+This document explains how the code works today: what happens on each run, how it decides what to send to Slack, and how to trace a Slack message back to its cause.
+
+- For **what the monitor must do** (requirements and full configuration reference), see [SPEC.md](./SPEC.md).
+- For **setup and everyday use**, see [README.md](./README.md).
+
+Where the code does not yet match the specification, this document describes the code and points to the deviation (`D-n`) listed in [SPEC.md section 10](./SPEC.md#10-known-deviations-from-this-specification).
+
+---
+
+## 1. The big picture
+
+Each week the monitor answers two questions for every ScalarDB-supported database:
+
+1. **Is there a newer version** of something ScalarDB depends on (driver, SDK, connector, server image)?
+2. **Did the vendor announce something** (new feature, deprecation, breaking change) that might affect a ScalarDB adapter?
+
+It then sends one Slack message with anything new. It only reports. People decide what to do.
+
+```
+GitHub Actions (Sunday 17:00 UTC)  or  python src/main.py on your machine
+        |
+        v
+1. Load monitors.yaml, relevance-rules.yaml, state/last-run.json
+        |
+        v
+2. For each database:
+     Version checks                     Feature checks
+     - read ScalarDB's pin              - fetch new feed items / releases / page
+     - list upstream versions           - keep items matching source keywords
+     - keep versions newer than pin     - apply relevance rules
+        |
+        v
+3. Drop GitHub "feature" items that only repeat a version update
+4. Compare with state: what is new, what was already sent
+5. Write output/report.json, output/slack-payload.json, output/notify-slack
+6. Save state/last-run.json (skipped on dry run)
+        |
+        v
+7. GitHub Actions commits the state file and posts the Slack message
+```
+
+Two points that clear up most confusion:
+
+- **Detecting is not the same as notifying.** A run can detect many updates and send none, because they were already sent, are not relevant, or this is the baseline run. `report.json` shows both.
+- **The Python program never talks to Slack.** It only writes `slack-payload.json`. The GitHub Actions workflow posts it.
+
+---
+
+## 2. Where the files are
+
+```
+ci/db-update-monitor/
+  config/monitors.yaml           What to watch: databases, pins, upstreams, feeds
+  config/relevance-rules.yaml    Global "never notify" / "notify" keywords
+  src/main.py                    Command-line entry point; writes output files
+  src/engine.py                  Runs all checks and puts the results together
+  src/pin_reader.py              Reads ScalarDB's current versions (pins)
+  src/version_normalizer.py      Parses and compares versions, applies granularity
+  src/relevance.py               Decides whether an announcement is relevant
+  src/diff.py                    Baseline and "was this already sent?" logic
+  src/state.py                   Loads and saves last-run.json
+  src/text_util.py               Keyword matching and other text helpers
+  src/notifier/slack.py          Builds the Slack message
+  src/plugins/                   One class per upstream or source type
+  state/last-run.json            Memory between runs (committed to git)
+  state/last-run.clean.json      Empty state, for resetting after local tests
+  tests/                         Unit tests (pytest)
+
+.github/workflows/db-update-monitor.yaml   The weekly job and the PR test job
+```
+
+`output/` is not committed. In GitHub Actions it is uploaded as the `db-monitor-report` artifact.
+
+---
+
+## 3. Configuration in short
+
+The full field reference is in [SPEC.md section 6](./SPEC.md#6-configuration-reference). This section explains the ideas.
+
+A database entry in `monitors.yaml` has two independent parts:
+
+```yaml
+- id: postgresql
+  name: PostgreSQL
+  watch_features: [jdbc, deprecated, breaking]
+
+  components:                  # version checks
+    - id: jdbc-driver
+      type: jdbc-driver
+      current_version:         # the pin: what ScalarDB uses today
+        source: gradle
+        file: build.gradle
+        property: postgresqlDriverVersion
+      upstream:                # where new versions appear
+        type: maven
+        artifact: org.postgresql:postgresql
+
+  sources:                     # feature checks
+    - type: rss
+      url: https://www.postgresql.org/news.rss
+```
+
+### 3.1 Pins (`current_version`)
+
+- **`gradle`** reads a line like `postgresqlDriverVersion = '42.7.14'` from the given file. Only single quotes are recognized.
+- **`tests-config`** reads `ci/tests-config.yaml`. The `%VERSION%` placeholder and the trailing `_` are removed from labels, so `postgresql_%VERSION%` becomes `postgresql`.
+  - `path: cassandra` takes the versions of that exact label.
+  - `filter: postgresql` takes the versions of every label starting with `postgresql`.
+  - The highest version found is the pin. For PostgreSQL that is "the newest server version we test against".
+  - Labels without a `versions` list (e.g. `cosmos`, `sqlite_3`) cannot be used.
+
+### 3.2 Upstreams
+
+| `type` | What it reads | Default granularity |
+|--------|---------------|---------------------|
+| `maven` | All versions in `maven-metadata.xml` | `exact` |
+| `docker` | Docker Hub tags, newest first, up to 5 pages of 100 | `major` |
+| `github_releases` | The 30 most recent GitHub releases | `exact` |
+
+A component can override granularity with `version_granularity`. Setting it under `defaults` has no effect today (D-8).
+
+Docker images publish many non-version tags (`latest`, `alpine`, `17-bookworm`). Use `tag_pattern` (e.g. `'^\d+(\.\d+)?$'`) and `exclude_tags` so only plain version tags are compared.
+
+### 3.3 Feature sources
+
+| `type` | What it reads | How it knows what is new |
+|--------|---------------|--------------------------|
+| `rss` | Items of an RSS or Atom feed | Items published after the newest item seen last time |
+| `github_releases` | Recent releases (title and notes) | Releases published after the newest release seen last time |
+| `webpage` | The page text, with HTML removed | The page text changed since last time (compared by hash) |
+
+`keywords` on a source decides which items are **considered** at all:
+
+- No `keywords` → every item is considered. Use this for feeds about one product only (PostgreSQL news, the Cosmos DB blog).
+- With `keywords` → only matching items are considered. **Shared vendor feeds must set keywords**, otherwise every AWS or Azure announcement would be considered.
+- `match_scope: title` (RSS only) matches keywords against the title only. Use it for shared feeds, because article bodies often mention other products in passing.
+- For `webpage`, the database's `watch_features` are added to the source keywords.
+
+Being considered does **not** mean being sent. Every considered item still goes through the relevance rules (section 6).
+
+### 3.4 Adding a database
+
+Add an entry to `monitors.yaml`. No Python change is needed if the vendor publishes on Maven, Docker Hub, GitHub Releases, an RSS/Atom feed, or a plain HTML page. See the README for a step-by-step guide.
+
+A new kind of upstream or source needs a new plugin class in `src/plugins/` and one line in the registry in `src/plugins/__init__.py`.
+
+---
+
+## 4. One run, step by step
+
+The entry point is `src/main.py`. It creates a `MonitorEngine` (`src/engine.py`) and calls `run()`.
+
+### Step 1 — Load configuration and state
+
+- Databases with `enabled: false` are dropped. The `defaults` section is copied onto each remaining database.
+- With `--filter <id>` (or the `DATABASE_FILTER` environment variable), only that database is kept. If the baseline is not complete yet, a warning is logged, because a filtered run never completes the baseline.
+- `state/last-run.json` is loaded. If it does not exist, the run starts with empty state.
+
+### Step 2 — Version checks
+
+For each component:
+
+1. Read the pin.
+2. Ask the upstream plugin for its versions.
+3. Remove pre-releases, unless the pin is itself a pre-release.
+4. Keep only versions newer than the pin, then apply the granularity.
+5. If anything is left, create one **version update** with the pin, the newest version, the level (major / minor / patch), and the full list of newer versions.
+
+"No version update" means "nothing newer than the pin". It does not mean the check failed. If reading the pin or calling the upstream fails, the error is recorded and the run continues with the next component.
+
+### Step 3 — Feature checks
+
+For each source:
+
+1. Look up the source's **cursor** in state: the time of the newest item seen last time, or the page hash for a web page. The cursor key is `{database id}:{type}:{url or repo}`.
+2. Fetch the source and keep only items newer than the cursor. Items without a date are always kept; the "already sent" check in step 5 stops repeats.
+3. Keep items that match the source `keywords` (if any).
+4. Move the cursor forward past **every** item fetched, matched or not. Otherwise a feed that rarely matches would never move its cursor.
+5. Apply the relevance rules (section 6) to each kept item.
+6. If the source has no cursor yet but the baseline is already complete, this is a **newly added source**. Its items are recorded as seen and not sent. This avoids a flood from a new feed.
+
+If fetching fails, the error is recorded and the run continues.
+
+### Step 4 — Drop feature items that only repeat a version update
+
+For TiDB, the same GitHub release is both a new version and a feature item. To avoid listing it twice, a feature item is dropped when **all** of these are true:
+
+- it comes from `github_releases`,
+- its tag matches one of the newer versions found for that database in step 2,
+- it matched no watch feature other than the database's own id or name (e.g. "TiDB" in "TiDB v8.5.9" does not count),
+- its relevance reason is not an adapter gap.
+
+RSS and web page items are never dropped here.
+
+Note: TiDB releases on older release lines (e.g. v7.5.x) are older than the pin, so they are not version updates and are not dropped. Because `tidb` is in TiDB's `watch_features`, they are sent as feature items.
+
+### Step 5 — Decide what to send
+
+**Version updates** are checked in this order (`partition_updates` in `src/diff.py`):
+
+1. ScalarDB's pin **changed** since the last run and the new pin is already the newest version → we upgraded. Record it and do not send.
+2. Baseline not complete yet → record the newest version as "sent", do not send.
+3. This newest version was already sent → do not send.
+4. Otherwise → **send**.
+
+A component added after the baseline has no history, so its update is sent on its first run.
+
+**Feature updates** (`partition_feature_updates`):
+
+1. Already judged not relevant before → do not send.
+2. Baseline not complete yet → record it, do not send.
+3. Already sent before → do not send.
+4. Not relevant → record as not relevant, do not send.
+5. Otherwise → **send**.
+
+Only relevant feature items can reach Slack.
+
+### Step 6 — Complete the baseline
+
+On a run without `--filter`, `baseline_established` is set to `true`. A filtered run never sets it.
+
+### Step 7 — Run status
+
+| Status | When | Exit code |
+|--------|------|-----------|
+| `SUCCESS` | No check failed | 0 |
+| `PARTIAL_SUCCESS` | Some checks failed | 0 |
+| `FAILURE` | Every check failed | 1 |
+
+A `--filter` value that matches no database checks nothing and still reports `SUCCESS` (D-12).
+
+### Step 8 — Write outputs and save state
+
+Always written, even on a dry run:
+
+| File | Contents |
+|------|----------|
+| `output/report.json` | Status, counts, errors, everything detected, and what was sent |
+| `output/slack-payload.json` | The Slack message. `{"blocks": []}` when there is nothing to send |
+| `output/notify-slack` | `true` if the message has content, otherwise `false` |
+
+Unless it is a dry run (`--dry-run` or `DRY_RUN=true`), `state/last-run.json` is saved with what was sent, the cursors, the pins, the errors, and the run time.
+
+---
+
+## 5. How versions are compared
+
+`src/version_normalizer.py`:
+
+- Any text before the first digit is removed (`v8.5.9` → `8.5.9`), then the version is parsed with Python's `packaging` library.
+- If a version cannot be parsed, the two versions are compared as plain text. This keeps the run from crashing but can order versions wrongly. It currently affects SQL Server (`13.6.0.jre8`) and YugabyteDB (`42.7.3-yb-4`) (D-1).
+- A version counts as a pre-release if `packaging` says so, or if it contains `alpha`, `beta`, `rc`, `preview`, `snapshot`, `milestone`, or a milestone marker such as `-M1`.
+- Granularity:
+  - `exact` — every newer version.
+  - `minor` — only versions with a higher major or minor number.
+  - `major` — only versions with a higher major number. A Docker pin of `17` does not report `17.6`, but does report `18`.
+
+---
+
+## 6. How relevance is decided
+
+`evaluate_relevance` in `src/relevance.py` checks these rules in order. The first match decides.
+
+| # | Rule | Result |
+|---|------|--------|
+| 1 | Text contains a global `irrelevant_keywords` entry | Not relevant |
+| 2 | **Adapter gap** (see below) | Relevant |
+| 3 | Text contains one of the database's `watch_features` | Relevant |
+| 4 | A source keyword that matched is also in `watch_features` | Relevant |
+| 5 | Text contains a global `relevant_keywords` entry | Relevant |
+| 6 | Nothing matched | Not relevant |
+
+"Text" is the item's title plus its description.
+
+**Adapter gap.** This rule exists for the Cosmos DB case. A database can record what its adapter supports today in `adapter_capabilities`, for example `partition_key_model: v1_single_path`. If a value contains `v1`, `single_path`, `single-path`, or `legacy`, it is treated as a legacy model. Then an item is relevant if it mentions any of the database's `watch_features`, or the words `hierarchical` or `v2`. The last two words are fixed in the code (D-9).
+
+**Keyword matching** (`keyword_in_text` in `src/text_util.py`) ignores case:
+
+- A keyword with a space, or longer than 4 characters, matches anywhere in the text. `partition key` matches "Hierarchical partition keys".
+- A keyword of 4 characters or fewer must match a whole word. `fts` does not match "drafts", and `json` does not match "jsonb".
+
+Because rule 1 runs first, an important announcement that also mentions "pricing" is dropped.
+
+---
+
+## 7. The state file
+
+`state/last-run.json` is committed to git, so each weekly run knows what earlier runs sent.
+
+| Field | Meaning |
+|-------|---------|
+| `baseline_established` | `false` until the first full, non-dry run |
+| `components` | Per `database:component`: newest version already sent, and last check time |
+| `features` | Announcements already sent or recorded during a baseline, with title and first-seen time |
+| `seen_irrelevant` | Announcements judged not relevant, so they are not checked again |
+| `source_cursors` | Per source: time of the newest item seen, or the page hash |
+| `pin_snapshot` | Each component's pin at the last run, used to notice upgrades |
+| `errors` | Failed checks of the last run |
+| `last_run`, `last_run_status` | Time and status of the last run |
+
+An announcement is identified by `{database id}:{source type}:{url}`, or by title and date if it has no URL.
+
+A web page always has the same URL, so after its first item every later change of that page looks "already sent" and is never reported (D-3).
+
+To reset after local testing:
+
+```bash
+cp state/last-run.clean.json state/last-run.json
+```
+
+Never commit a state file produced by local tests. The next production run would treat everything in it as already sent.
+
+---
+
+## 8. The Slack message
+
+Built by `src/notifier/slack.py`. Nothing is sent if there are no new version updates, no new feature updates, **and** no errors.
+
+Otherwise the message contains, in order:
+
+1. A header: *ScalarDB Database Update Monitor — N new update(s)*. Left out when only errors are reported.
+2. **VERSION updates**: a fixed-width table with database, component, current, latest, level, and source. If there are several newer versions, a line below lists up to five.
+3. **FEATURE updates**: one bullet per item with database, title, description (up to 500 characters), the ScalarDB adapter capabilities if configured, and a link.
+4. **Check failures**: up to five failed checks.
+5. A link to the GitHub Actions run and the branch name.
+
+Long version and feature lists are split into several sections to stay under Slack's 3,000-character limit per section. The failures section is not split, and the number of blocks is not capped, so a very large message can be rejected by Slack (D-4).
+
+To preview a message locally, post `output/slack-payload.json` to a **test** webhook with `curl`.
+
+---
+
+## 9. The GitHub Actions workflow
+
+File: `.github/workflows/db-update-monitor.yaml`.
+
+| Trigger | Job | What it does |
+|---------|-----|--------------|
+| Pull request changing `ci/db-update-monitor/**` or the workflow file | Unit tests | Runs `pytest`. Never posts to Slack. |
+| Schedule `0 17 * * 0` (Sunday 17:00 UTC, Monday 02:00 JST) | Check database updates | Full run. Default branch only. |
+| Manual "Run workflow" | Check database updates | Same, with optional `database_filter` and `dry_run` inputs. Default branch only. |
+
+The monitor job steps:
+
+1. Check out the repository, set up Python 3.12, install `requirements.txt`.
+2. Run `src/main.py` with `GITHUB_TOKEN` (for the GitHub API).
+3. Upload `output/` as the `db-monitor-report` artifact (always, even if the run failed).
+4. Unless it is a dry run: commit `state/` with message `chore: update db monitor state [skip ci]` and push it to the branch.
+5. Post `slack-payload.json` to `SLACK_SCALARDB_WEBHOOK_URL` if all of these are true:
+   - it is not a dry run,
+   - `notify-slack` is `true`,
+   - the state commit succeeded or was skipped.
+
+Things to know:
+
+- The state is committed **before** Slack is posted. If posting fails, the updates are already marked as sent and will not be sent again (D-5).
+- The push goes directly to the default branch. If branch protection blocks it, the commit step fails and Slack is not posted (D-6).
+- Both jobs share the concurrency group `db-update-monitor`, so pull request test runs can cancel each other (D-7).
+- When the run status is `FAILURE`, the run step fails, the commit step is skipped, and the Slack message with the failures is still posted.
+
+**First production run:** the state is empty, so the run records everything and posts nothing (unless checks failed). From the second weekly run on, only new updates are posted.
+
+---
+
+## 10. Finding out what happened in a run
+
+1. **Log line** at the end of the run step:
+   `Run complete: status=…, new_versions=…, new_features=…, errors=…`
+2. **`report.json`** in the `db-monitor-report` artifact:
+   - `detected_versions`, `detected_features` — everything the checks found.
+   - `version_updates`, `feature_updates` — what was sent.
+   - For a feature, `relevant` and `relevance_reason` explain the relevance decision.
+   - `errors` — which checks failed and why.
+3. **`notify-slack`** — whether the workflow would post.
+4. **`state/last-run.json`** on the default branch — what the next run will treat as already sent.
+
+**No Slack message this week?** One of these is true:
+
+- Nothing new was found (`notify-slack` is `false`).
+- The run was a dry run.
+- The run was on a branch other than the default branch, so the job did not run.
+- The state commit failed (see D-6).
+- This was the first (baseline) run.
+
+**An expected update was not sent?** Find it in `report.json`:
+
+- Not in `detected_*` → the check did not find it. Check the pin, the upstream settings, the source keywords, and `errors`.
+- In `detected_features` with `relevant: false` → no relevance rule matched. Add a keyword to the database's `watch_features` or to `relevant_keywords`.
+- In `detected_*` and relevant, but not in `version_updates` / `feature_updates` → it was already sent, or it was recorded during a baseline.
+
+---
+
+## 11. Worked examples
+
+### Cosmos DB hierarchical partition keys
+
+1. The Cosmos entry in `monitors.yaml` reads the Cosmos DB blog feed with no keywords, so every post is considered. Its `watch_features` include `hierarchical partition key`, and `adapter_capabilities` has `partition_key_model: v1_single_path`.
+2. A blog post about hierarchical partition keys is published.
+3. Relevance: `v1_single_path` is a legacy value, and the post mentions a watch feature → relevant, with reason `adapter partition_key_model=v1_single_path vs hierarchical partition key`.
+4. After the baseline, and if the post's URL was not sent before → it appears under FEATURE updates, with the line *ScalarDB adapter — partition_key_model: v1_single_path*, so readers see the adapter is still on v1.
+5. The URL is recorded. The same post is not sent again next week.
+
+A new Cosmos SDK release on Maven would appear separately under VERSION updates.
+
+### PostgreSQL JDBC driver patch
+
+1. `build.gradle` pins `postgresqlDriverVersion = '42.7.14'`.
+2. Maven Central lists `42.7.15`. Granularity is `exact` → version update `42.7.14 → 42.7.15`, level patch.
+3. `42.7.15` was not sent before → it appears under VERSION updates.
+4. Next week, nothing changed → not sent again.
+5. Someone bumps `build.gradle` to `42.7.15`. Next run: the pin changed and is now the newest version → recorded quietly, nothing sent.
+
+For the PostgreSQL server image, the pin is the highest PostgreSQL version in `ci/tests-config.yaml` (e.g. `17`) with granularity `major`. `17.6` is not reported. `18` is.
+
+---
+
+## 12. What this tool is not
+
+- Not Dependabot. Dependabot still opens the Gradle upgrade pull requests.
+- Not an automatic upgrader or adapter fixer.
+- Not real-time. Weekly is intentional.
+- Not an AI classifier. Relevance is keyword rules in YAML.
+- Not a dashboard or ticketing bot.
