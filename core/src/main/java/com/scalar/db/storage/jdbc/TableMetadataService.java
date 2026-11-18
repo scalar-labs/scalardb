@@ -80,23 +80,23 @@ public class TableMetadataService {
             + "("
             + enclose(COL_FULL_TABLE_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ","
             + enclose(COL_COLUMN_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ","
             + enclose(COL_DATA_TYPE)
             + " "
-            + getTextType(20, false)
+            + getTextColumnDefinition(20, false)
             + " NOT NULL,"
             + enclose(COL_KEY_TYPE)
             + " "
-            + getTextType(20, false)
+            + getTextColumnDefinition(20, false)
             + ","
             + enclose(COL_CLUSTERING_ORDER)
             + " "
-            + getTextType(10, false)
+            + getTextColumnDefinition(10, false)
             + ","
             + enclose(COL_INDEXED)
             + " "
@@ -378,7 +378,7 @@ public class TableMetadataService {
     return rdbEngine.getDataTypeForEngine(DataType.BOOLEAN);
   }
 
-  private String getTextType(int charLength, boolean isKey) {
+  private String getTextColumnDefinition(int charLength, boolean isKey) {
     return rdbEngine.appendCollationClause(
         rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }

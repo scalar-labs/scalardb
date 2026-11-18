@@ -53,19 +53,19 @@ public class VirtualTableMetadataService {
             + "("
             + enclose(COL_FULL_TABLE_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ", "
             + enclose(COL_LEFT_SOURCE_TABLE_FULL_TABLE_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ", "
             + enclose(COL_RIGHT_SOURCE_TABLE_FULL_TABLE_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ", "
             + enclose(COL_JOIN_TYPE)
             + " "
-            + getTextType(20, false)
+            + getTextColumnDefinition(20, false)
             + ", "
             + enclose(COL_ATTRIBUTES)
             + " "
@@ -313,7 +313,7 @@ public class VirtualTableMetadataService {
         });
   }
 
-  private String getTextType(int charLength, boolean isKey) {
+  private String getTextColumnDefinition(int charLength, boolean isKey) {
     return rdbEngine.appendCollationClause(
         rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }

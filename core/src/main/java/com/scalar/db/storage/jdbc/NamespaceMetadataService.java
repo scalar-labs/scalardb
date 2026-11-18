@@ -45,7 +45,7 @@ public class NamespaceMetadataService {
             + "("
             + enclose(COL_NAMESPACE_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ", "
             + "PRIMARY KEY ("
             + enclose(COL_NAMESPACE_NAME)
@@ -171,7 +171,7 @@ public class NamespaceMetadataService {
         });
   }
 
-  private String getTextType(int charLength, boolean isKey) {
+  private String getTextColumnDefinition(int charLength, boolean isKey) {
     return rdbEngine.appendCollationClause(
         rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }
