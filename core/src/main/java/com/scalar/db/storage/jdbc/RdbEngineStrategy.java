@@ -132,7 +132,7 @@ public interface RdbEngineStrategy {
       String table,
       String oldColumnName,
       String newColumnName,
-      String columnType) {
+      String columnDefinition) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
         + " RENAME COLUMN "
@@ -142,7 +142,7 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns whether {@link #renameColumnSql} uses its {@code columnType} argument.
+   * Returns whether {@link #renameColumnSql} uses its {@code columnDefinition} argument.
    *
    * @return {@code true} if the rename statement restates the column type
    */
@@ -152,7 +152,8 @@ public interface RdbEngineStrategy {
 
   String renameTableSql(String namespace, String oldTableName, String newTableName);
 
-  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnDefinition);
 
   /**
    * Returns a parameterized SQL that checks whether the specified table exists by querying the

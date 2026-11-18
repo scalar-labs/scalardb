@@ -783,10 +783,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String columnType =
-        getTypeForRedefinition(
+    String columnDefinition =
+        getColumnDefinitionForRedefinition(
             connection, namespace, table, columnName, dataType, columnTypeForKey);
-    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnDefinition);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
@@ -800,19 +800,19 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
 
-    String columnType =
-        getTypeForRedefinition(
+    String columnDefinition =
+        getColumnDefinitionForRedefinition(
             connection,
             namespace,
             table,
             columnName,
             dataType,
             rdbEngine.getDataTypeForEngine(dataType));
-    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnType);
+    String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnDefinition);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
 
-  private String getTypeForRedefinition(
+  private String getColumnDefinitionForRedefinition(
       Connection connection,
       String namespace,
       String table,
@@ -1080,20 +1080,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
             TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
 
-            String columnType = getVendorDbColumnType(updatedTableMetadata, newColumnName);
+            String columnDefinition = getVendorDbColumnType(updatedTableMetadata, newColumnName);
             if (rdbEngine.renameColumnRestatesType()) {
-              columnType =
-                  getTypeForRedefinition(
+              columnDefinition =
+                  getColumnDefinitionForRedefinition(
                       connection,
                       namespace,
                       table,
                       oldColumnName,
                       currentTableMetadata.getColumnDataType(oldColumnName),
-                      columnType);
+                      columnDefinition);
             }
             String renameColumnStatement =
                 rdbEngine.renameColumnSql(
-                    namespace, table, oldColumnName, newColumnName, columnType);
+                    namespace, table, oldColumnName, newColumnName, columnDefinition);
             execute(connection, rdbEngine, renameColumnStatement, requiresExplicitCommit);
 
             if (currentTableMetadata.getSecondaryIndexNames().contains(oldColumnName)) {
