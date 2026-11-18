@@ -27,10 +27,42 @@ function mutate(num, ...args) {
     return source;
   }
 
+  // Reads all the pages of the query result and passes the records to the callback. A page can be
+  // empty even when the query has more results, so the result is complete only when no
+  // continuation is returned
+  function queryAllPages(query, callback) {
+    let reads = [];
+
+    function queryPage(continuation) {
+      return __.queryDocuments(__.getSelfLink(), query, {continuation: continuation},
+        (error, page, options) => {
+          if (error) {
+            callback(error);
+            return;
+          }
+
+          if (page) {
+            reads = reads.concat(page);
+          }
+
+          if (options && options.continuation) {
+            if (!queryPage(options.continuation)) {
+              callback(new Error("The query was not accepted by the server."));
+            }
+            return;
+          }
+
+          callback(undefined, reads);
+        });
+    }
+
+    return queryPage();
+  }
+
   function mutateWithQuery(mutation, record, query) {
     return new Promise((resolve, reject) => {
-      const isAccepted = __.queryDocuments(__.getSelfLink(), query,
-        (error, reads, options) => {
+      const isAccepted = queryAllPages(query,
+        (error, reads) => {
           if (error) {
             reject(error);
             return;
