@@ -175,9 +175,10 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String table,
       String oldColumnName,
       String newColumnName,
-      String columnType) {
+      String columnDefinition) {
     if (renameColumnSupported) {
-      return super.renameColumnSql(namespace, table, oldColumnName, newColumnName, columnType);
+      return super.renameColumnSql(
+          namespace, table, oldColumnName, newColumnName, columnDefinition);
     }
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
@@ -186,7 +187,7 @@ class RdbEngineMysql extends AbstractRdbEngine {
         + " "
         + enclose(newColumnName)
         + " "
-        + columnType;
+        + columnDefinition;
   }
 
   @Override
@@ -204,14 +205,14 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String[] alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+      String namespace, String table, String columnName, String columnDefinition) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)
           + " MODIFY "
           + enclose(columnName)
           + " "
-          + columnType
+          + columnDefinition
     };
   }
 
