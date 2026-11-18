@@ -7,7 +7,7 @@ import javax.annotation.concurrent.Immutable;
 
 /** The collation and charset the catalog records for a character column. */
 @Immutable
-final class TextColumnCollation {
+public final class TextColumnCollation {
   private final String collation;
   @Nullable private final String charset;
 
