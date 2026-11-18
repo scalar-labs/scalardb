@@ -504,6 +504,18 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public boolean rejectsCollationClauses(Connection connection) throws SQLException {
+    // Every user can read DATABASE_PROPERTIES, unlike V$PARAMETER
+    String sql =
+        "SELECT PROPERTY_VALUE FROM DATABASE_PROPERTIES WHERE PROPERTY_NAME = 'MAX_STRING_SIZE'";
+    try (PreparedStatement ps = connection.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery()) {
+      return rs.next() && "STANDARD".equals(rs.getString(1));
+    }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Nullable
   @Override
   public String getSchemaDefaultCollation(Connection connection, String namespace)

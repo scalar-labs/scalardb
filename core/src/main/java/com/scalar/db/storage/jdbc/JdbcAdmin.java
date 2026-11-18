@@ -847,6 +847,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           dataSource,
           requiresExplicitCommit,
           connection -> {
+            // The transaction admin adds a TEXT column right after the import, and a registered
+            // table cannot be imported again, so the import fails before registering the table
+            if (columnCollationEnabled && rdbEngine.rejectsCollationClauses(connection)) {
+              throw new SQLException(
+                  CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+            }
             createMetadataSchemaIfNotExists(connection);
             createNamespacesTableIfNotExists(connection);
             upsertIntoNamespacesTable(connection, namespace);

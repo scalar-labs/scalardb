@@ -21,6 +21,8 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -453,6 +455,28 @@ class RdbEngineOracleTest {
 
     // Assert
     assertThat(actual).isTrue();
+  }
+
+  @ParameterizedTest
+  @CsvSource({"STANDARD,true", "EXTENDED,false"})
+  public void rejectsCollationClauses_ShouldReadMaxStringSizeFromDatabaseProperties(
+      String maxStringSize, boolean expected) throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(
+            "SELECT PROPERTY_VALUE FROM DATABASE_PROPERTIES WHERE PROPERTY_NAME = 'MAX_STRING_SIZE'"))
+        .thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getString(1)).thenReturn(maxStringSize);
+
+    // Act
+    boolean actual = rdbEngineOracle.rejectsCollationClauses(connection);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
   }
 
   @Test

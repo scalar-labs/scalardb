@@ -118,6 +118,18 @@ public interface RdbEngineStrategy {
   }
 
   /**
+   * Returns whether the database rejects every column collation clause, as Oracle does when
+   * MAX_STRING_SIZE is STANDARD.
+   *
+   * @param connection the connection to read the database setting with
+   * @return {@code true} if a column collation clause fails on this database
+   * @throws SQLException if reading the database setting fails
+   */
+  default boolean rejectsCollationClauses(Connection connection) throws SQLException {
+    return false;
+  }
+
+  /**
    * Returns the collation that columns of the schema get when they declare none. It is read only
    * when {@link #collationClauseRequiresExtendedStringSize()} returns {@code true}, so an engine
    * overrides it together with that method.
