@@ -353,7 +353,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                 columnName ->
                     enclose(columnName)
                         + " "
-                        + getVendorDbColumnType(metadata, columnName, sourceKeyCollationClauses))
+                        + getVendorDbColumnDefinition(
+                            metadata, columnName, sourceKeyCollationClauses))
             .collect(Collectors.joining(","));
 
     // Add primary key definition
@@ -907,19 +908,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   /**
-   * Get the vendor DB data type that is equivalent to the ScalarDB data type
+   * Get the vendor DB column definition of a column: the vendor DB data type that is equivalent to
+   * the ScalarDB data type, followed by the collation clause for a TEXT column
    *
    * @param metadata a table metadata
    * @param columnName a column name
-   * @return a vendor DB data type
+   * @return a vendor DB column definition
    */
-  private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
-    return getVendorDbColumnType(metadata, columnName, Collections.emptyMap());
+  private String getVendorDbColumnDefinition(TableMetadata metadata, String columnName) {
+    return getVendorDbColumnDefinition(metadata, columnName, Collections.emptyMap());
   }
 
-  private String getVendorDbColumnType(
+  private String getVendorDbColumnDefinition(
       TableMetadata metadata, String columnName, Map<String, String> sourceKeyCollationClauses) {
-    String bareType = getBareVendorDbColumnType(metadata, columnName);
+    String bareType = getVendorDbColumnType(metadata, columnName);
     if (metadata.getColumnDataType(columnName) != DataType.TEXT) {
       return bareType;
     }
@@ -930,7 +932,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return rdbEngine.appendCollationClause(bareType, clause);
   }
 
-  private String getBareVendorDbColumnType(TableMetadata metadata, String columnName) {
+  private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
 
     String dataType = rdbEngine.getDataTypeForEngine(scalarDbColumnType);
@@ -1269,7 +1271,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     + " ADD "
                     + enclose(columnName)
                     + " "
-                    + getVendorDbColumnType(updatedTableMetadata, columnName);
+                    + getVendorDbColumnDefinition(updatedTableMetadata, columnName);
             execute(connection, rdbEngine, addNewColumnStatement, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
             if (columnCollationEnabled && columnType == DataType.TEXT) {
@@ -1352,8 +1354,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             }
             TableMetadata updatedTableMetadata = tableMetadataBuilder.build();
 
-            String columnDefinition =
-                getBareVendorDbColumnType(updatedTableMetadata, newColumnName);
+            String columnDefinition = getVendorDbColumnType(updatedTableMetadata, newColumnName);
             if (rdbEngine.renameColumnRestatesType()) {
               DataType dataType = currentTableMetadata.getColumnDataType(oldColumnName);
               columnDefinition =
@@ -1409,7 +1410,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     .removeColumn(columnName)
                     .addColumn(columnName, newColumnType)
                     .build();
-            String newStorageColumnType =
+            String newStorageColumnDefinition =
                 getColumnDefinitionForRedefinition(
                     connection,
                     namespace,
@@ -1417,9 +1418,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     columnName,
                     currentColumnType,
                     newColumnType,
-                    getBareVendorDbColumnType(updatedTableMetadata, columnName));
+                    getVendorDbColumnType(updatedTableMetadata, columnName));
             String[] alterColumnTypeStatements =
-                rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
+                rdbEngine.alterColumnTypeSql(
+                    namespace, table, columnName, newStorageColumnDefinition);
 
             execute(connection, rdbEngine, alterColumnTypeStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
