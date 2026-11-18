@@ -15,9 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Spanner-emulator specific multiple clustering key scan test that works around the emulator
- * limitation to reduce the test execution to about 2 hours; the emulator only allows one read-write
- * transaction or schema change at a time.
+ * Spanner-emulator specific multiple clustering key scan test that works around the emulator only
+ * allowing one read-write transaction or schema change at a time.
  *
  * <p>This class is only enabled when running against the Spanner emulator. It overrides {@link
  * #createStorageAdmin} and {@link #createStorage} to return thread-dispatching proxies that route
