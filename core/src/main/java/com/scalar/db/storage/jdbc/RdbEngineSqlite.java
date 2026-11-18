@@ -291,7 +291,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
   @Override
   public String[] alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+      String namespace, String table, String columnName, String columnDefinition) {
     throw new AssertionError(
         "SQLite does not require changes in column data types when making indices");
   }

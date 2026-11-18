@@ -283,14 +283,14 @@ class RdbEngineDb2 extends AbstractRdbEngine {
 
   @Override
   public String[] alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+      String namespace, String table, String columnName, String columnDefinition) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)
           + " ALTER COLUMN "
           + enclose(columnName)
           + " SET DATA TYPE "
-          + columnType,
+          + columnDefinition,
       "CALL SYSPROC.ADMIN_CMD('REORG TABLE " + encloseFullTableName(namespace, table) + "')"
     };
   }
