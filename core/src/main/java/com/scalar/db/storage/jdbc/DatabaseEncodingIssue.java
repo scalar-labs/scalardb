@@ -6,7 +6,7 @@ import javax.annotation.concurrent.Immutable;
 
 /** A database encoding under which TEXT columns do not behave as ScalarDB expects. */
 @Immutable
-final class DatabaseEncodingIssue {
+public final class DatabaseEncodingIssue {
 
   enum Kind {
     /** The encoding cannot store every Unicode character. */
