@@ -5943,6 +5943,12 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
     Statement mockStatement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(mockStatement);
+    PreparedStatement maxStringSizeStatement = mock(PreparedStatement.class);
+    ResultSet maxStringSizeResultSet = mock(ResultSet.class);
+    when(connection.prepareStatement(anyString())).thenReturn(maxStringSizeStatement);
+    when(maxStringSizeStatement.executeQuery()).thenReturn(maxStringSizeResultSet);
+    when(maxStringSizeResultSet.next()).thenReturn(true);
+    when(maxStringSizeResultSet.getString(1)).thenReturn("EXTENDED");
     TableMetadata importedTableMetadata = mock(TableMetadata.class);
     doReturn(importedTableMetadata)
         .when(adminSpy)
@@ -7905,6 +7911,12 @@ public class JdbcAdminTest {
 
   private void importSingleTextColumnTable(RdbEngineStrategy rdbEngineStrategy)
       throws SQLException, ExecutionException {
+    spyAdminForSingleTextColumnImport(rdbEngineStrategy)
+        .importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+  }
+
+  private JdbcAdmin spyAdminForSingleTextColumnImport(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException, ExecutionException {
     PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
     DatabaseMetaData metadata = mock(DatabaseMetaData.class);
@@ -7934,7 +7946,7 @@ public class JdbcAdminTest {
     doNothing()
         .when(adminSpy)
         .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
-    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+    return adminSpy;
   }
 
   @Test
@@ -7961,6 +7973,43 @@ public class JdbcAdminTest {
 
     // Assert
     verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
+  }
+
+  @Test
+  public void importTable_ForOracleRejectingCollationClauses_ShouldFailBeforeRegisteringTable()
+      throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
+    doReturn(true).when(rdbEngineStrategy).rejectsCollationClauses(any());
+    JdbcAdmin adminSpy = spyAdminForSingleTextColumnImport(rdbEngineStrategy);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of()))
+        .isInstanceOf(ExecutionException.class)
+        .hasRootCauseMessage(
+            CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+    verify(adminSpy, never()).createMetadataSchemaIfNotExists(any());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+  }
+
+  @Test
+  public void
+      importTable_ForOracleRejectingCollationClausesWithColumnCollationDisabled_ShouldRegisterTable()
+          throws SQLException, ExecutionException {
+    // Arrange
+    when(config.isColumnCollationEnabled()).thenReturn(false);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
+    doReturn(true).when(rdbEngineStrategy).rejectsCollationClauses(any());
+    JdbcAdmin adminSpy = spyAdminForSingleTextColumnImport(rdbEngineStrategy);
+
+    // Act
+    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).rejectsCollationClauses(any());
+    verify(adminSpy).addTableMetadata(any(), eq(NAMESPACE), eq(TABLE), any(), eq(true), eq(false));
   }
 
   private TableMetadata textTableMetadata() {

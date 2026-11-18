@@ -567,6 +567,26 @@ public class JdbcAdminCollationIntegrationTest {
 
   @Test
   @DisabledIf("isDb2OrSpanner")
+  void importTable_OracleMaxStringSizeStandard_ShouldFailWithoutRegisteringTable()
+      throws Exception {
+    // Arrange
+    assumeTrue(isOracleWithStandardMaxStringSize());
+    createOracleTablesWithoutCollation();
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> admin.importTable(NAMESPACE, TABLE, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(ExecutionException.class)
+        .hasStackTraceContaining(
+            CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+    assertThat(admin.tableExists(NAMESPACE, TABLE)).isFalse();
+  }
+
+  @Test
+  @DisabledIf("isDb2OrSpanner")
   void repairTable_MaxStringSizeStandardAndTablesCreatedBeforeUpgrade_ShouldSucceed()
       throws Exception {
     // Arrange
@@ -589,7 +609,7 @@ public class JdbcAdminCollationIntegrationTest {
     // Arrange
     assumeTrue(isOracleWithStandardMaxStringSize());
     createOracleTablesWithoutCollation();
-    admin.importTable(NAMESPACE, TABLE, Collections.emptyMap());
+    admin.repairTable(NAMESPACE, TABLE, textTableMetadata(), Collections.emptyMap());
 
     // Act
     Throwable thrown =
