@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from models import ComponentType, VersionUpdate
-from plugins.base import SourcePlugin
+from plugins.base import SourcePlugin, resolve_granularity
 from text_util import USER_AGENT
 from version_normalizer import VersionNormalizer
 
@@ -36,9 +36,7 @@ class DockerHubChecker(SourcePlugin):
         if not stable_tags:
             return None
 
-        granularity = component.get(
-            "version_granularity", upstream_config.get("version_granularity", "major")
-        )
+        granularity = resolve_granularity(component, upstream_config, database, "major")
         newer = self.normalizer.filter_by_granularity(stable_tags, current_pin, granularity)
         if not newer:
             return None

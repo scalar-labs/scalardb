@@ -22,7 +22,7 @@ It then sends one Slack message with anything new. It only reports. People decid
 GitHub Actions (Sunday 17:00 UTC)  or  python src/main.py on your machine
         |
         v
-1. Load monitors.yaml, relevance-rules.yaml, state/last-run.json
+1. Load monitors.yaml, relevance-rules.yaml, last-run.json (the state)
         |
         v
 2. For each database:
@@ -35,10 +35,11 @@ GitHub Actions (Sunday 17:00 UTC)  or  python src/main.py on your machine
 3. Drop GitHub "feature" items that only repeat a version update
 4. Compare with state: what is new, what was already sent
 5. Write output/report.json, output/slack-payload.json, output/notify-slack
-6. Save state/last-run.json (skipped on dry run)
+6. Write the updated last-run.json (skipped on dry run)
         |
         v
-7. GitHub Actions commits the state file and posts the Slack message
+7. GitHub Actions posts the Slack message, then (if that worked)
+   pushes last-run.json to the db-update-monitor-state branch
 ```
 
 Two points that clear up most confusion:
@@ -64,14 +65,16 @@ ci/db-update-monitor/
   src/text_util.py               Keyword matching and other text helpers
   src/notifier/slack.py          Builds the Slack message
   src/plugins/                   One class per upstream or source type
-  state/last-run.json            Memory between runs (committed to git)
-  state/last-run.clean.json      Empty state, for resetting after local tests
   tests/                         Unit tests (pytest)
+  state/last-run.json            Local state only; ignored by git, created on first local run
+  output/                        Output files of a run; ignored by git
 
 .github/workflows/db-update-monitor.yaml   The weekly job and the PR test job
+
+Branch db-update-monitor-state            Production state (last-run.json), written by the workflow
 ```
 
-`output/` is not committed. In GitHub Actions it is uploaded as the `db-monitor-report` artifact.
+In GitHub Actions, `output/` is uploaded as the `db-monitor-report` artifact.
 
 ---
 
@@ -119,7 +122,9 @@ A database entry in `monitors.yaml` has two independent parts:
 | `docker` | Docker Hub tags, newest first, up to 5 pages of 100 | `major` |
 | `github_releases` | The 30 most recent GitHub releases | `exact` |
 
-A component can override granularity with `version_granularity`. Setting it under `defaults` has no effect today (D-8).
+`version_granularity` can be set on the component, on its `upstream`, on the database, or under `defaults`. The most specific setting wins; if none is set, the default in the table applies. A value under `defaults` also applies to Docker images, replacing their `major` default, so the current configuration does not set one there.
+
+Some vendors publish several builds of every release, e.g. `13.6.0.jre8` and `13.6.0.jre11` for the SQL Server driver. Set `version_pattern` on a `maven` or `github_releases` upstream (e.g. `'\.jre8$'`) so only the build ScalarDB uses is compared.
 
 Docker images publish many non-version tags (`latest`, `alpine`, `17-bookworm`). Use `tag_pattern` (e.g. `'^\d+(\.\d+)?$'`) and `exclude_tags` so only plain version tags are compared.
 
@@ -129,14 +134,16 @@ Docker images publish many non-version tags (`latest`, `alpine`, `17-bookworm`).
 |--------|---------------|--------------------------|
 | `rss` | Items of an RSS or Atom feed | Items published after the newest item seen last time |
 | `github_releases` | Recent releases (title and notes) | Releases published after the newest release seen last time |
-| `webpage` | The page text, with HTML removed | The page text changed since last time (compared by hash) |
+| `webpage` | The page, split into parts (list items, paragraphs, headings) | Parts that were not on the page last time |
 
 `keywords` on a source decides which items are **considered** at all:
 
 - No `keywords` → every item is considered. Use this for feeds about one product only (PostgreSQL news, the Cosmos DB blog).
 - With `keywords` → only matching items are considered. **Shared vendor feeds must set keywords**, otherwise every AWS or Azure announcement would be considered.
 - `match_scope: title` (RSS only) matches keywords against the title only. Use it for shared feeds, because article bodies often mention other products in passing.
-- For `webpage`, the database's `watch_features` are added to the source keywords.
+- For `webpage`, the database's `watch_features` are added to the source keywords, and keywords are matched against the **new parts** of the page only. All new matching parts of one page change become one item, titled e.g. *Oracle Database: page updated (JSON, partition)*, with up to five of the new parts as its description.
+
+RSS titles and descriptions are converted from HTML to plain text before they are used.
 
 Being considered does **not** mean being sent. Every considered item still goes through the relevance rules (section 6).
 
@@ -155,8 +162,8 @@ The entry point is `src/main.py`. It creates a `MonitorEngine` (`src/engine.py`)
 ### Step 1 — Load configuration and state
 
 - Databases with `enabled: false` are dropped. The `defaults` section is copied onto each remaining database.
-- With `--filter <id>` (or the `DATABASE_FILTER` environment variable), only that database is kept. If the baseline is not complete yet, a warning is logged, because a filtered run never completes the baseline.
-- `state/last-run.json` is loaded. If it does not exist, the run starts with empty state.
+- With `--filter <id>` (or the `DATABASE_FILTER` environment variable), only that database is kept. If no enabled database has that id, the run stops with an error that lists the valid ids (exit code 2). If the baseline is not complete yet, a warning is logged, because a filtered run never completes the baseline.
+- The state file given with `--state` is loaded. If it does not exist, the run starts with empty state.
 
 ### Step 2 — Version checks
 
@@ -174,7 +181,7 @@ For each component:
 
 For each source:
 
-1. Look up the source's **cursor** in state: the time of the newest item seen last time, or the page hash for a web page. The cursor key is `{database id}:{type}:{url or repo}`.
+1. Look up the source's **cursor** in state: the time of the newest item seen last time. For a web page, the cursor is a hash of the whole page plus a short hash of each part, so the next run can tell which parts are new. The cursor key is `{database id}:{type}:{url or repo}`.
 2. Fetch the source and keep only items newer than the cursor. Items without a date are always kept; the "already sent" check in step 5 stops repeats.
 3. Keep items that match the source `keywords` (if any).
 4. Move the cursor forward past **every** item fetched, matched or not. Otherwise a feed that rarely matches would never move its cursor.
@@ -227,9 +234,9 @@ On a run without `--filter`, `baseline_established` is set to `true`. A filtered
 |--------|------|-----------|
 | `SUCCESS` | No check failed | 0 |
 | `PARTIAL_SUCCESS` | Some checks failed | 0 |
-| `FAILURE` | Every check failed | 1 |
+| `FAILURE` | Every check failed, or there was nothing to check | 1 |
 
-A `--filter` value that matches no database checks nothing and still reports `SUCCESS` (D-12).
+A `--filter` value that matches no database never gets this far: the run stops in step 1 with exit code 2.
 
 ### Step 8 — Write outputs and save state
 
@@ -241,7 +248,7 @@ Always written, even on a dry run:
 | `output/slack-payload.json` | The Slack message. `{"blocks": []}` when there is nothing to send |
 | `output/notify-slack` | `true` if the message has content, otherwise `false` |
 
-Unless it is a dry run (`--dry-run` or `DRY_RUN=true`), `state/last-run.json` is saved with what was sent, the cursors, the pins, the errors, and the run time.
+Unless it is a dry run (`--dry-run` or `DRY_RUN=true`), the state file is written with what was sent, the cursors, the pins, the errors, and the run time. The Python program only writes the file; in GitHub Actions, the workflow decides afterwards whether to push it (section 9).
 
 ---
 
@@ -250,7 +257,7 @@ Unless it is a dry run (`--dry-run` or `DRY_RUN=true`), `state/last-run.json` is
 `src/version_normalizer.py`:
 
 - Any text before the first digit is removed (`v8.5.9` → `8.5.9`), then the version is parsed with Python's `packaging` library.
-- If a version cannot be parsed, the two versions are compared as plain text. This keeps the run from crashing but can order versions wrongly. It currently affects SQL Server (`13.6.0.jre8`) and YugabyteDB (`42.7.3-yb-4`) (D-1).
+- Some vendors use formats `packaging` cannot parse, such as the SQL Server driver (`13.6.0.jre8`) and the YugabyteDB driver (`42.7.3-yb-4`). These are split into numbers and words and compared part by part, with numbers compared as numbers. So `13.10.0.jre8` is newer than `13.6.0.jre8`, and `42.7.3-yb-10` is newer than `42.7.3-yb-4`. The leading numbers (`13.6.0`) are used for the update level and the granularity.
 - A version counts as a pre-release if `packaging` says so, or if it contains `alpha`, `beta`, `rc`, `preview`, `snapshot`, `milestone`, or a milestone marker such as `-M1`.
 - Granularity:
   - `exact` — every newer version.
@@ -287,7 +294,17 @@ Because rule 1 runs first, an important announcement that also mentions "pricing
 
 ## 7. The state file
 
-`state/last-run.json` is committed to git, so each weekly run knows what earlier runs sent.
+`last-run.json` is how each weekly run knows what earlier runs sent.
+
+- **In GitHub Actions** it lives on the branch `db-update-monitor-state`, not on the default branch (which is protected). That branch holds only `last-run.json` and a short README, and each run that changes the state adds one commit to it. Section 9 explains how the workflow reads and saves it.
+- **Locally** it is `state/last-run.json`. Git ignores it, so a local file can never be committed by accident.
+
+To look at the production state:
+
+```bash
+git fetch origin db-update-monitor-state
+git show origin/db-update-monitor-state:last-run.json
+```
 
 | Field | Meaning |
 |-------|---------|
@@ -295,22 +312,17 @@ Because rule 1 runs first, an important announcement that also mentions "pricing
 | `components` | Per `database:component`: newest version already sent, and last check time |
 | `features` | Announcements already sent or recorded during a baseline, with title and first-seen time |
 | `seen_irrelevant` | Announcements judged not relevant, so they are not checked again |
-| `source_cursors` | Per source: time of the newest item seen, or the page hash |
+| `source_cursors` | Per source: time of the newest item seen. For a web page: the page hash and a short hash of each part (about 7 KB for the Oracle page) |
 | `pin_snapshot` | Each component's pin at the last run, used to notice upgrades |
 | `errors` | Failed checks of the last run |
 | `last_run`, `last_run_status` | Time and status of the last run |
 
-An announcement is identified by `{database id}:{source type}:{url}`, or by title and date if it has no URL.
+An announcement is identified by `{database id}:{source type}:{url}`, or by title and date if it has no URL. A web page always has the same URL, so a web page change is identified by the URL plus a hash of that version of the page (`{url}#{page hash}`). Each change is therefore reported once, and the next change is reported again.
 
-A web page always has the same URL, so after its first item every later change of that page looks "already sent" and is never reported (D-3).
+**To reset:**
 
-To reset after local testing:
-
-```bash
-cp state/last-run.clean.json state/last-run.json
-```
-
-Never commit a state file produced by local tests. The next production run would treat everything in it as already sent.
+- Locally: delete `state/last-run.json`. A missing file means empty state.
+- In production: delete the `db-update-monitor-state` branch. The next run starts with empty state, so it is a silent baseline run that recreates the branch.
 
 ---
 
@@ -326,7 +338,11 @@ Otherwise the message contains, in order:
 4. **Check failures**: up to five failed checks.
 5. A link to the GitHub Actions run and the branch name.
 
-Long version and feature lists are split into several sections to stay under Slack's 3,000-character limit per section. The failures section is not split, and the number of blocks is not capped, so a very large message can be rejected by Slack (D-4).
+The message is kept within Slack's limits so Slack never rejects it:
+
+- Long sections are split into several, to stay under 3,000 characters each. Each failure message is cut to 300 characters.
+- Slack allows at most 50 blocks per message. If there are more, the update list is shortened and ends with a note pointing to `report.json` in the run's artifact. The header, the failures, and the run link are always kept.
+- `&`, `<`, and `>` in database names, titles, descriptions, and failure messages are escaped, so they show as text instead of breaking the formatting.
 
 To preview a message locally, post `output/slack-payload.json` to a **test** webhook with `curl`.
 
@@ -344,23 +360,28 @@ File: `.github/workflows/db-update-monitor.yaml`.
 
 The monitor job steps:
 
-1. Check out the repository, set up Python 3.12, install `requirements.txt`.
-2. Run `src/main.py` with `GITHUB_TOKEN` (for the GitHub API).
-3. Upload `output/` as the `db-monitor-report` artifact (always, even if the run failed).
-4. Unless it is a dry run: commit `state/` with message `chore: update db monitor state [skip ci]` and push it to the branch.
-5. Post `slack-payload.json` to `SLACK_SCALARDB_WEBHOOK_URL` if all of these are true:
+1. Check out the default branch, set up Python 3.12, install `requirements.txt`.
+2. **Check out the state branch** into a separate folder (`$RUNNER_TEMP/db-update-monitor-state`), using a git worktree. If the branch does not exist yet, create it there as an empty branch with a short README. Then the run starts with empty state, which makes it the baseline run.
+3. **Run** `src/main.py` with `--state` pointing at `last-run.json` in that folder, and `GITHUB_TOKEN` for the GitHub API.
+4. **Upload** `output/` as the `db-monitor-report` artifact (always, even if the run failed).
+5. **Post to Slack**: send `slack-payload.json` to `SLACK_SCALARDB_WEBHOOK_URL` if it is not a dry run and `notify-slack` is `true`. The step fails if Slack rejects the message (`errors: true`).
+6. **Save state**: commit `last-run.json` on the state branch and push it, only if all of these are true:
    - it is not a dry run,
-   - `notify-slack` is `true`,
-   - the state commit succeeded or was skipped.
+   - the monitor run succeeded (status `SUCCESS` or `PARTIAL_SUCCESS`),
+   - the Slack post succeeded, or there was nothing to post.
+
+   If the state did not change, nothing is committed.
+
+Why this order: Slack is posted **before** the state is saved. If posting fails, the state is not saved, so the next run sends the same updates again. An update can be sent twice (for example, if Slack accepted the message but the push then failed), but it is never lost. A failed post or push fails the job, so GitHub shows the run as failed.
 
 Things to know:
 
-- The state is committed **before** Slack is posted. If posting fails, the updates are already marked as sent and will not be sent again (D-5).
-- The push goes directly to the default branch. If branch protection blocks it, the commit step fails and Slack is not posted (D-6).
-- Both jobs share the concurrency group `db-update-monitor`, so pull request test runs can cancel each other (D-7).
-- When the run status is `FAILURE`, the run step fails, the commit step is skipped, and the Slack message with the failures is still posted.
+- The default branch is never written to. The workflow needs `contents: write` only to push the state branch, and that branch must not be covered by branch protection or rulesets.
+- Pushes made with `GITHUB_TOKEN` do not start other workflows, so state commits do not trigger CI.
+- Only the monitor job uses the concurrency group `db-update-monitor`, so two monitor runs never write the state at the same time. The test job has one group per pull request; a new push cancels that pull request's outdated test run.
+- When the run status is `FAILURE`, the run step fails, the Slack message with the failures is still posted, and the state is not saved.
 
-**First production run:** the state is empty, so the run records everything and posts nothing (unless checks failed). From the second weekly run on, only new updates are posted.
+**First production run:** the state branch does not exist yet, so the run records everything, posts nothing (unless checks failed), and creates the branch. From the second weekly run on, only new updates are posted.
 
 ---
 
@@ -374,15 +395,17 @@ Things to know:
    - For a feature, `relevant` and `relevance_reason` explain the relevance decision.
    - `errors` — which checks failed and why.
 3. **`notify-slack`** — whether the workflow would post.
-4. **`state/last-run.json`** on the default branch — what the next run will treat as already sent.
+4. **`last-run.json`** on the `db-update-monitor-state` branch — what the next run will treat as already sent. If the "Save state" step was skipped or failed, the next run will send this week's updates again.
 
 **No Slack message this week?** One of these is true:
 
 - Nothing new was found (`notify-slack` is `false`).
 - The run was a dry run.
 - The run was on a branch other than the default branch, so the job did not run.
-- The state commit failed (see D-6).
+- The "Notify Slack" step failed, for example because the webhook secret is wrong. The job is shown as failed, and the updates will be sent again next run.
 - This was the first (baseline) run.
+
+**The same update was sent twice?** The previous run's "Save state" step was skipped or failed after Slack was posted. Check that run's log; the most likely cause is that the state branch could not be pushed.
 
 **An expected update was not sent?** Find it in `report.json`:
 

@@ -15,7 +15,7 @@ SRC_DIR = Path(__file__).resolve().parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from engine import MonitorEngine
+from engine import MonitorEngine, UnknownDatabaseError
 from notifier.slack import build_slack_payload, write_slack_payload
 
 
@@ -50,7 +50,10 @@ def main(
         database_filter=database_filter or os.environ.get("DATABASE_FILTER") or None,
     )
 
-    report = engine.run(dry_run=dry_run or os.environ.get("DRY_RUN", "").lower() == "true")
+    try:
+        report = engine.run(dry_run=dry_run or os.environ.get("DRY_RUN", "").lower() == "true")
+    except UnknownDatabaseError as exc:
+        raise click.UsageError(str(exc)) from exc
     notify_version_updates = report.pop("notify_version_updates")
     notify_feature_updates = report.pop("notify_feature_updates")
     errors = report.get("errors", [])

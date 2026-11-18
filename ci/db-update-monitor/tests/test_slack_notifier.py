@@ -62,3 +62,50 @@ def test_build_slack_payload_splits_long_feature_section():
     section_texts = [block["text"]["text"] for block in payload["blocks"] if block["type"] == "section"]
     assert any("FEATURE updates (cont.)" in text for text in section_texts)
     assert all(len(text) <= 3000 for text in section_texts)
+
+
+def _feature(index: int, **overrides) -> FeatureUpdate:
+    data = dict(
+        database_id="cosmos",
+        database_name="Azure Cosmos DB",
+        title=f"Announcement {index}",
+        description="d" * 500,
+        source_type="rss",
+        matched_keywords=[],
+        relevant=True,
+        url=f"https://example.com/{index}",
+    )
+    data.update(overrides)
+    return FeatureUpdate(**data)
+
+
+def _sections(payload):
+    return [block["text"]["text"] for block in payload["blocks"] if block["type"] == "section"]
+
+
+def test_build_slack_payload_escapes_control_characters():
+    payload = build_slack_payload([], [_feature(1, title="Q&A <live>")], errors=[])
+    text = _sections(payload)[1]
+    assert "Q&amp;A &lt;live&gt;" in text
+    assert "<https://example.com/1|View announcement>" in text
+
+
+def test_build_slack_payload_long_errors_stay_under_section_limit():
+    errors = [
+        {"database_id": "x", "component_id": "y", "source_type": "rss", "error": "E" * 900}
+        for _ in range(5)
+    ]
+    payload = build_slack_payload([], [], errors=errors)
+    assert all(len(text) <= 3000 for text in _sections(payload))
+
+
+def test_build_slack_payload_caps_blocks_and_keeps_errors():
+    errors = [{"database_id": "x", "component_id": "y", "source_type": "rss", "error": "boom"}]
+    payload = build_slack_payload(
+        [], [_feature(index) for index in range(400)], errors=errors, run_url="https://run"
+    )
+    sections = _sections(payload)
+    assert len(payload["blocks"]) <= 50
+    assert any("Message shortened" in text for text in sections)
+    assert any("Check failures" in text for text in sections)
+    assert payload["blocks"][-1]["type"] == "context"

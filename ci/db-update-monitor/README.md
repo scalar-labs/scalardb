@@ -25,7 +25,7 @@ The monitor only reports. It does not upgrade dependencies, change code, or open
 | **Schedule** | Every Sunday 17:00 UTC (Monday 02:00 JST), on the default branch only |
 | **Manual run** | GitHub → Actions → *Database Update Monitor* → *Run workflow*. Options: one database only (`database_filter`), dry run (`dry_run`) |
 | **Slack** | Posted with the repository secret `SLACK_SCALARDB_WEBHOOK_URL` (Slack incoming webhook) |
-| **Memory** | `state/last-run.json` records what was already sent. The workflow commits it to the default branch after each run |
+| **Memory** | `last-run.json` records what was already sent. It lives on the branch `db-update-monitor-state`, because the default branch is protected. The workflow pushes it there after Slack was posted successfully. Details: [HOW-IT-WORKS.md section 7](./HOW-IT-WORKS.md#7-the-state-file) |
 | **Report** | Each run uploads `output/` as the `db-monitor-report` artifact (kept 90 days) |
 | **Pull requests** | Changes under `ci/db-update-monitor/` run the unit tests only |
 
@@ -133,6 +133,15 @@ databases:
         match_scope: title
 ```
 
+**If the vendor publishes several builds of every release** (for example `13.6.0.jre8` and `13.6.0.jre11` for the SQL Server driver), add `version_pattern` to the upstream so only the build ScalarDB uses is compared:
+
+```yaml
+        upstream:
+          type: maven
+          artifact: com.microsoft.sqlserver:mssql-jdbc
+          version_pattern: '\.jre8$'
+```
+
 **4. Test it locally** with a dry run for just that database (see below), and check `output/report.json`:
 
 - `errors` is empty.
@@ -154,7 +163,7 @@ cd ci/db-update-monitor
 pip install -r requirements.txt
 ```
 
-Dry run for one database. This calls the real upstream services but does **not** change `state/last-run.json`:
+Dry run for one database. This calls the real upstream services but does **not** write the state file:
 
 ```bash
 python src/main.py --config config/monitors.yaml --state state/last-run.json --output-dir output --repo-root ../.. --filter cosmos --dry-run --verbose
@@ -176,17 +185,24 @@ The program never posts to Slack itself. To preview the message, post `slack-pay
 curl -X POST -H 'Content-Type: application/json' --data @output/slack-payload.json "$TEST_SLACK_WEBHOOK_URL"
 ```
 
-Because the committed state has no baseline yet, a local run with the real state produces a message only if checks failed. To preview version updates, pass a throwaway state file containing `{"baseline_established": true}` with `--state`. Feature items still do not appear in that preview: every feed looks newly added, and new feeds are recorded silently on their first run.
+**About the local state file.** Locally, the state is `state/last-run.json`. It does not exist until you run without `--dry-run`, and git ignores it, so it can never be committed by accident. It is separate from the production state on the `db-update-monitor-state` branch. To reset it, delete it.
 
-**If you ran without `--dry-run`,** `state/last-run.json` was changed. Reset it before committing:
-
-```bash
-cp state/last-run.clean.json state/last-run.json
-```
-
-Never commit a state file produced by a local run. The next weekly run would treat everything in it as already sent.
+With no local state, a run is a baseline run, so the message contains only check failures, if any. To preview version updates, pass a throwaway state file containing `{"baseline_established": true}` with `--state`. Feature items still do not appear in that preview: every feed looks newly added, and new feeds are recorded silently on their first run.
 
 **Do not use `--filter` for the first production run.** A filtered run never completes the baseline, so the next full run would also send nothing.
+
+## Production state
+
+To see what the monitor has already sent:
+
+```bash
+git fetch origin db-update-monitor-state
+git show origin/db-update-monitor-state:last-run.json
+```
+
+To start over (for example after a large configuration change), delete the `db-update-monitor-state` branch. The next run is then a silent baseline run that recreates it.
+
+The `db-update-monitor-state` branch must not be covered by branch protection or rulesets. Otherwise the workflow cannot save the state, the job fails, and the same updates are sent again every week.
 
 ## Tests
 

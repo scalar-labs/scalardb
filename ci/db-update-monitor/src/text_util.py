@@ -2,13 +2,32 @@
 
 from __future__ import annotations
 
+import html as html_lib
 import re
 from datetime import datetime
 from typing import List, Optional
 
 _WHITESPACE = re.compile(r"\s+")
 _SHORT_TOKEN = 4
+_SCRIPT = re.compile(r"<script[\s\S]*?</script>", re.IGNORECASE)
+_STYLE = re.compile(r"<style[\s\S]*?</style>", re.IGNORECASE)
+_BLOCK_TAG = re.compile(r"</?(?:li|p|div|h[1-6]|tr|td|th|dt|dd|br|table|ul|ol|section)\b[^>]*>", re.IGNORECASE)
+_TAG = re.compile(r"<[^>]+>")
 USER_AGENT = "ScalarDB-Database-Update-Monitor/1.0"
+
+
+def html_to_blocks(raw: str) -> List[str]:
+    """Plain text of each block-level element (list item, paragraph, heading, ...)."""
+    text = _SCRIPT.sub(" ", raw)
+    text = _STYLE.sub(" ", text)
+    text = _BLOCK_TAG.sub("\n", text)
+    text = _TAG.sub(" ", text)
+    blocks = (collapse_whitespace(html_lib.unescape(line)) for line in text.split("\n"))
+    return [block for block in blocks if block]
+
+
+def html_to_text(raw: str) -> str:
+    return " ".join(html_to_blocks(raw))
 
 
 def keyword_in_text(text: str, keyword: str) -> bool:

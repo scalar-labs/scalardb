@@ -48,7 +48,7 @@ The goal of the monitor is therefore:
 | **Source** | A place where a vendor announces features: an RSS/Atom feed, GitHub release notes, or a web page. |
 | **Relevant** | A feature announcement that matches the relevance rules and is therefore allowed to reach Slack. |
 | **Baseline** | The first full run. It records everything that already exists and sends nothing, so the team is not flooded with old news. |
-| **State** | The file `state/last-run.json`. It remembers what was already reported, so the same update is not sent twice. |
+| **State** | The file `last-run.json`, kept on the `db-update-monitor-state` branch. It remembers what was already reported, so the same update is not sent twice. |
 | **Digest** | The single Slack message a run sends. |
 
 ## 4. Functional requirements
@@ -56,7 +56,7 @@ The goal of the monitor is therefore:
 ### 4.1 Schedule and triggers
 
 - **FR-1** The monitor runs automatically once a week: Sunday 17:00 UTC (Monday 02:00 JST).
-- **FR-2** It can be started manually from GitHub Actions, optionally for one database only, and optionally as a dry run.
+- **FR-2** It can be started manually from GitHub Actions, optionally for one database only, and optionally as a dry run. A database id that does not match any enabled database stops the run with an error listing the valid ids.
 - **FR-3** Scheduled and manual runs only work on the repository's default branch.
 - **FR-4** Pull requests that change the monitor run its unit tests only. They never post to Slack or change state.
 
@@ -72,6 +72,10 @@ The goal of the monitor is therefore:
   | `minor` | Only a newer minor or major version | SDKs that release very often |
   | `major` | Only a newer major version | Server images (pin `17` does not report `17.6`, but does report `18`) |
 
+  Granularity is taken from the first place that sets it: the component, its `upstream`, the database (including `defaults`), and finally the default of the upstream type (`exact` for Maven and GitHub, `major` for Docker).
+
+- **FR-7a** Versions are compared by their numbers, including vendor formats that are not standard version numbers, such as `13.6.0.jre8` or `42.7.3-yb-4` (`13.10.0.jre8` is newer than `13.6.0.jre8`; `42.7.3-yb-10` is newer than `42.7.3-yb-4`).
+- **FR-7b** When a vendor publishes several builds of each release (e.g. `jre8` and `jre11`), the component can be limited to the build ScalarDB uses (`version_pattern`).
 - **FR-8** One report per component, showing the pin, the newest version, the update level (major / minor / patch), and the list of newer versions.
 - **FR-9** A given newest version is reported **once**. If an even newer version appears later, that is reported once too.
 - **FR-10** When ScalarDB upgrades a pin and the new pin is already the newest version, nothing is reported.
@@ -83,7 +87,7 @@ The goal of the monitor is therefore:
 - **FR-13** For shared vendor feeds that cover many products (e.g. AWS "What's New"), keyword matching can be limited to the item title (`match_scope: title`).
 - **FR-14** Every considered item goes through the **relevance rules** (section 4.4). Only relevant items can reach Slack.
 - **FR-15** Each relevant item is reported **once**.
-- **FR-16** For a web page source, a change to the page is reported when the page matches the configured keywords. Each new change can be reported again.
+- **FR-16** For a web page source, the monitor finds the parts of the page (list items, paragraphs, headings) that are new since the last run, and reports them if they match the keywords. Each new change is reported once; later changes are reported again.
 - **FR-17** If the same GitHub release is both a version update and a feature item, and the feature item has no feature-specific keyword match, only the version update is reported.
 
 ### 4.4 Relevance rules
@@ -117,7 +121,7 @@ Keyword matching ignores case. Keywords with a space or longer than 4 characters
   - a link to the GitHub Actions run.
 - **FR-25** No message is sent when there are no new updates and no failures.
 - **FR-26** A message is sent when checks failed, even if there are no new updates.
-- **FR-27** Dry runs never post to Slack.
+- **FR-27** Dry runs never post to Slack and never save state.
 - **FR-28** The message must stay within Slack's limits (3,000 characters per section, 50 blocks per message). Long content is split or shortened, never rejected.
 
 ### 4.7 Failure handling
@@ -131,6 +135,7 @@ Keyword matching ignores case. Keywords with a space or longer than 4 characters
   | `SUCCESS` | No check failed | 0 |
   | `PARTIAL_SUCCESS` | Some checks failed | 0 |
   | `FAILURE` | Every check failed, or there was nothing to check | 1 |
+  | (usage error) | The database id given to `--filter` does not exist | 2 |
 
 - **FR-32** An update must not be marked as reported unless the Slack message was delivered.
 
@@ -204,6 +209,7 @@ databases:
 | Field | Values | Meaning |
 |-------|--------|---------|
 | `first_run_policy` | `baseline_silent` (default) | First full run sends nothing. Any other value sends everything on the first run. |
+| `version_granularity` | `exact`, `minor`, `major` | Optional. Applies to every component that does not set its own, **including Docker server images**, which otherwise default to `major`. Not set in the current configuration. |
 
 **Component fields**
 
@@ -211,7 +217,7 @@ databases:
 |-------|----------|---------|
 | `id` | yes | Unique within the database, e.g. `jdbc-driver`, `server`. |
 | `type` | no | `sdk`, `jdbc-driver`, `server`, `connector`, or `driver`. Shown in Slack. Default `sdk` for Maven, `server` for Docker and GitHub. |
-| `version_granularity` | no | `exact`, `minor`, or `major`. Default `exact` for Maven and GitHub, `major` for Docker. |
+| `version_granularity` | no | `exact`, `minor`, or `major`. If not set: the database or `defaults` value, otherwise `exact` for Maven and GitHub and `major` for Docker. |
 | `current_version` | yes | Where to read the pin (below). |
 | `upstream` | yes | Where to look for new versions (below). |
 
@@ -233,6 +239,7 @@ Only labels that list `versions` in `ci/tests-config.yaml` can be used.
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `artifact` | yes | `groupId:artifactId`. Must be the same artifact ScalarDB depends on. |
+| `version_pattern` | no | Regular expression; only versions containing a match are compared. E.g. `'\.jre8$'` keeps only the jre8 builds of the SQL Server driver. |
 | `repository` | no | Maven repository URL. Default Maven Central. |
 | `timeout_seconds` | no | Default 30. |
 
@@ -254,6 +261,7 @@ Only labels that list `versions` in `ci/tests-config.yaml` can be used.
 |-------|----------|---------|
 | `repo` | yes | `owner/name`. |
 | `tag_strip_prefix` | no | Text to remove from tags before comparing, e.g. `release-`. A leading `v` is always removed. |
+| `version_pattern` | no | Regular expression; only versions (after removing the prefix) containing a match are compared. |
 | `include_prerelease` | no | Default `false`. |
 | `timeout_seconds` | no | Default 30. |
 
@@ -310,7 +318,11 @@ The Python program does not post to Slack. The GitHub Actions workflow posts `sl
 
 ## 8. State
 
-`state/last-run.json` is committed to the repository so that weekly runs share memory.
+The state is the file `last-run.json`. In production it is kept on its own branch, `db-update-monitor-state`, so that weekly runs share memory without committing to the protected default branch. That branch holds only `last-run.json` and a short README. Locally, the state is `state/last-run.json`, which git ignores.
+
+- **FR-37** The state is saved only after the Slack message was delivered, or when there was nothing to send. If delivery fails, the state is not saved, and the next run sends the same updates again. An update may therefore be sent twice, but is never lost.
+- **FR-38** The state is not saved when the run status is `FAILURE`, or on a dry run.
+- **FR-39** Deleting the state branch resets the monitor. The next run is a silent baseline.
 
 | Field | Meaning |
 |-------|---------|
@@ -318,14 +330,14 @@ The Python program does not post to Slack. The GitHub Actions workflow posts `sl
 | `components` | Per component (`database:component`): last reported newest version, last check time |
 | `features` | Relevant announcements already reported or baselined |
 | `seen_irrelevant` | Announcements judged not relevant |
-| `source_cursors` | Per source: time of the newest item seen, or a hash of the web page |
+| `source_cursors` | Per source: time of the newest item seen. For a web page: a hash of the page plus a short hash of each part, used to find new parts |
 | `pin_snapshot` | Pin of each component at the last run |
 | `errors` | Failures of the last run |
 | `last_run`, `last_run_status` | Time and status of the last run |
 
-An announcement is identified by database, source type, and URL (or title and date when there is no URL).
+An announcement is identified by database, source type, and URL (or title and date when there is no URL). A web page change is identified by the URL plus a hash of that version of the page.
 
-`state/last-run.clean.json` is an empty state file. Copy it over `last-run.json` to reset the state after local testing. Never commit a state file produced by local tests.
+To reset the local state, delete `state/last-run.json`. A missing file means empty state.
 
 ## 9. Operational requirements
 
@@ -333,7 +345,8 @@ An announcement is identified by database, source type, and URL (or title and da
 |------|-------------|
 | Runtime | Python 3.12 on GitHub Actions (`ubuntu-latest`) |
 | Secrets | `SLACK_SCALARDB_WEBHOOK_URL`: Slack incoming webhook. `GITHUB_TOKEN`: provided by Actions, used for the GitHub API. |
-| Permissions | The workflow must be able to save `state/last-run.json` after each run. |
+| Permissions | The monitor job needs `contents: write` to push the `db-update-monitor-state` branch. The test job only needs `contents: read`. |
+| Branch rules | The default branch is protected, so the monitor never writes to it. The `db-update-monitor-state` branch must **not** be covered by branch protection or rulesets, or the state cannot be saved. |
 | Concurrency | Only one monitor run at a time, so two runs never write state together. |
 | Report retention | `output/` is uploaded as the `db-monitor-report` artifact and kept 90 days. |
 | Network | Outgoing HTTPS to Maven Central, Docker Hub, the GitHub API, and each feed or page in `monitors.yaml`. |
@@ -342,20 +355,12 @@ An announcement is identified by database, source type, and URL (or title and da
 
 The current implementation does not yet meet the specification in these places. Each one should be fixed or the specification changed.
 
+Each deviation keeps its number when others are fixed, so the gaps in the numbering are fixed items (D-1 to D-8, D-10, D-12).
+
 | # | Requirement | Current behavior |
 |---|-------------|------------------|
-| D-1 | FR-5, FR-9 | Versions that are not standard version numbers fall back to text comparison, which orders them wrongly. Affects SQL Server (`13.6.0.jre8`: `13.10.0` is treated as older than `13.6.0`, and jre8 and jre11 builds are both reported) and YugabyteDB (`42.7.3-yb-4`). |
-| D-2 | FR-5 | The Cassandra driver is checked against `com.datastax.cassandra:cassandra-driver-core`, but ScalarDB uses `org.apache.cassandra:cassandra-driver-core`, so new versions are never found. |
-| D-3 | FR-16 | A web page source reports only once in its lifetime: every change gets the same identity (the URL), so later changes are treated as already seen. It also matches keywords against the whole page, not the change. Affects Oracle. |
-| D-4 | FR-28 | The failures section is not shortened and can exceed 3,000 characters, and the number of blocks is not capped at 50. Slack then rejects the whole message. |
-| D-5 | FR-32 | The workflow saves state before posting to Slack. If the post fails, those updates are never reported. |
-| D-6 | Section 9 | The workflow pushes state directly to the default branch. If that branch is protected, the push fails and Slack is skipped. |
-| D-7 | Section 9 | The pull request test job shares the monitor's concurrency group, so test runs of different pull requests can cancel each other. |
-| D-8 | FR-7 | `version_granularity` set under `defaults` has no effect. Only the component or upstream setting is used. |
 | D-9 | FR-35 | The adapter-gap rule also matches the words `hierarchical` and `v2`, which are hard-coded for the Cosmos case. |
-| D-10 | FR-24 | RSS descriptions are sent with their HTML tags, and titles are not escaped for Slack (`&`, `<`, `>`). |
 | D-11 | FR-36 | There is no check of `monitors.yaml`. Misspelled keys are ignored, and missing pins are only found on the weekly run. |
-| D-12 | FR-31 | A `--filter` value that matches no database gives `SUCCESS` with nothing checked. |
 
 Coverage gaps that are not deviations, but worth knowing:
 

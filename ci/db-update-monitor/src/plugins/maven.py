@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from models import ComponentType, VersionUpdate
-from plugins.base import SourcePlugin
+from plugins.base import SourcePlugin, filter_by_version_pattern, resolve_granularity
 from text_util import USER_AGENT
 from version_normalizer import VersionNormalizer
 
@@ -29,8 +29,10 @@ class MavenVersionChecker(SourcePlugin):
     ) -> Optional[VersionUpdate]:
         artifact = upstream_config["artifact"]
         group_id, artifact_id = artifact.split(":", 1)
-        versions = self._fetch_versions(group_id, artifact_id, upstream_config)
-        granularity = component.get("version_granularity", upstream_config.get("version_granularity", "exact"))
+        versions = filter_by_version_pattern(
+            self._fetch_versions(group_id, artifact_id, upstream_config), upstream_config
+        )
+        granularity = resolve_granularity(component, upstream_config, database, "exact")
         newer = self.normalizer.filter_by_granularity(versions, current_pin, granularity)
         if not newer:
             return None

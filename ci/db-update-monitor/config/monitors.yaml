@@ -1,6 +1,5 @@
 defaults:
   first_run_policy: baseline_silent
-  version_granularity: exact
 
 databases:
   - id: cosmos
@@ -47,7 +46,7 @@ databases:
           property: cassandraDriverVersion
         upstream:
           type: maven
-          artifact: com.datastax.cassandra:cassandra-driver-core
+          artifact: org.apache.cassandra:cassandra-driver-core
       - id: server
         type: server
         version_granularity: major
@@ -236,6 +235,8 @@ databases:
         upstream:
           type: maven
           artifact: com.microsoft.sqlserver:mssql-jdbc
+          # Every release is published as a jre8 and a jre11 build. ScalarDB uses jre8.
+          version_pattern: '\.jre8$'
 
   - id: sqlite
     name: SQLite
@@ -310,6 +311,8 @@ databases:
         upstream:
           type: maven
           artifact: com.ibm.db2:jcc
+          # IBM also publishes one-off builds such as 12.1.5.0_special_89304; only report regular releases.
+          version_pattern: '^\d+(\.\d+)*$'
 
   - id: tidb
     name: TiDB

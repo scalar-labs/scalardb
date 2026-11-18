@@ -18,6 +18,10 @@ from text_util import feature_cursor_key, resolve_cursor
 logger = logging.getLogger(__name__)
 
 
+class UnknownDatabaseError(ValueError):
+    """The database filter does not match any enabled database."""
+
+
 class MonitorEngine:
     def __init__(
         self,
@@ -43,7 +47,13 @@ class MonitorEngine:
         defaults = monitors_config.get("defaults", {})
         first_run_policy = defaults.get("first_run_policy", "baseline_silent")
         if self.database_filter:
+            enabled_ids = [db["id"] for db in databases]
             databases = [db for db in databases if db["id"] == self.database_filter]
+            if not databases:
+                raise UnknownDatabaseError(
+                    f"No enabled database with id '{self.database_filter}'. "
+                    f"Enabled ids: {', '.join(enabled_ids)}"
+                )
             if not state.baseline_established:
                 logger.warning(
                     "Running with --filter before the first full run; "
@@ -194,9 +204,11 @@ class MonitorEngine:
         total_checks = sum(
             len(db.get("components", [])) + len(db.get("sources", [])) for db in databases
         )
+        if total_checks == 0:
+            return "FAILURE"
         if not errors:
             return "SUCCESS"
-        if total_checks == 0 or len(errors) >= total_checks:
+        if len(errors) >= total_checks:
             return "FAILURE"
         return "PARTIAL_SUCCESS"
 

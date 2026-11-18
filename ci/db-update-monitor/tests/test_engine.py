@@ -1,3 +1,5 @@
+import pytest
+
 from pathlib import Path
 
 from engine import MonitorEngine
@@ -65,3 +67,17 @@ def test_keep_github_release_when_tag_not_in_version_updates():
         [{"id": "tidb", "name": "TiDB", "watch_features": ["tidb"]}],
     )
     assert len(kept) == 1
+
+
+def test_unknown_filter_raises(tmp_path):
+    from engine import UnknownDatabaseError
+
+    config = tmp_path / "monitors.yaml"
+    config.write_text("databases:\n  - id: cosmos\n    name: Azure Cosmos DB\n", encoding="utf-8")
+    engine = MonitorEngine(config, tmp_path / "state.json", tmp_path, database_filter="cosmoss")
+    with pytest.raises(UnknownDatabaseError, match="cosmos"):
+        engine.run(dry_run=True)
+
+
+def test_status_is_failure_when_nothing_was_checked():
+    assert _engine()._resolve_status([], [{"id": "empty"}]) == "FAILURE"

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Tuple
+from functools import cmp_to_key
+from typing import List, Optional, Tuple, Union
 
 from packaging.version import InvalidVersion, Version
 
@@ -14,6 +15,19 @@ PRE_RELEASE_TOKEN = re.compile(
     r"(beta|alpha|rc|preview|snapshot|milestone|(?:^|[.\-])m\d+)",
     re.IGNORECASE,
 )
+# Splits vendor schemes that packaging cannot parse, e.g. "13.6.0.jre8" or "42.7.3-yb-4".
+VERSION_TOKEN = re.compile(r"\d+|[a-z]+")
+
+
+def _compare_tokens(left: List[Union[int, str]], right: List[Union[int, str]]) -> int:
+    for left_token, right_token in zip(left, right):
+        if left_token == right_token:
+            continue
+        if type(left_token) is type(right_token):
+            return -1 if left_token < right_token else 1
+        # A number is newer than a word, e.g. "1.0.1" > "1.0.final".
+        return 1 if isinstance(left_token, int) else -1
+    return (len(left) > len(right)) - (len(left) < len(right))
 
 
 class VersionNormalizer:
@@ -29,6 +43,24 @@ class VersionNormalizer:
         except InvalidVersion:
             return None
 
+    def tokens(self, version: str) -> List[Union[int, str]]:
+        return [
+            int(token) if token.isdigit() else token
+            for token in VERSION_TOKEN.findall(self.normalize(version).lower())
+        ]
+
+    def release(self, version: str) -> Tuple[int, ...]:
+        """Leading numeric parts, e.g. (13, 6, 0) for "13.6.0.jre8"."""
+        parsed = self.parse(version)
+        if parsed is not None:
+            return parsed.release
+        parts: List[int] = []
+        for token in self.tokens(version):
+            if not isinstance(token, int):
+                break
+            parts.append(token)
+        return tuple(parts)
+
     def compare(self, left: str, right: str) -> int:
         left_parsed = self.parse(left)
         right_parsed = self.parse(right)
@@ -38,9 +70,7 @@ class VersionNormalizer:
             if left_parsed > right_parsed:
                 return 1
             return 0
-        if left == right:
-            return 0
-        return -1 if left < right else 1
+        return _compare_tokens(self.tokens(left), self.tokens(right))
 
     def is_prerelease(self, version: str) -> bool:
         parsed = self.parse(version)
@@ -57,26 +87,22 @@ class VersionNormalizer:
         return self.compare(candidate, baseline) > 0
 
     def update_level(self, baseline: str, latest: str) -> UpdateLevel:
-        base = self.parse(baseline)
-        latest_parsed = self.parse(latest)
-        if not base or not latest_parsed:
+        base = self.release(baseline)
+        latest_release = self.release(latest)
+        if not base or not latest_release:
             return UpdateLevel.UNKNOWN
-        if latest_parsed.major > base.major:
+        base = base + (0,) * (3 - len(base))
+        latest_release = latest_release + (0,) * (3 - len(latest_release))
+        if latest_release[0] > base[0]:
             return UpdateLevel.MAJOR
-        if latest_parsed.minor > base.minor:
+        if latest_release[:2] > base[:2]:
             return UpdateLevel.MINOR
-        if latest_parsed.micro > base.micro:
+        if latest_release[:3] > base[:3]:
             return UpdateLevel.PATCH
         return UpdateLevel.UNKNOWN
 
     def sort_desc(self, versions: List[str]) -> List[str]:
-        def sort_key(value: str) -> Tuple[int, Version | str]:
-            parsed = self.parse(value)
-            if parsed:
-                return (0, parsed)
-            return (1, value)
-
-        return sorted(versions, key=sort_key, reverse=True)
+        return sorted(versions, key=cmp_to_key(self.compare), reverse=True)
 
     def newer_than(self, versions: List[str], baseline: str) -> List[str]:
         versions = self.exclude_prereleases(versions, baseline)
@@ -87,29 +113,19 @@ class VersionNormalizer:
         self, versions: List[str], baseline: str, granularity: str
     ) -> List[str]:
         newer = self.newer_than(versions, baseline)
-        if granularity == "exact":
+        if granularity not in ("minor", "major"):
             return newer
-        if granularity == "minor":
-            base = self.parse(baseline)
-            if not base:
-                return newer
-            filtered: List[str] = []
-            for version in newer:
-                parsed = self.parse(version)
-                if parsed and (parsed.minor > base.minor or parsed.major > base.major):
-                    filtered.append(version)
-            return filtered
-        if granularity == "major":
-            base = self.parse(baseline)
-            if not base:
-                return newer
-            filtered: List[str] = []
-            for version in newer:
-                parsed = self.parse(version)
-                if parsed and parsed.major > base.major:
-                    filtered.append(version)
-            return filtered
-        return newer
+        base = self.release(baseline)
+        if not base:
+            return newer
+        width = 2 if granularity == "minor" else 1
+        base_key = (base + (0,) * width)[:width]
+        filtered: List[str] = []
+        for version in newer:
+            parts = self.release(version)
+            if parts and (parts + (0,) * width)[:width] > base_key:
+                filtered.append(version)
+        return filtered
 
     def max_version(self, versions: List[str]) -> Optional[str]:
         if not versions:

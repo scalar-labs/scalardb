@@ -99,3 +99,31 @@ def test_relevant_feature_notifies_after_baseline():
     to_notify, skipped = partition_feature_updates(state, [feature])
     assert len(to_notify) == 1
     assert to_notify[0].title == feature.title
+
+
+def test_each_web_page_change_is_notified_once():
+    from diff import apply_notifications, partition_feature_updates
+    from models import FeatureUpdate, MonitorState
+
+    state = MonitorState(baseline_established=True)
+
+    def page_update(page_hash: str) -> FeatureUpdate:
+        return FeatureUpdate(
+            database_id="oracle",
+            database_name="Oracle Database",
+            title="Oracle Database: page updated (JSON)",
+            description="JSON collections",
+            source_type="webpage",
+            matched_keywords=["JSON"],
+            relevant=True,
+            url="https://example.com/toc",
+            fingerprint=f"https://example.com/toc#{page_hash}",
+        )
+
+    for page_hash in ("aaa", "bbb"):
+        to_notify, _ = partition_feature_updates(state, [page_update(page_hash)])
+        assert len(to_notify) == 1
+        apply_notifications(state, [], to_notify)
+
+    to_notify, _ = partition_feature_updates(state, [page_update("bbb")])
+    assert to_notify == []

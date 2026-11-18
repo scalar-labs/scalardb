@@ -63,3 +63,29 @@ def test_rss_checker_does_not_use_watch_features_as_feed_filter():
         cursor=None,
     )
     assert updates == []
+
+
+HTML_FEED = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Partition keys &amp; more</title>
+      <link>https://example.com/html</link>
+      <pubDate>Mon, 10 Mar 2026 12:00:00 GMT</pubDate>
+      <description>&lt;p&gt;New &lt;b&gt;hierarchical&lt;/b&gt; keys.&lt;/p&gt;&lt;img src="x.png"&gt;</description>
+    </item>
+  </channel>
+</rss>
+"""
+
+
+@responses.activate
+def test_rss_checker_strips_html_from_description():
+    responses.add(responses.GET, "https://example.com/feed.xml", body=HTML_FEED, status=200)
+    updates, _ = RssFeatureChecker().check_features(
+        {"type": "rss", "url": "https://example.com/feed.xml"},
+        {"id": "cosmos", "name": "Azure Cosmos DB"},
+        cursor=None,
+    )
+    assert updates[0].description == "New hierarchical keys."
+    assert updates[0].title == "Partition keys & more"

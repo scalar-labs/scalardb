@@ -64,10 +64,12 @@ class FeatureUpdate:
     published_at: Optional[str] = None
     include_all: bool = False
     version: Optional[str] = None
+    # Identity when the URL alone is not unique, e.g. one web page that changes over time.
+    fingerprint: Optional[str] = None
     detected_at: str = field(default_factory=utc_now_iso)
 
     def dedup_key(self) -> str:
-        canonical = self.url or f"{self.title}:{self.published_at or ''}"
+        canonical = self.fingerprint or self.url or f"{self.title}:{self.published_at or ''}"
         return f"{self.database_id}:{self.source_type}:{canonical}"
 
 

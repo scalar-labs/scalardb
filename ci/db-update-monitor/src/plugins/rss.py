@@ -11,7 +11,7 @@ import requests
 
 from models import FeatureUpdate
 from plugins.feature_base import FeatureSourcePlugin
-from text_util import USER_AGENT, collapse_whitespace, match_keywords, parse_iso_datetime, to_iso_z, truncate
+from text_util import USER_AGENT, html_to_text, match_keywords, parse_iso_datetime, to_iso_z, truncate
 
 
 def _parse_published(entry: Dict[str, Any]) -> Optional[datetime]:
@@ -85,12 +85,13 @@ class RssFeatureChecker(FeatureSourcePlugin):
             if keywords and not matched:
                 continue
 
-            description = truncate(collapse_whitespace(entry.get("summary", entry.get("description", ""))))
+            # Feed summaries are usually HTML; Slack needs plain text.
+            description = truncate(html_to_text(entry.get("summary", entry.get("description", ""))))
             updates.append(
                 FeatureUpdate(
                     database_id=database["id"],
                     database_name=database["name"],
-                    title=collapse_whitespace(entry.get("title", "Untitled")),
+                    title=html_to_text(entry.get("title", "")) or "Untitled",
                     description=description,
                     source_type=self.plugin_type(),
                     matched_keywords=matched,

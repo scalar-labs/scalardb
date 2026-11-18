@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from models import ComponentType, VersionUpdate
-from plugins.base import SourcePlugin
+from plugins.base import SourcePlugin, filter_by_version_pattern, resolve_granularity
 from plugins.github_client import fetch_releases
 from version_normalizer import VersionNormalizer
 
@@ -43,9 +43,8 @@ class GitHubReleaseChecker(SourcePlugin):
                 if release_url is None:
                     release_url = release.get("html_url")
 
-        granularity = component.get(
-            "version_granularity", upstream_config.get("version_granularity", "exact")
-        )
+        versions = filter_by_version_pattern(versions, upstream_config)
+        granularity = resolve_granularity(component, upstream_config, database, "exact")
         newer = self.normalizer.filter_by_granularity(versions, current_pin, granularity)
         if not newer:
             return None
