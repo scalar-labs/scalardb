@@ -487,6 +487,9 @@ public class JdbcAdminCollationIntegrationTest {
         .isEqualTo("utf8mb4_general_ci");
   }
 
+  // The CI sets MAX_STRING_SIZE=EXTENDED on every Oracle version, so the tests that assume STANDARD
+  // run only by hand, against an Oracle database left on STANDARD. The other tests of this class
+  // fail on such a database.
   private boolean isOracleWithStandardMaxStringSize() throws Exception {
     if (!JdbcTestUtils.isOracle(rdbEngine)) {
       return false;
