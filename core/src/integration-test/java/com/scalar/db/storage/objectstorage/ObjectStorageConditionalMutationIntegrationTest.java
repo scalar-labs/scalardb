@@ -16,6 +16,11 @@ public class ObjectStorageConditionalMutationIntegrationTest
   }
 
   @Override
+  protected int getThreadNum() {
+    return 30;
+  }
+
+  @Override
   protected Column<?> getColumnWithRandomValue(
       Random random, String columnName, DataType dataType) {
     if (dataType == DataType.BIGINT) {
