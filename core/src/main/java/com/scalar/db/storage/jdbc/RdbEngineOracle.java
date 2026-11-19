@@ -474,7 +474,10 @@ class RdbEngineOracle extends AbstractRdbEngine {
     String charset = queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_CHARACTERSET");
     String nCharset =
         queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_NCHAR_CHARACTERSET");
-    String sessionNlsComp = queryNlsParameter(connection, "NLS_SESSION_PARAMETERS", "NLS_COMP");
+    // ORDER BY follows NLS_SORT whatever NLS_COMP is, and comparisons follow NLS_SORT or binary, so
+    // NLS_SORT alone decides whether a USING_NLS_COMP column orders by code point. See Table 5-3 of
+    // https://docs.oracle.com/en/database/oracle/oracle-database/19/nlspg/linguistic-sorting-and-matching.html
+    String sessionNlsSort = queryNlsParameter(connection, "NLS_SESSION_PARAMETERS", "NLS_SORT");
     String sql =
         "SELECT COLUMN_NAME, DATA_TYPE, COLLATION FROM ALL_TAB_COLS"
             + " WHERE OWNER = ? AND TABLE_NAME = ? AND HIDDEN_COLUMN = 'NO'"
@@ -491,7 +494,7 @@ class RdbEngineOracle extends AbstractRdbEngine {
               new TextColumnCollation(
                   collation,
                   rs.getString("DATA_TYPE").startsWith("N") ? nCharset : charset,
-                  collation.equals(USING_NLS_COMP) ? sessionNlsComp : null));
+                  collation.equals(USING_NLS_COMP) ? sessionNlsSort : null));
         }
         return collations;
       }
