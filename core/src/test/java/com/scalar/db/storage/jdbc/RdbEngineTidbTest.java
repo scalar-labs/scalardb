@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -28,6 +29,16 @@ class RdbEngineTidbTest {
   }
 
   @Test
+  void renameColumnSql_ShouldRenameWithoutRestatingTheType() {
+    // Arrange Act
+    String sql = rdbEngineTidb.renameColumnSql("ns", "tbl", "c1", "c2", "LONGTEXT");
+
+    // Assert
+    assertThat(sql).isEqualTo("ALTER TABLE `ns`.`tbl` RENAME COLUMN `c1` TO `c2`");
+    assertThat(rdbEngineTidb.renameColumnRestatesType()).isFalse();
+  }
+
+  @Test
   void setConnectionToReadOnly_ShouldDoNothing() throws SQLException {
     // TiDB rejects "SET SESSION TRANSACTION READ ONLY" with error 1235 unless
     // tidb_enable_noop_functions is enabled, and MariaDB Connector/J 3.5.10 and later issue that
@@ -37,5 +48,17 @@ class RdbEngineTidbTest {
     rdbEngineTidb.setConnectionToReadOnly(connection, true);
 
     verify(connection, never()).setReadOnly(anyBoolean());
+  }
+
+  @Test
+  void getCollationClause_ShouldReturnCharacterSetAndCollate() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    String clause = rdbEngineTidb.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("CHARACTER SET utf8mb4 COLLATE utf8mb4_bin");
   }
 }
