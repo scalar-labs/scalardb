@@ -434,8 +434,6 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     }
   }
 
-  // With sendStringParametersAsUnicode set to false, the driver encodes String parameters in the
-  // code page of the database default collation, whatever the collation of the target column
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
   public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
@@ -475,6 +473,9 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
     return "UTF-8".equals(collation.getCharset());
   }
 
+  // With sendStringParametersAsUnicode set to false, the driver encodes String parameters in the
+  // code page of the database default collation, so an imported column with a UTF-8 collation
+  // still receives values through that code page
   @Override
   public boolean checksDatabaseEncodingOnImport() {
     return true;
