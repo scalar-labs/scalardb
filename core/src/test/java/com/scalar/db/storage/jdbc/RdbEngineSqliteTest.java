@@ -151,10 +151,10 @@ class RdbEngineSqliteTest {
   @Test
   void getDatabaseTextIssues_DefaultDatabase_ShouldReturnEmpty() throws SQLException {
     // Arrange Act
-    List<DatabaseTextIssue> encoding = rdbEngine.getDatabaseTextIssues(connection);
+    List<DatabaseTextIssue> issues = rdbEngine.getDatabaseTextIssues(connection);
 
     // Assert
-    assertThat(encoding).isEmpty();
+    assertThat(issues).isEmpty();
   }
 
   @Test
@@ -170,10 +170,10 @@ class RdbEngineSqliteTest {
       }
 
       // Act
-      List<DatabaseTextIssue> encoding = rdbEngine.getDatabaseTextIssues(utf16Connection);
+      List<DatabaseTextIssue> issues = rdbEngine.getDatabaseTextIssues(utf16Connection);
 
       // Assert
-      assertThat(encoding)
+      assertThat(issues)
           .containsExactly(
               new DatabaseTextIssue("UTF-16le", DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER));
     } finally {

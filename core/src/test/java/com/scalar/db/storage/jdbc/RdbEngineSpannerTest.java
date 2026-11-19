@@ -478,11 +478,11 @@ public class RdbEngineSpannerTest {
     // Act
     Map<String, TextColumnCollation> collations =
         rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
-    List<DatabaseTextIssue> encoding = rdbEngine.getDatabaseTextIssues(connection);
+    List<DatabaseTextIssue> issues = rdbEngine.getDatabaseTextIssues(connection);
 
     // Assert
     assertThat(collations).isEmpty();
-    assertThat(encoding).isEmpty();
+    assertThat(issues).isEmpty();
     verifyNoInteractions(connection);
   }
 }

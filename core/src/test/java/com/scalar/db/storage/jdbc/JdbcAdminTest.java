@@ -8060,7 +8060,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createTable_TextColumnOnNonUnicodeDatabase_ShouldCallEncodingCheck()
+  public void createTable_TextColumnOnNonUnicodeDatabase_ShouldCallTextSettingsCheck()
       throws SQLException, ExecutionException {
     // Arrange
     when(connection.createStatement()).thenReturn(mock(Statement.class));
@@ -8367,7 +8367,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createTable_BinaryCollationDisabled_ShouldNotCallEncodingCheck()
+  public void createTable_BinaryCollationDisabled_ShouldNotCallTextSettingsCheck()
       throws SQLException, ExecutionException {
     // Arrange
     disableColumnCollation();
@@ -8520,7 +8520,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createTable_NoTextColumn_ShouldNotCallEncodingCheck()
+  public void createTable_NoTextColumn_ShouldNotCallTextSettingsCheck()
       throws SQLException, ExecutionException {
     // Arrange
     when(connection.createStatement()).thenReturn(mock(Statement.class));
@@ -8539,7 +8539,7 @@ public class JdbcAdminTest {
 
   @ParameterizedTest
   @MethodSource("catalogReadFailures")
-  public void createTable_EncodingCheckThrows_ShouldStillCreateTable(Exception failure)
+  public void createTable_TextSettingsCheckThrows_ShouldStillCreateTable(Exception failure)
       throws SQLException, ExecutionException {
     // Arrange
     when(connection.createStatement()).thenReturn(mock(Statement.class));
@@ -8577,7 +8577,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void addNewColumnToTable_TextColumn_ShouldCallEncodingCheck()
+  public void addNewColumnToTable_TextColumn_ShouldCallTextSettingsCheck()
       throws SQLException, ExecutionException {
     // Arrange
     prepareAddNewColumnToTable();
@@ -8615,7 +8615,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void addNewColumnToTable_IntColumn_ShouldNotCallEncodingCheck()
+  public void addNewColumnToTable_IntColumn_ShouldNotCallTextSettingsCheck()
       throws SQLException, ExecutionException {
     // Arrange
     prepareAddNewColumnToTable();
@@ -8630,7 +8630,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void addNewColumnToTable_EncodingCheckThrows_ShouldStillAddColumn()
+  public void addNewColumnToTable_TextSettingsCheckThrows_ShouldStillAddColumn()
       throws SQLException, ExecutionException {
     // Arrange
     prepareAddNewColumnToTable();

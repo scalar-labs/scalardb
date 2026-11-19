@@ -309,11 +309,11 @@ public class JdbcAdminCollationIntegrationTest {
   @Test
   void getDatabaseTextIssues_CiDatabase_ShouldReturnEmpty() throws Exception {
     // Arrange Act
-    List<DatabaseTextIssue> encoding =
+    List<DatabaseTextIssue> issues =
         testUtils.withCatalogConnection(rdbEngine::getDatabaseTextIssues);
 
     // Assert
-    assertThat(encoding).isEmpty();
+    assertThat(issues).isEmpty();
   }
 
   @Test
