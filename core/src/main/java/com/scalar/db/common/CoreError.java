@@ -73,7 +73,7 @@ public enum CoreError implements ScalarDbError {
       "0010",
       "The clustering key boundary is not properly specified. Operation: %s; Table metadata: %s",
       "",
-      "Ensure the clustering-key boundary values match the table's clustering-key definition and are specified in the correct order."),
+      "Verify that the clustering-key boundary values match the table's clustering-key definition and are specified in the correct order."),
   OPERATION_CHECK_ERROR_START_CLUSTERING_KEY(
       Category.USER_ERROR,
       "0011",
@@ -91,7 +91,7 @@ public enum CoreError implements ScalarDbError {
       "0013",
       "Orderings are not properly specified. Operation: %s; Table metadata: %s",
       "",
-      "Ensure the ordering specifies clustering-key columns in the correct order and that ordering directions (ASC/DESC) are valid."),
+      "Verify that the ordering specifies clustering-key columns in the correct order and that ordering directions (ASC/DESC) are valid."),
   OPERATION_CHECK_ERROR_ORDERING_COLUMN_NOT_FOUND(
       Category.USER_ERROR,
       "0014",
@@ -133,7 +133,7 @@ public enum CoreError implements ScalarDbError {
       "0020",
       "The partition key is not properly specified. Operation: %s; Table metadata: %s",
       "",
-      "Ensure all partition key columns are specified with the correct names and data types in the proper order."),
+      "Verify that all partition key columns are specified with the correct names and data types in the proper order."),
   OPERATION_CHECK_ERROR_CLUSTERING_KEY(
       Category.USER_ERROR,
       "0021",
@@ -286,7 +286,7 @@ public enum CoreError implements ScalarDbError {
       "0046",
       "The transaction has not been prepared or validated. Status: %s",
       "",
-      "Call 'prepare()' or 'validate()' before committing the transaction."),
+      "Call prepare() or validate() before committing the transaction."),
   TRANSACTION_ALREADY_EXISTS(
       Category.USER_ERROR,
       "0047",
@@ -414,7 +414,7 @@ public enum CoreError implements ScalarDbError {
       "0068",
       "Please use scan() for non-exact match selection. Operation: %s",
       "",
-      "Use 'scan()' instead of 'get()' for range queries or partial key matching."),
+      "Use scan() instead of get() for range queries or partial key matching."),
   CASSANDRA_IMPORT_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0069",
