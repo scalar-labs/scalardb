@@ -127,7 +127,7 @@ public enum CoreError implements ScalarDbError {
       "0019",
       "The storage does not support mutations across multiple partitions. Storage: %s; Mutations: %s",
       "",
-      "Group mutations by partition key and execute them in separate transactions, or use a storage that supports multi-partition mutations."),
+      "Group mutations by partition key and issue a separate mutate() call for each group, or use a storage that supports multi-partition mutations."),
   OPERATION_CHECK_ERROR_PARTITION_KEY(
       Category.USER_ERROR,
       "0020",
@@ -274,13 +274,13 @@ public enum CoreError implements ScalarDbError {
       "0044",
       "The transaction has already been committed. Status: %s",
       "",
-      "Begin a new transaction if you need to perform additional operations."),
+      "Do not call rollback() or abort() after the transaction has been committed."),
   TRANSACTION_NOT_PREPARED(
       Category.USER_ERROR,
       "0045",
       "The transaction has not been prepared. Status: %s",
       "",
-      "Call 'prepare()' before committing a two-phase transaction."),
+      "Call prepare() before calling validate()."),
   TRANSACTION_NOT_PREPARED_OR_VALIDATED(
       Category.USER_ERROR,
       "0046",
@@ -432,7 +432,7 @@ public enum CoreError implements ScalarDbError {
       "0071",
       "The property 'scalar.db.contact_port' must be greater than or equal to zero",
       "",
-      "Set 'scalar.db.contact_port' to a valid port number (0-65535)."),
+      "Set 'scalar.db.contact_port' to a non-negative value."),
   COSMOS_CLUSTERING_KEY_BLOB_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0073",
@@ -480,7 +480,7 @@ public enum CoreError implements ScalarDbError {
       "0081",
       "An index column cannot be set to an empty value for Text or Blob in DynamoDB. Operation: %s",
       "",
-      "Provide a non-null, non-empty value for indexed Text or Blob columns in DynamoDB."),
+      "Provide a non-empty value for indexed Text or Blob columns in DynamoDB."),
   DYNAMO_CONDITION_OPERATION_NOT_SUPPORTED_FOR_BOOLEAN_TYPE(
       Category.USER_ERROR,
       "0082",
@@ -504,13 +504,13 @@ public enum CoreError implements ScalarDbError {
       "0085",
       "The namespace name is not acceptable in SQLite. Namespace: %s",
       "",
-      "Use a valid SQLite database name that follows SQLite naming conventions."),
+      "Remove the '$' character from the name. ScalarDB uses '$' as the namespace separator in SQLite."),
   JDBC_SQLITE_TABLE_NAME_NOT_ACCEPTABLE(
       Category.USER_ERROR,
       "0086",
       "The table name is not acceptable in SQLite. Table: %s",
       "",
-      "Use a valid SQLite table name that follows SQLite naming conventions."),
+      "Remove the '$' character from the name. ScalarDB uses '$' as the namespace separator in SQLite."),
   JDBC_SQLITE_IMPORT_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0087",
@@ -534,13 +534,13 @@ public enum CoreError implements ScalarDbError {
       "0090",
       "Data type %s(%d) is not supported: %s",
       "",
-      "Use a supported ScalarDB data type or check the import-type mapping configuration."),
+      "Change the column to a type ScalarDB supports, exclude it from the import, or map it explicitly with 'override-columns-type' in the import schema."),
   JDBC_IMPORT_DATA_TYPE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0091",
       "Data type %s is not supported: %s",
       "",
-      "Use a supported ScalarDB data type or check the import-type mapping configuration."),
+      "Change the column to a type ScalarDB supports, exclude it from the import, or map it explicitly with 'override-columns-type' in the import schema."),
   JDBC_TRANSACTION_GETTING_TRANSACTION_STATE_NOT_SUPPORTED(
       Category.USER_ERROR,
       "0092",
@@ -552,7 +552,7 @@ public enum CoreError implements ScalarDbError {
       "0093",
       "Rolling back a transaction is not supported in JDBC transactions",
       "",
-      "Remove the rollback call. JDBC transactions in ScalarDB do not support manual rollback."),
+      "Call rollback() on the transaction object instead. Rolling back by transaction ID is not supported in JDBC transactions."),
   CONSENSUS_COMMIT_COORDINATOR_TABLES_ALREADY_EXIST(
       Category.USER_ERROR, "0094", "Coordinator tables already exist", "", ""),
   CONSENSUS_COMMIT_COORDINATOR_TABLES_NOT_FOUND(
