@@ -4,10 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -22,8 +27,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -341,7 +350,7 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void classify_UsingNlsCompWithBinarySession_ShouldReturnCodePointOrder() {
+  public void classify_UsingNlsCompWithBinarySort_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "BINARY");
 
@@ -353,10 +362,9 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void classify_UsingNlsCompWithLinguisticSession_ShouldReturnOtherOrder() {
+  public void classify_UsingNlsCompWithGermanSort_ShouldReturnOtherOrder() {
     // Arrange
-    TextColumnCollation collation =
-        new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "LINGUISTIC");
+    TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "GERMAN");
 
     // Act
     TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
@@ -390,7 +398,7 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void classify_UsingNlsCompWithBinarySessionOnCesu8Charset_ShouldReturnOtherOrder() {
+  public void classify_UsingNlsCompWithBinarySortOnCesu8Charset_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "UTF8", "BINARY");
 
@@ -515,6 +523,62 @@ class RdbEngineOracleTest {
 
     // Assert
     assertThat(actual).isNull();
+  }
+
+  @ParameterizedTest
+  @CsvSource({"BINARY,GERMAN,GERMAN", "LINGUISTIC,BINARY,BINARY"})
+  public void getTextColumnCollations_UsingNlsCompColumn_ShouldResolveSessionNlsSort(
+      String nlsComp, String nlsSort, String expected) throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement databaseParameters =
+        nlsParameterStatement(ImmutableMap.of("NLS_CHARACTERSET", "AL32UTF8"));
+    PreparedStatement sessionParameters =
+        nlsParameterStatement(ImmutableMap.of("NLS_COMP", nlsComp, "NLS_SORT", nlsSort));
+    when(connection.prepareStatement(
+            "SELECT VALUE FROM NLS_DATABASE_PARAMETERS WHERE PARAMETER = ?"))
+        .thenReturn(databaseParameters);
+    when(connection.prepareStatement(
+            "SELECT VALUE FROM NLS_SESSION_PARAMETERS WHERE PARAMETER = ?"))
+        .thenReturn(sessionParameters);
+    PreparedStatement columns = mock(PreparedStatement.class);
+    ResultSet columnRows = mock(ResultSet.class);
+    when(connection.prepareStatement(startsWith("SELECT COLUMN_NAME"))).thenReturn(columns);
+    when(columns.executeQuery()).thenReturn(columnRows);
+    when(columnRows.next()).thenReturn(true, false);
+    when(columnRows.getString("COLUMN_NAME")).thenReturn("c");
+    when(columnRows.getString("DATA_TYPE")).thenReturn("VARCHAR2");
+    when(columnRows.getString("COLLATION")).thenReturn("USING_NLS_COMP");
+
+    // Act
+    TextColumnCollation actual =
+        rdbEngineOracle.getTextColumnCollations(connection, "ns", "tbl").get("c");
+
+    // Assert
+    assertThat(actual).isEqualTo(new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", expected));
+  }
+
+  private static PreparedStatement nlsParameterStatement(Map<String, String> values)
+      throws SQLException {
+    PreparedStatement ps = mock(PreparedStatement.class);
+    AtomicReference<String> parameter = new AtomicReference<>();
+    doAnswer(
+            invocation -> {
+              parameter.set(invocation.getArgument(1));
+              return null;
+            })
+        .when(ps)
+        .setString(eq(1), anyString());
+    when(ps.executeQuery())
+        .thenAnswer(
+            invocation -> {
+              ResultSet rs = mock(ResultSet.class);
+              String value = values.get(parameter.get());
+              when(rs.next()).thenReturn(value != null);
+              when(rs.getString(1)).thenReturn(value);
+              return rs;
+            });
+    return ps;
   }
 
   @Test

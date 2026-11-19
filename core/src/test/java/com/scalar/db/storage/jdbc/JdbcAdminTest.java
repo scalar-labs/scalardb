@@ -7783,12 +7783,12 @@ public class JdbcAdminTest {
 
   @Test
   public void
-      buildImportTextColumnWarnings_OracleUsingNlsCompLinguistic_ShouldNameResolvedNlsComp() {
+      buildImportTextColumnWarnings_OracleUsingNlsCompGermanSort_ShouldNameResolvedNlsSort() {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
     Map<String, TextColumnCollation> collations =
-        ImmutableMap.of("pk", new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "LINGUISTIC"));
+        ImmutableMap.of("pk", new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "GERMAN"));
 
     // Act
     List<String> actual =
@@ -7798,7 +7798,7 @@ public class JdbcAdminTest {
     // Assert
     assertThat(actual)
         .containsExactly(
-            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation USING_NLS_COMP resolved to LINGUISTIC, character set AL32UTF8)");
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation USING_NLS_COMP resolved to GERMAN, character set AL32UTF8)");
   }
 
   @Test
