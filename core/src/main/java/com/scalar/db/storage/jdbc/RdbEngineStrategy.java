@@ -119,15 +119,6 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns whether any collation clause on a column needs a database-level setting.
-   *
-   * @return {@code true} if a column collation clause depends on a database-level setting
-   */
-  default boolean collationClauseNeedsDatabaseSetting() {
-    return false;
-  }
-
-  /**
    * Throws an exception if the database rejects every column collation clause.
    *
    * @param connection the connection to read the database setting with
@@ -139,9 +130,8 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns the collation that columns of the schema get when they declare none. It is read only
-   * when {@link #collationClauseNeedsDatabaseSetting()} returns {@code true}, so an engine
-   * overrides it together with that method.
+   * Returns the collation that columns of the schema get when they declare none, on engines whose
+   * column collation clause depends on a database setting.
    *
    * @param connection the connection to read the catalog with
    * @param namespace the schema to read the default collation of

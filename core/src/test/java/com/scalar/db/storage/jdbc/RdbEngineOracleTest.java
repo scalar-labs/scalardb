@@ -449,15 +449,6 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void collationClauseNeedsDatabaseSetting_ShouldReturnTrue() {
-    // Act
-    boolean actual = rdbEngineOracle.collationClauseNeedsDatabaseSetting();
-
-    // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
   public void throwIfCollationClausesRejected_MaxStringSizeStandard_ShouldThrowMaxStringSizeError()
       throws SQLException {
     // Arrange
