@@ -12,7 +12,7 @@ from models import FeatureUpdate, MonitorState, VersionUpdate, utc_now_iso
 from pin_reader import PinReader
 from plugins import get_feature_plugin, get_plugin
 from relevance import evaluate_relevance, load_relevance_rules
-from state import load_state, save_state, record_feature, record_irrelevant
+from state import load_state, prune_seen_features, save_state, record_feature, record_irrelevant
 from text_util import feature_cursor_key, resolve_cursor
 
 logger = logging.getLogger(__name__)
@@ -114,6 +114,9 @@ class MonitorEngine:
             state.last_run_status = run_status
             state.errors = errors
             state.pin_snapshot.update(pin_reader.build_pin_snapshot(databases))
+            pruned = prune_seen_features(state)
+            if pruned:
+                logger.info("Forgot %s announcement(s) first seen over a year ago", pruned)
             save_state(self.state_path, state)
 
         report["notify_version_updates"] = version_to_notify

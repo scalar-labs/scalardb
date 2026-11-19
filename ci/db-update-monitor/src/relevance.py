@@ -6,21 +6,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from config_loader import load_yaml
+from config_schema import raise_if_invalid, validate_relevance_rules
 from models import FeatureUpdate
 from text_util import keyword_in_text, match_keywords
-
-_LEGACY_ADAPTER_HINTS = (
-    "v1",
-    "single_path",
-    "single-path",
-    "legacy",
-)
 
 
 def load_relevance_rules(path: Path) -> Dict[str, List[str]]:
     if not path.exists():
         return {"irrelevant_keywords": [], "relevant_keywords": []}
     raw = load_yaml(path)
+    raise_if_invalid(validate_relevance_rules(raw), path.name)
     return {
         "irrelevant_keywords": [k.lower() for k in raw.get("irrelevant_keywords", [])],
         "relevant_keywords": [k.lower() for k in raw.get("relevant_keywords", [])],
@@ -32,21 +27,16 @@ def _text_blob(feature: FeatureUpdate) -> str:
 
 
 def _adapter_gap_reason(text: str, database: Dict[str, Any]) -> Optional[str]:
-    capabilities = database.get("adapter_capabilities") or {}
-    watch_features = database.get("watch_features") or []
-    if not capabilities:
-        return None
+    """Name the gap when the text mentions something the adapter does not implement yet.
 
-    for key, value in capabilities.items():
-        value_text = str(value).lower()
-        legacy = any(hint in value_text for hint in _LEGACY_ADAPTER_HINTS)
-        if not legacy:
-            continue
-        matched = match_keywords(text, watch_features)
+    `adapter_gap_keywords` maps an `adapter_capabilities` entry to the words that
+    signal a newer model, e.g. partition_key_model -> [hierarchical, v2].
+    """
+    capabilities = database.get("adapter_capabilities") or {}
+    for capability, keywords in (database.get("adapter_gap_keywords") or {}).items():
+        matched = match_keywords(text, keywords)
         if matched:
-            return f"adapter {key}={value} vs {matched[0]}"
-        if keyword_in_text(text, "hierarchical") or keyword_in_text(text, "v2"):
-            return f"adapter {key}={value} vs newer capability in announcement"
+            return f"adapter {capability}={capabilities.get(capability)} vs {matched[0]}"
     return None
 
 

@@ -109,3 +109,9 @@ def test_build_slack_payload_caps_blocks_and_keeps_errors():
     assert any("Message shortened" in text for text in sections)
     assert any("Check failures" in text for text in sections)
     assert payload["blocks"][-1]["type"] == "context"
+
+
+def test_build_slack_payload_has_fallback_text():
+    errors = [{"database_id": "x", "component_id": "y", "source_type": "rss", "error": "boom"}]
+    payload = build_slack_payload([], [_feature(1), _feature(2)], errors=errors)
+    assert payload["text"] == "ScalarDB Database Update Monitor: 2 new update(s), 1 check failure(s)"

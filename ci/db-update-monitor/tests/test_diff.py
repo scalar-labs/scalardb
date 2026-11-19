@@ -127,3 +127,19 @@ def test_each_web_page_change_is_notified_once():
 
     to_notify, _ = partition_feature_updates(state, [page_update("bbb")])
     assert to_notify == []
+
+
+def test_prune_forgets_only_old_announcements():
+    from models import FeatureState, MonitorState
+    from state import prune_seen_features
+
+    state = MonitorState(
+        features={
+            "old": FeatureState(first_seen="2020-01-01T00:00:00Z", title="old"),
+            "new": FeatureState(first_seen="2999-01-01T00:00:00Z", title="new"),
+        },
+        seen_irrelevant={"old": "2020-01-01T00:00:00Z", "new": "2999-01-01T00:00:00Z"},
+    )
+    assert prune_seen_features(state) == 2
+    assert list(state.features) == ["new"]
+    assert list(state.seen_irrelevant) == ["new"]

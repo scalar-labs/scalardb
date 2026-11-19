@@ -15,18 +15,46 @@ SRC_DIR = Path(__file__).resolve().parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from config_schema import ConfigError
 from engine import MonitorEngine, UnknownDatabaseError
 from notifier.slack import build_slack_payload, write_slack_payload
 
 
 @click.command()
-@click.option("--config", "config_path", type=click.Path(path_type=Path), required=True)
-@click.option("--state", "state_path", type=click.Path(path_type=Path), required=True)
-@click.option("--output-dir", type=click.Path(path_type=Path), required=True)
-@click.option("--repo-root", type=click.Path(path_type=Path), default=None)
-@click.option("--filter", "database_filter", default=None, help="Run for one database id")
-@click.option("--dry-run", is_flag=True, help="Do not persist state changes")
-@click.option("--verbose", is_flag=True)
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Path to monitors.yaml; relevance-rules.yaml is read from the same folder.",
+)
+@click.option(
+    "--state",
+    "state_path",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="State file. Missing means first run. Written at the end unless --dry-run.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="Folder for report.json, slack-payload.json, and notify-slack.",
+)
+@click.option(
+    "--repo-root",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Repository root with build.gradle and ci/tests-config.yaml. Default: found from --config.",
+)
+@click.option(
+    "--filter",
+    "database_filter",
+    default=None,
+    help="Check one database id only. Also DATABASE_FILTER.",
+)
+@click.option("--dry-run", is_flag=True, help="Do not write the state file. Also DRY_RUN=true.")
+@click.option("--verbose", is_flag=True, help="Debug logging.")
 def main(
     config_path: Path,
     state_path: Path,
@@ -54,6 +82,8 @@ def main(
         report = engine.run(dry_run=dry_run or os.environ.get("DRY_RUN", "").lower() == "true")
     except UnknownDatabaseError as exc:
         raise click.UsageError(str(exc)) from exc
+    except ConfigError as exc:
+        raise click.ClickException(str(exc)) from exc
     notify_version_updates = report.pop("notify_version_updates")
     notify_feature_updates = report.pop("notify_feature_updates")
     errors = report.get("errors", [])

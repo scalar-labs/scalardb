@@ -193,7 +193,14 @@ def build_slack_payload(
             )
         )
 
-    return {"blocks": header + body + error_blocks + context}
+    # Shown in notifications and previews, where blocks are not rendered.
+    summary = [f"{total} new update(s)"] if total else []
+    if errors:
+        summary.append(f"{len(errors)} check failure(s)")
+    return {
+        "text": f"ScalarDB Database Update Monitor: {', '.join(summary)}",
+        "blocks": header + body + error_blocks + context,
+    }
 
 
 def write_slack_payload(path: Path, payload: Dict) -> None:

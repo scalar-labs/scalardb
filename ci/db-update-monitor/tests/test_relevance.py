@@ -64,10 +64,30 @@ def test_adapter_capability_gap_is_relevant():
     database = {
         "watch_features": ["hierarchical partition key", "partition key"],
         "adapter_capabilities": {"partition_key_model": "v1_single_path"},
+        "adapter_gap_keywords": {"partition_key_model": ["hierarchical", "v2"]},
     }
     result = evaluate_relevance(feature, database, {"irrelevant_keywords": [], "relevant_keywords": []})
     assert result.relevant
-    assert "adapter" in result.relevance_reason
+    assert result.relevance_reason == "adapter partition_key_model=v1_single_path vs hierarchical"
+
+
+def test_watch_feature_alone_is_not_an_adapter_gap():
+    feature = FeatureUpdate(
+        database_id="cosmos",
+        database_name="Azure Cosmos DB",
+        title="Multi-region write improvements",
+        description="Lower latency for multi-region write accounts",
+        source_type="rss",
+        matched_keywords=[],
+    )
+    database = {
+        "watch_features": ["multi-region write"],
+        "adapter_capabilities": {"partition_key_model": "v1_single_path"},
+        "adapter_gap_keywords": {"partition_key_model": ["hierarchical", "v2"]},
+    }
+    result = evaluate_relevance(feature, database, {"irrelevant_keywords": [], "relevant_keywords": []})
+    assert result.relevant
+    assert result.relevance_reason == "matches watch_features: multi-region write"
 
 
 def test_short_keyword_uses_word_boundary():

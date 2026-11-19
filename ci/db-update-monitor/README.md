@@ -9,12 +9,40 @@ A weekly job that watches every database ScalarDB supports and posts to Slack wh
 
 The monitor only reports. It does not upgrade dependencies, change code, or open tickets.
 
+## Inputs and outputs
+
+The monitor compares **what ScalarDB uses** and **what vendors have published** with **what it already reported**, and outputs **only what is new**.
+
+**Inputs**
+
+| Input | What it provides |
+|-------|------------------|
+| [`config/monitors.yaml`](./config/monitors.yaml) | The databases to watch: which versions to check, which feeds to read, and which words make an announcement relevant |
+| [`config/relevance-rules.yaml`](./config/relevance-rules.yaml) | Global words that always or never make an announcement relevant ("deprecated", "pricing", ...) |
+| `build.gradle` and `ci/tests-config.yaml` | The versions ScalarDB uses today: drivers and SDKs from `build.gradle`, database servers from the CI test matrix. Read only. |
+| Vendor data | Published versions and announcements from Maven Central, Docker Hub, GitHub, RSS/Atom feeds, and web pages |
+| `last-run.json` | What earlier runs already reported. Kept on the `db-update-monitor-state` branch. |
+| Options | Which files to use, one database only, dry run. See [Running locally](#running-locally). |
+
+**Outputs**
+
+| Output | What it is |
+|--------|------------|
+| **Slack message** | One message per run, only when there are new updates or failed checks: a table of new versions, a list of relevant announcements, and any failed checks |
+| `output/report.json` | Everything that was found, what was sent, why, and any errors |
+| `output/slack-payload.json` | The Slack message as JSON (the workflow posts this file) |
+| `output/notify-slack` | `true` if there is something to send |
+| Updated `last-run.json` | So next week's run does not repeat this week's updates |
+| Exit code | `0` success (also when some checks failed), `1` every check failed or the configuration is invalid, `2` unknown database id |
+
+The full description, with every command-line option, environment variable, and a real example of each output, is in [SPEC.md section 4](./SPEC.md#4-inputs-and-outputs).
+
 ## Documentation
 
 | Document | Read it to learn |
 |----------|------------------|
-| This README | How it runs, how to add a database, how to run it locally |
-| [SPEC.md](./SPEC.md) | What the monitor must do, and the full configuration reference |
+| This README | What goes in and comes out, how it runs, how to add a database, how to run it locally |
+| [SPEC.md](./SPEC.md) | What the monitor must do, every input and output in detail, and the full configuration reference |
 | [HOW-IT-WORKS.md](./HOW-IT-WORKS.md) | How the code works, step by step, and how to trace a Slack message to its cause |
 
 ## How it runs
@@ -25,9 +53,9 @@ The monitor only reports. It does not upgrade dependencies, change code, or open
 | **Schedule** | Every Sunday 17:00 UTC (Monday 02:00 JST), on the default branch only |
 | **Manual run** | GitHub → Actions → *Database Update Monitor* → *Run workflow*. Options: one database only (`database_filter`), dry run (`dry_run`) |
 | **Slack** | Posted with the repository secret `SLACK_SCALARDB_WEBHOOK_URL` (Slack incoming webhook) |
-| **Memory** | `last-run.json` records what was already sent. It lives on the branch `db-update-monitor-state`, because the default branch is protected. The workflow pushes it there after Slack was posted successfully. Details: [HOW-IT-WORKS.md section 7](./HOW-IT-WORKS.md#7-the-state-file) |
+| **Memory** | `last-run.json` records what was already sent. It lives on the branch `db-update-monitor-state`, because the default branch is protected. The workflow pushes it there at the end of each run, but only once the Slack message (if there was one) was delivered. Details: [HOW-IT-WORKS.md section 7](./HOW-IT-WORKS.md#7-the-state-file) |
 | **Report** | Each run uploads `output/` as the `db-monitor-report` artifact (kept 90 days) |
-| **Pull requests** | Changes under `ci/db-update-monitor/` run the unit tests only |
+| **Pull requests** | Changes under `ci/db-update-monitor/`, to the workflow, to `build.gradle`, or to `ci/tests-config.yaml` run the unit tests only. The tests include a check of the configuration and of every version the monitor reads from those two files. |
 
 ## When a Slack message is sent
 
@@ -39,7 +67,7 @@ A run sends **one** message, or none.
 - **Nothing is sent** in a week with no new updates and no failures.
 - **The first run sends nothing.** It records everything that already exists as the starting point (the *baseline*), so the team is not flooded with old news.
 
-The exact rules are in [SPEC.md section 4](./SPEC.md#4-functional-requirements).
+The exact rules are in [SPEC.md section 5](./SPEC.md#5-functional-requirements).
 
 ## What is monitored
 
@@ -70,7 +98,7 @@ The list is defined in [`config/monitors.yaml`](./config/monitors.yaml).
 - **Db2**: IBM blocks automated access to `ibm.com/docs`, so Db2 server announcements cannot be read. Feature monitoring uses IBM's driver repositories on GitHub instead, which cover the driver, not the server.
 - **Oracle**: the new-features guide is built with JavaScript, so the monitor reads the plain table-of-contents page (`nfcoa/toc.htm`) instead.
 - **Server images outside Docker Hub** (Oracle, SQL Server, Db2) are not supported, so their server versions are not monitored.
-- The current code has some gaps against the specification, listed in [SPEC.md section 10](./SPEC.md#10-known-deviations-from-this-specification).
+- Known sources of noisy messages (for example the AWS SDK appearing almost every week) are listed in [SPEC.md section 11](./SPEC.md#11-known-deviations-from-this-specification).
 
 ## Adding a database
 
@@ -142,21 +170,26 @@ databases:
           version_pattern: '\.jre8$'
 ```
 
-**4. Test it locally** with a dry run for just that database (see below), and check `output/report.json`:
+**4. Run the unit tests** (see [Tests](#tests)). They check the whole configuration: misspelled or missing keys, unknown types, invalid patterns, duplicate ids, and that every `current_version` can be read from `build.gradle` or `ci/tests-config.yaml`. Each problem is reported with its location, for example `databases[exampledb].sources[0]: unknown key 'match_scop'`.
+
+**5. Test it locally** with a dry run for just that database (see below), and check `output/report.json`:
 
 - `errors` is empty.
 - `detected_versions` shows the right current version.
 - `detected_features` shows sensible items, and `relevance_reason` explains each decision.
 
-**5. Open a pull request.** The new database is baselined silently on its first weekly run. New announcements from it are sent after that.
+**6. Open a pull request.** On the first weekly run after it is merged:
 
-Every field is described in [SPEC.md section 6](./SPEC.md#6-configuration-reference). To pause a database without deleting it, set `enabled: false`.
+- Its **feeds** are recorded silently, so old announcements are not sent. New announcements are sent from the next run on.
+- Its **version checks** report straight away if ScalarDB is already behind upstream.
+
+Every field is described in [SPEC.md section 7](./SPEC.md#7-configuration-reference). To pause a database without deleting it, set `enabled: false`.
 
 **New kind of source?** If the vendor publishes in a form not listed above, add a plugin class in [`src/plugins/`](./src/plugins/) and register it in [`src/plugins/__init__.py`](./src/plugins/__init__.py).
 
 ## Running locally
 
-Requires Python 3.12.
+Requires Python 3.10 or newer. GitHub Actions uses 3.12.
 
 ```bash
 cd ci/db-update-monitor
@@ -170,6 +203,18 @@ python src/main.py --config config/monitors.yaml --state state/last-run.json --o
 ```
 
 Remove `--filter cosmos` to check every database.
+
+| Option | Required | Meaning |
+|--------|----------|---------|
+| `--config` | yes | Path to `monitors.yaml`. `relevance-rules.yaml` is read from the same folder. |
+| `--state` | yes | Path to the state file. Missing means first run. Written at the end unless `--dry-run`. |
+| `--output-dir` | yes | Folder for the output files |
+| `--repo-root` | no | Repository root, where `build.gradle` and `ci/tests-config.yaml` are. Default: found from the `--config` path. |
+| `--filter ID` | no | Check one database only (also `DATABASE_FILTER`) |
+| `--dry-run` | no | Do not write the state file (also `DRY_RUN=true`) |
+| `--verbose` | no | Debug logging |
+
+`python src/main.py --help` prints the same list. All options and environment variables are described in [SPEC.md section 4.2](./SPEC.md#42-command-line-options-and-environment-variables).
 
 The results are in `output/`:
 

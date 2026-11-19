@@ -5,7 +5,7 @@ This document explains how the code works today: what happens on each run, how i
 - For **what the monitor must do** (requirements and full configuration reference), see [SPEC.md](./SPEC.md).
 - For **setup and everyday use**, see [README.md](./README.md).
 
-Where the code does not yet match the specification, this document describes the code and points to the deviation (`D-n`) listed in [SPEC.md section 10](./SPEC.md#10-known-deviations-from-this-specification).
+If the code ever stops matching the specification, the gap is listed in [SPEC.md section 11](./SPEC.md#11-known-deviations-from-this-specification). There are none at the moment.
 
 ---
 
@@ -56,6 +56,8 @@ ci/db-update-monitor/
   config/monitors.yaml           What to watch: databases, pins, upstreams, feeds
   config/relevance-rules.yaml    Global "never notify" / "notify" keywords
   src/main.py                    Command-line entry point; writes output files
+  src/config_loader.py           Loads monitors.yaml and applies defaults
+  src/config_schema.py           Checks monitors.yaml and relevance-rules.yaml for mistakes
   src/engine.py                  Runs all checks and puts the results together
   src/pin_reader.py              Reads ScalarDB's current versions (pins)
   src/version_normalizer.py      Parses and compares versions, applies granularity
@@ -65,7 +67,7 @@ ci/db-update-monitor/
   src/text_util.py               Keyword matching and other text helpers
   src/notifier/slack.py          Builds the Slack message
   src/plugins/                   One class per upstream or source type
-  tests/                         Unit tests (pytest)
+  tests/                         Unit tests (pytest); tests/test_config.py checks the real configuration
   state/last-run.json            Local state only; ignored by git, created on first local run
   output/                        Output files of a run; ignored by git
 
@@ -80,7 +82,7 @@ In GitHub Actions, `output/` is uploaded as the `db-monitor-report` artifact.
 
 ## 3. Configuration in short
 
-The full field reference is in [SPEC.md section 6](./SPEC.md#6-configuration-reference). This section explains the ideas.
+The full field reference is in [SPEC.md section 7](./SPEC.md#7-configuration-reference). This section explains the ideas.
 
 A database entry in `monitors.yaml` has two independent parts:
 
@@ -124,7 +126,10 @@ A database entry in `monitors.yaml` has two independent parts:
 
 `version_granularity` can be set on the component, on its `upstream`, on the database, or under `defaults`. The most specific setting wins; if none is set, the default in the table applies. A value under `defaults` also applies to Docker images, replacing their `major` default, so the current configuration does not set one there.
 
-Some vendors publish several builds of every release, e.g. `13.6.0.jre8` and `13.6.0.jre11` for the SQL Server driver. Set `version_pattern` on a `maven` or `github_releases` upstream (e.g. `'\.jre8$'`) so only the build ScalarDB uses is compared.
+Some vendors publish versions that ScalarDB should not compare against. Set `version_pattern` (a regular expression) on a `maven` or `github_releases` upstream to keep only the versions that matter. The current configuration uses it twice:
+
+- **SQL Server driver:** every release comes as a `jre8` and a `jre11` build (`13.6.0.jre8`, `13.6.0.jre11`). `'\.jre8$'` keeps the build ScalarDB uses.
+- **Db2 driver:** IBM also publishes one-off builds such as `12.1.5.0_special_89304`. `'^\d+(\.\d+)*$'` keeps regular releases only.
 
 Docker images publish many non-version tags (`latest`, `alpine`, `17-bookworm`). Use `tag_pattern` (e.g. `'^\d+(\.\d+)?$'`) and `exclude_tags` so only plain version tags are compared.
 
@@ -161,6 +166,14 @@ The entry point is `src/main.py`. It creates a `MonitorEngine` (`src/engine.py`)
 
 ### Step 1 — Load configuration and state
 
+- `monitors.yaml` and `relevance-rules.yaml` are checked first (`src/config_schema.py`): unknown or missing keys, unknown types and values, invalid regular expressions, duplicate ids, and `adapter_gap_keywords` that name a capability the database does not list. If anything is wrong, the run stops with exit code 1 and lists every problem with its location, for example:
+
+  ```
+  Error: Invalid monitors.yaml:
+    - databases[dynamo].sources[0]: unknown key 'match_scop'
+  ```
+
+  The same checks run in the unit tests (`tests/test_config.py`), together with a check that every pin can be read from `build.gradle` and `ci/tests-config.yaml`. So most mistakes are caught on the pull request.
 - Databases with `enabled: false` are dropped. The `defaults` section is copied onto each remaining database.
 - With `--filter <id>` (or the `DATABASE_FILTER` environment variable), only that database is kept. If no enabled database has that id, the run stops with an error that lists the valid ids (exit code 2). If the baseline is not complete yet, a warning is logged, because a filtered run never completes the baseline.
 - The state file given with `--state` is loaded. If it does not exist, the run starts with empty state.
@@ -281,7 +294,16 @@ Unless it is a dry run (`--dry-run` or `DRY_RUN=true`), the state file is writte
 
 "Text" is the item's title plus its description.
 
-**Adapter gap.** This rule exists for the Cosmos DB case. A database can record what its adapter supports today in `adapter_capabilities`, for example `partition_key_model: v1_single_path`. If a value contains `v1`, `single_path`, `single-path`, or `legacy`, it is treated as a legacy model. Then an item is relevant if it mentions any of the database's `watch_features`, or the words `hierarchical` or `v2`. The last two words are fixed in the code (D-9).
+**Adapter gap.** This rule exists for the Cosmos DB case. A database records what its adapter supports today in `adapter_capabilities`, and the words that mean the vendor has moved past it in `adapter_gap_keywords`:
+
+```yaml
+adapter_capabilities:
+  partition_key_model: v1_single_path
+adapter_gap_keywords:
+  partition_key_model: [hierarchical, v2]
+```
+
+An item that mentions one of those words is relevant, with a reason such as `adapter partition_key_model=v1_single_path vs hierarchical`. Both settings are plain configuration, so the same idea works for any database: add a capability and its words, and nothing in the code changes.
 
 **Keyword matching** (`keyword_in_text` in `src/text_util.py`) ignores case:
 
@@ -319,6 +341,8 @@ git show origin/db-update-monitor-state:last-run.json
 
 An announcement is identified by `{database id}:{source type}:{url}`, or by title and date if it has no URL. A web page always has the same URL, so a web page change is identified by the URL plus a hash of that version of the page (`{url}#{page hash}`). Each change is therefore reported once, and the next change is reported again.
 
+**Old entries are removed.** Before the state is written, announcements in `features` and `seen_irrelevant` that were first seen more than 365 days ago are dropped, so the file does not grow forever. This is safe because the feed cursors already stop dated items that old from being fetched again. Only a feed item without a date could be sent once more after a year.
+
 **To reset:**
 
 - Locally: delete `state/last-run.json`. A missing file means empty state.
@@ -338,6 +362,8 @@ Otherwise the message contains, in order:
 4. **Check failures**: up to five failed checks.
 5. A link to the GitHub Actions run and the branch name.
 
+The message also has a plain-text summary, for example *ScalarDB Database Update Monitor: 18 new update(s), 1 check failure(s)*. Slack shows it in notifications and previews, where the blocks above are not rendered.
+
 The message is kept within Slack's limits so Slack never rejects it:
 
 - Long sections are split into several, to stay under 3,000 characters each. Each failure message is cut to 300 characters.
@@ -354,7 +380,7 @@ File: `.github/workflows/db-update-monitor.yaml`.
 
 | Trigger | Job | What it does |
 |---------|-----|--------------|
-| Pull request changing `ci/db-update-monitor/**` or the workflow file | Unit tests | Runs `pytest`. Never posts to Slack. |
+| Pull request changing `ci/db-update-monitor/**`, the workflow file, `build.gradle`, or `ci/tests-config.yaml` | Unit tests | Runs `pytest`, including the configuration and pin checks. Never posts to Slack. |
 | Schedule `0 17 * * 0` (Sunday 17:00 UTC, Monday 02:00 JST) | Check database updates | Full run. Default branch only. |
 | Manual "Run workflow" | Check database updates | Same, with optional `database_filter` and `dry_run` inputs. Default branch only. |
 
@@ -363,7 +389,7 @@ The monitor job steps:
 1. Check out the default branch, set up Python 3.12, install `requirements.txt`.
 2. **Check out the state branch** into a separate folder (`$RUNNER_TEMP/db-update-monitor-state`), using a git worktree. If the branch does not exist yet, create it there as an empty branch with a short README. Then the run starts with empty state, which makes it the baseline run.
 3. **Run** `src/main.py` with `--state` pointing at `last-run.json` in that folder, and `GITHUB_TOKEN` for the GitHub API.
-4. **Upload** `output/` as the `db-monitor-report` artifact (always, even if the run failed).
+4. **Upload** `output/` as the `db-monitor-report` artifact (always, even if the run failed). When the workflow runs locally under act, this step is allowed to fail, because act's artifact server does not support this action version.
 5. **Post to Slack**: send `slack-payload.json` to `SLACK_SCALARDB_WEBHOOK_URL` if it is not a dry run and `notify-slack` is `true`. The step fails if Slack rejects the message (`errors: true`).
 6. **Save state**: commit `last-run.json` on the state branch and push it, only if all of these are true:
    - it is not a dry run,
@@ -419,9 +445,9 @@ Things to know:
 
 ### Cosmos DB hierarchical partition keys
 
-1. The Cosmos entry in `monitors.yaml` reads the Cosmos DB blog feed with no keywords, so every post is considered. Its `watch_features` include `hierarchical partition key`, and `adapter_capabilities` has `partition_key_model: v1_single_path`.
+1. The Cosmos entry in `monitors.yaml` reads the Cosmos DB blog feed with no keywords, so every post is considered. `adapter_capabilities` has `partition_key_model: v1_single_path`, and `adapter_gap_keywords` lists `hierarchical` and `v2` for it.
 2. A blog post about hierarchical partition keys is published.
-3. Relevance: `v1_single_path` is a legacy value, and the post mentions a watch feature → relevant, with reason `adapter partition_key_model=v1_single_path vs hierarchical partition key`.
+3. Relevance: the post contains `hierarchical`, one of the `adapter_gap_keywords` for `partition_key_model` → relevant, with reason `adapter partition_key_model=v1_single_path vs hierarchical`.
 4. After the baseline, and if the post's URL was not sent before → it appears under FEATURE updates, with the line *ScalarDB adapter — partition_key_model: v1_single_path*, so readers see the adapter is still on v1.
 5. The URL is recorded. The same post is not sent again next week.
 

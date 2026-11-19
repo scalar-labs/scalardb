@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict
 
 from models import ComponentState, FeatureState, FeatureUpdate, MonitorState, VersionUpdate, utc_now_iso
+from text_util import parse_iso_datetime
+
+# Announcements older than this are forgotten; see prune_seen_features.
+FEATURE_RETENTION_DAYS = 365
 
 
 def load_state(path: Path) -> MonitorState:
@@ -80,3 +85,24 @@ def record_feature(state: MonitorState, update: FeatureUpdate) -> None:
 
 def record_irrelevant(state: MonitorState, update: FeatureUpdate) -> None:
     state.seen_irrelevant[update.dedup_key()] = utc_now_iso()
+
+
+def prune_seen_features(state: MonitorState, max_age_days: int = FEATURE_RETENTION_DAYS) -> int:
+    """Forget announcements first seen more than `max_age_days` ago. Returns how many.
+
+    Feed cursors already stop dated items that old from coming back, so this only keeps
+    the state file from growing forever.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+
+    def expired(timestamp: str) -> bool:
+        seen = parse_iso_datetime(timestamp)
+        return seen is not None and seen < cutoff
+
+    old_features = [key for key, value in state.features.items() if expired(value.first_seen)]
+    old_irrelevant = [key for key, value in state.seen_irrelevant.items() if expired(value)]
+    for key in old_features:
+        del state.features[key]
+    for key in old_irrelevant:
+        del state.seen_irrelevant[key]
+    return len(old_features) + len(old_irrelevant)

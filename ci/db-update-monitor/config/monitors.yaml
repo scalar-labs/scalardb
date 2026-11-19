@@ -11,6 +11,9 @@ databases:
       - multi-region write
     adapter_capabilities:
       partition_key_model: v1_single_path
+    # Words that mean Cosmos DB announced something the adapter does not implement yet.
+    adapter_gap_keywords:
+      partition_key_model: [hierarchical, v2]
     sources:
       - type: rss
         url: https://devblogs.microsoft.com/cosmosdb/feed/
@@ -369,6 +372,9 @@ databases:
         upstream:
           type: docker
           image: google/alloydbomni
+          # Plain major or major.minor tags only, like the other server images; skips variants
+          # such as 17.10.0-ubi9 and 17.10-bookworm, and the 17.10.0 duplicates of 17.10.
+          tag_pattern: '^\d+(\.\d+)?$'
 
   - id: spanner
     name: Cloud Spanner

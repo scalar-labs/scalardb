@@ -84,10 +84,7 @@ class PinReader:
         if not versions:
             raise ValueError(f"No versions found for tests-config pin: {config}")
 
-        strategy = config.get("strategy", "highest")
-        if strategy == "all":
-            return ",".join(sorted(set(versions), key=lambda v: NORMALIZER.parse(v) or v))
-
+        # The only strategy: the highest version tested is the pin.
         return NORMALIZER.max_version(versions) or versions[-1]
 
     def build_pin_snapshot(self, databases: List[Dict[str, Any]]) -> Dict[str, str]:

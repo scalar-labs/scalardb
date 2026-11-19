@@ -34,14 +34,13 @@ class GitHubReleaseChecker(SourcePlugin):
         tag_strip_prefix = upstream_config.get("tag_strip_prefix", "")
 
         versions: List[str] = []
-        release_url: Optional[str] = None
+        release_urls: Dict[str, Optional[str]] = {}
         for release in releases:
             raw_tag = release.get("tag_name", "")
             tag = raw_tag.removeprefix(tag_strip_prefix).lstrip("vV")
             if self.normalizer.is_newer(tag, current_pin):
                 versions.append(tag)
-                if release_url is None:
-                    release_url = release.get("html_url")
+                release_urls[tag] = release.get("html_url")
 
         versions = filter_by_version_pattern(versions, upstream_config)
         granularity = resolve_granularity(component, upstream_config, database, "exact")
@@ -60,6 +59,7 @@ class GitHubReleaseChecker(SourcePlugin):
             latest_version=latest,
             new_versions=newer,
             update_level=self.normalizer.update_level(current_pin, latest),
-            url=release_url,
+            # Link the newest version's release, not whichever release the API listed first.
+            url=release_urls.get(latest),
             adapter_package=database.get("adapter_package"),
         )
