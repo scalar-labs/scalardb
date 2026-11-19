@@ -87,10 +87,6 @@ public interface RdbEngineStrategy {
     return "";
   }
 
-  default String appendCollationClause(String type, String collationClause) {
-    return collationClause.isEmpty() ? type : type + " " + collationClause;
-  }
-
   /**
    * Returns a query that reads the collation of a character column, or null when the engine does
    * not restate column collations. The query binds the namespace, the table and the column, and

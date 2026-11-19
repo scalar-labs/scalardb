@@ -7676,6 +7676,17 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void appendCollationClause_ShouldAppendNonEmptyClauseOnly() {
+    // Arrange Act
+    String withClause = JdbcAdmin.appendCollationClause("VARCHAR(10)", "COLLATE c");
+    String withoutClause = JdbcAdmin.appendCollationClause("VARCHAR(10)", "");
+
+    // Assert
+    assertThat(withClause).isEqualTo("VARCHAR(10) COLLATE c");
+    assertThat(withoutClause).isEqualTo("VARCHAR(10)");
+  }
+
+  @Test
   public void buildImportTextColumnWarnings_AllBinaryUtf8_ShouldReturnEmpty() {
     // Arrange
     TableMetadata metadata =

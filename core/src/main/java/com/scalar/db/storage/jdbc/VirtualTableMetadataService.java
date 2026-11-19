@@ -69,7 +69,7 @@ public class VirtualTableMetadataService {
             + ", "
             + enclose(COL_ATTRIBUTES)
             + " "
-            + rdbEngine.appendCollationClause(
+            + JdbcAdmin.appendCollationClause(
                 rdbEngine.getDataTypeForEngine(DataType.TEXT), createdTextCollationClause)
             + ", "
             + "PRIMARY KEY ("
@@ -314,7 +314,7 @@ public class VirtualTableMetadataService {
   }
 
   private String getTextColumnDefinition(int charLength, boolean isKey) {
-    return rdbEngine.appendCollationClause(
+    return JdbcAdmin.appendCollationClause(
         rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }
 

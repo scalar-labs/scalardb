@@ -172,7 +172,7 @@ public class NamespaceMetadataService {
   }
 
   private String getTextColumnDefinition(int charLength, boolean isKey) {
-    return rdbEngine.appendCollationClause(
+    return JdbcAdmin.appendCollationClause(
         rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }
 
