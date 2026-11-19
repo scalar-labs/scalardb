@@ -418,17 +418,6 @@ class RdbEngineMysqlTest {
   }
 
   @Test
-  void appendCollationClause_ShouldAppendNonEmptyClauseOnly() {
-    // Arrange Act
-    String withClause = rdbEngineMysql.appendCollationClause("VARCHAR(10)", "COLLATE c");
-    String withoutClause = rdbEngineMysql.appendCollationClause("VARCHAR(10)", "");
-
-    // Assert
-    assertThat(withClause).isEqualTo("VARCHAR(10) COLLATE c");
-    assertThat(withoutClause).isEqualTo("VARCHAR(10)");
-  }
-
-  @Test
   void isBinaryCollation_Utf8mb4BinOnNoPadServer_ShouldReturnFalse() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");

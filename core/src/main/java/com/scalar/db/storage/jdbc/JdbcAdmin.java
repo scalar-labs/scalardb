@@ -922,7 +922,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     if (metadata.getColumnDataType(columnName) != DataType.TEXT) {
       return bareType;
     }
-    return rdbEngine.appendCollationClause(
+    return appendCollationClause(
         bareType, sourceKeyCollationClauses.getOrDefault(columnName, createdTextCollationClause));
   }
 
@@ -1075,7 +1075,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return bareType;
     }
     if (currentType != DataType.TEXT) {
-      return rdbEngine.appendCollationClause(bareType, createdTextCollationClause);
+      return appendCollationClause(bareType, createdTextCollationClause);
     }
     String sql = rdbEngine.textColumnCollationSql();
     if (sql == null) {
@@ -1095,7 +1095,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             rs -> rs.next() ? new TextColumnCollation(rs.getString(1), rs.getString(2)) : null);
     return current == null
         ? bareType
-        : rdbEngine.appendCollationClause(bareType, rdbEngine.getCollationClause(current));
+        : appendCollationClause(bareType, rdbEngine.getCollationClause(current));
   }
 
   private String getCollationClauseOrCreated(
@@ -1992,6 +1992,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         throw e;
       }
     }
+  }
+
+  static String appendCollationClause(String type, String collationClause) {
+    return collationClause.isEmpty() ? type : type + " " + collationClause;
   }
 
   static void execute(
