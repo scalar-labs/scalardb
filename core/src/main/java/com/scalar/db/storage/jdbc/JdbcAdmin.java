@@ -296,9 +296,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     // A COLLATE clause needs MAX_STRING_SIZE=EXTENDED on Oracle, so a key that already gets the
     // schema's default collation declares none when the setting is off.
     String schemaDefault =
-        !columnCollationEnabled && rdbEngine.collationClauseNeedsDatabaseSetting()
-            ? rdbEngine.getSchemaDefaultCollation(connection, namespace)
-            : null;
+        columnCollationEnabled ? null : rdbEngine.getSchemaDefaultCollation(connection, namespace);
     ImmutableMap.Builder<String, String> clauses = ImmutableMap.builder();
     for (String columnName :
         Iterables.concat(metadata.getPartitionKeyNames(), metadata.getClusteringKeyNames())) {

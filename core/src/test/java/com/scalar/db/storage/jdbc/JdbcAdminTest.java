@@ -8327,7 +8327,7 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createTable_BinaryCollationDisabledOnMysqlWithKeySource_ShouldNotReadSchemaDefault()
+  public void createTable_BinaryCollationDisabledOnMysqlWithKeySource_ShouldCopySourceKeyCollation()
       throws SQLException, ExecutionException {
     // Arrange
     disableColumnCollation();
@@ -8350,7 +8350,6 @@ public class JdbcAdminTest {
         ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
 
     // Assert
-    verify(rdbEngineStrategy, never()).getSchemaDefaultCollation(any(), anyString());
     ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
     verify(statement, atLeastOnce()).execute(sql.capture());
     assertThat(sql.getAllValues())

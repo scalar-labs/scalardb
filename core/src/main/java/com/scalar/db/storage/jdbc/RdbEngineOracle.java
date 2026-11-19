@@ -509,11 +509,6 @@ class RdbEngineOracle extends AbstractRdbEngine {
     }
   }
 
-  @Override
-  public boolean collationClauseNeedsDatabaseSetting() {
-    return true;
-  }
-
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
   public void throwIfCollationClausesRejected(Connection connection) throws SQLException {
