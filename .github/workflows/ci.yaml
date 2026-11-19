@@ -408,7 +408,7 @@ jobs:
         if: ${{ always() && env.REPORT_GROUP != '' }}
         run: |
           mkdir -p core/build/test-results
-          echo > "core/build/test-results/outcome-${{ steps.run-integration-test.outcome }}"
+          echo "${{ steps.run-integration-test.outcome }}" > "core/build/test-results/outcome-${{ matrix.label }}"
 
       - name: Upload binary test results of the test group
         if: ${{ always() && env.REPORT_GROUP != '' }}
@@ -484,10 +484,12 @@ jobs:
 
           # A job that fails before loading its configuration, or whose runner is lost, uploads no
           # binary results, so the expected jobs come from the planner
+          # When the pattern matches a single artifact, download-artifact puts its files directly in
+          # downloaded-results, so the markers are found by name rather than by artifact folder
           outcome=success
           for label in $EXPECTED_LABELS; do
-            marker=$(find "downloaded-results/internal_test-results_${ARTIFACT_SUFFIX}_${REPORT_GROUP}_${FLAVOR}_${label}" -name 'outcome-*' 2>/dev/null | head -n 1)
-            job_outcome=${marker##*outcome-}
+            marker=$(find downloaded-results -name "outcome-${label}" | head -n 1)
+            job_outcome=$([ -n "$marker" ] && cat "$marker" || true)
             job_outcome=${job_outcome:-missing}
             [ "$job_outcome" = success ] || outcome=failure
             echo "${label}: ${job_outcome}"
