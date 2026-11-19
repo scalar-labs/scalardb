@@ -143,14 +143,14 @@ class RdbEngineOracle extends AbstractRdbEngine {
 
   @Override
   public String[] alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+      String namespace, String table, String columnName, String columnDefinition) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)
           + " MODIFY ( "
           + enclose(columnName)
           + " "
-          + columnType
+          + columnDefinition
           + " )"
     };
   }
