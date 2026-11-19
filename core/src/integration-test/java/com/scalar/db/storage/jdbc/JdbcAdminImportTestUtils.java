@@ -247,7 +247,10 @@ public class JdbcAdminImportTestUtils {
    */
   @Nullable
   public String getNonBinaryTextKeyCollation() {
-    if (JdbcTestUtils.isTidb(rdbEngine)) {
+    // RdbEngineSpanner extends RdbEnginePostgresql, so it must be ruled out first
+    if (JdbcTestUtils.isSpanner(rdbEngine)) {
+      return null;
+    } else if (JdbcTestUtils.isTidb(rdbEngine)) {
       return "utf8mb4_general_ci";
     } else if (JdbcTestUtils.isMysql(rdbEngine) || JdbcTestUtils.isMariaDB(rdbEngine)) {
       return JdbcTestUtils.isMysql(rdbEngine)
