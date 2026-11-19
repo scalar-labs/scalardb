@@ -1601,7 +1601,7 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act
@@ -1627,7 +1627,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     doReturn(
             ImmutableMap.of(
                 "pk", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4"),
@@ -1671,7 +1671,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(statement);
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     doReturn(Collections.emptyMap())
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), eq("my_ns"), eq("missing_table"));
@@ -1704,7 +1704,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
@@ -1726,7 +1726,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act
@@ -7969,7 +7969,7 @@ public class JdbcAdminTest {
     doReturn(Collections.emptyMap())
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), anyString(), anyString());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
     doNothing().when(adminSpy).createMetadataSchemaIfNotExists(any());
     doNothing().when(adminSpy).createNamespacesTableIfNotExists(any());
@@ -7990,7 +7990,7 @@ public class JdbcAdminTest {
     importSingleTextColumnTable(rdbEngineStrategy);
 
     // Assert
-    verify(rdbEngineStrategy).getDatabaseEncodingIssue(connection);
+    verify(rdbEngineStrategy).getDatabaseTextIssues(connection);
   }
 
   @Test
@@ -8003,7 +8003,7 @@ public class JdbcAdminTest {
     importSingleTextColumnTable(rdbEngineStrategy);
 
     // Assert
-    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
   }
 
   @Test
@@ -8066,27 +8066,28 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(new DatabaseEncodingIssue("latin1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET))
+    doReturn(
+            ImmutableList.of(
+                new DatabaseTextIssue("latin1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET)))
         .when(rdbEngineStrategy)
-        .getDatabaseEncodingIssue(any());
+        .getDatabaseTextIssues(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
     admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
 
     // Assert
-    verify(rdbEngineStrategy).getDatabaseEncodingIssue(connection);
+    verify(rdbEngineStrategy).getDatabaseTextIssues(connection);
   }
 
   @Test
-  public void
-      buildDatabaseEncodingWarning_PartialCharacterSet_ShouldSayValuesAreRejectedOrReplaced() {
+  public void buildDatabaseTextWarning_PartialCharacterSet_ShouldSayValuesAreRejectedOrReplaced() {
     // Arrange
-    DatabaseEncodingIssue issue =
-        new DatabaseEncodingIssue("LATIN1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+    DatabaseTextIssue issue =
+        new DatabaseTextIssue("LATIN1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET);
 
     // Act
-    String actual = JdbcAdmin.buildDatabaseEncodingWarning(issue, "ns.tbl");
+    String actual = JdbcAdmin.buildDatabaseTextWarning(issue, "ns.tbl");
 
     // Assert
     assertThat(actual)
@@ -8096,13 +8097,13 @@ public class JdbcAdminTest {
 
   @Test
   public void
-      buildDatabaseEncodingWarning_EncodingByteOrder_ShouldSayValuesAreOrderedByEncodingBytes() {
+      buildDatabaseTextWarning_EncodingByteOrder_ShouldSayValuesAreOrderedByEncodingBytes() {
     // Arrange
-    DatabaseEncodingIssue issue =
-        new DatabaseEncodingIssue("UTF-16le", DatabaseEncodingIssue.Kind.ENCODING_BYTE_ORDER);
+    DatabaseTextIssue issue =
+        new DatabaseTextIssue("UTF-16le", DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER);
 
     // Act
-    String actual = JdbcAdmin.buildDatabaseEncodingWarning(issue, "ns.tbl");
+    String actual = JdbcAdmin.buildDatabaseTextWarning(issue, "ns.tbl");
 
     // Assert
     assertThat(actual)
@@ -8111,43 +8112,18 @@ public class JdbcAdminTest {
   }
 
   @Test
-  public void createTable_TextColumnOnNonBinaryDatabaseCollation_ShouldCallCollationCheck()
-      throws SQLException, ExecutionException {
+  public void buildDatabaseTextWarning_NonBinaryCollation_ShouldSayValuesCanBeOrderedDifferently() {
     // Arrange
-    when(connection.createStatement()).thenReturn(mock(Statement.class));
-    when(dataSource.getConnection()).thenReturn(connection);
-    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
-    doReturn("UCA400_NO").when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+    DatabaseTextIssue issue =
+        new DatabaseTextIssue("UCA400_NO", DatabaseTextIssue.Kind.NON_BINARY_COLLATION);
 
     // Act
-    admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
+    String actual = JdbcAdmin.buildDatabaseTextWarning(issue, "ns.tbl");
 
     // Assert
-    verify(rdbEngineStrategy).getNonBinaryDatabaseCollation(connection);
-  }
-
-  @ParameterizedTest
-  @MethodSource("catalogReadFailures")
-  public void createTable_CollationCheckThrows_ShouldStillCreateTable(Exception failure)
-      throws SQLException, ExecutionException {
-    // Arrange
-    when(connection.createStatement()).thenReturn(mock(Statement.class));
-    when(dataSource.getConnection()).thenReturn(connection);
-    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
-    doThrow(failure).when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
-    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
-    TableMetadata metadata = textTableMetadata();
-
-    // Act
-    Throwable thrown =
-        catchThrowable(() -> adminSpy.createTable("ns", "tbl", metadata, Collections.emptyMap()));
-
-    // Assert
-    assertThat(thrown).isNull();
-    verify(adminSpy).addTableMetadata(connection, "ns", "tbl", metadata, true, false);
+    assertThat(actual)
+        .isEqualTo(
+            "The database collation is UCA400_NO, not binary, so the database can order and compare the TEXT values of the ns.tbl table differently from ScalarDB");
   }
 
   private void disableColumnCollation() {
@@ -8260,7 +8236,7 @@ public class JdbcAdminTest {
   private RdbEngineStrategy oracleWithKeyCollationSource(
       String sourceCollation, String schemaDefault) throws SQLException {
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     doReturn(ImmutableMap.of("pk", new TextColumnCollation(sourceCollation, "AL32UTF8")))
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
@@ -8404,8 +8380,7 @@ public class JdbcAdminTest {
     admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
 
     // Assert
-    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
-    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
   }
 
   @Test
@@ -8478,8 +8453,7 @@ public class JdbcAdminTest {
 
     // Assert
     verify(statement).execute("ALTER TABLE `ns`.`table` ADD `c2` LONGTEXT");
-    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
-    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
   }
 
   @Test
@@ -8560,8 +8534,7 @@ public class JdbcAdminTest {
     admin.createTable("ns", "tbl", metadata, Collections.emptyMap());
 
     // Assert
-    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
-    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
   }
 
   @ParameterizedTest
@@ -8572,7 +8545,7 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doThrow(failure).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doThrow(failure).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
     TableMetadata metadata = textTableMetadata();
 
@@ -8609,33 +8582,18 @@ public class JdbcAdminTest {
     // Arrange
     prepareAddNewColumnToTable();
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(new DatabaseEncodingIssue("latin1", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET))
+    doReturn(
+            ImmutableList.of(
+                new DatabaseTextIssue("latin1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET)))
         .when(rdbEngineStrategy)
-        .getDatabaseEncodingIssue(any());
+        .getDatabaseTextIssues(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
     admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
 
     // Assert
-    verify(rdbEngineStrategy).getDatabaseEncodingIssue(connection);
-  }
-
-  @Test
-  public void addNewColumnToTable_TextColumn_ShouldCallCollationCheck()
-      throws SQLException, ExecutionException {
-    // Arrange
-    prepareAddNewColumnToTable();
-    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
-    doReturn("UCA400_NO").when(rdbEngineStrategy).getNonBinaryDatabaseCollation(any());
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
-
-    // Act
-    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
-
-    // Assert
-    verify(rdbEngineStrategy).getNonBinaryDatabaseCollation(connection);
+    verify(rdbEngineStrategy).getDatabaseTextIssues(connection);
   }
 
   @Test
@@ -8644,7 +8602,7 @@ public class JdbcAdminTest {
     // Arrange
     prepareAddNewColumnToTable();
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
-    doReturn(null).when(rdbEngineStrategy).getDatabaseEncodingIssue(any());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
     admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
     prepareAddNewColumnToTable();
@@ -8653,8 +8611,7 @@ public class JdbcAdminTest {
     admin.addNewColumnToTable("ns", "tbl", "c3", DataType.TEXT);
 
     // Assert
-    verify(rdbEngineStrategy, times(1)).getDatabaseEncodingIssue(any());
-    verify(rdbEngineStrategy, times(1)).getNonBinaryDatabaseCollation(any());
+    verify(rdbEngineStrategy, times(1)).getDatabaseTextIssues(any());
   }
 
   @Test
@@ -8669,8 +8626,7 @@ public class JdbcAdminTest {
     admin.addNewColumnToTable("ns", "tbl", "c2", DataType.INT);
 
     // Assert
-    verify(rdbEngineStrategy, never()).getDatabaseEncodingIssue(any());
-    verify(rdbEngineStrategy, never()).getNonBinaryDatabaseCollation(any());
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
   }
 
   @Test
@@ -8681,7 +8637,7 @@ public class JdbcAdminTest {
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
     doThrow(new SQLException("catalog failure"))
         .when(rdbEngineStrategy)
-        .getDatabaseEncodingIssue(any());
+        .getDatabaseTextIssues(any());
     JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act

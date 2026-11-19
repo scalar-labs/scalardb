@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -148,16 +149,16 @@ class RdbEngineSqliteTest {
   }
 
   @Test
-  void getDatabaseEncodingIssue_DefaultDatabase_ShouldReturnNull() throws SQLException {
+  void getDatabaseTextIssues_DefaultDatabase_ShouldReturnEmpty() throws SQLException {
     // Arrange Act
-    DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(connection);
+    List<DatabaseTextIssue> encoding = rdbEngine.getDatabaseTextIssues(connection);
 
     // Assert
-    assertThat(encoding).isNull();
+    assertThat(encoding).isEmpty();
   }
 
   @Test
-  void getDatabaseEncodingIssue_Utf16Database_ShouldReturnEncodingByteOrder()
+  void getDatabaseTextIssues_Utf16Database_ShouldReturnEncodingByteOrder()
       throws SQLException, IOException {
     // Arrange
     File utf16File = File.createTempFile(getClass().getName(), ".db");
@@ -169,13 +170,12 @@ class RdbEngineSqliteTest {
       }
 
       // Act
-      DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(utf16Connection);
+      List<DatabaseTextIssue> encoding = rdbEngine.getDatabaseTextIssues(utf16Connection);
 
       // Assert
       assertThat(encoding)
-          .isEqualTo(
-              new DatabaseEncodingIssue(
-                  "UTF-16le", DatabaseEncodingIssue.Kind.ENCODING_BYTE_ORDER));
+          .containsExactly(
+              new DatabaseTextIssue("UTF-16le", DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER));
     } finally {
       assertTrue(utf16File.delete());
     }

@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -183,29 +184,29 @@ class RdbEngineSqlServerTest {
   }
 
   @Test
-  void getDatabaseEncodingIssue_Cp1252_ShouldReturnPartialCharacterSet() throws SQLException {
+  void getDatabaseTextIssues_Cp1252_ShouldReturnPartialCharacterSet() throws SQLException {
     // Arrange
     Connection connection = mockDatabaseCodePage(1252);
 
     // Act
-    DatabaseEncodingIssue actual = rdbEngine.getDatabaseEncodingIssue(connection);
+    List<DatabaseTextIssue> actual = rdbEngine.getDatabaseTextIssues(connection);
 
     // Assert
     assertThat(actual)
-        .isEqualTo(
-            new DatabaseEncodingIssue("CP1252", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
+        .containsExactly(
+            new DatabaseTextIssue("CP1252", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
   }
 
   @Test
-  void getDatabaseEncodingIssue_Utf8_ShouldReturnNull() throws SQLException {
+  void getDatabaseTextIssues_Utf8_ShouldReturnEmpty() throws SQLException {
     // Arrange
     Connection connection = mockDatabaseCodePage(65001);
 
     // Act
-    DatabaseEncodingIssue actual = rdbEngine.getDatabaseEncodingIssue(connection);
+    List<DatabaseTextIssue> actual = rdbEngine.getDatabaseTextIssues(connection);
 
     // Assert
-    assertThat(actual).isNull();
+    assertThat(actual).isEmpty();
   }
 
   private static Connection mockDatabaseCodePage(int codePage) throws SQLException {

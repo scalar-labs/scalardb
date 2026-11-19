@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -549,44 +550,42 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void getDatabaseEncodingIssue_Al32utf8_ShouldReturnNull() throws SQLException {
+  public void getDatabaseTextIssues_Al32utf8_ShouldReturnEmpty() throws SQLException {
     // Arrange
     Connection connection = connectionWithCharacterSet("AL32UTF8");
 
     // Act
-    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+    List<DatabaseTextIssue> actual = rdbEngineOracle.getDatabaseTextIssues(connection);
 
     // Assert
-    assertThat(actual).isNull();
+    assertThat(actual).isEmpty();
   }
 
   @Test
-  public void getDatabaseEncodingIssue_Cesu8_ShouldReturnEncodingByteOrder() throws SQLException {
+  public void getDatabaseTextIssues_Cesu8_ShouldReturnEncodingByteOrder() throws SQLException {
     // Arrange
     Connection connection = connectionWithCharacterSet("UTF8");
 
     // Act
-    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+    List<DatabaseTextIssue> actual = rdbEngineOracle.getDatabaseTextIssues(connection);
 
     // Assert
     assertThat(actual)
-        .isEqualTo(
-            new DatabaseEncodingIssue("UTF8", DatabaseEncodingIssue.Kind.ENCODING_BYTE_ORDER));
+        .containsExactly(new DatabaseTextIssue("UTF8", DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER));
   }
 
   @Test
-  public void getDatabaseEncodingIssue_WesternEuropean_ShouldReturnPartialCharacterSet()
+  public void getDatabaseTextIssues_WesternEuropean_ShouldReturnPartialCharacterSet()
       throws SQLException {
     // Arrange
     Connection connection = connectionWithCharacterSet("WE8MSWIN1252");
 
     // Act
-    DatabaseEncodingIssue actual = rdbEngineOracle.getDatabaseEncodingIssue(connection);
+    List<DatabaseTextIssue> actual = rdbEngineOracle.getDatabaseTextIssues(connection);
 
     // Assert
     assertThat(actual)
-        .isEqualTo(
-            new DatabaseEncodingIssue(
-                "WE8MSWIN1252", DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET));
+        .containsExactly(
+            new DatabaseTextIssue("WE8MSWIN1252", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
   }
 }

@@ -19,7 +19,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -479,8 +481,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
-  @Nullable
-  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+  public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
     String sql =
         "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = current_database()";
     try (Statement stmt = connection.createStatement();
@@ -488,10 +489,11 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
       if (rs.next()) {
         String encoding = rs.getString(1);
         return "UTF8".equals(encoding)
-            ? null
-            : new DatabaseEncodingIssue(encoding, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+            ? Collections.emptyList()
+            : Collections.singletonList(
+                new DatabaseTextIssue(encoding, DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
       }
-      return null;
+      return Collections.emptyList();
     }
   }
 
