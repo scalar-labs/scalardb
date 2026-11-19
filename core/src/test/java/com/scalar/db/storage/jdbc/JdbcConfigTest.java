@@ -300,4 +300,33 @@ public class JdbcConfigTest {
     assertThatThrownBy(() -> new JdbcConfig(new DatabaseConfig(props3)))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  public void constructor_ColumnCollationEnabledNotSet_ShouldDefaultToTrue() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+
+    // Act
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isColumnCollationEnabled()).isTrue();
+  }
+
+  @Test
+  public void constructor_ColumnCollationEnabledFalse_ShouldReturnFalse() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props.setProperty(JdbcConfig.COLUMN_COLLATION_ENABLED, "false");
+
+    // Act
+    JdbcConfig config = new JdbcConfig(new DatabaseConfig(props));
+
+    // Assert
+    assertThat(config.isColumnCollationEnabled()).isFalse();
+  }
 }

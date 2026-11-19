@@ -4,7 +4,7 @@ class RdbEngineMariaDB extends RdbEngineMysql {
 
   // Every supported MariaDB version has RENAME COLUMN, which the 10.5 series introduced.
   RdbEngineMariaDB() {
-    super(true);
+    super(true, "utf8mb4_nopad_bin");
   }
 
   @Override

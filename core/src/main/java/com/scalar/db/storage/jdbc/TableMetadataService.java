@@ -30,12 +30,17 @@ public class TableMetadataService {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final String createdTextCollationClause;
   private final boolean requiresExplicitCommit;
 
   TableMetadataService(
-      String metadataSchema, RdbEngineStrategy rdbEngine, boolean requiresExplicitCommit) {
+      String metadataSchema,
+      RdbEngineStrategy rdbEngine,
+      String createdTextCollationClause,
+      boolean requiresExplicitCommit) {
     this.metadataSchema = metadataSchema;
     this.rdbEngine = rdbEngine;
+    this.createdTextCollationClause = createdTextCollationClause;
     this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
@@ -75,23 +80,23 @@ public class TableMetadataService {
             + "("
             + enclose(COL_FULL_TABLE_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ","
             + enclose(COL_COLUMN_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ","
             + enclose(COL_DATA_TYPE)
             + " "
-            + getTextType(20, false)
+            + getTextColumnDefinition(20, false)
             + " NOT NULL,"
             + enclose(COL_KEY_TYPE)
             + " "
-            + getTextType(20, false)
+            + getTextColumnDefinition(20, false)
             + ","
             + enclose(COL_CLUSTERING_ORDER)
             + " "
-            + getTextType(10, false)
+            + getTextColumnDefinition(10, false)
             + ","
             + enclose(COL_INDEXED)
             + " "
@@ -105,7 +110,14 @@ public class TableMetadataService {
             + enclose(COL_COLUMN_NAME)
             + "))";
 
-    createTable(connection, createTableStatement, true);
+    JdbcAdmin.createTable(
+        connection,
+        rdbEngine,
+        createTableStatement,
+        true,
+        metadataSchema,
+        TABLE_NAME,
+        requiresExplicitCommit);
   }
 
   private void insertMetadataColumn(
@@ -366,24 +378,9 @@ public class TableMetadataService {
     return rdbEngine.getDataTypeForEngine(DataType.BOOLEAN);
   }
 
-  private String getTextType(int charLength, boolean isKey) {
-    return rdbEngine.getTextType(charLength, isKey);
-  }
-
-  private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
-      throws SQLException {
-    String stmt = createTableStatement;
-    if (ifNotExists) {
-      stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
-    }
-    try {
-      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
-        throw e;
-      }
-    }
+  private String getTextColumnDefinition(int charLength, boolean isKey) {
+    return JdbcAdmin.appendCollationClause(
+        rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }
 
   private boolean internalTableExists(Connection connection, String namespace, String table)

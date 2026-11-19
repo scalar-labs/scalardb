@@ -20,12 +20,17 @@ public class NamespaceMetadataService {
 
   private final String metadataSchema;
   private final RdbEngineStrategy rdbEngine;
+  private final String createdTextCollationClause;
   private final boolean requiresExplicitCommit;
 
   NamespaceMetadataService(
-      String metadataSchema, RdbEngineStrategy rdbEngine, boolean requiresExplicitCommit) {
+      String metadataSchema,
+      RdbEngineStrategy rdbEngine,
+      String createdTextCollationClause,
+      boolean requiresExplicitCommit) {
     this.metadataSchema = metadataSchema;
     this.rdbEngine = rdbEngine;
+    this.createdTextCollationClause = createdTextCollationClause;
     this.requiresExplicitCommit = requiresExplicitCommit;
   }
 
@@ -40,12 +45,19 @@ public class NamespaceMetadataService {
             + "("
             + enclose(COL_NAMESPACE_NAME)
             + " "
-            + getTextType(128, true)
+            + getTextColumnDefinition(128, true)
             + ", "
             + "PRIMARY KEY ("
             + enclose(COL_NAMESPACE_NAME)
             + "))";
-    createTable(connection, createTableStatement, true);
+    JdbcAdmin.createTable(
+        connection,
+        rdbEngine,
+        createTableStatement,
+        true,
+        metadataSchema,
+        TABLE_NAME,
+        requiresExplicitCommit);
 
     // Insert the system namespace to the namespaces table
     insertIntoNamespacesTable(connection, metadataSchema);
@@ -159,24 +171,9 @@ public class NamespaceMetadataService {
         });
   }
 
-  private String getTextType(int charLength, boolean isKey) {
-    return rdbEngine.getTextType(charLength, isKey);
-  }
-
-  private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
-      throws SQLException {
-    String stmt = createTableStatement;
-    if (ifNotExists) {
-      stmt = rdbEngine.tryAddIfNotExistsToCreateTableSql(createTableStatement);
-    }
-    try {
-      execute(connection, rdbEngine, stmt, requiresExplicitCommit);
-    } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
-        throw e;
-      }
-    }
+  private String getTextColumnDefinition(int charLength, boolean isKey) {
+    return JdbcAdmin.appendCollationClause(
+        rdbEngine.getTextType(charLength, isKey), createdTextCollationClause);
   }
 
   private boolean internalTableExists(Connection connection, String namespace, String table)
