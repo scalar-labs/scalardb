@@ -381,7 +381,7 @@ public enum CoreError implements ScalarDbError {
   CROSS_PARTITION_SCAN_MUST_BE_ENABLED_TO_USE_CROSS_PARTITION_SCAN_WITH_FILTERING_OR_ORDERING(
       Category.USER_ERROR,
       "0062",
-      "The property 'scalar.db.cross_partition_scan.enabled' must be set to 'true' "
+      "The property 'scalar.db.cross_partition_scan.enabled' must be set to true "
           + "to use cross-partition scan with filtering or ordering",
       "",
       "Set 'scalar.db.cross_partition_scan.enabled' to 'true' in your configuration."),
