@@ -7,6 +7,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Ordering;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -586,36 +587,67 @@ public class Snapshot {
         return entry.getKey();
       }
 
-      if (isStartGiven && isEndGiven) {
-        com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
-        com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
-        // If startKey <= writtenKey <= endKey
-        if ((scan.getStartInclusive() && writtenKey.equals(startKey))
-            || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
-            || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
-          return entry.getKey();
-        }
-      }
-
-      if (isStartGiven && !isEndGiven) {
-        com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
-        // If startKey <= writtenKey
-        if ((scan.getStartInclusive() && startKey.equals(writtenKey))
-            || writtenKey.compareTo(startKey) > 0) {
-          return entry.getKey();
-        }
-      }
-
-      if (!isStartGiven) {
-        com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
-        // If writtenKey <= endKey
-        if ((scan.getEndInclusive() && writtenKey.equals(endKey))
-            || writtenKey.compareTo(endKey) < 0) {
-          return entry.getKey();
-        }
+      // A written key overlaps with the range only when it is within every given boundary. The
+      // comparison assumes that the in-memory order of the columns matches the order of the values
+      // in the storage, regardless of the ASC or DESC clustering order. This assumption is about
+      // the supported configurations (binary UTF-8 collations) and is not enforced at table
+      // creation. There is no conservative branch for the case where the orders do not match.
+      boolean isWithinStart =
+          !isStartGiven
+              || isWithinStartBoundary(
+                  writtenKey, scan.getStartClusteringKey().get(), scan.getStartInclusive());
+      boolean isWithinEnd =
+          !isEndGiven
+              || isWithinEndBoundary(
+                  writtenKey, scan.getEndClusteringKey().get(), scan.getEndInclusive());
+      if (isWithinStart && isWithinEnd) {
+        return entry.getKey();
       }
     }
     return null;
+  }
+
+  private boolean isWithinStartBoundary(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key boundary, boolean inclusive) {
+    if (!matchesPrecedingBoundaryColumns(writtenKey, boundary)) {
+      return false;
+    }
+    int comparison = compareWithLastBoundaryColumn(writtenKey, boundary);
+    return comparison > 0 || (inclusive && comparison == 0);
+  }
+
+  private boolean isWithinEndBoundary(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key boundary, boolean inclusive) {
+    if (!matchesPrecedingBoundaryColumns(writtenKey, boundary)) {
+      return false;
+    }
+    int comparison = compareWithLastBoundaryColumn(writtenKey, boundary);
+    return comparison < 0 || (inclusive && comparison == 0);
+  }
+
+  /**
+   * Checks the equality conditions of a boundary. As in the storages, the columns before the last
+   * boundary column are equality conditions, the last boundary column is the range condition, and
+   * the columns after it are not conditions. A written key with fewer columns than the boundary is
+   * malformed and does not match, which leaves it to the validation at commit time.
+   */
+  private boolean matchesPrecedingBoundaryColumns(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key boundary) {
+    int lastIndex = boundary.size() - 1;
+    if (writtenKey.size() <= lastIndex) {
+      return false;
+    }
+    return writtenKey
+        .getColumns()
+        .subList(0, lastIndex)
+        .equals(boundary.getColumns().subList(0, lastIndex));
+  }
+
+  private int compareWithLastBoundaryColumn(
+      com.scalar.db.io.Key writtenKey, com.scalar.db.io.Key boundary) {
+    int lastIndex = boundary.size() - 1;
+    return Ordering.<Column<?>>natural()
+        .compare(writtenKey.getColumns().get(lastIndex), boundary.getColumns().get(lastIndex));
   }
 
   private boolean areConjunctionsOverlapped(Put put, Scan scan) {

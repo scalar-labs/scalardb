@@ -97,16 +97,3 @@ updates:
       day: "monday"
       time: "01:00"
       timezone: "Asia/Tokyo"
-
-  - package-ecosystem: "github-actions"
-    target-branch: "3.16"
-    groups:
-      actions on branch 3.16:
-        patterns:
-          - "*"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
