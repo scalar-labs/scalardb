@@ -89,7 +89,10 @@ public final class RdbEngineFactory {
       if (metaData.getDatabaseProductVersion().contains("TiDB")) {
         return new RdbEngineTidb(config);
       } else {
-        return new RdbEngineMysql(config, RdbEngineMysql.supportsInsertRowAlias(metaData));
+        return new RdbEngineMysql(
+            config,
+            RdbEngineMysql.supportsInsertRowAlias(metaData),
+            RdbEngineMysql.supportsRenameColumn(metaData));
       }
     } catch (SQLException e) {
       // We can't throw a checked exception here because it would break backward compatibility since
