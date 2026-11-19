@@ -1139,6 +1139,12 @@ public enum CoreError implements ScalarDbError {
       "Oracle accepts a column collation only when the MAX_STRING_SIZE initialization parameter is EXTENDED. ScalarDB declares the BINARY collation on every TEXT column, so set MAX_STRING_SIZE to EXTENDED, or set the property scalar.db.jdbc.column_collation.enabled to false",
       "",
       ""),
+  JDBC_VIRTUAL_TABLE_SOURCE_KEYS_HAVE_DIFFERENT_COLLATIONS(
+      Category.USER_ERROR,
+      "0306",
+      "The source tables must have the same collation for each TEXT primary key column, because the database cannot join keys with different collations. Column: %s; Left source table: %s; Left collation: %s; Right source table: %s; Right collation: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

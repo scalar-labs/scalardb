@@ -1676,10 +1676,41 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  // The join needs source keys with compatible collations: SQL Server (Msg 468) and Oracle
-  // (ORA-43915) reject the view otherwise, and PostgreSQL creates it but fails every read. The view
-  // checks none, because its only caller, ConsensusCommitAdmin, creates both source tables in one
-  // createTable call or copies the key collations with COLLATION_SOURCE_TABLE.
+  // The join needs source keys with the same collation: SQL Server (Msg 468) and Oracle (ORA-43915)
+  // reject the view otherwise, and PostgreSQL creates it but fails every read
+  private void throwIfSourceKeyCollationsDiffer(
+      Connection connection,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      TableMetadata sourceTableMetadata)
+      throws SQLException {
+    if (engineLacksColumnCollations()) {
+      return;
+    }
+    Map<String, TextColumnCollation> leftCollations =
+        rdbEngine.getTextColumnCollations(connection, leftSourceNamespace, leftSourceTable);
+    Map<String, TextColumnCollation> rightCollations =
+        rdbEngine.getTextColumnCollations(connection, rightSourceNamespace, rightSourceTable);
+    for (String key :
+        Iterables.concat(
+            sourceTableMetadata.getPartitionKeyNames(),
+            sourceTableMetadata.getClusteringKeyNames())) {
+      TextColumnCollation left = leftCollations.get(key);
+      TextColumnCollation right = rightCollations.get(key);
+      if (left != null && right != null && !left.getCollation().equals(right.getCollation())) {
+        throw new IllegalArgumentException(
+            CoreError.JDBC_VIRTUAL_TABLE_SOURCE_KEYS_HAVE_DIFFERENT_COLLATIONS.buildMessage(
+                key,
+                getFullTableName(leftSourceNamespace, leftSourceTable),
+                left.getCollation(),
+                getFullTableName(rightSourceNamespace, rightSourceTable),
+                right.getCollation()));
+      }
+    }
+  }
+
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createVirtualTableView(
       Connection connection,
@@ -1696,6 +1727,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     TableMetadata rightSourceTableMetadata =
         tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable);
     assert leftSourceTableMetadata != null && rightSourceTableMetadata != null;
+    throwIfSourceKeyCollationsDiffer(
+        connection,
+        leftSourceNamespace,
+        leftSourceTable,
+        rightSourceNamespace,
+        rightSourceTable,
+        leftSourceTableMetadata);
 
     StringBuilder createViewSql = new StringBuilder("CREATE VIEW ");
     createViewSql.append(encloseFullTableName(namespace, table));

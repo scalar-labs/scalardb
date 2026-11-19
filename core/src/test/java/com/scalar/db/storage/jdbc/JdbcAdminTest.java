@@ -182,6 +182,27 @@ public class JdbcAdminTest {
     }
   }
 
+  private JdbcAdmin createJdbcAdminWithMetadataServicesFor(RdbEngineStrategy rdbEngineStrategy) {
+    try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
+      mocked
+          .when(() -> RdbEngineFactory.create(any(JdbcConfig.class)))
+          .thenReturn(rdbEngineStrategy);
+      return new JdbcAdmin(
+          dataSource,
+          config,
+          tableMetadataService,
+          namespaceMetadataService,
+          virtualTableMetadataService,
+          false);
+    }
+  }
+
+  private void mockEmptyCatalogQueries() throws SQLException {
+    PreparedStatement catalogStatement = mock(PreparedStatement.class);
+    when(catalogStatement.executeQuery()).thenReturn(mock(ResultSet.class));
+    when(connection.prepareStatement(anyString())).thenReturn(catalogStatement);
+  }
+
   private ResultSet mockResultSet(SelectAllFromMetadataTableResultSetMocker.Row... rows)
       throws SQLException {
     ResultSet resultSet = mock(ResultSet.class);
@@ -6936,6 +6957,96 @@ public class JdbcAdminTest {
         .hasMessageContainingAll("BLOB", "index");
   }
 
+  private RdbEngineStrategy mysqlWithSourceKeyCollations(
+      String leftKeyCollation, String rightKeyCollation) throws SQLException {
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
+            .build();
+    when(tableMetadataService.getTableMetadata(any(Connection.class), eq("ns"), eq("left_table")))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(any(Connection.class), eq("ns"), eq("right_table")))
+        .thenReturn(rightSourceTableMetadata);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(ImmutableMap.of("pk", new TextColumnCollation(leftKeyCollation, "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("ns"), eq("left_table"));
+    doReturn(ImmutableMap.of("pk", new TextColumnCollation(rightKeyCollation, "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("ns"), eq("right_table"));
+    return rdbEngineStrategy;
+  }
+
+  @Test
+  public void
+      createVirtualTable_SourceTextKeysWithDifferentCollations_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    JdbcAdmin admin =
+        createJdbcAdminWithMetadataServicesFor(
+            mysqlWithSourceKeyCollations("utf8mb4_bin", "utf8mb4_0900_bin"));
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.createVirtualTable(
+                    "ns",
+                    "vtable",
+                    "ns",
+                    "left_table",
+                    "ns",
+                    "right_table",
+                    VirtualTableJoinType.INNER,
+                    Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_VIRTUAL_TABLE_SOURCE_KEYS_HAVE_DIFFERENT_COLLATIONS.buildMessage(
+                "pk", "ns.left_table", "utf8mb4_bin", "ns.right_table", "utf8mb4_0900_bin"));
+    verify(statement, never()).execute(anyString());
+  }
+
+  @Test
+  public void createVirtualTable_SourceTextKeysWithSameCollation_ShouldCreateView()
+      throws Exception {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    JdbcAdmin admin =
+        spy(
+            createJdbcAdminWithMetadataServicesFor(
+                mysqlWithSourceKeyCollations("utf8mb4_bin", "utf8mb4_bin")));
+    doNothing().when(admin).createMetadataSchemaIfNotExists(any(Connection.class));
+
+    // Act
+    admin.createVirtualTable(
+        "ns",
+        "vtable",
+        "ns",
+        "left_table",
+        "ns",
+        "right_table",
+        VirtualTableJoinType.INNER,
+        Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute(startsWith("CREATE VIEW"));
+  }
+
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Test
   public void createVirtualTable_WithInnerJoin_ShouldCreateViewWithInnerJoin() throws Exception {
@@ -6976,6 +7087,7 @@ public class JdbcAdminTest {
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
+    mockEmptyCatalogQueries();
     doNothing()
         .when(virtualTableMetadataService)
         .createVirtualTablesTableIfNotExists(any(Connection.class));
@@ -7103,6 +7215,7 @@ public class JdbcAdminTest {
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
+    mockEmptyCatalogQueries();
     doNothing()
         .when(virtualTableMetadataService)
         .createVirtualTablesTableIfNotExists(any(Connection.class));
@@ -7204,6 +7317,7 @@ public class JdbcAdminTest {
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
+    mockEmptyCatalogQueries();
 
     TableMetadata leftSourceTableMetadata =
         TableMetadata.newBuilder()
