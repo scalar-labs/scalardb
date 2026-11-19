@@ -55,4 +55,17 @@ class RdbEnginePostgresqlTest {
     assertThat(sqls).hasSize(1);
     assertThat(sqls[0]).startsWith("CREATE UNIQUE INDEX ");
   }
+
+  @Test
+  void getCollationClause_SchemaQualifiedCollation_ShouldReturnItAsIs() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
+
+    // Act
+    String clause =
+        rdbEngine.getCollationClause(new TextColumnCollation("\"pg_catalog\".\"en_US\"", null));
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE \"pg_catalog\".\"en_US\"");
+  }
 }

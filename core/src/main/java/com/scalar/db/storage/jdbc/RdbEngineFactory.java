@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.common.CoreError;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -45,14 +46,14 @@ public final class RdbEngineFactory {
    * @return a {@link RdbEngineMysql} or {@link RdbEngineTidb}.
    */
   private static RdbEngineStrategy createMysqlOrTidbEngine(JdbcConfig config) {
-    RdbEngineMysql mysqlEngine = new RdbEngineMysql(config);
-    try (BasicDataSource dataSource = JdbcUtils.initDataSourceForAdmin(config, mysqlEngine);
+    try (BasicDataSource dataSource =
+            JdbcUtils.initDataSourceForAdmin(config, new RdbEngineMysql(config));
         Connection connection = dataSource.getConnection()) {
-      String version = connection.getMetaData().getDatabaseProductVersion();
-      if (version.contains("TiDB")) {
+      DatabaseMetaData metaData = connection.getMetaData();
+      if (metaData.getDatabaseProductVersion().contains("TiDB")) {
         return new RdbEngineTidb(config);
       } else {
-        return mysqlEngine;
+        return new RdbEngineMysql(config, RdbEngineMysql.supportsRenameColumn(metaData));
       }
     } catch (SQLException e) {
       // We can't throw a checked exception here because it would break backward compatibility since
