@@ -10,4 +10,9 @@ public class ObjectStorageConditionalMutationIntegrationTest
   protected Properties getProperties(String testName) {
     return ObjectStorageEnv.getProperties(testName);
   }
+
+  @Override
+  protected int getThreadNum() {
+    return 30;
+  }
 }
