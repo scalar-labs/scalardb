@@ -228,7 +228,7 @@ In notifications, where the formatting is not shown, the same message appears as
 - **FR-1** The monitor runs automatically once a week: Sunday 17:00 UTC (Monday 02:00 JST).
 - **FR-2** It can be started manually from GitHub Actions, optionally for one database only, and optionally as a dry run. A database id that does not match any enabled database stops the run with an error listing the valid ids.
 - **FR-3** Scheduled and manual runs only work on the repository's default branch.
-- **FR-4** Pull requests that change the monitor run its unit tests only. They never post to Slack or change state.
+- **FR-4** Pull requests that change the monitor run its unit tests only, in a separate workflow (`db-update-monitor-tests.yaml`) with read-only permissions and no secrets. They never post to Slack or change state, and the monitor job does not appear on them.
 
 ### 5.2 Version updates
 
@@ -523,7 +523,7 @@ To reset the local state, delete `state/last-run.json`. A missing file means emp
 |------|-------------|
 | Runtime | Python 3.12 on GitHub Actions (`ubuntu-latest`). Python 3.10 or newer works locally. |
 | Secrets | `SLACK_SCALARDB_WEBHOOK_URL`: Slack incoming webhook. `GITHUB_TOKEN`: provided by Actions, used for the GitHub API. |
-| Permissions | The monitor job needs `contents: write` to push the `db-update-monitor-state` branch. The test job only needs `contents: read`. |
+| Permissions | The monitor job (`db-update-monitor.yaml`) needs `contents: write` to push the `db-update-monitor-state` branch. The test workflow (`db-update-monitor-tests.yaml`) only has `contents: read`. |
 | Branch rules | The default branch is protected, so the monitor never writes to it. The `db-update-monitor-state` branch must **not** be covered by branch protection or rulesets, or the state cannot be saved. |
 | Concurrency | Only one monitor run at a time, so two runs never write state together. |
 | Report retention | `output/` is uploaded as the `db-monitor-report` artifact and kept 90 days. |

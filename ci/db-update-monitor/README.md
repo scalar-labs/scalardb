@@ -49,13 +49,13 @@ The full description, with every command-line option, environment variable, and 
 
 | | |
 |---|---|
-| **Workflow** | [`.github/workflows/db-update-monitor.yaml`](../../.github/workflows/db-update-monitor.yaml) |
+| **Workflows** | [`db-update-monitor.yaml`](../../.github/workflows/db-update-monitor.yaml): the weekly monitor (schedule and manual runs only). [`db-update-monitor-tests.yaml`](../../.github/workflows/db-update-monitor-tests.yaml): the unit tests, on pull requests. Both are in `.github/workflows/`. |
 | **Schedule** | Every Sunday 17:00 UTC (Monday 02:00 JST), on the default branch only |
 | **Manual run** | GitHub → Actions → *Database Update Monitor* → *Run workflow*. Options: one database only (`database_filter`), dry run (`dry_run`) |
 | **Slack** | Posted with the repository secret `SLACK_SCALARDB_WEBHOOK_URL` (Slack incoming webhook) |
 | **Memory** | `last-run.json` records what was already sent. It lives on the branch `db-update-monitor-state`, because the default branch is protected. The workflow pushes it there at the end of each run, but only once the Slack message (if there was one) was delivered. Details: [HOW-IT-WORKS.md section 7](./HOW-IT-WORKS.md#7-the-state-file) |
 | **Report** | Each run uploads `output/` as the `db-monitor-report` artifact (kept 90 days) |
-| **Pull requests** | Changes under `ci/db-update-monitor/`, to the workflow, to `build.gradle`, or to `ci/tests-config.yaml` run the unit tests only. The tests include a check of the configuration and of every version the monitor reads from those two files. |
+| **Pull requests** | Pull requests that change `ci/db-update-monitor/`, either workflow, `build.gradle`, or `ci/tests-config.yaml` show one check, **Database Update Monitor Tests / Unit tests**. It runs the unit tests only, including a check of the configuration and of every version the monitor reads from those two files. The monitor itself never runs on pull requests. |
 
 ## When a Slack message is sent
 

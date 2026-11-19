@@ -115,3 +115,13 @@ def test_build_slack_payload_has_fallback_text():
     errors = [{"database_id": "x", "component_id": "y", "source_type": "rss", "error": "boom"}]
     payload = build_slack_payload([], [_feature(1), _feature(2)], errors=errors)
     assert payload["text"] == "ScalarDB Database Update Monitor: 2 new update(s), 1 check failure(s)"
+
+
+def test_split_never_cuts_an_item_in_half():
+    payload = build_slack_payload([], [_feature(index) for index in range(20)], errors=[])
+    sections = _sections(payload)[1:]
+    assert len(sections) > 1
+    for text in sections:
+        body = text.split("\n", 1)[1]
+        assert body.startswith("• "), body[:40]
+        assert body.rstrip().endswith("|View announcement>")

@@ -71,7 +71,8 @@ ci/db-update-monitor/
   state/last-run.json            Local state only; ignored by git, created on first local run
   output/                        Output files of a run; ignored by git
 
-.github/workflows/db-update-monitor.yaml   The weekly job and the PR test job
+.github/workflows/db-update-monitor.yaml         The weekly monitor (schedule and manual runs)
+.github/workflows/db-update-monitor-tests.yaml   The unit tests, on pull requests
 
 Branch db-update-monitor-state            Production state (last-run.json), written by the workflow
 ```
@@ -376,13 +377,13 @@ To preview a message locally, post `output/slack-payload.json` to a **test** web
 
 ## 9. The GitHub Actions workflow
 
-File: `.github/workflows/db-update-monitor.yaml`.
+There are two workflow files in `.github/workflows/`, so that pull requests never show the monitor job (not even as skipped):
 
-| Trigger | Job | What it does |
-|---------|-----|--------------|
-| Pull request changing `ci/db-update-monitor/**`, the workflow file, `build.gradle`, or `ci/tests-config.yaml` | Unit tests | Runs `pytest`, including the configuration and pin checks. Never posts to Slack. |
-| Schedule `0 17 * * 0` (Sunday 17:00 UTC, Monday 02:00 JST) | Check database updates | Full run. Default branch only. |
-| Manual "Run workflow" | Check database updates | Same, with optional `database_filter` and `dry_run` inputs. Default branch only. |
+| Workflow file | Trigger | Job | What it does |
+|---------------|---------|-----|--------------|
+| `db-update-monitor.yaml` | Schedule `0 17 * * 0` (Sunday 17:00 UTC, Monday 02:00 JST) | Check database updates | Full run. Default branch only. |
+| `db-update-monitor.yaml` | Manual "Run workflow" | Check database updates | Same, with optional `database_filter` and `dry_run` inputs. Default branch only. |
+| `db-update-monitor-tests.yaml` | Pull request changing `ci/db-update-monitor/**`, either workflow file, `build.gradle`, or `ci/tests-config.yaml` | Unit tests | Runs `pytest`, including the configuration and pin checks. Read-only permissions, no secrets, never posts to Slack. |
 
 The monitor job steps:
 
@@ -404,7 +405,7 @@ Things to know:
 
 - The default branch is never written to. The workflow needs `contents: write` only to push the state branch, and that branch must not be covered by branch protection or rulesets.
 - Pushes made with `GITHUB_TOKEN` do not start other workflows, so state commits do not trigger CI.
-- Only the monitor job uses the concurrency group `db-update-monitor`, so two monitor runs never write the state at the same time. The test job has one group per pull request; a new push cancels that pull request's outdated test run.
+- The monitor job uses the concurrency group `db-update-monitor`, so two monitor runs never write the state at the same time. The test workflow has one group per pull request; a new push cancels that pull request's outdated test run.
 - When the run status is `FAILURE`, the run step fails, the Slack message with the failures is still posted, and the state is not saved.
 
 **First production run:** the state branch does not exist yet, so the run records everything, posts nothing (unless checks failed), and creates the branch. From the second weekly run on, only new updates are posted.

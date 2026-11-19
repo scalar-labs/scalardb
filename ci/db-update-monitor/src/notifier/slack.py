@@ -79,26 +79,24 @@ def _chunk_lines(lines: List[str], limit: int = _SECTION_LIMIT) -> List[List[str
 
 
 def _version_blocks(version_updates: List[VersionUpdate]) -> List[Dict]:
+    # One entry per update (its row plus the "new versions" line), so a split never separates them.
     rows: List[str] = []
     for update in version_updates:
-        rows.append(
-            escape(
-                f"{update.database_name[:18]:<18} "
-                f"{_component_label(update):<12} "
-                f"{update.current_version:<10} "
-                f"{update.latest_version:<10} "
-                f"{LEVEL_LABEL[update.update_level]:<6} "
-                f"{SOURCE_LABEL.get(update.source_type, update.source_type)}"
-            )
+        row = (
+            f"{update.database_name[:18]:<18} "
+            f"{_component_label(update):<12} "
+            f"{update.current_version:<10} "
+            f"{update.latest_version:<10} "
+            f"{LEVEL_LABEL[update.update_level]:<6} "
+            f"{SOURCE_LABEL.get(update.source_type, update.source_type)}"
         )
         if len(update.new_versions) > 1:
-            rows.append(
-                escape(
-                    f"  └ {len(update.new_versions)} new versions: "
-                    f"{', '.join(update.new_versions[:5])}"
-                    f"{'...' if len(update.new_versions) > 5 else ''}"
-                )
+            row += (
+                f"\n  └ {len(update.new_versions)} new versions: "
+                f"{', '.join(update.new_versions[:5])}"
+                f"{'...' if len(update.new_versions) > 5 else ''}"
             )
+        rows.append(escape(row))
     table_header = [
         f"{'Database':<18} {'Component':<12} {'Current':<10} {'Latest':<10} {'Level':<6} Source",
         "-" * 76,
@@ -114,16 +112,18 @@ def _version_blocks(version_updates: List[VersionUpdate]) -> List[Dict]:
 
 
 def _feature_blocks(feature_updates: List[FeatureUpdate]) -> List[Dict]:
+    # One entry per announcement, so a split never cuts an announcement in half.
     lines: List[str] = []
     for feature in feature_updates:
-        lines.append(f"• *{escape(feature.database_name)}* — {escape(feature.title)}")
+        entry = [f"• *{escape(feature.database_name)}* — {escape(feature.title)}"]
         if feature.description:
-            lines.append(f"  {escape(feature.description)}")
+            entry.append(f"  {escape(feature.description)}")
         capability = _capability_context(feature)
         if capability:
-            lines.append(f"  _{escape(capability)}_")
+            entry.append(f"  _{escape(capability)}_")
         if feature.url:
-            lines.append(f"  <{feature.url}|View announcement>")
+            entry.append(f"  <{feature.url}|View announcement>")
+        lines.append("\n".join(entry))
     blocks: List[Dict] = []
     for index, chunk in enumerate(_chunk_lines(lines, _SECTION_LIMIT - 40)):
         title = "*FEATURE updates*" if index == 0 else "*FEATURE updates (cont.)*"

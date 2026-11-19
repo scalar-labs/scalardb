@@ -81,3 +81,24 @@ def test_unknown_filter_raises(tmp_path):
 
 def test_status_is_failure_when_nothing_was_checked():
     assert _engine()._resolve_status([], [{"id": "empty"}]) == "FAILURE"
+
+
+def test_unreadable_pin_is_reported_without_stopping_the_run(tmp_path, repo_root):
+    """A renamed Gradle property must become a reported error, not a crash."""
+    config = tmp_path / "monitors.yaml"
+    config.write_text(
+        "databases:\n"
+        "  - id: exampledb\n"
+        "    name: ExampleDB\n"
+        "    components:\n"
+        "      - id: jdbc-driver\n"
+        "        current_version: {source: gradle, file: build.gradle, property: noSuchVersion}\n"
+        "        upstream: {type: maven, artifact: com.example:example}\n",
+        encoding="utf-8",
+    )
+    state_path = tmp_path / "state.json"
+    report = MonitorEngine(config, state_path, repo_root).run(dry_run=False)
+
+    assert report["last_run_status"] == "FAILURE"
+    assert "noSuchVersion" in report["errors"][0]["error"]
+    assert state_path.exists()

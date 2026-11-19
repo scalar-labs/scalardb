@@ -137,7 +137,7 @@ def _validate_upstream(errors: List[str], where: str, upstream: Any) -> None:
     required, optional = UPSTREAM_KEYS[kind]
     if not _check_keys(errors, where, upstream, required, optional):
         return
-    if kind == "maven" and ":" not in str(upstream.get("artifact", "")):
+    if kind == "maven" and "artifact" in upstream and ":" not in str(upstream["artifact"]):
         errors.append(f"{where}: artifact must be 'groupId:artifactId'")
     if "exclude_tags" in upstream:
         _check_string_list(errors, f"{where}.exclude_tags", upstream["exclude_tags"])

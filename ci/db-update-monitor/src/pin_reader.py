@@ -88,9 +88,14 @@ class PinReader:
         return NORMALIZER.max_version(versions) or versions[-1]
 
     def build_pin_snapshot(self, databases: List[Dict[str, Any]]) -> Dict[str, str]:
+        """Current pin of every component. A pin that cannot be read is left out:
+        its version check already reported the error, and the previous snapshot is kept."""
         snapshot: Dict[str, str] = {}
         for database in databases:
             for component in database.get("components", []):
                 key = f"{database['id']}:{component['id']}"
-                snapshot[key] = self.resolve(component["current_version"])
+                try:
+                    snapshot[key] = self.resolve(component["current_version"])
+                except (OSError, ValueError, KeyError):
+                    continue
         return snapshot
