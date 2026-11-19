@@ -21,6 +21,8 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.MockedStatic;
 
 class RdbEngineFactoryTest {
@@ -223,6 +225,29 @@ class RdbEngineFactoryTest {
     // Assert
     assertThat(engine).isInstanceOf(RdbEngineTidb.class);
     assertThat(upsertSql(engine)).endsWith("ON DUPLICATE KEY UPDATE `v1`=VALUES(`v1`)");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"5.7.44, true", "8.0.2, true", "8.0.3, false", "8.4.3, false"})
+  void create_GivenMysqlUrlAndMysqlServer_ShouldRestateTheTypeOnRenameColumnBefore803(
+      String productVersion, boolean expected) throws SQLException {
+    // Arrange Act
+    RdbEngineStrategy engine =
+        createWithServerVersion("jdbc:mysql://localhost:3306/", productVersion);
+
+    // Assert
+    assertThat(engine.renameColumnRestatesType()).isEqualTo(expected);
+  }
+
+  @Test
+  void create_GivenMysqlUrlAndTidbServerReportingMysql8_ShouldRenameColumnWithoutRestatingTheType()
+      throws SQLException {
+    // Arrange Act
+    RdbEngineStrategy engine =
+        createWithServerVersion("jdbc:mysql://localhost:4000/", "8.0.11-TiDB-v8.5.0");
+
+    // Assert
+    assertThat(engine.renameColumnRestatesType()).isFalse();
   }
 
   private static RdbEngineStrategy createWithServerVersion(String jdbcUrl, String productVersion)

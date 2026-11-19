@@ -109,7 +109,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
       String table,
       String oldColumnName,
       String newColumnName,
-      String columnType) {
+      String columnDefinition) {
     return "EXEC sp_rename '"
         + encloseFullTableName(namespace, table)
         + "."
@@ -130,14 +130,14 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
 
   @Override
   public String[] alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+      String namespace, String table, String columnName, String columnDefinition) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)
           + " ALTER COLUMN "
           + enclose(columnName)
           + " "
-          + columnType
+          + columnDefinition
     };
   }
 
