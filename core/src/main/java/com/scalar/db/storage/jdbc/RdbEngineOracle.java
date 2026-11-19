@@ -28,7 +28,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -574,17 +576,17 @@ class RdbEngineOracle extends AbstractRdbEngine {
   }
 
   @Override
-  @Nullable
-  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+  public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
     String charset = queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_CHARACTERSET");
     if (charset == null || "AL32UTF8".equals(charset)) {
-      return null;
+      return Collections.emptyList();
     }
-    return new DatabaseEncodingIssue(
-        charset,
-        "UTF8".equals(charset)
-            ? DatabaseEncodingIssue.Kind.ENCODING_BYTE_ORDER
-            : DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+    return Collections.singletonList(
+        new DatabaseTextIssue(
+            charset,
+            "UTF8".equals(charset)
+                ? DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER
+                : DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
   }
 
   @Override

@@ -24,6 +24,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -542,11 +543,11 @@ class RdbEngineMysqlTest {
   }
 
   @Test
-  void getDatabaseEncodingIssue_ShouldReturnNull() throws SQLException {
+  void getDatabaseTextIssues_ShouldReturnNull() throws SQLException {
     // Arrange Act
-    DatabaseEncodingIssue actual = rdbEngineMysql.getDatabaseEncodingIssue(mock(Connection.class));
+    List<DatabaseTextIssue> actual = rdbEngineMysql.getDatabaseTextIssues(mock(Connection.class));
 
     // Assert
-    assertThat(actual).isNull();
+    assertThat(actual).isEmpty();
   }
 }

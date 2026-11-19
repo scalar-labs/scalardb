@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -437,8 +438,7 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
   // code page of the database default collation, whatever the collation of the target column
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
-  @Nullable
-  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+  public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
     String sql =
         "SELECT COLLATIONPROPERTY(CONVERT(NVARCHAR(128),"
             + " DATABASEPROPERTYEX(DB_NAME(), 'Collation')), 'CodePage')";
@@ -447,11 +447,12 @@ class RdbEngineSqlServer extends AbstractRdbEngine {
       if (rs.next()) {
         int codePage = rs.getInt(1);
         return codePage == 65001
-            ? null
-            : new DatabaseEncodingIssue(
-                "CP" + codePage, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
+            ? Collections.emptyList()
+            : Collections.singletonList(
+                new DatabaseTextIssue(
+                    "CP" + codePage, DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
       }
-      return null;
+      return Collections.emptyList();
     }
   }
 

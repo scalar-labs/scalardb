@@ -33,6 +33,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -469,7 +470,7 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
-  void getTextColumnCollationsAndGetDatabaseEncodingIssue_ShouldNotQueryTheDatabase()
+  void getTextColumnCollationsAndGetDatabaseTextIssues_ShouldNotQueryTheDatabase()
       throws SQLException {
     // Arrange
     Connection connection = mock(Connection.class);
@@ -477,11 +478,11 @@ public class RdbEngineSpannerTest {
     // Act
     Map<String, TextColumnCollation> collations =
         rdbEngine.getTextColumnCollations(connection, "ns", "tbl");
-    DatabaseEncodingIssue encoding = rdbEngine.getDatabaseEncodingIssue(connection);
+    List<DatabaseTextIssue> encoding = rdbEngine.getDatabaseTextIssues(connection);
 
     // Assert
     assertThat(collations).isEmpty();
-    assertThat(encoding).isNull();
+    assertThat(encoding).isEmpty();
     verifyNoInteractions(connection);
   }
 }

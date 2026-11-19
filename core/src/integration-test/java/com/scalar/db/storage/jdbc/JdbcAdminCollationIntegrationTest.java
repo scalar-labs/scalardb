@@ -307,13 +307,13 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
-  void getDatabaseEncodingIssue_CiDatabase_ShouldReturnNull() throws Exception {
+  void getDatabaseTextIssues_CiDatabase_ShouldReturnEmpty() throws Exception {
     // Arrange Act
-    DatabaseEncodingIssue encoding =
-        testUtils.withCatalogConnection(rdbEngine::getDatabaseEncodingIssue);
+    List<DatabaseTextIssue> encoding =
+        testUtils.withCatalogConnection(rdbEngine::getDatabaseTextIssues);
 
     // Assert
-    assertThat(encoding).isNull();
+    assertThat(encoding).isEmpty();
   }
 
   @Test

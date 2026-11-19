@@ -162,40 +162,25 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns how the database encoding keeps TEXT columns from behaving as ScalarDB expects, on
-   * engines whose columns cannot choose their encoding.
+   * Returns the database settings that keep TEXT columns from behaving as ScalarDB expects, on
+   * engines whose columns cannot choose their encoding or their collation.
    *
-   * @param connection the connection to read the encoding with
-   * @return the issue, or null when the encoding has none or the engine does not read it
+   * @param connection the connection to read the settings with
+   * @return the issues, empty when the settings have none or the engine does not read them
    * @throws SQLException if the query fails
    */
-  @Nullable
-  default DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection)
-      throws SQLException {
-    return null;
+  default List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
+    return Collections.emptyList();
   }
 
   /**
    * Returns whether importing a table also checks the database encoding, on engines whose column
    * character sets do not reflect the encoding that string parameters go through.
    *
-   * @return {@code true} if {@link #getDatabaseEncodingIssue} applies to imported tables
+   * @return {@code true} if {@link #getDatabaseTextIssues} applies to imported tables
    */
   default boolean checksDatabaseEncodingOnImport() {
     return false;
-  }
-
-  /**
-   * Returns the database collation when it is not binary, on engines whose columns cannot declare
-   * their own collation.
-   *
-   * @param connection the connection to read the collation with
-   * @return the collation name, or null when it is binary or the engine does not read it
-   * @throws SQLException if the query fails
-   */
-  @Nullable
-  default String getNonBinaryDatabaseCollation(Connection connection) throws SQLException {
-    return null;
   }
 
   String computeBooleanValue(boolean value);

@@ -77,9 +77,8 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  @Nullable
-  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) {
-    return null;
+  public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) {
+    return Collections.emptyList();
   }
 
   @Override

@@ -21,6 +21,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -159,8 +161,7 @@ class RdbEngineSqlite extends AbstractRdbEngine {
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
-  @Nullable
-  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
+  public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
     try (Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("PRAGMA encoding")) {
       if (rs.next()) {
@@ -168,10 +169,11 @@ class RdbEngineSqlite extends AbstractRdbEngine {
         // The only other encodings are UTF-16LE and UTF-16BE, and the BINARY collation compares
         // their bytes with memcmp
         return "UTF-8".equalsIgnoreCase(encoding)
-            ? null
-            : new DatabaseEncodingIssue(encoding, DatabaseEncodingIssue.Kind.ENCODING_BYTE_ORDER);
+            ? Collections.emptyList()
+            : Collections.singletonList(
+                new DatabaseTextIssue(encoding, DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER));
       }
-      return null;
+      return Collections.emptyList();
     }
   }
 

@@ -747,37 +747,29 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       return;
     }
     try {
-      DatabaseEncodingIssue issue = rdbEngine.getDatabaseEncodingIssue(connection);
-      if (issue != null) {
-        logger.warn(buildDatabaseEncodingWarning(issue, getFullTableName(namespace, table)));
+      for (DatabaseTextIssue issue : rdbEngine.getDatabaseTextIssues(connection)) {
+        logger.warn(buildDatabaseTextWarning(issue, getFullTableName(namespace, table)));
       }
     } catch (SQLException | RuntimeException e) {
-      logger.debug("Reading the database encoding failed", e);
-    }
-    try {
-      String collation = rdbEngine.getNonBinaryDatabaseCollation(connection);
-      if (collation != null) {
-        logger.warn(
-            "The database collation is {}, not binary, so the database can order and compare the TEXT values of the {} table differently from ScalarDB",
-            collation,
-            getFullTableName(namespace, table));
-      }
-    } catch (SQLException | RuntimeException e) {
-      logger.debug("Reading the database collation failed", e);
+      logger.debug("Reading the database text settings failed", e);
     }
   }
 
   @VisibleForTesting
-  static String buildDatabaseEncodingWarning(DatabaseEncodingIssue issue, String fullTableName) {
+  static String buildDatabaseTextWarning(DatabaseTextIssue issue, String fullTableName) {
     switch (issue.getKind()) {
       case PARTIAL_CHARACTER_SET:
         return String.format(
             "The database encoding is %s, so TEXT columns of the %s table cannot store every Unicode character, the database rejects or replaces a value that holds a character outside it, and it can order the values it stores differently from ScalarDB",
-            issue.getEncoding(), fullTableName);
+            issue.getSetting(), fullTableName);
       case ENCODING_BYTE_ORDER:
         return String.format(
             "The database encoding is %s, so the database orders the TEXT values of the %s table by the bytes of that encoding, not by Unicode code point like ScalarDB",
-            issue.getEncoding(), fullTableName);
+            issue.getSetting(), fullTableName);
+      case NON_BINARY_COLLATION:
+        return String.format(
+            "The database collation is %s, not binary, so the database can order and compare the TEXT values of the %s table differently from ScalarDB",
+            issue.getSetting(), fullTableName);
       default:
         throw new AssertionError();
     }

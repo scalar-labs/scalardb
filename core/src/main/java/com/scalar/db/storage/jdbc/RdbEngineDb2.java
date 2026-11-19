@@ -494,19 +494,18 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  @Nullable
-  public DatabaseEncodingIssue getDatabaseEncodingIssue(Connection connection) throws SQLException {
-    String codeset = readDatabaseSettings(connection).get("codeset");
-    return codeset == null || "UTF-8".equalsIgnoreCase(codeset)
-        ? null
-        : new DatabaseEncodingIssue(codeset, DatabaseEncodingIssue.Kind.PARTIAL_CHARACTER_SET);
-  }
-
-  @Override
-  @Nullable
-  public String getNonBinaryDatabaseCollation(Connection connection) throws SQLException {
-    String collation = readDatabaseSettings(connection).get("db_collname");
-    return collation == null || "IDENTITY".equals(collation) ? null : collation;
+  public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
+    Map<String, String> settings = readDatabaseSettings(connection);
+    List<DatabaseTextIssue> issues = new ArrayList<>();
+    String codeset = settings.get("codeset");
+    if (codeset != null && !"UTF-8".equalsIgnoreCase(codeset)) {
+      issues.add(new DatabaseTextIssue(codeset, DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
+    }
+    String collation = settings.get("db_collname");
+    if (collation != null && !"IDENTITY".equals(collation)) {
+      issues.add(new DatabaseTextIssue(collation, DatabaseTextIssue.Kind.NON_BINARY_COLLATION));
+    }
+    return issues;
   }
 
   @Override
