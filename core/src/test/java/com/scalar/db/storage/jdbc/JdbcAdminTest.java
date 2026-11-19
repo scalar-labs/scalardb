@@ -7704,6 +7704,26 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void
+      buildImportTextColumnWarnings_PartialCharsetBinaryCollation_ShouldReturnBothWarnings() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c").addColumn("c", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("c", new TextColumnCollation("latin1_bin", "latin1"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual).hasSize(2);
+    assertThat(actual.get(0)).contains("c (collation latin1_bin, character set latin1)");
+    assertThat(actual.get(1)).contains("c (character set latin1)");
+  }
+
+  @Test
   public void buildImportTextColumnWarnings_MysqlPadSpaceBin_ShouldReturnCollationWarning() {
     // Arrange
     TableMetadata metadata =

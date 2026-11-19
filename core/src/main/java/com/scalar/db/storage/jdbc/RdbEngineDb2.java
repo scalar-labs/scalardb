@@ -480,12 +480,16 @@ class RdbEngineDb2 extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isBinaryCollation(TextColumnCollation collation) {
+  public TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.of(
+        isFullUnicodeCharset(collation), isBinaryCollation(collation));
+  }
+
+  private boolean isBinaryCollation(TextColumnCollation collation) {
     return "IDENTITY".equals(collation.getCollation());
   }
 
-  @Override
-  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+  private boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return "UTF-8".equalsIgnoreCase(collation.getCharset());
   }
 

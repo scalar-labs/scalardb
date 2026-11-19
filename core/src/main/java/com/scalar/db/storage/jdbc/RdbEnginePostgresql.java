@@ -460,7 +460,12 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isBinaryCollation(TextColumnCollation collation) {
+  public TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.of(
+        isFullUnicodeCharset(collation), isBinaryCollation(collation));
+  }
+
+  private boolean isBinaryCollation(TextColumnCollation collation) {
     String name = collation.getCollation();
     if (name.equals("default")) {
       return BINARY_DATABASE_COLLATIONS.contains(collation.getResolvedDefault());
@@ -468,8 +473,7 @@ class RdbEnginePostgresql extends AbstractRdbEngine {
     return BINARY_COLLATIONS.contains(name);
   }
 
-  @Override
-  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+  private boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return "UTF8".equals(collation.getCharset());
   }
 

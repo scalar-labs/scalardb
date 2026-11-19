@@ -457,27 +457,15 @@ public class RdbEngineSpannerTest {
   }
 
   @Test
-  void isBinaryCollation_AnyCollation_ShouldReturnTrue() {
+  void classify_AnyCollationAndCharset_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("default", "LATIN1");
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  void isFullUnicodeCharset_AnyCharset_ShouldReturnTrue() {
-    // Arrange
-    TextColumnCollation collation = new TextColumnCollation("default", "LATIN1");
-
-    // Act
-    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
-
-    // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test

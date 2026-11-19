@@ -152,24 +152,13 @@ public interface RdbEngineStrategy {
   }
 
   /**
-   * Returns whether the collation compares and sorts by code point.
+   * Returns how a TEXT column with the collation orders and stores values.
    *
    * @param collation a collation read by {@link #getTextColumnCollations}
-   * @return {@code true} if the collation is binary
+   * @return the kind of the collation
    */
-  default boolean isBinaryCollation(TextColumnCollation collation) {
-    return true;
-  }
-
-  /**
-   * Returns whether the character set of the collation can store every Unicode character, whatever
-   * its encoding.
-   *
-   * @param collation a collation read by {@link #getTextColumnCollations}
-   * @return {@code true} if the character set covers all of Unicode
-   */
-  default boolean isFullUnicodeCharset(TextColumnCollation collation) {
-    return true;
+  default TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.CODE_POINT_ORDER;
   }
 
   /**

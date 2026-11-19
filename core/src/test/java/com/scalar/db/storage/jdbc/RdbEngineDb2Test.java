@@ -133,75 +133,63 @@ public class RdbEngineDb2Test {
   }
 
   @Test
-  void isBinaryCollation_Identity_ShouldReturnTrue() {
+  void classify_IdentityOnLowerCaseUtf8_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
 
     // Act
-    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_UcaCollation_ShouldReturnFalse() {
+  void classify_UcaCollation_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("UCA400_NO", "utf-8");
 
     // Act
-    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  void isFullUnicodeCharset_Utf8InAnyCase_ShouldReturnTrue() {
-    // Arrange
-    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
-
-    // Act
-    boolean actual = rdbEngineDb2.isFullUnicodeCharset(collation);
-
-    // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  void isFullUnicodeCharset_Iso88591_ShouldReturnFalse() {
+  void classify_Iso88591_ShouldReturnPartialCharacterSet() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("IDENTITY", "iso8859-1");
 
     // Act
-    boolean actual = rdbEngineDb2.isFullUnicodeCharset(collation);
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
   }
 
   @Test
-  void isBinaryCollation_Identity16Bit_ShouldReturnFalse() {
+  void classify_Identity16Bit_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("IDENTITY_16BIT", "UTF-8");
 
     // Act
-    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Unknown_ShouldReturnFalse() {
+  void classify_Unknown_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("UNKNOWN", "UTF-8");
 
     // Act
-    boolean actual = rdbEngineDb2.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   private static Connection connectionWithDatabaseSettings(String name, String value)

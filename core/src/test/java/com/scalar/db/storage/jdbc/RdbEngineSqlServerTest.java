@@ -134,52 +134,40 @@ class RdbEngineSqlServerTest {
   }
 
   @Test
-  void isBinaryCollation_Bin_ShouldReturnFalse() {
+  void classify_BinOnUtf8_ShouldReturnOtherOrder() {
     // Arrange
-    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN", "CP1252");
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN", "UTF-8");
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Bin2_ShouldReturnTrue() {
-    // Arrange
-    TextColumnCollation collation = new TextColumnCollation("Latin1_General_Bin2", "CP1252");
-
-    // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
-
-    // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  void isFullUnicodeCharset_Utf8_ShouldReturnTrue() {
+  void classify_Bin2InAnyCaseOnUtf8_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation =
-        new TextColumnCollation("Latin1_General_100_BIN2_UTF8", "UTF-8");
+        new TextColumnCollation("Latin1_General_100_Bin2_UTF8", "UTF-8");
 
     // Act
-    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isFullUnicodeCharset_CodePage_ShouldReturnFalse() {
+  void classify_CodePage_ShouldReturnPartialCharacterSet() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN2", "CP1252");
 
     // Act
-    boolean actual = rdbEngine.isFullUnicodeCharset(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
   }
 
   @Test

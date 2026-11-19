@@ -193,78 +193,67 @@ class RdbEnginePostgresqlTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"C", "POSIX", "ucs_basic", "pg_c_utf8", "pg_unicode_fast"})
-  void isBinaryCollation_BinaryPgCatalogCollation_ShouldReturnTrue(String name) {
+  void classify_BinaryPgCatalogCollation_ShouldReturnCodePointOrder(String name) {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
     TextColumnCollation collation =
         new TextColumnCollation("\"pg_catalog\".\"" + name + "\"", "UTF8");
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_CollationNamedCInAnotherSchema_ShouldReturnFalse() {
+  void classify_CollationNamedCInAnotherSchema_ShouldReturnOtherOrder() {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
     TextColumnCollation collation = new TextColumnCollation("\"app\".\"C\"", "UTF8");
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @ParameterizedTest
   @CsvSource({
-    "libc:C,true",
-    "libc:POSIX,true",
-    "builtin:C,true",
-    "builtin:C.UTF-8,true",
-    "builtin:PG_UNICODE_FAST,true",
-    "libc:C.UTF-8,false",
-    "libc:en_US.UTF-8,false",
-    "icu:en-US,false"
+    "libc:C,CODE_POINT_ORDER",
+    "libc:POSIX,CODE_POINT_ORDER",
+    "builtin:C,CODE_POINT_ORDER",
+    "builtin:C.UTF-8,CODE_POINT_ORDER",
+    "builtin:PG_UNICODE_FAST,CODE_POINT_ORDER",
+    "libc:C.UTF-8,OTHER_ORDER",
+    "libc:en_US.UTF-8,OTHER_ORDER",
+    "icu:en-US,OTHER_ORDER"
   })
-  void isBinaryCollation_DefaultCollation_ShouldFollowDatabaseCollation(
-      String databaseCollation, boolean expected) {
+  void classify_DefaultCollation_ShouldFollowDatabaseCollation(
+      String databaseCollation, TextColumnCollationKind expected) {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
     TextColumnCollation collation = new TextColumnCollation("default", "UTF8", databaseCollation);
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
   }
 
   @Test
-  void isFullUnicodeCharset_Utf8_ShouldReturnTrue() {
+  void classify_Latin1_ShouldReturnPartialCharacterSet() {
     // Arrange
     RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
 
     // Act
-    boolean actual = rdbEngine.isFullUnicodeCharset(new TextColumnCollation("default", "UTF8"));
+    TextColumnCollationKind actual =
+        rdbEngine.classify(new TextColumnCollation("default", "LATIN1"));
 
     // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  void isFullUnicodeCharset_Latin1_ShouldReturnFalse() {
-    // Arrange
-    RdbEngineStrategy rdbEngine = new RdbEnginePostgresql();
-
-    // Act
-    boolean actual = rdbEngine.isFullUnicodeCharset(new TextColumnCollation("default", "LATIN1"));
-
-    // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
   }
 
   @Test

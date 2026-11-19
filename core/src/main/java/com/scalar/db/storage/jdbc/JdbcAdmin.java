@@ -796,9 +796,8 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         continue;
       }
       TextColumnCollation collation = entry.getValue();
-      boolean fullUnicode = rdbEngine.isFullUnicodeCharset(collation);
-      // A binary collation over a partial character set orders by the bytes of that character set
-      if (!fullUnicode || !rdbEngine.isBinaryCollation(collation)) {
+      TextColumnCollationKind kind = rdbEngine.classify(collation);
+      if (kind != TextColumnCollationKind.CODE_POINT_ORDER) {
         nonBinary.add(
             entry.getKey()
                 + " (collation "
@@ -811,7 +810,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     : ", character set " + collation.getCharset())
                 + ")");
       }
-      if (!fullUnicode) {
+      if (kind == TextColumnCollationKind.PARTIAL_CHARACTER_SET) {
         partialCharset.add(entry.getKey() + " (character set " + collation.getCharset() + ")");
       }
     }
