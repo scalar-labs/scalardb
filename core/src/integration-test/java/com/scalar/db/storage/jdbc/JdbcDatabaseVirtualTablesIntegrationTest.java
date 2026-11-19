@@ -1,8 +1,11 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.api.ConditionBuilder;
 import com.scalar.db.api.DistributedStorageVirtualTablesIntegrationTestBase;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -10,6 +13,8 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.ScalarDbUtils;
@@ -17,6 +22,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
@@ -30,6 +36,10 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
 
   private static final Logger logger =
       LoggerFactory.getLogger(JdbcDatabaseVirtualTablesIntegrationTest.class);
+
+  private static final String LEFT_OUTER_LEFT_SOURCE_TABLE = "left_outer_left_source_table";
+  private static final String LEFT_OUTER_RIGHT_SOURCE_TABLE = "left_outer_right_source_table";
+  private static final String LEFT_OUTER_VIRTUAL_TABLE = "left_outer_virtual_table";
 
   private JdbcAdminImportTestUtils testUtils;
   private RdbEngineStrategy rdbEngine;
@@ -194,6 +204,229 @@ public class JdbcDatabaseVirtualTablesIntegrationTest
         admin.dropTable(namespace, importedTableName, true);
       }
     }
+  }
+
+  @Test
+  public void
+      put_ForLeftOuterVirtualTableSettingAllRightColumnsToNull_ShouldDeleteRightSourceRecord()
+          throws Exception {
+    try {
+      // Arrange
+      createLeftOuterVirtualTable();
+      storage.put(
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(LEFT_OUTER_VIRTUAL_TABLE)
+              .partitionKey(Key.ofInt("pk", 1))
+              .textValue("col1", "value1")
+              .textValue("col2", "value2")
+              .intValue("col3", 3)
+              .build());
+
+      // Act
+      storage.put(
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(LEFT_OUTER_VIRTUAL_TABLE)
+              .partitionKey(Key.ofInt("pk", 1))
+              .textValue("col1", "value1")
+              .textValue("col2", null)
+              .intValue("col3", null)
+              .build());
+
+      // Assert
+      assertThat(getFromLeftOuterRightSourceTable(1)).isEmpty();
+      Optional<Result> result = getFromLeftOuterVirtualTable(1);
+      assertThat(result).isPresent();
+      assertThat(result.get().getText("col1")).isEqualTo("value1");
+      assertThat(result.get().isNull("col2")).isTrue();
+      assertThat(result.get().isNull("col3")).isTrue();
+    } finally {
+      dropLeftOuterVirtualTable();
+    }
+  }
+
+  @Test
+  public void put_ForLeftOuterVirtualTableWithoutRightColumns_ShouldNotCreateRightSourceRecord()
+      throws Exception {
+    try {
+      // Arrange
+      createLeftOuterVirtualTable();
+
+      // Act
+      storage.put(
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(LEFT_OUTER_VIRTUAL_TABLE)
+              .partitionKey(Key.ofInt("pk", 1))
+              .textValue("col1", "value1")
+              .build());
+
+      // Assert
+      assertThat(getFromLeftOuterRightSourceTable(1)).isEmpty();
+      Optional<Result> result = getFromLeftOuterVirtualTable(1);
+      assertThat(result).isPresent();
+      assertThat(result.get().getText("col1")).isEqualTo("value1");
+      assertThat(result.get().isNull("col2")).isTrue();
+      assertThat(result.get().isNull("col3")).isTrue();
+    } finally {
+      dropLeftOuterVirtualTable();
+    }
+  }
+
+  @Test
+  public void
+      putIf_ForLeftOuterVirtualTableWithIsNullConditionsOnRightColumns_WhenRecordDoesNotExist_ShouldThrowNoMutationException()
+          throws Exception {
+    try {
+      // Arrange
+      createLeftOuterVirtualTable();
+      Put putWithLeftColumns =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(LEFT_OUTER_VIRTUAL_TABLE)
+              .partitionKey(Key.ofInt("pk", 1))
+              .textValue("col1", "value1")
+              .textValue("col2", "value2")
+              .condition(
+                  ConditionBuilder.putIf(ConditionBuilder.column("col2").isNullText()).build())
+              .build();
+      Put putWithoutLeftColumns =
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(LEFT_OUTER_VIRTUAL_TABLE)
+              .partitionKey(Key.ofInt("pk", 2))
+              .textValue("col2", "value2")
+              .condition(
+                  ConditionBuilder.putIf(ConditionBuilder.column("col2").isNullText()).build())
+              .build();
+
+      // Act Assert
+      assertThatThrownBy(() -> storage.put(putWithLeftColumns))
+          .isInstanceOf(NoMutationException.class);
+      assertThatThrownBy(() -> storage.put(putWithoutLeftColumns))
+          .isInstanceOf(NoMutationException.class);
+      assertThat(getFromLeftOuterLeftSourceTable(1)).isEmpty();
+      assertThat(getFromLeftOuterRightSourceTable(1)).isEmpty();
+      assertThat(getFromLeftOuterLeftSourceTable(2)).isEmpty();
+      assertThat(getFromLeftOuterRightSourceTable(2)).isEmpty();
+    } finally {
+      dropLeftOuterVirtualTable();
+    }
+  }
+
+  @Test
+  public void
+      putIf_ForLeftOuterVirtualTableWithIsNullConditionsOnRightColumns_WhenOnlyLeftSourceRecordExists_ShouldPutProperly()
+          throws Exception {
+    try {
+      // Arrange
+      createLeftOuterVirtualTable();
+      for (int pk = 1; pk <= 2; pk++) {
+        storage.put(
+            Put.newBuilder()
+                .namespace(namespace)
+                .table(LEFT_OUTER_VIRTUAL_TABLE)
+                .partitionKey(Key.ofInt("pk", pk))
+                .textValue("col1", "value1")
+                .build());
+      }
+
+      // Act
+      storage.put(
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(LEFT_OUTER_VIRTUAL_TABLE)
+              .partitionKey(Key.ofInt("pk", 1))
+              .textValue("col1", "value1-2")
+              .textValue("col2", "value2")
+              .intValue("col3", 3)
+              .condition(
+                  ConditionBuilder.putIf(ConditionBuilder.column("col2").isNullText()).build())
+              .build());
+      storage.put(
+          Put.newBuilder()
+              .namespace(namespace)
+              .table(LEFT_OUTER_VIRTUAL_TABLE)
+              .partitionKey(Key.ofInt("pk", 2))
+              .textValue("col2", "value2")
+              .intValue("col3", 3)
+              .condition(
+                  ConditionBuilder.putIf(ConditionBuilder.column("col2").isNullText()).build())
+              .build());
+
+      // Assert
+      Optional<Result> result1 = getFromLeftOuterVirtualTable(1);
+      assertThat(result1).isPresent();
+      assertThat(result1.get().getText("col1")).isEqualTo("value1-2");
+      assertThat(result1.get().getText("col2")).isEqualTo("value2");
+      assertThat(result1.get().getInt("col3")).isEqualTo(3);
+      Optional<Result> result2 = getFromLeftOuterVirtualTable(2);
+      assertThat(result2).isPresent();
+      assertThat(result2.get().getText("col1")).isEqualTo("value1");
+      assertThat(result2.get().getText("col2")).isEqualTo("value2");
+      assertThat(result2.get().getInt("col3")).isEqualTo(3);
+    } finally {
+      dropLeftOuterVirtualTable();
+    }
+  }
+
+  private void createLeftOuterVirtualTable() throws ExecutionException {
+    admin.createTable(
+        namespace,
+        LEFT_OUTER_LEFT_SOURCE_TABLE,
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("col1", DataType.TEXT)
+            .addPartitionKey("pk")
+            .build(),
+        true);
+    admin.createTable(
+        namespace,
+        LEFT_OUTER_RIGHT_SOURCE_TABLE,
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.INT)
+            .addColumn("col2", DataType.TEXT)
+            .addColumn("col3", DataType.INT)
+            .addPartitionKey("pk")
+            .build(),
+        true);
+    admin.createVirtualTable(
+        namespace,
+        LEFT_OUTER_VIRTUAL_TABLE,
+        namespace,
+        LEFT_OUTER_LEFT_SOURCE_TABLE,
+        namespace,
+        LEFT_OUTER_RIGHT_SOURCE_TABLE,
+        VirtualTableJoinType.LEFT_OUTER,
+        true);
+  }
+
+  private void dropLeftOuterVirtualTable() throws ExecutionException {
+    admin.dropTable(namespace, LEFT_OUTER_VIRTUAL_TABLE, true);
+    admin.dropTable(namespace, LEFT_OUTER_RIGHT_SOURCE_TABLE, true);
+    admin.dropTable(namespace, LEFT_OUTER_LEFT_SOURCE_TABLE, true);
+  }
+
+  private Optional<Result> getFromLeftOuterVirtualTable(int pk) throws ExecutionException {
+    return get(LEFT_OUTER_VIRTUAL_TABLE, pk);
+  }
+
+  private Optional<Result> getFromLeftOuterLeftSourceTable(int pk) throws ExecutionException {
+    return get(LEFT_OUTER_LEFT_SOURCE_TABLE, pk);
+  }
+
+  private Optional<Result> getFromLeftOuterRightSourceTable(int pk) throws ExecutionException {
+    return get(LEFT_OUTER_RIGHT_SOURCE_TABLE, pk);
+  }
+
+  private Optional<Result> get(String table, int pk) throws ExecutionException {
+    return storage.get(
+        Get.newBuilder()
+            .namespace(namespace)
+            .table(table)
+            .partitionKey(Key.ofInt("pk", pk))
+            .build());
   }
 
   private Key getPartitionKey(DataType dataType, int index) {

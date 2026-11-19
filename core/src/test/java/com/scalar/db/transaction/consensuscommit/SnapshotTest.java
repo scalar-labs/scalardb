@@ -47,6 +47,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -265,6 +266,85 @@ public class SnapshotTest {
         .textValue(ANY_NAME_3, ANY_TEXT_3)
         .textValue(ANY_NAME_4, ANY_TEXT_4)
         .build();
+  }
+
+  private Put preparePutWithClusteringKey(Key clusteringKey) {
+    return Put.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .clusteringKey(clusteringKey)
+        .textValue(ANY_NAME_5, ANY_TEXT_3)
+        .build();
+  }
+
+  private Key prepareIntClusteringKey(int... values) {
+    String[] names = {ANY_NAME_2, ANY_NAME_3, ANY_NAME_4};
+    Key.Builder builder = Key.newBuilder();
+    for (int i = 0; i < values.length; i++) {
+      builder.addInt(names[i], values[i]);
+    }
+    return builder.build();
+  }
+
+  private Snapshot.Key prepareSnapshotKey(Key clusteringKey) {
+    return new Snapshot.Key(preparePutWithClusteringKey(clusteringKey));
+  }
+
+  private Scan prepareScanWithoutRange() {
+    return Scan.newBuilder()
+        .namespace(ANY_NAMESPACE_NAME)
+        .table(ANY_TABLE_NAME)
+        .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+        .build();
+  }
+
+  private Scan prepareScanWithStart(Key start, boolean startInclusive) {
+    return Scan.newBuilder(prepareScanWithoutRange()).start(start, startInclusive).build();
+  }
+
+  private Scan prepareScanWithEnd(Key end, boolean endInclusive) {
+    return Scan.newBuilder(prepareScanWithoutRange()).end(end, endInclusive).build();
+  }
+
+  private Scan prepareScanWithRange(
+      Key start, boolean startInclusive, Key end, boolean endInclusive) {
+    return Scan.newBuilder(prepareScanWithoutRange())
+        .start(start, startInclusive)
+        .end(end, endInclusive)
+        .build();
+  }
+
+  private Throwable verifyNoOverlapAfterPut(Key writtenClusteringKey, Scan scan)
+      throws CrudException {
+    return verifyNoOverlapAfterPut(
+        writtenClusteringKey, scan, Collections.emptyMap(), Collections.emptySet());
+  }
+
+  private Throwable verifyNoOverlapAfterPut(
+      Key writtenClusteringKey,
+      Scan scan,
+      Map<Snapshot.Key, TransactionResult> results,
+      Set<Snapshot.Key> exemptKeys)
+      throws CrudException {
+    snapshot = prepareSnapshot();
+    Put put = preparePutWithClusteringKey(writtenClusteringKey);
+    snapshot.putIntoWriteSet(new Snapshot.Key(put), put);
+    return catchThrowable(() -> snapshot.verifyNoOverlap(scan, results, exemptKeys));
+  }
+
+  private void stubTableMetadataWithDescendingClusteringKeys(String... clusteringKeyNames)
+      throws Exception {
+    TableMetadata.Builder builder =
+        TableMetadata.newBuilder().addColumn(ANY_NAME_1, DataType.TEXT).addPartitionKey(ANY_NAME_1);
+    for (String name : clusteringKeyNames) {
+      builder.addColumn(name, DataType.INT).addClusteringKey(name, Scan.Ordering.Order.DESC);
+    }
+    TransactionTableMetadata metadata =
+        new TransactionTableMetadata(
+            ConsensusCommitUtils.buildTransactionTableMetadata(builder.build()));
+    when(tableMetadataManager.getTransactionTableMetadata(any())).thenReturn(metadata);
+    when(tableMetadataManager.getTransactionTableMetadata(any(), any())).thenReturn(metadata);
   }
 
   private Put preparePutWithPartitionKeyOnly() {
@@ -2337,6 +2417,347 @@ public class SnapshotTest {
     assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
     assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
     assertThat(thrown3).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithEmptyOrReversedRangeBoundedByPutKeyGiven_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    Key written = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+    Key smaller = Key.ofText(ANY_NAME_2, ANY_TEXT_1);
+    Key larger = Key.ofText(ANY_NAME_2, ANY_TEXT_3);
+
+    // Act
+    // ["text2", "text2")
+    Throwable thrown1 =
+        verifyNoOverlapAfterPut(written, prepareScanWithRange(written, true, written, false));
+    // ("text2", "text2"]
+    Throwable thrown2 =
+        verifyNoOverlapAfterPut(written, prepareScanWithRange(written, false, written, true));
+    // ["text2", "text1"]
+    Throwable thrown3 =
+        verifyNoOverlapAfterPut(written, prepareScanWithRange(written, true, smaller, true));
+    // ["text3", "text2"]
+    Throwable thrown4 =
+        verifyNoOverlapAfterPut(written, prepareScanWithRange(larger, true, written, true));
+
+    // Assert
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2).doesNotThrowAnyException();
+    assertThat(thrown3).doesNotThrowAnyException();
+    assertThat(thrown4).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithSinglePointRangeAtPutKeyGiven_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Arrange
+    Key written = Key.ofText(ANY_NAME_2, ANY_TEXT_2);
+
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(written, prepareScanWithRange(written, true, written, true));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialInclusiveEndAndNewPutInRangeGiven_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 7);
+    Key partial = prepareIntClusteringKey(1);
+
+    // Act
+    Throwable thrown1 = verifyNoOverlapAfterPut(written, prepareScanWithEnd(partial, true));
+    Throwable thrown2 =
+        verifyNoOverlapAfterPut(written, prepareScanWithRange(partial, true, partial, true));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialInclusiveEndAndPutOfRecordNotReturnedGiven_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 7);
+    Scan scan = prepareScanWithEnd(prepareIntClusteringKey(1), true);
+    Snapshot.Key returnedKey = prepareSnapshotKey(prepareIntClusteringKey(1, 1));
+    Map<Snapshot.Key, TransactionResult> results =
+        Collections.singletonMap(returnedKey, prepareResult(ANY_ID));
+
+    // Act
+    // A scan with a limit that returned only (1, 1)
+    Throwable thrown1 = verifyNoOverlapAfterPut(written, scan, results, Collections.emptySet());
+    // A scanner closed after returning only (1, 1)
+    Throwable thrown2 =
+        verifyNoOverlapAfterPut(written, scan, results, Collections.singleton(returnedKey));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialInclusiveEndAndPutMatchingConjunctionNotInResultsGiven_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 7);
+    Scan scan =
+        Scan.newBuilder()
+            .namespace(ANY_NAMESPACE_NAME)
+            .table(ANY_TABLE_NAME)
+            .partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_1))
+            .end(prepareIntClusteringKey(1), true)
+            .where(ConditionBuilder.column(ANY_NAME_5).isEqualToText(ANY_TEXT_3))
+            .build();
+
+    // Act
+    Throwable thrown = verifyNoOverlapAfterPut(written, scan);
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialInclusiveEndAndNewPutAfterScannerReturnedAllRecordsGiven_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 99);
+    Scan scan = prepareScanWithEnd(prepareIntClusteringKey(1), true);
+    Snapshot.Key returnedKey = prepareSnapshotKey(prepareIntClusteringKey(1, 1));
+
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(
+            written,
+            scan,
+            Collections.singletonMap(returnedKey, prepareResult(ANY_ID)),
+            Collections.singleton(returnedKey));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialInclusiveEndAndPutOfRecordInExemptKeysGiven_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 7);
+    Scan scan = prepareScanWithEnd(prepareIntClusteringKey(1), true);
+    Snapshot.Key writtenKey = prepareSnapshotKey(written);
+
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(
+            written,
+            scan,
+            Collections.singletonMap(writtenKey, prepareResult(ANY_ID)),
+            Collections.singleton(writtenKey));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialInclusiveEndAndPutOfRecordInResultsGiven_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 7);
+    Scan scan = prepareScanWithEnd(prepareIntClusteringKey(1), true);
+
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(
+            written,
+            scan,
+            Collections.singletonMap(prepareSnapshotKey(written), prepareResult(ANY_ID)),
+            Collections.emptySet());
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialExclusiveStartAndPutMatchingBoundaryGiven_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 7);
+    Key start = prepareIntClusteringKey(1);
+    Key end = prepareIntClusteringKey(2);
+
+    // Act
+    Throwable thrown1 = verifyNoOverlapAfterPut(written, prepareScanWithStart(start, false));
+    Throwable thrown2 =
+        verifyNoOverlapAfterPut(written, prepareScanWithRange(start, false, end, true));
+
+    // Assert
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithPartialBoundaryGiven_ShouldApplyInclusivenessToLastBoundaryColumn()
+          throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1, 7);
+    Key partial = prepareIntClusteringKey(1);
+
+    // Act
+    Throwable thrown1 = verifyNoOverlapAfterPut(written, prepareScanWithStart(partial, true));
+    Throwable thrown2 = verifyNoOverlapAfterPut(written, prepareScanWithEnd(partial, false));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithOneSidedMultiColumnBoundaryAndPutWithDifferentPrecedingColumnGiven_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    Key boundary = prepareIntClusteringKey(1, 5);
+
+    // Act
+    Throwable thrown1 =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(2, 0), prepareScanWithStart(boundary, true));
+    Throwable thrown2 =
+        verifyNoOverlapAfterPut(prepareIntClusteringKey(0, 9), prepareScanWithEnd(boundary, true));
+    Throwable thrown3 =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(2, 7), prepareScanWithStart(boundary, true));
+    Throwable thrown4 =
+        verifyNoOverlapAfterPut(prepareIntClusteringKey(0, 3), prepareScanWithEnd(boundary, true));
+    Throwable thrown5 =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(1, 9, 4),
+            prepareScanWithStart(prepareIntClusteringKey(1, 2, 3), true));
+
+    // Assert
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2).doesNotThrowAnyException();
+    assertThat(thrown3).doesNotThrowAnyException();
+    assertThat(thrown4).doesNotThrowAnyException();
+    assertThat(thrown5).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithTwoSidedMultiColumnRangeAndPutWithDifferentPrecedingColumnGiven_ShouldNotThrowException()
+          throws CrudException {
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(2, 3),
+            prepareScanWithRange(
+                prepareIntClusteringKey(1, 1), true, prepareIntClusteringKey(1, 5), true));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithMultiColumnBoundaryAndPutInRangeGiven_ShouldThrowIllegalArgumentException()
+          throws CrudException {
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(1, 7),
+            prepareScanWithStart(prepareIntClusteringKey(1, 5), true));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanWithMultiColumnBoundaryAndPutWithLastColumnOutOfRangeGiven_ShouldNotThrowException()
+          throws CrudException {
+    // Arrange
+    Key boundary = prepareIntClusteringKey(1, 5);
+
+    // Act
+    Throwable thrown1 =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(1, 3), prepareScanWithStart(boundary, true));
+    Throwable thrown2 =
+        verifyNoOverlapAfterPut(prepareIntClusteringKey(1, 9), prepareScanWithEnd(boundary, true));
+    Throwable thrown3 = verifyNoOverlapAfterPut(boundary, prepareScanWithStart(boundary, false));
+    Throwable thrown4 = verifyNoOverlapAfterPut(boundary, prepareScanWithEnd(boundary, false));
+
+    // Assert
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2).doesNotThrowAnyException();
+    assertThat(thrown3).doesNotThrowAnyException();
+    assertThat(thrown4).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void verifyNoOverlap_PutWithClusteringKeyShorterThanBoundaryGiven_ShouldNotThrowException()
+      throws CrudException {
+    // Arrange
+    Key written = prepareIntClusteringKey(1);
+    Key boundary = prepareIntClusteringKey(1, 5);
+
+    // Act
+    Throwable thrown1 = verifyNoOverlapAfterPut(written, prepareScanWithStart(boundary, true));
+    Throwable thrown2 = verifyNoOverlapAfterPut(written, prepareScanWithEnd(boundary, true));
+
+    // Assert
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanOnDescendingClusteringKeyAndPutInRangeGiven_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    stubTableMetadataWithDescendingClusteringKeys(ANY_NAME_2);
+
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(3),
+            prepareScanWithRange(
+                prepareIntClusteringKey(1), true, prepareIntClusteringKey(5), true));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      verifyNoOverlap_ScanOnDescendingMultiColumnClusteringKeyAndPutInRangeGiven_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    stubTableMetadataWithDescendingClusteringKeys(ANY_NAME_2, ANY_NAME_3);
+
+    // Act
+    Throwable thrown =
+        verifyNoOverlapAfterPut(
+            prepareIntClusteringKey(1, 7),
+            prepareScanWithRange(
+                prepareIntClusteringKey(1, 5), true, prepareIntClusteringKey(1, 9), true));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

@@ -22,6 +22,7 @@ import com.scalar.db.io.DateColumn;
 import com.scalar.db.io.TimeColumn;
 import com.scalar.db.io.TimestampColumn;
 import com.zaxxer.hikari.HikariConfig;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -54,6 +55,13 @@ public class RdbEngineSpannerTest {
   void getDriverClassName_ShouldReturnSpannerDriver() {
     assertThat(rdbEngine.getDriverClassName())
         .isEqualTo("com.google.cloud.spanner.jdbc.JdbcDriver");
+  }
+
+  @Test
+  void getMinimumIsolationLevelForConsistentVirtualTableRead_ShouldReturnRepeatableRead() {
+    // Spanner rejects READ COMMITTED, which RdbEnginePostgresql returns
+    assertThat(rdbEngine.getMinimumIsolationLevelForConsistentVirtualTableRead())
+        .isEqualTo(Connection.TRANSACTION_REPEATABLE_READ);
   }
 
   @Test
@@ -267,6 +275,11 @@ public class RdbEngineSpannerTest {
   @Test
   void requiresExplicitDropIndexBeforeDropColumn_ShouldReturnTrue() {
     assertThat(rdbEngine.requiresExplicitDropIndexBeforeDropColumn()).isTrue();
+  }
+
+  @Test
+  void isPrimaryKeyColumnAssignableInUpdate_ShouldReturnFalse() {
+    assertThat(rdbEngine.isPrimaryKeyColumnAssignableInUpdate()).isFalse();
   }
 
   @Test

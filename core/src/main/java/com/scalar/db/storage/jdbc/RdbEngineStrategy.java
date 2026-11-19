@@ -179,6 +179,18 @@ public interface RdbEngineStrategy {
     return false;
   }
 
+  /**
+   * Returns {@code true} if this RDB engine allows an UPDATE statement to assign a value to a
+   * primary key column. Some engines (e.g. Spanner) reject such an assignment even when the value
+   * does not change.
+   *
+   * @return {@code true} if an UPDATE statement can assign a value to a primary key column, {@code
+   *     false} otherwise
+   */
+  default boolean isPrimaryKeyColumnAssignableInUpdate() {
+    return true;
+  }
+
   String[] renameIndexSqls(
       String schema, String table, String column, String oldIndexName, String newIndexName);
 
@@ -386,6 +398,10 @@ public interface RdbEngineStrategy {
    * different source tables reflects different points in time. This method returns the minimum
    * isolation level that guarantees a consistent snapshot across all source tables involved in a
    * virtual table read.
+   *
+   * <p>A virtual table is read with a single SELECT statement on the view that joins its source
+   * tables, so the returned level only has to make that one statement read all source tables as of
+   * the same point in time.
    *
    * @return the minimum isolation level required for consistent virtual table reads
    */

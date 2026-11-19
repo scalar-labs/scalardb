@@ -915,6 +915,182 @@ public class SchemaLoaderTest {
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigFilePathAndNullSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configFilePath, (Path) null, options, true, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigFilePathAndNullSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configFilePath, (Path) null, options, false, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigFilePathAndNullSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configFilePath, (String) null, options, true, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigFilePathAndNullSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configFilePath, (String) null, options, false, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigPropertiesAndNullSchemaFilePathAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configProperties, (Path) null, options, true, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigPropertiesAndNullSchemaFilePathAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configProperties, (Path) null, options, false, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigPropertiesAndNullSerializedSchemaAndDoRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configProperties, (String) null, options, true, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator).repairCoordinatorTables(options);
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void
+      repairAll_WithConfigPropertiesAndNullSerializedSchemaAndDoNotRepairCoordinatorTables_ShouldCallParserAndOperatorProperly(
+          boolean withReplicationTables) throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.repairAll(configProperties, (String) null, options, false, withReplicationTables);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).repairNamespaces(Collections.emptyList());
+    verify(operator).repairTables(Collections.emptyList());
+    verify(operator, never()).repairCoordinatorTables(anyMap());
+    if (withReplicationTables) {
+      verify(operator).repairReplicationTables(options);
+    } else {
+      verify(operator, never()).repairReplicationTables(options);
+    }
+  }
+
   @Test
   public void
       load_WithConfigFileAndSchemaFileWithCreateCoordinatorTables_ShouldCallParserAndOperatorProperly()

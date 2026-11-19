@@ -98,19 +98,6 @@ updates:
       time: "01:00"
       timezone: "Asia/Tokyo"
 
-  - package-ecosystem: "github-actions"
-    target-branch: "3.16"
-    groups:
-      actions on branch 3.16:
-        patterns:
-          - "*"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "01:00"
-      timezone: "Asia/Tokyo"
-
   # For Docker, update the base images pinned in all Dockerfiles on the default branch only
   # The support and release branches are not covered here because base image updates are applied to them
   # by backporting the changes merged into the default branch
