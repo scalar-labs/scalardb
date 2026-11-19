@@ -543,7 +543,7 @@ class RdbEngineMysqlTest {
   }
 
   @Test
-  void getDatabaseTextIssues_ShouldReturnNull() throws SQLException {
+  void getDatabaseTextIssues_ShouldReturnEmpty() throws SQLException {
     // Arrange Act
     List<DatabaseTextIssue> actual = rdbEngineMysql.getDatabaseTextIssues(mock(Connection.class));
 
