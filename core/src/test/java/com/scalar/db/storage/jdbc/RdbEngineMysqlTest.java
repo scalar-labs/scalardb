@@ -418,65 +418,77 @@ class RdbEngineMysqlTest {
   }
 
   @Test
-  void isBinaryCollation_Utf8mb4BinOnNoPadServer_ShouldReturnFalse() {
+  void classify_Utf8mb4BinOnNoPadServer_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
 
     // Act
-    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Utf8mb4BinOnPadOnlyServer_ShouldReturnTrue() {
+  void classify_Utf8mb4BinOnPadOnlyServer_ShouldReturnCodePointOrder() {
     // Arrange
     RdbEngineMysql padOnlyEngine =
         new RdbEngineMysql(mock(JdbcConfig.class), false, false, "utf8mb4_bin");
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
 
     // Act
-    boolean actual = padOnlyEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = padOnlyEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Utf8mb40900Bin_ShouldReturnTrue() {
+  void classify_Utf8mb40900Bin_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4");
 
     // Act
-    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Utf8mb4NopadBin_ShouldReturnTrue() {
+  void classify_Utf8mb4NopadBin_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_nopad_bin", "utf8mb4");
 
     // Act
-    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_CaseInsensitiveCollation_ShouldReturnFalse() {
+  void classify_CaseInsensitiveCollation_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_general_ci", "utf8mb4");
 
     // Act
-    boolean actual = rdbEngineMysql.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
+  }
+
+  @Test
+  void classify_Latin1Bin_ShouldReturnPartialCharacterSet() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("latin1_bin", "latin1");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
   }
 
   @Test

@@ -118,30 +118,30 @@ class RdbEngineTidbTest {
   }
 
   @Test
-  void isBinaryCollation_Utf8mb4BinOnTidbWithoutNoPad_ShouldReturnTrue() {
+  void classify_Utf8mb4BinOnTidbWithoutNoPad_ShouldReturnCodePointOrder() {
     // Arrange
     RdbEngineTidb padEngine = new RdbEngineTidb(new JdbcConfig(new DatabaseConfig(props())));
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
 
     // Act
-    boolean actual = padEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = padEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Utf8mb4BinOnTidbWithNoPad_ShouldReturnFalse() {
+  void classify_Utf8mb4BinOnTidbWithNoPad_ShouldReturnOtherOrder() {
     // Arrange
     RdbEngineTidb noPadEngine =
         new RdbEngineTidb(new JdbcConfig(new DatabaseConfig(props())), "utf8mb4_0900_bin");
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
 
     // Act
-    boolean actual = noPadEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = noPadEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   private static Properties props() {

@@ -42,7 +42,7 @@ public class RdbEngineTidb extends RdbEngineMysql {
   // TiDB stores latin1 values as UTF-8, which its docs call a bug: "TiDB incorrectly treats latin1
   // as a subset of utf8." https://docs.pingcap.com/tidb/stable/character-set-and-collation/
   @Override
-  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+  protected boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return "latin1".equals(collation.getCharset()) || super.isFullUnicodeCharset(collation);
   }
 

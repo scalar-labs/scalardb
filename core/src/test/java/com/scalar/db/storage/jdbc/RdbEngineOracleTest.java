@@ -304,136 +304,100 @@ class RdbEngineOracleTest {
   }
 
   @Test
-  public void isFullUnicodeCharset_Al32utf8_ShouldReturnTrue() {
-    // Arrange
-    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL32UTF8");
-
-    // Act
-    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
-
-    // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  public void isFullUnicodeCharset_Utf8Cesu_ShouldReturnTrue() {
-    // Arrange
-    TextColumnCollation collation = new TextColumnCollation("BINARY", "UTF8");
-
-    // Act
-    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
-
-    // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  public void isFullUnicodeCharset_Al16utf16_ShouldReturnTrue() {
-    // Arrange
-    TextColumnCollation collation = new TextColumnCollation("BINARY", "AL16UTF16");
-
-    // Act
-    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
-
-    // Assert
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  public void isFullUnicodeCharset_WesternEuropean_ShouldReturnFalse() {
+  public void classify_WesternEuropean_ShouldReturnPartialCharacterSet() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY", "WE8MSWIN1252");
 
     // Act
-    boolean actual = rdbEngineOracle.isFullUnicodeCharset(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
   }
 
   @Test
-  public void isBinaryCollation_Binary_ShouldReturnTrue() {
+  public void classify_Binary_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY", "AL32UTF8");
 
     // Act
-    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  public void isBinaryCollation_BinaryCi_ShouldReturnFalse() {
+  public void classify_BinaryCi_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY_CI", "AL32UTF8");
 
     // Act
-    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  public void isBinaryCollation_UsingNlsCompWithBinarySession_ShouldReturnTrue() {
+  public void classify_UsingNlsCompWithBinarySession_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "BINARY");
 
     // Act
-    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  public void isBinaryCollation_UsingNlsCompWithLinguisticSession_ShouldReturnFalse() {
+  public void classify_UsingNlsCompWithLinguisticSession_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation =
         new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "LINGUISTIC");
 
     // Act
-    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  public void isBinaryCollation_BinaryOnCesu8Charset_ShouldReturnFalse() {
+  public void classify_BinaryOnCesu8Charset_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY", "UTF8");
 
     // Act
-    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  public void isBinaryCollation_BinaryOnAl16utf16Charset_ShouldReturnFalse() {
+  public void classify_BinaryOnAl16utf16Charset_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("BINARY", "AL16UTF16");
 
     // Act
-    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test
-  public void isBinaryCollation_UsingNlsCompWithBinarySessionOnCesu8Charset_ShouldReturnFalse() {
+  public void classify_UsingNlsCompWithBinarySessionOnCesu8Charset_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("USING_NLS_COMP", "UTF8", "BINARY");
 
     // Act
-    boolean actual = rdbEngineOracle.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngineOracle.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @Test

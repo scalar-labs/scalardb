@@ -265,8 +265,9 @@ public class JdbcAdminCollationIntegrationTest {
     assertThat(collations.keySet())
         .containsExactlyInAnyOrder(TEXT_PK, TEXT_CK, TEXT_INDEX, TEXT_PLAIN);
     for (Map.Entry<String, TextColumnCollation> entry : collations.entrySet()) {
-      assertThat(rdbEngine.isBinaryCollation(entry.getValue())).as(entry.toString()).isTrue();
-      assertThat(rdbEngine.isFullUnicodeCharset(entry.getValue())).as(entry.toString()).isTrue();
+      assertThat(rdbEngine.classify(entry.getValue()))
+          .as(entry.toString())
+          .isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
     }
   }
 
@@ -316,7 +317,7 @@ public class JdbcAdminCollationIntegrationTest {
   }
 
   @Test
-  void isBinaryCollation_PostgresqlColumnOnDefaultCollation_ShouldResolveDatabaseLibcLocale()
+  void classify_PostgresqlColumnOnDefaultCollation_ShouldResolveDatabaseLibcLocale()
       throws Exception {
     // Arrange
     assumeTrue(JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcTestUtils.isSpanner(rdbEngine));
@@ -348,8 +349,11 @@ public class JdbcAdminCollationIntegrationTest {
       // Assert
       assertThat(collations.get("pk").getCollation()).isEqualTo("default");
       assertThat(collations.get("pk").getResolvedDefault()).isEqualTo("libc:" + databaseLocale[1]);
-      assertThat(rdbEngine.isBinaryCollation(collations.get("pk")))
-          .isEqualTo(Arrays.asList("C", "POSIX").contains(databaseLocale[1]));
+      assertThat(rdbEngine.classify(collations.get("pk")))
+          .isEqualTo(
+              Arrays.asList("C", "POSIX").contains(databaseLocale[1])
+                  ? TextColumnCollationKind.CODE_POINT_ORDER
+                  : TextColumnCollationKind.OTHER_ORDER);
     } finally {
       // The table has no ScalarDB metadata, so the admin cannot drop it.
       testUtils.dropTable(NAMESPACE, TABLE);

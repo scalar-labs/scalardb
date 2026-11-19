@@ -64,51 +64,51 @@ class RdbEngineMariaDBTest {
   }
 
   @Test
-  void isBinaryCollation_Utf8mb4NopadBin_ShouldReturnTrue() {
+  void classify_Utf8mb4NopadBin_ShouldReturnCodePointOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_nopad_bin", "utf8mb4");
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Utf8mb4Bin_ShouldReturnFalse() {
+  void classify_Utf8mb4Bin_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"utf16", "utf16le", "utf32"})
-  void isBinaryCollation_OtherUnicodeEncodingNopadBin_ShouldReturnTrue(String charset) {
+  void classify_OtherUnicodeEncodingNopadBin_ShouldReturnCodePointOrder(String charset) {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation(charset + "_nopad_bin", charset);
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isTrue();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
   }
 
   @Test
-  void isBinaryCollation_Utf16Bin_ShouldReturnFalse() {
+  void classify_Utf16Bin_ShouldReturnOtherOrder() {
     // Arrange
     TextColumnCollation collation = new TextColumnCollation("utf16_bin", "utf16");
 
     // Act
-    boolean actual = rdbEngine.isBinaryCollation(collation);
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
 
     // Assert
-    assertThat(actual).isFalse();
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
   }
 }

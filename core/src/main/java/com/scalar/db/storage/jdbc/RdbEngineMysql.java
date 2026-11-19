@@ -573,13 +573,17 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
-  public boolean isBinaryCollation(TextColumnCollation collation) {
+  public TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.of(
+        isFullUnicodeCharset(collation), isBinaryCollation(collation));
+  }
+
+  private boolean isBinaryCollation(TextColumnCollation collation) {
     String name = collation.getCollation();
     return CODE_POINT_NO_PAD_COLLATIONS.contains(name) || name.equals(binaryCollation);
   }
 
-  @Override
-  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
+  protected boolean isFullUnicodeCharset(TextColumnCollation collation) {
     return FULL_UNICODE_CHARSETS.contains(collation.getCharset());
   }
 

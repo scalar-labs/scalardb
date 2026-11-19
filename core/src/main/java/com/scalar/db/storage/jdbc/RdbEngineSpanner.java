@@ -72,13 +72,8 @@ class RdbEngineSpanner extends RdbEnginePostgresql {
   }
 
   @Override
-  public boolean isBinaryCollation(TextColumnCollation collation) {
-    return true;
-  }
-
-  @Override
-  public boolean isFullUnicodeCharset(TextColumnCollation collation) {
-    return true;
+  public TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.CODE_POINT_ORDER;
   }
 
   @Override
