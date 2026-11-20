@@ -19,10 +19,14 @@ def testsByCategory = new YamlSlurper().parse(new File(scriptBasePath.resolve("t
 // test_sources paths are relative to the repository root
 def repositoryRoot = new File(scriptBasePath.resolve(".."))
 testsByCategory.each { category, tests ->
-    tests.findAll { it.test_sources }.each { validateTestGroupsCoverage(it, repositoryRoot) }
+    tests.findAll { it.test_sources }.each { test ->
+        def testClasses = findTestClasses(test, repositoryRoot)
+        resolveRemainingTests(test, testClasses)
+        validateTestGroupsCoverage(test, testClasses)
+    }
 }
 
-// Expand tests by versions and group commit settings
+// Expand tests by versions, and then by test groups or group commit settings
 def expandedTestsConfig = expandTests(testsByCategory)
 
 // Filter tests based on environment variables
@@ -77,18 +81,13 @@ static def validateEnvironmentVariables() {
     }
 }
 
-// Expand tests by versions and group commit settings
+// Expand tests by versions, and then by test groups or group commit settings
 def static expandTests(testsByCategory) {
     def expandedTests = []
 
     testsByCategory.each { category, tests ->
         tests.each { test ->
             test["test_category"] = category
-
-            if (test.test_groups) {
-                expandedTests.addAll(expandTestGroups(test))
-                return
-            }
 
             // Get list of test variants (expanded by version if applicable)
             def testVariants = []
@@ -108,8 +107,13 @@ def static expandTests(testsByCategory) {
                 testVariants.add(test)
             }
 
-            // Expand each variant by group commit setting
+            // Expand each variant by test group, or by group commit setting
             testVariants.each { variant ->
+                if (variant.test_groups) {
+                    expandedTests.addAll(expandTestGroups(variant))
+                    return
+                }
+
                 def baseVariant = new LinkedHashMap(variant)
                 baseVariant.remove("disable_group_commit")
 
@@ -131,12 +135,17 @@ def static expandTests(testsByCategory) {
 
 // Expand a test with test groups into one test per group, each running only the group's test classes
 def static expandTestGroups(test) {
-    if (test.containsKey("versions") || test.containsKey("disable_group_commit")) {
-        exitWithError("Test '${test.label}': test_groups cannot be combined with versions or disable_group_commit")
+    if (test.containsKey("disable_group_commit")) {
+        exitWithError("Test '${test.label}': test_groups cannot be combined with disable_group_commit")
     }
 
     return test.test_groups.collect { group ->
-        def missingFields = ["label", "name", "group_commit_enabled", "tests"].findAll { group[it] == null }
+        if (group.remaining_tests && !test.test_sources) {
+            exitWithError("Test '${test.label}', group '${group.label}': remaining_tests requires test_sources")
+        }
+        def missingFields = ["label", "name", "group_commit_enabled", "tests"].findAll {
+            group[it] == null || (it == "tests" && group.tests.isEmpty())
+        }
         if (!missingFields.isEmpty()) {
             exitWithError("Test '${test.label}', group '${group.label}': missing ${missingFields.join(', ')}")
         }
@@ -153,11 +162,9 @@ def static expandTestGroups(test) {
     }
 }
 
-// Check that the test groups run every test class in test_sources, and that
-// the group commit groups run every ConsensusCommit test class, which the group commit jobs of
-// tests without test groups select with the **.ConsensusCommit** filter
-def static validateTestGroupsCoverage(test, File repositoryRoot) {
-    def testClasses = test.test_sources.collectMany { source ->
+// List the test classes in test_sources
+def static findTestClasses(test, File repositoryRoot) {
+    return test.test_sources.collectMany { source ->
         def dir = new File(repositoryRoot, source)
         if (!dir.isDirectory()) {
             exitWithError("Test '${test.label}': test source '${source}' is not a directory")
@@ -165,7 +172,41 @@ def static validateTestGroupsCoverage(test, File repositoryRoot) {
         dir.listFiles().findAll { it.name.endsWith(".java") && isTestClass(it) }
                 .collect { it.name - ".java" }
     } as Set
+}
 
+// Give a group with remaining_tests the test classes that the other groups with the same group
+// commit setting don't list. A group commit group gets only the ConsensusCommit test classes, which
+// are the ones the group commit jobs of tests without test groups run
+def static resolveRemainingTests(test, Set testClasses) {
+    test.test_groups.groupBy { it.group_commit_enabled.toString() == 'true' }.each { groupCommitEnabled, groups ->
+        def remainingGroups = groups.findAll { it.remaining_tests }
+        if (remainingGroups.isEmpty()) {
+            return
+        }
+        def flavor = groupCommitEnabled ? "with group commit" : "without group commit"
+        if (remainingGroups.size() > 1) {
+            exitWithError("Test '${test.label}': more than one test group ${flavor} has remaining_tests: ${remainingGroups*.label.join(', ')}")
+        }
+        def remainingGroup = remainingGroups[0]
+        if (remainingGroup.tests != null) {
+            exitWithError("Test '${test.label}', group '${remainingGroup.label}' ${flavor}: remaining_tests cannot be combined with tests")
+        }
+        def candidates = groupCommitEnabled ? testClasses.findAll { it.startsWith("ConsensusCommit") } : testClasses
+        def listed = groups.collectMany { it.tests ?: [] }
+        def remaining = (candidates - listed).sort()
+        // A group without tests would run the whole test task
+        if (remaining.isEmpty()) {
+            exitWithError("Test '${test.label}', group '${remainingGroup.label}' ${flavor}: no test class remains for remaining_tests")
+        }
+        remainingGroup.tests = remaining
+    }
+}
+
+// Check that the test groups run every test class in test_sources, and that
+// the group commit groups run every ConsensusCommit test class, which the group commit jobs of
+// tests without test groups select with the **.ConsensusCommit** filter. Also check that no test
+// class is listed more than once for the same group commit setting
+def static validateTestGroupsCoverage(test, Set testClasses) {
     def (groupCommitGroups, defaultGroups) = test.test_groups.split { it.group_commit_enabled.toString() == 'true' }
     def defaultClasses = defaultGroups.collectMany { it.tests ?: [] } as Set
     def groupCommitClasses = groupCommitGroups.collectMany { it.tests ?: [] } as Set
@@ -181,6 +222,12 @@ def static validateTestGroupsCoverage(test, File repositoryRoot) {
     def groupCommitUnlisted = testClasses.findAll { it.startsWith("ConsensusCommit") } - groupCommitClasses
     if (groupCommitUnlisted) {
         errors.add("ConsensusCommit test classes missing from the group commit test groups: ${groupCommitUnlisted.sort().join(', ')}")
+    }
+    [["without group commit", defaultGroups], ["with group commit", groupCommitGroups]].each { flavor, groups ->
+        def duplicated = groups.collectMany { it.tests ?: [] }.countBy { it }.findAll { it.value > 1 }.keySet()
+        if (duplicated) {
+            errors.add("test classes listed more than once in the test groups ${flavor}: ${duplicated.sort().join(', ')}")
+        }
     }
     if (errors) {
         exitWithError("Test '${test.label}': ${errors.join('. ')}")
