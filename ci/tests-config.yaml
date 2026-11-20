@@ -11,6 +11,8 @@
 #     db_healthcheck: (optional) a bash script that succeed if the database is ready. The script will be run repeatedly with a delay until it succeeds with a 10 minutes timeout. If not provided, it is assumed the database is ready before the run script is executed.
 #     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+#     test_groups: (optional) an array of test groups, each with a `label`, a `name`, a `group_commit_enabled` flag and the `tests` classes to run. Each group becomes one matrix entry that runs only its test classes, and the binary results of the groups are aggregated into one test report per group commit flag. Cannot be combined with `versions` or `disable_group_commit`.
+#     test_sources: (optional) with `test_groups`, the source folders of the test classes, relative to the repository root. The CI fails if a test class of these folders is missing from the test groups, or if a ConsensusCommit test class is missing from the group commit test groups.
 
 blob-storage:
   - label: blob-storage
