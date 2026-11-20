@@ -376,7 +376,7 @@ jdbc:
           - JdbcDatabaseMultiplePartitionKeyIntegrationTest
           - JdbcDatabaseSecondaryIndexIntegrationTest
           - ConsensusCommitAdminIntegrationTestWithJdbcDatabase
-          - ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
+          - ConsensusCommitAdminRepairTableIntegrationTestWithJdbcDatabase
           - ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
           - ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
           - ConsensusCommitAdminImportTablePrimaryKeyOrderIntegrationTestWithJdbcDatabase
@@ -384,11 +384,13 @@ jdbc:
           - ConsensusCommitImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
           - JdbcAdminImportTableIntegrationTest
           - JdbcAdminImportTablePrimaryKeyOrderIntegrationTest
-          - JdbcAdminRepairIntegrationTest
+          - JdbcAdminRepairTableIntegrationTest
           - JdbcSchemaLoaderImportIntegrationTest
           - JdbcSchemaLoaderImportWithMetadataDecouplingIntegrationTest
           - JdbcAdminIntegrationTest
           - JdbcTransactionAdminIntegrationTest
+          - JdbcTransactionAdminImportTableIntegrationTest
+          - JdbcTransactionAdminRepairTableIntegrationTest
           - ConsensusCommitIntegrationTestWithJdbcDatabase
           - ConsensusCommitIntegrationTestWithJdbcDatabaseInHighestIsolation
           - ConsensusCommitCrossPartitionScanIntegrationTestWithJdbcDatabase
@@ -433,7 +435,7 @@ jdbc:
           - ConsensusCommitWithIncludeMetadataEnabledIntegrationTestWithJdbcDatabase
           - ConsensusCommitWithMetadataDecouplingIntegrationTestWithJdbcDatabase
           - ConsensusCommitAdminIntegrationTestWithJdbcDatabase
-          - ConsensusCommitAdminRepairIntegrationTestWithJdbcDatabase
+          - ConsensusCommitAdminRepairTableIntegrationTestWithJdbcDatabase
           - ConsensusCommitAdminImportTableIntegrationTestWithJdbcDatabase
           - ConsensusCommitAdminImportTableWithMetadataDecouplingIntegrationTestWithJdbcDatabase
           - ConsensusCommitAdminImportTablePrimaryKeyOrderIntegrationTestWithJdbcDatabase
