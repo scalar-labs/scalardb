@@ -93,7 +93,8 @@ public class RdbEngineStrategyExceptionIntegrationTest {
   private boolean isCreateTableIfNotExistsSyntaxSupported() {
     return JdbcTestUtils.isMysql(rdbEngine)
         || JdbcTestUtils.isPostgresql(rdbEngine)
-        || JdbcTestUtils.isDb2(rdbEngine);
+        || JdbcTestUtils.isDb2(rdbEngine)
+        || JdbcTestUtils.isSqlite(rdbEngine);
   }
 
   @Test
