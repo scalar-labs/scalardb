@@ -16,8 +16,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Spanner-emulator specific conditional mutation integration test that works around the emulator
- * limitation to reduce the test execution to about 2 hours; the emulator only allows one read-write
- * transaction or schema change at a time.
+ * only allowing one read-write transaction or schema change at a time.
  *
  * <p>This class is only enabled when running against the Spanner emulator. It overrides {@link
  * #createStorageAdmin} and {@link #createStorage} to return thread-dispatching proxies that route
@@ -38,7 +37,7 @@ public class JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
   @Override
   protected int getThreadNum() {
     // Optimized for a standard Github action runner
-    return 18;
+    return 12;
   }
 
   @Override
