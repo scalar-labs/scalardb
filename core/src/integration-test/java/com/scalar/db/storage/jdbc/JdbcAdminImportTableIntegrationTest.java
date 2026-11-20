@@ -93,6 +93,11 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @SuppressWarnings("unused")
+  private boolean isMysql() {
+    return JdbcEnv.isMysql();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isTidb() {
     return testUtils.isTidb();
   }
@@ -130,6 +135,26 @@ public class JdbcAdminImportTableIntegrationTest
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();
+  }
+
+  @Test
+  @EnabledIf("isMysql")
+  public void importTable_Mysql_ForTableWithOnUpdateColumn_ShouldImportProperly() throws Exception {
+    // Arrange
+    TestData testData = testUtils.createExistingMysqlTableWithOnUpdateColumn(getNamespace());
+    testDataList.add(testData);
+
+    // Act
+    admin.importTable(
+        getNamespace(),
+        testData.getTableName(),
+        Collections.emptyMap(),
+        testData.getOverrideColumnsType());
+
+    // Assert
+    assertThat(admin.tableExists(getNamespace(), testData.getTableName())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), testData.getTableName()))
+        .isEqualTo(testData.getTableMetadata());
   }
 
   @Test
