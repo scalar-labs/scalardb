@@ -1,0 +1,10 @@
+# Compatible-release pins: bug-fix and minor updates are picked up, major versions are not.
+requests~=2.34
+feedparser~=6.0
+pyyaml~=6.0
+packaging~=26.0
+click~=8.5
+
+# Tests only
+pytest~=9.2
+responses~=0.26
