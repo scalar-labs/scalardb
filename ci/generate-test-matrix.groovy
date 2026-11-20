@@ -16,6 +16,12 @@ validateEnvironmentVariables()
 URI scriptBasePath
 def testsByCategory = new YamlSlurper().parse(new File(scriptBasePath.resolve("tests-config.yaml")))
 
+// test_sources paths are relative to the repository root
+def repositoryRoot = new File(scriptBasePath.resolve(".."))
+testsByCategory.each { category, tests ->
+    tests.findAll { it.test_sources }.each { validateTestGroupsCoverage(it, repositoryRoot) }
+}
+
 // Expand tests by versions and group commit settings
 def expandedTestsConfig = expandTests(testsByCategory)
 
@@ -79,6 +85,11 @@ def static expandTests(testsByCategory) {
         tests.each { test ->
             test["test_category"] = category
 
+            if (test.test_groups) {
+                expandedTests.addAll(expandTestGroups(test))
+                return
+            }
+
             // Get list of test variants (expanded by version if applicable)
             def testVariants = []
             if (test.versions) {
@@ -116,6 +127,80 @@ def static expandTests(testsByCategory) {
     }
 
     return expandedTests
+}
+
+// Expand a test with test groups into one test per group, each running only the group's test classes
+def static expandTestGroups(test) {
+    if (test.containsKey("versions") || test.containsKey("disable_group_commit")) {
+        exitWithError("Test '${test.label}': test_groups cannot be combined with versions or disable_group_commit")
+    }
+
+    return test.test_groups.collect { group ->
+        def missingFields = ["label", "name", "group_commit_enabled", "tests"].findAll { group[it] == null }
+        if (!missingFields.isEmpty()) {
+            exitWithError("Test '${test.label}', group '${group.label}': missing ${missingFields.join(', ')}")
+        }
+
+        def groupTest = new LinkedHashMap(test)
+        groupTest.remove("test_groups")
+        groupTest.remove("test_sources")
+        groupTest["label"] = "${test.label}_${group.label}".toString()
+        groupTest["display_name"] = "${test.display_name} (${group.name})".toString()
+        groupTest["run"] = test.run.trim() + group.tests.collect { " --tests ${it}" }.join()
+        groupTest["group_commit_enabled"] = group.group_commit_enabled.toString()
+        groupTest["report_group"] = test.label
+        return groupTest
+    }
+}
+
+// Check that the test groups run every test class in test_sources, and that
+// the group commit groups run every ConsensusCommit test class, which the group commit jobs of
+// tests without test groups select with the **.ConsensusCommit** filter
+def static validateTestGroupsCoverage(test, File repositoryRoot) {
+    def testClasses = test.test_sources.collectMany { source ->
+        def dir = new File(repositoryRoot, source)
+        if (!dir.isDirectory()) {
+            exitWithError("Test '${test.label}': test source '${source}' is not a directory")
+        }
+        dir.listFiles().findAll { it.name.endsWith(".java") && isTestClass(it) }
+                .collect { it.name - ".java" }
+    } as Set
+
+    def (groupCommitGroups, defaultGroups) = test.test_groups.split { it.group_commit_enabled.toString() == 'true' }
+    def defaultClasses = defaultGroups.collectMany { it.tests ?: [] } as Set
+    def groupCommitClasses = groupCommitGroups.collectMany { it.tests ?: [] } as Set
+    def errors = []
+    def unlisted = testClasses - defaultClasses
+    if (unlisted) {
+        errors.add("test classes missing from the test groups without group commit: ${unlisted.sort().join(', ')}")
+    }
+    def unknown = (defaultClasses + groupCommitClasses) - testClasses
+    if (unknown) {
+        errors.add("test_groups list classes that are not in test_sources: ${unknown.sort().join(', ')}")
+    }
+    def groupCommitUnlisted = testClasses.findAll { it.startsWith("ConsensusCommit") } - groupCommitClasses
+    if (groupCommitUnlisted) {
+        errors.add("ConsensusCommit test classes missing from the group commit test groups: ${groupCommitUnlisted.sort().join(', ')}")
+    }
+    if (errors) {
+        exitWithError("Test '${test.label}': ${errors.join('. ')}")
+    }
+}
+
+// Test class names contain "Test", while helper class names end with "Utils", such as JdbcTestUtils,
+// or have no "Test", such as JdbcEnv. Matching names rather than test annotations catches test
+// classes that only inherit their test methods.
+def static isTestClass(File javaFile) {
+    def className = javaFile.name - ".java"
+    if (!className.contains("Test") || className.endsWith("Utils")) {
+        return false
+    }
+    return !(javaFile.text =~ /\babstract\s+(?:\w+\s+)*class\s+${className}\b/)
+}
+
+static def exitWithError(String message) {
+    System.err.println("Error: ${message}")
+    System.exit(1)
 }
 
 // Filter tests based on environment variables
