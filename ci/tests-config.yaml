@@ -405,6 +405,7 @@ jdbc:
           - JdbcDatabaseVirtualTablesIntegrationTest
           - JdbcDatabaseMutationAtomicityUnitIntegrationTest
           - JdbcAdminCaseSensitivityIntegrationTest
+          - JdbcAdminCollationIntegrationTest
           - JdbcSchemaLoaderIntegrationTest
           - JdbcSchemaLoaderWithMetadataDecouplingIntegrationTest
           - RdbEngineStrategyExceptionIntegrationTest
