@@ -667,23 +667,25 @@ public class JdbcAdminImportTestUtils {
   }
 
   private List<JdbcTestData> prepareCreateNonImportableTableSql(
-      String namespace, List<String> types) {
+      String namespace, List<String> columnDefinitions) {
     ImmutableList.Builder<JdbcTestData> data = new ImmutableList.Builder<>();
-    for (int i = 0; i < types.size(); i++) {
+    for (int i = 0; i < columnDefinitions.size(); i++) {
       String table = "bad_table" + i;
       data.add(
           JdbcTestData.createNonImportableTable(
-              table, prepareCreateNonImportableTableSql(namespace, table, types.get(i))));
+              table,
+              prepareCreateNonImportableTableSql(namespace, table, columnDefinitions.get(i))));
     }
     return data.build();
   }
 
-  private String prepareCreateNonImportableTableSql(String namespace, String table, String type) {
+  private String prepareCreateNonImportableTableSql(
+      String namespace, String table, String columnDefinition) {
     LinkedHashMap<String, String> columns = new LinkedHashMap<>();
     // All storages beside Spanner support CHAR(n)
     String pkType = JdbcTestUtils.isSpanner(rdbEngine) ? "VARCHAR(8) NOT NULL" : "CHAR(8) NOT NULL";
     columns.put("pk", pkType);
-    columns.put("col", type);
+    columns.put("col", columnDefinition);
     return prepareCreateTableSql(
         namespace, table, columns, new LinkedHashSet<>(Collections.singletonList("pk")));
   }
