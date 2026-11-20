@@ -64,6 +64,28 @@ public interface RdbEngineStrategy {
 
   String getTextType(int charLength, boolean isKey);
 
+  /**
+   * Returns a query that reads the collation of a character column, or null when the engine does
+   * not restate column collations. The query binds the namespace, the table and the column, and
+   * returns at most one row with the collation and the charset, the latter of which may be null.
+   *
+   * @return the query, or null
+   */
+  @Nullable
+  default String textColumnCollationSql() {
+    return null;
+  }
+
+  /**
+   * Returns the clause that declares the given collation on a column.
+   *
+   * @param collation a collation read by {@link #textColumnCollationSql}
+   * @return the clause, or "" when the engine has no column collation clause
+   */
+  default String getCollationClause(TextColumnCollation collation) {
+    return "";
+  }
+
   String computeBooleanValue(boolean value);
 
   String[] createSchemaSqls(String fullSchema);
@@ -110,7 +132,7 @@ public interface RdbEngineStrategy {
       String table,
       String oldColumnName,
       String newColumnName,
-      String columnType) {
+      String columnDefinition) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
         + " RENAME COLUMN "
@@ -119,9 +141,19 @@ public interface RdbEngineStrategy {
         + enclose(newColumnName);
   }
 
+  /**
+   * Returns whether {@link #renameColumnSql} uses its {@code columnDefinition} argument.
+   *
+   * @return {@code true} if the rename statement restates the column type
+   */
+  default boolean renameColumnRestatesType() {
+    return false;
+  }
+
   String renameTableSql(String namespace, String oldTableName, String newTableName);
 
-  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnDefinition);
 
   /**
    * Returns a parameterized SQL that checks whether the specified table exists by querying the

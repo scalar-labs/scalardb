@@ -16,7 +16,7 @@ import java.sql.SQLException;
 public class RdbEngineTidb extends RdbEngineMysql {
 
   RdbEngineTidb(JdbcConfig config) {
-    super(config);
+    super(config, false, true);
   }
 
   @Override
