@@ -3,6 +3,7 @@ package com.scalar.db.util.groupcommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -21,6 +22,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -575,7 +578,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void close_WithMetricsMonitorLogEnabled_ShouldCloseAllResources() throws InterruptedException {
+  void close_WithMetricsMonitorLogEnabled_ShouldCloseAllResources() {
     // Arrange
     doReturn(false).when(groupCommitMetrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
@@ -584,7 +587,6 @@ class GroupCommitterTest {
             new TestableGroupCommitKeyManipulator());
     // Act
     groupCommitter.close();
-    TimeUnit.SECONDS.sleep(4);
 
     // Assert
     verify(groupSizeFixWorker).close();
@@ -594,8 +596,7 @@ class GroupCommitterTest {
   }
 
   @Test
-  void close_WithMetricsMonitorLogDisabled_ShouldCloseAllResourcesExceptForMonitor()
-      throws InterruptedException {
+  void close_WithMetricsMonitorLogDisabled_ShouldCloseAllResourcesExceptForMonitor() {
     // Arrange
     doReturn(false).when(groupCommitMetrics).hasRemaining();
     TestableGroupCommitter groupCommitter =
@@ -604,7 +605,6 @@ class GroupCommitterTest {
             new TestableGroupCommitKeyManipulator());
     // Act
     groupCommitter.close();
-    TimeUnit.SECONDS.sleep(4);
 
     // Assert
     verify(groupSizeFixWorker).close();
@@ -614,22 +614,30 @@ class GroupCommitterTest {
   }
 
   @Test
-  void close_WhenNoOngoingGroup_ShouldCloseAllResources()
+  void close_WhenOngoingGroupRemains_ShouldNotCloseResourcesUntilNoGroupRemains()
       throws InterruptedException, ExecutionException, TimeoutException {
     // Arrange
     doReturn(true).when(groupCommitMetrics).hasRemaining();
+    CountDownLatch metricsReadTwice = new CountDownLatch(2);
     TestableGroupCommitter groupCommitter =
         new TestableGroupCommitter(
             new GroupCommitConfig(20, 100, 400, 60000, 10),
-            new TestableGroupCommitKeyManipulator());
+            new TestableGroupCommitKeyManipulator()) {
+          @Override
+          GroupCommitMetrics getMetrics() {
+            metricsReadTwice.countDown();
+            return super.getMetrics();
+          }
+        };
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     // Act
     // Assert
     Future<?> future = executorService.submit(groupCommitter::close);
     executorService.shutdown();
-    TimeUnit.SECONDS.sleep(2);
 
+    // The second read means that close() didn't close the resources with the first metrics.
+    assertThat(metricsReadTwice.await(10, TimeUnit.SECONDS)).isTrue();
     verify(groupSizeFixWorker, never()).close();
     verify(delayedSlotMoveWorker, never()).close();
     verify(groupCleanupWorker, never()).close();
@@ -642,5 +650,73 @@ class GroupCommitterTest {
     verify(delayedSlotMoveWorker).close();
     verify(groupCleanupWorker).close();
     verify(groupCommitMonitor, never()).close();
+  }
+
+  @Test
+  void close_WhenReserveFinishesWhileReadingMetrics_ShouldNotCloseResourcesUntilNoGroupRemains()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    // Arrange
+    CountDownLatch reserveStarted = new CountDownLatch(1);
+    CountDownLatch reserveAllowedToFinish = new CountDownLatch(1);
+    doAnswer(
+            invocation -> {
+              reserveStarted.countDown();
+              reserveAllowedToFinish.await();
+              return "0000:child-key";
+            })
+        .when(groupManager)
+        .reserveNewSlot(any());
+    GroupCommitMetrics noGroupRemaining = new GroupCommitMetrics(0, 0, 0, 0, 0);
+    GroupCommitMetrics oneGroupRemaining = new GroupCommitMetrics(1, 0, 0, 1, 0);
+    AtomicReference<GroupCommitMetrics> latestMetrics = new AtomicReference<>(oneGroupRemaining);
+    AtomicInteger metricsReadCount = new AtomicInteger();
+    CountDownLatch firstMetricsReadStarted = new CountDownLatch(1);
+    CountDownLatch firstMetricsReadAllowedToFinish = new CountDownLatch(1);
+    CountDownLatch secondMetricsReadStarted = new CountDownLatch(1);
+    TestableGroupCommitter groupCommitter =
+        new TestableGroupCommitter(
+            new GroupCommitConfig(20, 100, 400, 60000, 10),
+            new TestableGroupCommitKeyManipulator()) {
+          @Override
+          GroupCommitMetrics getMetrics() {
+            if (metricsReadCount.getAndIncrement() == 0) {
+              // The first metrics are taken before the reserve() call registers its slot, so they
+              // don't reflect the slot.
+              firstMetricsReadStarted.countDown();
+              Uninterruptibles.awaitUninterruptibly(firstMetricsReadAllowedToFinish);
+              return noGroupRemaining;
+            }
+            secondMetricsReadStarted.countDown();
+            return latestMetrics.get();
+          }
+        };
+    ExecutorService executorService = Executors.newCachedThreadPool();
+
+    // Act
+    // Assert
+    Future<String> reserveFuture =
+        executorService.submit(() -> groupCommitter.reserve("child-key"));
+    assertThat(reserveStarted.await(10, TimeUnit.SECONDS)).isTrue();
+    Future<?> closeFuture = executorService.submit(groupCommitter::close);
+    executorService.shutdown();
+
+    // Let the reserve() call finish while close() is reading the first metrics.
+    assertThat(firstMetricsReadStarted.await(10, TimeUnit.SECONDS)).isTrue();
+    reserveAllowedToFinish.countDown();
+    reserveFuture.get(10, TimeUnit.SECONDS);
+    firstMetricsReadAllowedToFinish.countDown();
+
+    // The second read means that close() didn't close the resources with the first metrics.
+    assertThat(secondMetricsReadStarted.await(10, TimeUnit.SECONDS)).isTrue();
+    verify(groupSizeFixWorker, never()).close();
+    verify(delayedSlotMoveWorker, never()).close();
+    verify(groupCleanupWorker, never()).close();
+
+    latestMetrics.set(noGroupRemaining);
+    closeFuture.get(10, TimeUnit.SECONDS);
+
+    verify(groupSizeFixWorker).close();
+    verify(delayedSlotMoveWorker).close();
+    verify(groupCleanupWorker).close();
   }
 }
