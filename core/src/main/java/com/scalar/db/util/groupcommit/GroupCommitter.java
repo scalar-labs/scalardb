@@ -7,6 +7,7 @@ import java.io.Closeable;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -57,6 +58,12 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
 
   private final AtomicBoolean closing = new AtomicBoolean();
 
+  // The number of reserve() calls in progress. A call that has passed the check of `closing` may
+  // not have registered its slot yet, so close() doesn't stop the workers while this is positive.
+  private final AtomicInteger ongoingReserveCount = new AtomicInteger();
+
+  private final long timeoutCheckIntervalMillis;
+
   /**
    * @param label A label used for thread name.
    * @param config A configuration.
@@ -69,6 +76,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
           keyManipulator) {
     logger.info("Starting GroupCommitter. Label: {}, Config: {}", label, config);
     this.keyManipulator = keyManipulator;
+    this.timeoutCheckIntervalMillis = config.timeoutCheckIntervalMillis();
     this.groupManager = createGroupManager(config, keyManipulator);
     this.groupCleanupWorker = createGroupCleanupWorker(label, config, groupManager);
     this.delayedSlotMoveWorker =
@@ -112,20 +120,27 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
    * @return The full key associated with the reserved slot.
    */
   public FULL_KEY reserve(CHILD_KEY childKey) {
-    if (closing.get()) {
-      throw new GroupCommitException(
-          String.format(
-              "Reserving a new slot isn't allowed since already closed. Child key: %s", childKey));
-    }
-
-    while (true) {
-      FULL_KEY fullKey = groupManager.reserveNewSlot(childKey);
-      if (fullKey != null) {
-        return fullKey;
+    // This must be incremented before `closing` is checked. See close().
+    ongoingReserveCount.incrementAndGet();
+    try {
+      if (closing.get()) {
+        throw new GroupCommitException(
+            String.format(
+                "Reserving a new slot isn't allowed since already closed. Child key: %s",
+                childKey));
       }
-      logger.debug(
-          "Failed to reserve a new value slot since the group was already size-fixed. Retrying. Key: {}",
-          childKey);
+
+      while (true) {
+        FULL_KEY fullKey = groupManager.reserveNewSlot(childKey);
+        if (fullKey != null) {
+          return fullKey;
+        }
+        logger.debug(
+            "Failed to reserve a new value slot since the group was already size-fixed. Retrying. Key: {}",
+            childKey);
+      }
+    } finally {
+      ongoingReserveCount.decrementAndGet();
     }
   }
 
@@ -192,9 +207,12 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
     long loggingIntervalMillis = 10000;
     Instant nextLoggingAt = Instant.now().plusMillis(loggingIntervalMillis);
     do {
-      Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
+      // The count must be read before the metrics. A reserve() call that saw `closing` unset
+      // incremented the count before `closing` was set. So, if the count is zero here, the call
+      // has already registered its slot, and the metrics read below reflect it.
+      boolean reserving = ongoingReserveCount.get() > 0;
       GroupCommitMetrics groupCommitMetrics = getMetrics();
-      if (!groupCommitMetrics.hasRemaining()) {
+      if (!reserving && !groupCommitMetrics.hasRemaining()) {
         logger.info("No ongoing group remains. Closing all the resources");
         if (groupCommitMonitor != null) {
           groupCommitMonitor.close();
@@ -209,6 +227,7 @@ public class GroupCommitter<PARENT_KEY, CHILD_KEY, FULL_KEY, EMIT_PARENT_KEY, EM
         logger.info("Ongoing slot still remains. Metrics: {}", groupCommitMetrics);
         nextLoggingAt = Instant.now().plusMillis(loggingIntervalMillis);
       }
+      Uninterruptibles.sleepUninterruptibly(timeoutCheckIntervalMillis, TimeUnit.MILLISECONDS);
     } while (true);
   }
 
