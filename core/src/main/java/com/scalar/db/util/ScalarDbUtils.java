@@ -53,6 +53,7 @@ import com.scalar.db.io.TimestampColumn;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -70,6 +71,25 @@ import javax.annotation.Nullable;
 public final class ScalarDbUtils {
 
   private ScalarDbUtils() {}
+
+  /** Returns the primary key columns of a Get: the partition key's, then the clustering key's. */
+  public static List<Column<?>> getPrimaryKeyColumns(Get get) {
+    List<Column<?>> columns = new ArrayList<>(get.getPartitionKey().getColumns());
+    get.getClusteringKey().ifPresent(k -> columns.addAll(k.getColumns()));
+    return columns;
+  }
+
+  /**
+   * Returns the full table name and the values of every primary key column but the last of a Get. A
+   * storage that supports multi-get reads the Gets with an equal group with one request.
+   */
+  public static List<Object> getMultiGetGroup(Get get) {
+    List<Column<?>> columns = getPrimaryKeyColumns(get);
+    List<Object> group = new ArrayList<>(columns.size());
+    group.add(get.forFullTableName().get());
+    group.addAll(columns.subList(0, columns.size() - 1));
+    return group;
+  }
 
   @SuppressWarnings("unchecked")
   public static <T extends Operation> List<T> copyAndSetTargetToIfNot(

@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.Sets;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.CrudOperable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -415,18 +416,18 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     if (isolation == Isolation.READ_COMMITTED) {
       // In READ_COMMITTED isolation, the storage operation should be called twice because every get
       // should be a new read
-      verify(storage, times(2)).get(any(Get.class));
+      verify(storage, times(2)).get(any());
     } else if (isolation == Isolation.SNAPSHOT) {
       // In SNAPSHOT isolation, the storage operation should be called once because the second get
       // should be served from the snapshot
-      verify(storage).get(any(Get.class));
+      verify(storage).get(any());
     } else {
       assert isolation == Isolation.SERIALIZABLE;
 
       // In SERIALIZABLE isolation, the storage operation should be called twice because the second
       // get should be served from the snapshot, but the storage operation should additionally be
       // call the by the validation
-      verify(storage, times(2)).get(any(Get.class));
+      verify(storage, times(2)).get(any());
     }
 
     assertThat(result1.isPresent()).isTrue();
@@ -471,7 +472,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // The storage operation should be called three times: twice for the get by this transaction
       // and once for the update by another transaction
-      verify(storage, times(3)).get(any(Get.class));
+      verify(storage, times(3)).get(any());
 
       // The second record should be the updated one
       assertThat(result1.isPresent()).isTrue();
@@ -490,7 +491,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
       // The storage operation should be called twice: once for the get by this transaction and
       // once for the update by another transaction
-      verify(storage, times(2)).get(any(Get.class));
+      verify(storage, times(2)).get(any());
 
       // The first record should be the same as the second because the second
       // should be returned from the snapshot
@@ -1388,6 +1389,133 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     Scan scanAll = prepareScanAll(namespace1, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldBehaveCorrectly(
         scanAll, true, isolation, readOnly, commitType);
+  }
+
+  @ParameterizedTest
+  @MethodSource("snapshotAndSerializableAndCoordinatorState")
+  void batch_GetsGivenWithPreparedRecord_ShouldRecoverItAndReturnTheResultsInOrder(
+      Isolation isolation, TransactionState coordinatorState)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        System.currentTimeMillis(),
+        coordinatorState,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act
+    List<CrudOperable.BatchResult> results =
+        transaction.batch(
+            Arrays.asList(
+                prepareGet(0, 1, namespace1, TABLE_1),
+                prepareGet(0, 0, namespace1, TABLE_1), // PREPARED
+                prepareGet(1, 0, namespace1, TABLE_1),
+                prepareGet(0, NUM_TYPES, namespace1, TABLE_1), // Not found
+                prepareGet(0, 2, namespace1, TABLE_1)));
+    transaction.commit();
+
+    // Assert
+    assertThat(results).hasSize(5);
+    assertThat(results.get(0).getGetResult().get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(1).getGetResult().get().getInt(BALANCE))
+        .isEqualTo(coordinatorState == TransactionState.COMMITTED ? NEW_BALANCE : INITIAL_BALANCE);
+    assertThat(results.get(2).getGetResult().get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(3).getGetResult()).isEmpty();
+    assertThat(results.get(4).getGetResult().get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+  }
+
+  @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void batch_GetsGivenWithPreparedRecordWhenCoordinatorStateCommitted_ShouldBehaveAsGetDoes(
+      Isolation isolation, boolean readOnly)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            TransactionState.COMMITTED,
+            CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = begin(manager, readOnly);
+
+    // Act
+    // The Gets are on one partition, so a storage that supports multi-get reads them with one
+    List<CrudOperable.BatchResult> results =
+        transaction.batch(
+            Arrays.asList(
+                prepareGet(0, 1, namespace1, TABLE_1),
+                prepareGet(0, 0, namespace1, TABLE_1), // PREPARED
+                prepareGet(0, 2, namespace1, TABLE_1)));
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+    assertThat(results).hasSize(3);
+    assertThat(results.get(0).getGetResult().get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(2).getGetResult().get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    TransactionResult result =
+        (TransactionResult)
+            ((FilteredResult) results.get(1).getGetResult().get()).getOriginalResult();
+    if (isolation == Isolation.READ_COMMITTED) {
+      // The committed (before-image) record is returned, and recovered only in read-write mode
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getVersion()).isEqualTo(1);
+      if (readOnly) {
+        verify(recovery, never())
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      } else {
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      }
+    } else {
+      // The record is rolled forward, and the rolled-forward record is returned
+      assertThat(result.getId()).isEqualTo(ongoingTxId);
+      assertThat(result.getVersion()).isEqualTo(2);
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = Isolation.class,
+      names = {"SNAPSHOT", "SERIALIZABLE"})
+  void
+      batch_GetsGivenWithPreparedRecordWhenCoordinatorStateNotExist_ShouldThrowCrudConflictException(
+          Isolation isolation)
+          throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    populatePreparedRecordAndCoordinatorStateRecord(
+        storage,
+        namespace1,
+        TABLE_1,
+        TransactionState.PREPARED,
+        System.currentTimeMillis(),
+        null,
+        CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = manager.begin();
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                transaction.batch(
+                    Arrays.asList(
+                        prepareGet(0, 1, namespace1, TABLE_1),
+                        prepareGet(0, 0, namespace1, TABLE_1))))
+        .isInstanceOf(CrudConflictException.class);
+    transaction.rollback();
   }
 
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldBehaveCorrectly(
@@ -5163,7 +5291,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    verify(storage).get(any(Get.class));
+    verify(storage).get(any());
 
     DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(get);
@@ -5196,7 +5324,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    verify(storage).get(any(Get.class));
+    verify(storage).get(any());
 
     DistributedTransaction another = manager.beginReadOnly();
     Optional<Result> r = another.get(prepareGet(0, 0, namespace1, TABLE_1));
@@ -9875,7 +10003,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    verify(storage, times(2)).get(any(Get.class));
+    verify(storage, times(2)).get(any());
 
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
     switch (storageInfo.getMutationAtomicityUnit()) {
@@ -9998,7 +10126,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    verify(storage, times(2)).get(any(Get.class));
+    verify(storage, times(2)).get(any());
 
     StorageInfo storageInfo = admin.getStorageInfo(namespace1);
     switch (storageInfo.getMutationAtomicityUnit()) {
@@ -10121,7 +10249,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    verify(storage, times(2)).get(any(Get.class));
+    verify(storage, times(2)).get(any());
 
     StorageInfo storageInfo1 = admin.getStorageInfo(namespace1);
     StorageInfo storageInfo2 = admin.getStorageInfo(namespace2);
@@ -10258,7 +10386,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
     // Assert
     if (isolation == Isolation.SERIALIZABLE) {
       // one for transaction read, one for validation read
-      verify(storage, times(2)).get(any(Get.class));
+      verify(storage, times(2)).get(any());
 
       // one for prepare, one for commit
       verify(storage, times(2)).mutate(anyList());
@@ -10271,7 +10399,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       verify(coordinator).putState(any(CoordinatorStateAccessor.State.class));
     } else if (onePhaseCommitEnabled) {
       // only one transaction read, no validation read
-      verify(storage).get(any(Get.class));
+      verify(storage).get(any());
 
       // one-phase commit, so only one mutation call
       verify(storage).mutate(anyList());
@@ -10280,7 +10408,7 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
       verify(coordinator, never()).putState(any(CoordinatorStateAccessor.State.class));
     } else {
       // only one transaction read, no validation read
-      verify(storage).get(any(Get.class));
+      verify(storage).get(any());
 
       // one for prepare, one for commit
       verify(storage, times(2)).mutate(anyList());
@@ -12068,7 +12196,8 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            new StorageInfoProvider(admin));
     commit = spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
     return new ConsensusCommitManager(
         storage,
@@ -12139,6 +12268,14 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
 
   private boolean isGroupCommitEnabled() {
     return consensusCommitConfig.isCoordinatorGroupCommitEnabled();
+  }
+
+  static Stream<Arguments> snapshotAndSerializableAndCoordinatorState() {
+    return Stream.of(Isolation.SNAPSHOT, Isolation.SERIALIZABLE)
+        .flatMap(
+            isolation ->
+                Stream.of(TransactionState.COMMITTED, TransactionState.ABORTED)
+                    .map(state -> Arguments.of(isolation, state)));
   }
 
   static Stream<Arguments> isolationAndReadOnlyMode() {

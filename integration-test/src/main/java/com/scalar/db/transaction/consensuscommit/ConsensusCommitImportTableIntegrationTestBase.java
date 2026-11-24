@@ -146,7 +146,8 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            new StorageInfoProvider(admin));
     CommitHandler commit =
         spy(createCommitHandler(tableMetadataManager, groupCommitter, onePhaseCommitEnabled));
     return new ConsensusCommitManager(
@@ -516,7 +517,7 @@ public abstract class ConsensusCommitImportTableIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    verify(storage).get(any(Get.class));
+    verify(storage).get(any());
     assertThat(result1).isEqualTo(result2);
   }
 

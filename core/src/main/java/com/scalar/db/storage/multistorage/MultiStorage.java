@@ -1,6 +1,7 @@
 package com.scalar.db.storage.multistorage;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -20,6 +21,9 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -94,6 +98,38 @@ public class MultiStorage extends AbstractDistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     get = copyAndSetTargetToIfNot(get);
     return getStorage(get).get(get);
+  }
+
+  /**
+   * Calls {@link DistributedStorage#multiGet(List)} once per storage that the Gets are routed to.
+   */
+  @Override
+  public List<Optional<Result>> multiGet(List<Get> gets) throws ExecutionException {
+    Map<DistributedStorage, List<Integer>> byStorage = new LinkedHashMap<>();
+    List<Get> targeted = new ArrayList<>(gets.size());
+    for (int i = 0; i < gets.size(); i++) {
+      Get get = copyAndSetTargetToIfNot(gets.get(i));
+      targeted.add(get);
+      byStorage.computeIfAbsent(getStorage(get), s -> new ArrayList<>()).add(i);
+    }
+    @SuppressWarnings("unchecked")
+    Optional<Result>[] results = new Optional[gets.size()];
+    for (Map.Entry<DistributedStorage, List<Integer>> e : byStorage.entrySet()) {
+      List<Get> sub = new ArrayList<>(e.getValue().size());
+      for (int i : e.getValue()) {
+        sub.add(targeted.get(i));
+      }
+      List<Optional<Result>> subResults = e.getKey().multiGet(sub);
+      checkState(
+          subResults.size() == sub.size(),
+          "The storage returned %s results for %s Gets",
+          subResults.size(),
+          sub.size());
+      for (int k = 0; k < sub.size(); k++) {
+        results[e.getValue().get(k)] = subResults.get(k);
+      }
+    }
+    return Arrays.asList(results);
   }
 
   @Override

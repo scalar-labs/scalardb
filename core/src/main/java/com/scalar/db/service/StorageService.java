@@ -68,6 +68,11 @@ public class StorageService implements DistributedStorage {
   }
 
   @Override
+  public List<Optional<Result>> multiGet(List<Get> gets) throws ExecutionException {
+    return storage.multiGet(gets);
+  }
+
+  @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     return storage.scan(scan);
   }

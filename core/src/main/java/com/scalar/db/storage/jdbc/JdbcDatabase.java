@@ -117,7 +117,21 @@ public class JdbcDatabase extends AbstractDistributedStorage {
 
   @Override
   public Optional<Result> get(Get get) throws ExecutionException {
-    get = copyAndSetTargetToIfNot(get);
+    Get target = copyAndSetTargetToIfNot(get);
+    return select(connection -> jdbcCrudService.get(target, connection));
+  }
+
+  @Override
+  public List<Optional<Result>> multiGet(List<Get> gets) throws ExecutionException {
+    List<Get> targets = new ArrayList<>(gets.size());
+    for (Get get : gets) {
+      targets.add(copyAndSetTargetToIfNot(get));
+    }
+    return select(connection -> jdbcCrudService.multiGet(targets, connection));
+  }
+
+  /** Runs a selection on a read-only connection of its own. */
+  private <T> T select(ConnectionFunction<T> selection) throws ExecutionException {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
@@ -125,7 +139,7 @@ public class JdbcDatabase extends AbstractDistributedStorage {
         connection.setAutoCommit(false);
       }
       rdbEngine.setConnectionToReadOnly(connection, true);
-      Optional<Result> result = jdbcCrudService.get(get, connection);
+      T result = selection.apply(connection);
       if (requiresExplicitCommit) {
         connection.commit();
       }
@@ -697,5 +711,10 @@ public class JdbcDatabase extends AbstractDistributedStorage {
   public void close() {
     dataSource.close();
     tableMetadataDataSource.close();
+  }
+
+  @FunctionalInterface
+  private interface ConnectionFunction<T> {
+    T apply(Connection connection) throws SQLException, ExecutionException;
   }
 }

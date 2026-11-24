@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -106,6 +107,53 @@ public class JdbcDatabaseTest {
     // Assert
     verify(connection).setReadOnly(true);
     verify(jdbcCrudService).get(any(), any());
+    verify(connection).close();
+  }
+
+  @Test
+  public void whenMultiGetOperationExecuted_shouldCallJdbcCrudServiceOnceOnOneConnection()
+      throws Exception {
+    // Arrange
+    Get get1 =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "a"))
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "b"))
+            .build();
+
+    // Act
+    jdbcDatabase.multiGet(Arrays.asList(get1, get2));
+
+    // Assert
+    verify(connection).setReadOnly(true);
+    verify(jdbcCrudService).multiGet(Arrays.asList(get1, get2), connection);
+    verify(jdbcCrudService, never()).get(any(), any());
+    verify(connection).close();
+  }
+
+  @Test
+  public void
+      whenMultiGetOperationExecutedAndJdbcCrudServiceThrowsSQLException_shouldThrowExecutionException()
+          throws Exception {
+    // Arrange
+    when(jdbcCrudService.multiGet(anyList(), any())).thenThrow(sqlException);
+    Get get =
+        Get.newBuilder()
+            .namespace(NAMESPACE)
+            .table(TABLE)
+            .partitionKey(Key.ofText("p1", "a"))
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> jdbcDatabase.multiGet(Collections.singletonList(get)))
+        .isInstanceOf(ExecutionException.class)
+        .hasCause(sqlException);
     verify(connection).close();
   }
 

@@ -95,7 +95,7 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   /**
    * Executes the operations in order, as the default implementation does, except that each run of
    * consecutive Gets goes through {@link CrudHandler#batchGet(List, TransactionContext)}, which
-   * runs them in parallel.
+   * reads their records with one storage multi-get or runs them in parallel.
    */
   @Override
   public List<BatchResult> batch(List<? extends Operation> operations) throws CrudException {

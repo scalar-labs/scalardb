@@ -152,7 +152,8 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
             tableMetadataManager,
             consensusCommitConfig.isIncludeMetadataEnabled(),
             consensusCommitConfig.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
+            parallelExecutor,
+            new StorageInfoProvider(admin));
     CommitHandler commit = spy(createCommitHandler(tableMetadataManager, groupCommitter));
     manager =
         new ConsensusCommitManager(
@@ -527,7 +528,7 @@ public abstract class ConsensusCommitNullMetadataIntegrationTestBase {
     transaction.commit();
 
     // Assert
-    verify(storage).get(any(Get.class));
+    verify(storage).get(any());
     assertThat(result1).isEqualTo(result2);
   }
 

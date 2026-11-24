@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -16,6 +17,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
@@ -33,8 +35,13 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
@@ -113,6 +120,85 @@ public class JdbcCrudServiceTest {
     // Assert
     verify(operationChecker).check(any(Get.class));
     verify(queryBuilder).select(any());
+  }
+
+  @Test
+  public void multiGet_CharKeyColumnGiven_ShouldMatchPaddedValuesWithOneQuery() throws Exception {
+    // Arrange
+    when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(anyList(), anyList())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.build()).thenReturn(selectQuery);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    // A CHAR(5) column returns its values padded with spaces
+    when(resultSet.next()).thenReturn(true, true, false);
+    when(resultSet.getString("p1")).thenReturn("a    ", "bb   ");
+    when(resultSet.getString("v1")).thenReturn("x", "y");
+    ResultSetMetaData resultSetMetaData = mock(ResultSetMetaData.class);
+    when(resultSet.getMetaData()).thenReturn(resultSetMetaData);
+    when(resultSet.findColumn("p1")).thenReturn(1);
+    when(resultSetMetaData.getColumnType(1)).thenReturn(Types.CHAR);
+    List<Get> gets = new ArrayList<>();
+    for (String p1 : Arrays.asList("a", "bb", "a ")) {
+      gets.add(
+          Get.newBuilder()
+              .namespace(NAMESPACE)
+              .table(TABLE)
+              .partitionKey(Key.ofText("p1", p1))
+              .build());
+    }
+
+    // Act
+    List<Optional<Result>> results = jdbcCrudService.multiGet(gets, connection);
+
+    // Assert
+    assertThat(results).hasSize(3);
+    assertThat(results.get(0).map(r -> r.getText("v1"))).hasValue("x");
+    assertThat(results.get(1).map(r -> r.getText("v1"))).hasValue("y");
+    assertThat(results.get(2).map(r -> r.getText("v1"))).hasValue("x");
+    verify(connection, times(1)).prepareStatement(any());
+  }
+
+  @Test
+  public void multiGet_RecordMatchingNoGetOnIntKeyGiven_ShouldCheckTheMissedGetsAgain()
+      throws Exception {
+    // Arrange
+    when(tableMetadataManager.getTableMetadata(any(Operation.class)))
+        .thenReturn(
+            TableMetadata.newBuilder()
+                .addColumn("p1", DataType.INT)
+                .addColumn("v1", DataType.TEXT)
+                .addPartitionKey("p1")
+                .build());
+    when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(anyList(), anyList())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any(), any(), anySet())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.build()).thenReturn(selectQuery);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    // The IN-list queries return a record that matches neither Get; the single Gets find nothing
+    when(resultSet.next()).thenReturn(true, false, true, false, false, false);
+    when(resultSet.getInt("p1")).thenReturn(3);
+    when(resultSet.getString("v1")).thenReturn("x");
+    List<Get> gets = new ArrayList<>();
+    for (int p1 : new int[] {1, 2}) {
+      gets.add(
+          Get.newBuilder()
+              .namespace(NAMESPACE)
+              .table(TABLE)
+              .partitionKey(Key.ofInt("p1", p1))
+              .build());
+    }
+
+    // Act
+    List<Optional<Result>> results = jdbcCrudService.multiGet(gets, connection);
+
+    // Assert
+    assertThat(results).hasSize(2).allMatch(r -> !r.isPresent());
+    // The IN list, the IN list of the missed values, and each Get by itself
+    verify(connection, times(4)).prepareStatement(any());
   }
 
   @Test
