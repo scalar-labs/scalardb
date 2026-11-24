@@ -1431,6 +1431,62 @@ public abstract class ConsensusCommitSpecificIntegrationTestBase {
   }
 
   @ParameterizedTest
+  @MethodSource("isolationAndReadOnlyMode")
+  void batch_GetsGivenWithPreparedRecordWhenCoordinatorStateCommitted_ShouldBehaveAsGetDoes(
+      Isolation isolation, boolean readOnly)
+      throws ExecutionException, CoordinatorException, TransactionException {
+    // Arrange
+    ConsensusCommitManager manager = createConsensusCommitManager(isolation);
+    populateRecords(manager, namespace1, TABLE_1);
+    String ongoingTxId =
+        populatePreparedRecordAndCoordinatorStateRecord(
+            storage,
+            namespace1,
+            TABLE_1,
+            TransactionState.PREPARED,
+            System.currentTimeMillis(),
+            TransactionState.COMMITTED,
+            CommitType.NORMAL_COMMIT);
+    DistributedTransaction transaction = begin(manager, readOnly);
+
+    // Act
+    // The Gets are on one partition, so a storage that supports multi-get reads them with one
+    List<CrudOperable.BatchResult> results =
+        transaction.batch(
+            Arrays.asList(
+                prepareGet(0, 1, namespace1, TABLE_1),
+                prepareGet(0, 0, namespace1, TABLE_1), // PREPARED
+                prepareGet(0, 2, namespace1, TABLE_1)));
+    transaction.commit();
+
+    waitForRecoveryCompletion(transaction);
+
+    // Assert
+    assertThat(results).hasSize(3);
+    assertThat(results.get(0).getGetResult().get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    assertThat(results.get(2).getGetResult().get().getInt(BALANCE)).isEqualTo(INITIAL_BALANCE);
+    TransactionResult result =
+        (TransactionResult)
+            ((FilteredResult) results.get(1).getGetResult().get()).getOriginalResult();
+    if (isolation == Isolation.READ_COMMITTED) {
+      // The committed (before-image) record is returned, and recovered only in read-write mode
+      assertThat(result.getId()).isEqualTo(ANY_ID_1);
+      assertThat(result.getVersion()).isEqualTo(1);
+      if (readOnly) {
+        verify(recovery, never())
+            .tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      } else {
+        verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+      }
+    } else {
+      // The record is rolled forward, and the rolled-forward record is returned
+      assertThat(result.getId()).isEqualTo(ongoingTxId);
+      assertThat(result.getVersion()).isEqualTo(2);
+      verify(recovery).tryRecover(any(Selection.class), any(TransactionResult.class), any());
+    }
+  }
+
+  @ParameterizedTest
   @EnumSource(
       value = Isolation.class,
       names = {"SNAPSHOT", "SERIALIZABLE"})

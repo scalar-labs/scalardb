@@ -10,9 +10,21 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BlobColumn;
+import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DateColumn;
+import com.scalar.db.io.DoubleColumn;
+import com.scalar.db.io.FloatColumn;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TimeColumn;
+import com.scalar.db.io.TimestampColumn;
+import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.service.StorageFactory;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,10 +34,13 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * Multi-get on JDBC databases: Gets that need more than one IN list, and TEXT keys whose SQL
- * equality differs from the equality of their values.
+ * Multi-get on JDBC databases: Gets that need more than one IN list, and keys whose SQL equality
+ * can differ from the equality of their values (TEXT under a collation, FLOAT and DOUBLE signed
+ * zeros, BLOB and date/time values).
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class JdbcDatabaseMultiGetIntegrationTest {
@@ -33,6 +48,7 @@ public class JdbcDatabaseMultiGetIntegrationTest {
   private static final String INT_TABLE = "int_keys";
   private static final String TEXT_TABLE = "text_keys";
   private static final String CASE_INSENSITIVE_COLLATION = "scalardb_multi_get_ci";
+  private static final String KEY_TABLE_PREFIX = "keys_";
 
   private RdbEngineStrategy rdbEngine;
   private DistributedStorageAdmin admin;
@@ -71,6 +87,38 @@ public class JdbcDatabaseMultiGetIntegrationTest {
             .build(),
         true);
     makeTextKeyCaseInsensitive();
+    for (DataType type : DataType.values()) {
+      if (isKeyTypeTested(type)) {
+        admin.createTable(
+            NAMESPACE,
+            KEY_TABLE_PREFIX + type,
+            TableMetadata.newBuilder()
+                .addColumn("p", DataType.INT)
+                .addColumn("c", type)
+                .addColumn("v", DataType.TEXT)
+                .addPartitionKey("p")
+                .addClusteringKey("c")
+                .build(),
+            true);
+      }
+    }
+  }
+
+  /** The key types of the parity test: the inexact ones but TEXT, which has its own tests. */
+  private boolean isKeyTypeTested(DataType type) {
+    switch (type) {
+      case FLOAT:
+      case DOUBLE:
+      case DATE:
+      case TIME:
+      case TIMESTAMP:
+      case TIMESTAMPTZ:
+        return true;
+      case BLOB:
+        return !JdbcTestUtils.isOracle(rdbEngine) && !JdbcTestUtils.isDb2(rdbEngine);
+      default:
+        return false;
+    }
   }
 
   /** Gives the TEXT key a case-insensitive collation on the engines where that is easy to set. */
@@ -98,6 +146,9 @@ public class JdbcDatabaseMultiGetIntegrationTest {
   void tearDown() throws Exception {
     admin.dropTable(NAMESPACE, INT_TABLE, true);
     admin.dropTable(NAMESPACE, TEXT_TABLE, true);
+    for (DataType type : DataType.values()) {
+      admin.dropTable(NAMESPACE, KEY_TABLE_PREFIX + type, true);
+    }
     admin.dropNamespace(NAMESPACE, true);
     if (JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcEnv.isYugabyte()) {
       testUtils.executeSql("DROP COLLATION IF EXISTS " + CASE_INSENSITIVE_COLLATION);
@@ -212,5 +263,124 @@ public class JdbcDatabaseMultiGetIntegrationTest {
 
     // Assert
     assertThat(results).hasSize(3).allMatch(r -> !r.isPresent());
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = DataType.class,
+      names = {"FLOAT", "DOUBLE", "BLOB", "DATE", "TIME", "TIMESTAMP", "TIMESTAMPTZ"})
+  public void multiGet_KeysOfTypeGiven_ShouldRetrieveWhatEachGetRetrievesByItself(DataType type)
+      throws ExecutionException {
+    if (!isKeyTypeTested(type)) {
+      return;
+    }
+
+    // Arrange
+    String table = KEY_TABLE_PREFIX + type;
+    List<Column<?>> stored = storedKeys(type);
+    for (int i = 0; i < stored.size(); i++) {
+      storage.put(
+          Put.newBuilder()
+              .namespace(NAMESPACE)
+              .table(table)
+              .partitionKey(Key.ofInt("p", 1))
+              .clusteringKey(Key.newBuilder().add(stored.get(i)).build())
+              .textValue("v", "v" + i)
+              .build());
+    }
+    List<Get> gets = new ArrayList<>();
+    for (Column<?> key : getKeys(type)) {
+      gets.add(
+          Get.newBuilder()
+              .namespace(NAMESPACE)
+              .table(table)
+              .partitionKey(Key.ofInt("p", 1))
+              .clusteringKey(Key.newBuilder().add(key).build())
+              .build());
+    }
+
+    // Act
+    List<Optional<Result>> results = storage.multiGet(gets);
+
+    // Assert
+    assertThat(results).hasSize(gets.size());
+    for (int i = 0; i < gets.size(); i++) {
+      Optional<Result> expected = storage.get(gets.get(i));
+      assertThat(results.get(i).map(r -> r.getText("v")))
+          .as("Get %s", gets.get(i).getClusteringKey())
+          .isEqualTo(expected.map(r -> r.getText("v")));
+    }
+    // The stored keys come first in getKeys(), and each of them finds its record
+    for (int i = 0; i < stored.size(); i++) {
+      assertThat(results.get(i).map(r -> r.getText("v"))).hasValue("v" + i);
+    }
+  }
+
+  /** The keys of the records the parity test writes. */
+  private static List<Column<?>> storedKeys(DataType type) {
+    switch (type) {
+      case FLOAT:
+        return Arrays.asList(FloatColumn.of("c", 0.0f), FloatColumn.of("c", 1.5f));
+      case DOUBLE:
+        return Arrays.asList(DoubleColumn.of("c", 0.0), DoubleColumn.of("c", 1.5));
+      case BLOB:
+        return Arrays.asList(
+            BlobColumn.of("c", new byte[] {1, 2}), BlobColumn.of("c", new byte[] {3}));
+      case DATE:
+        return Arrays.asList(
+            DateColumn.of("c", LocalDate.of(2024, 2, 29)),
+            DateColumn.of("c", LocalDate.of(2024, 3, 1)));
+      case TIME:
+        return Arrays.asList(
+            TimeColumn.of("c", LocalTime.of(10, 0)),
+            TimeColumn.of("c", LocalTime.of(12, 34, 56, 123_456_000)));
+      case TIMESTAMP:
+        return Arrays.asList(
+            TimestampColumn.of("c", LocalDateTime.of(2024, 2, 29, 10, 0)),
+            TimestampColumn.of("c", LocalDateTime.of(2024, 2, 29, 12, 34, 56, 789_000_000)));
+      case TIMESTAMPTZ:
+        return Arrays.asList(
+            TimestampTZColumn.of("c", Instant.ofEpochMilli(1_700_000_000_000L)),
+            TimestampTZColumn.of("c", Instant.ofEpochMilli(1_700_000_000_789L)));
+      default:
+        throw new AssertionError(type);
+    }
+  }
+
+  /**
+   * The keys of the Gets: the stored keys, then keys without records, and, for FLOAT and DOUBLE,
+   * the negative zero, which SQL finds equal to the stored positive zero.
+   */
+  private static List<Column<?>> getKeys(DataType type) {
+    List<Column<?>> keys = new ArrayList<>(storedKeys(type));
+    switch (type) {
+      case FLOAT:
+        keys.add(FloatColumn.of("c", -0.0f));
+        keys.add(FloatColumn.of("c", 2.5f));
+        break;
+      case DOUBLE:
+        keys.add(DoubleColumn.of("c", -0.0));
+        keys.add(DoubleColumn.of("c", 2.5));
+        break;
+      case BLOB:
+        keys.add(BlobColumn.of("c", new byte[] {1}));
+        keys.add(BlobColumn.of("c", new byte[] {1, 2, 0}));
+        break;
+      case DATE:
+        keys.add(DateColumn.of("c", LocalDate.of(2024, 3, 2)));
+        break;
+      case TIME:
+        keys.add(TimeColumn.of("c", LocalTime.of(12, 34, 56, 123_457_000)));
+        break;
+      case TIMESTAMP:
+        keys.add(TimestampColumn.of("c", LocalDateTime.of(2024, 2, 29, 12, 34, 56, 788_000_000)));
+        break;
+      case TIMESTAMPTZ:
+        keys.add(TimestampTZColumn.of("c", Instant.ofEpochMilli(1_700_000_000_788L)));
+        break;
+      default:
+        throw new AssertionError(type);
+    }
+    return keys;
   }
 }

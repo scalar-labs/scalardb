@@ -1039,6 +1039,92 @@ public class CrudHandlerTest {
   }
 
   @Test
+  public void
+      batchGet_GetsReadBefore_ReadCommittedIsolation_ShouldReadThemAgainWithMultiGetAndRepeatedKeyByItself()
+          throws ExecutionException, CrudException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    Get get3 = prepareGet(); // The same record as get1
+    when(storage.get(toGetForStorageFrom(get1)))
+        .thenReturn(Optional.of(prepareResult(TransactionState.COMMITTED)));
+    when(storage.multiGet(Arrays.asList(toGetForStorageFrom(get1), toGetForStorageFrom(get2))))
+        .thenReturn(
+            Arrays.asList(
+                Optional.of(prepareResult(TransactionState.COMMITTED)),
+                Optional.of(prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED))));
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.READ_COMMITTED, false, false);
+    handler.get(get1, context);
+
+    // Act
+    List<Optional<Result>> results = handler.batchGet(Arrays.asList(get1, get2, get3), context);
+
+    // Assert
+    assertThat(results).hasSize(3).allMatch(Optional::isPresent);
+    // In READ_COMMITTED, get1, read before, is read again from storage, here with the multi-get;
+    // get3 on the same record as get1 is read again by itself
+    verify(storage).multiGet(Arrays.asList(toGetForStorageFrom(get1), toGetForStorageFrom(get2)));
+    verify(storage, times(2)).get(toGetForStorageFrom(get1));
+    assertThat(snapshot.containsKeyInReadSet(new Snapshot.Key(get1))).isTrue();
+    assertThat(snapshot.containsKeyInReadSet(new Snapshot.Key(get2))).isTrue();
+    assertThat(snapshot.containsKeyInGetSet(get1)).isFalse();
+    assertThat(snapshot.containsKeyInGetSet(get2)).isFalse();
+  }
+
+  @ParameterizedTest
+  @EnumSource(Isolation.class)
+  public void
+      batchGet_PreparedRecordsReadWithMultiGetInReadOnlyMode_ShouldRecoverEachAsGetDoesWithoutReadSet(
+          Isolation isolation) throws ExecutionException, CrudException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    Snapshot.Key key1 = new Snapshot.Key(get1);
+    Snapshot.Key key2 = new Snapshot.Key(get2);
+    TransactionResult prepared1 = prepareResult(TransactionState.PREPARED);
+    TransactionResult prepared2 = prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.PREPARED);
+    when(storage.multiGet(Arrays.asList(toGetForStorageFrom(get1), toGetForStorageFrom(get2))))
+        .thenReturn(Arrays.asList(Optional.of(prepared1), Optional.of(prepared2)));
+    RecoveryExecutor.RecoveryType recoveryType =
+        isolation == Isolation.READ_COMMITTED
+            ? RecoveryExecutor.RecoveryType.RETURN_COMMITTED_RESULT_AND_NOT_RECOVER
+            : RecoveryExecutor.RecoveryType.RETURN_LATEST_RESULT_AND_RECOVER;
+    TransactionResult recovered1 = prepareResult(TransactionState.COMMITTED);
+    TransactionResult recovered2 =
+        prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED);
+    @SuppressWarnings("unchecked")
+    Future<Void> recoveryFuture = mock(Future.class);
+    when(recoveryExecutor.execute(key1, get1, prepared1, ANY_ID_1, recoveryType))
+        .thenReturn(
+            new RecoveryExecutor.Result(key1, Optional.of(recovered1), recoveryFuture, false));
+    when(recoveryExecutor.execute(key2, get2, prepared2, ANY_ID_1, recoveryType))
+        .thenReturn(
+            new RecoveryExecutor.Result(key2, Optional.of(recovered2), recoveryFuture, false));
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context = new TransactionContext(ANY_ID_1, snapshot, isolation, true, false);
+
+    // Act
+    List<Optional<Result>> results = handler.batchGet(Arrays.asList(get1, get2), context);
+
+    // Assert
+    assertThat(results).hasSize(2).allMatch(Optional::isPresent);
+    assertThat(results.get(0).get().getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(results.get(1).get().getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_3);
+    verify(recoveryExecutor).execute(key1, get1, prepared1, ANY_ID_1, recoveryType);
+    verify(recoveryExecutor).execute(key2, get2, prepared2, ANY_ID_1, recoveryType);
+    verify(storage, never()).get(any());
+    // In read-only mode, nothing enters the read set; the get set holds the results for snapshot
+    // reads, which READ_COMMITTED does not do
+    assertThat(snapshot.containsKeyInReadSet(key1)).isFalse();
+    assertThat(snapshot.containsKeyInReadSet(key2)).isFalse();
+    boolean inGetSet = isolation != Isolation.READ_COMMITTED;
+    assertThat(snapshot.containsKeyInGetSet(get1)).isEqualTo(inGetSet);
+    assertThat(snapshot.containsKeyInGetSet(get2)).isEqualTo(inGetSet);
+  }
+
+  @Test
   public void batchGet_MultiGetFails_ShouldThrowCrudException() throws ExecutionException {
     // Arrange
     Get get1 = prepareGet();
