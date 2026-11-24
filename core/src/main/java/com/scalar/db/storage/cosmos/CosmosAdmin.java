@@ -6,6 +6,7 @@ import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
+import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.models.CompositePath;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
@@ -134,45 +135,60 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     CosmosContainerProperties properties = computeContainerProperties(table, metadata);
     if (ifNotExists) {
       cosmosDatabase.createContainerIfNotExists(properties);
+      addOrReplaceStoredProcedure(database, table);
     } else {
       cosmosDatabase.createContainer(properties);
+      addStoredProcedure(database, table);
     }
-    addStoredProcedure(database, table, ifNotExists);
   }
 
-  private void addStoredProcedure(String namespace, String table, boolean ifNotExists)
+  private void addStoredProcedure(String namespace, String table) throws ExecutionException {
+    client
+        .getDatabase(namespace)
+        .getContainer(table)
+        .getScripts()
+        .createStoredProcedure(computeContainerStoredProcedureProperties());
+  }
+
+  private void addOrReplaceStoredProcedure(String namespace, String table)
       throws ExecutionException {
-    CosmosDatabase cosmosDatabase = client.getDatabase(namespace);
+    CosmosScripts scripts = client.getDatabase(namespace).getContainer(table).getScripts();
     CosmosStoredProcedureProperties storedProcedureProperties =
         computeContainerStoredProcedureProperties();
 
-    if (ifNotExists && storedProcedureExists(namespace, table)) {
+    Optional<CosmosStoredProcedureProperties> existingStoredProcedureProperties =
+        readStoredProcedureProperties(scripts);
+    if (!existingStoredProcedureProperties.isPresent()) {
+      scripts.createStoredProcedure(storedProcedureProperties);
       return;
     }
-    cosmosDatabase
-        .getContainer(table)
-        .getScripts()
-        .createStoredProcedure(storedProcedureProperties);
+
+    // The existing stored procedure can differ from the one of this version, for example, when
+    // an older version added it. In that case, replace it with the one of this version.
+    // Replacing a stored procedure requires the properties read from Cosmos DB because they
+    // have the link to it, so this sets the body to them
+    CosmosStoredProcedureProperties properties = existingStoredProcedureProperties.get();
+    if (!properties.getBody().equals(storedProcedureProperties.getBody())) {
+      properties.setBody(storedProcedureProperties.getBody());
+      scripts.getStoredProcedure(STORED_PROCEDURE_FILE_NAME).replace(properties);
+    }
   }
 
-  private boolean storedProcedureExists(String namespace, String table) {
+  private Optional<CosmosStoredProcedureProperties> readStoredProcedureProperties(
+      CosmosScripts scripts) {
     try {
-      client
-          .getDatabase(namespace)
-          .getContainer(table)
-          .getScripts()
-          .getStoredProcedure(STORED_PROCEDURE_FILE_NAME)
-          .read();
-      return true;
+      return Optional.of(
+          scripts.getStoredProcedure(STORED_PROCEDURE_FILE_NAME).read().getProperties());
     } catch (CosmosException e) {
       if (e.getStatusCode() == 404) {
-        return false;
+        return Optional.empty();
       }
       throw e;
     }
   }
 
-  private CosmosStoredProcedureProperties computeContainerStoredProcedureProperties()
+  @VisibleForTesting
+  CosmosStoredProcedureProperties computeContainerStoredProcedureProperties()
       throws ExecutionException {
     String storedProcedure;
     try (InputStream storedProcedureInputStream =
