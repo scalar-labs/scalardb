@@ -86,13 +86,15 @@ public final class RdbEngineFactory {
             JdbcUtils.initDataSourceForAdmin(config, new RdbEngineMysql(config));
         Connection connection = dataSource.getConnection()) {
       DatabaseMetaData metaData = connection.getMetaData();
-      if (metaData.getDatabaseProductVersion().contains("TiDB")) {
-        return new RdbEngineTidb(config);
+      String productVersion = metaData.getDatabaseProductVersion();
+      if (productVersion.contains("TiDB")) {
+        return new RdbEngineTidb(config, RdbEngineTidb.selectTidbBinaryCollation(productVersion));
       } else {
         return new RdbEngineMysql(
             config,
             RdbEngineMysql.supportsInsertRowAlias(metaData),
-            RdbEngineMysql.supportsRenameColumn(metaData));
+            RdbEngineMysql.supportsRenameColumn(metaData),
+            RdbEngineMysql.selectMysqlBinaryCollation(productVersion));
       }
     } catch (SQLException e) {
       // We can't throw a checked exception here because it would break backward compatibility since

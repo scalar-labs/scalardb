@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
@@ -12,6 +13,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -132,5 +134,50 @@ class RdbEngineSqliteTest {
       throwIfInvalidTableName_WhenContainsNamespaceSeparator_ShouldThrowIllegalArgumentException() {
     assertThatThrownBy(() -> rdbEngine.throwIfInvalidTableName("a$b"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnCollateBinary() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE BINARY");
+  }
+
+  @Test
+  void getDatabaseTextIssues_DefaultDatabase_ShouldReturnEmpty() throws SQLException {
+    // Arrange Act
+    List<DatabaseTextIssue> issues = rdbEngine.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(issues).isEmpty();
+  }
+
+  @Test
+  void getDatabaseTextIssues_Utf16Database_ShouldReturnEncodingByteOrder()
+      throws SQLException, IOException {
+    // Arrange
+    File utf16File = File.createTempFile(getClass().getName(), ".db");
+    try (Connection utf16Connection =
+        DriverManager.getConnection("jdbc:sqlite:" + utf16File.getAbsolutePath())) {
+      try (Statement stmt = utf16Connection.createStatement()) {
+        stmt.execute("PRAGMA encoding = 'UTF-16le'");
+        stmt.execute("CREATE TABLE t (c TEXT)");
+      }
+
+      // Act
+      List<DatabaseTextIssue> issues = rdbEngine.getDatabaseTextIssues(utf16Connection);
+
+      // Assert
+      assertThat(issues)
+          .containsExactly(
+              new DatabaseTextIssue("UTF-16le", DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER));
+    } finally {
+      assertTrue(utf16File.delete());
+    }
   }
 }
