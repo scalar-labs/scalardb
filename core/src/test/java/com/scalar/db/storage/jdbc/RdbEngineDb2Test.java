@@ -1,14 +1,23 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -98,5 +107,184 @@ public class RdbEngineDb2Test {
                     scanAll, metadata))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("blob_column1");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnEmpty() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngineDb2;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("");
+  }
+
+  @Test
+  void getCollationClause_ShouldReturnEmpty() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    String clause = rdbEngineDb2.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEmpty();
+  }
+
+  @Test
+  void classify_IdentityOnLowerCaseUtf8_ShouldReturnCodePointOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "utf-8");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
+  }
+
+  @Test
+  void classify_UcaCollation_ShouldReturnOtherOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("UCA400_NO", "utf-8");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
+  }
+
+  @Test
+  void classify_Iso88591_ShouldReturnPartialCharacterSet() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY", "iso8859-1");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
+  }
+
+  @Test
+  void classify_Identity16Bit_ShouldReturnOtherOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("IDENTITY_16BIT", "UTF-8");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
+  }
+
+  @Test
+  void classify_Unknown_ShouldReturnOtherOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("UNKNOWN", "UTF-8");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineDb2.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
+  }
+
+  private static Connection connectionWithDatabaseSettings(String... namesAndValues)
+      throws SQLException {
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    ResultSet resultSet = mock(ResultSet.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(statement.executeQuery(
+            "SELECT NAME, VALUE FROM SYSIBMADM.DBCFG WHERE NAME IN ('codeset', 'db_collname')"))
+        .thenReturn(resultSet);
+    int rows = namesAndValues.length / 2;
+    Boolean[] next = new Boolean[rows];
+    String[] names = new String[rows];
+    String[] values = new String[rows];
+    for (int i = 0; i < rows; i++) {
+      next[i] = i < rows - 1;
+      names[i] = namesAndValues[2 * i];
+      values[i] = namesAndValues[2 * i + 1];
+    }
+    when(resultSet.next()).thenReturn(true, next);
+    when(resultSet.getString(1)).thenReturn(names[0], Arrays.copyOfRange(names, 1, rows));
+    when(resultSet.getString(2)).thenReturn(values[0], Arrays.copyOfRange(values, 1, rows));
+    return connection;
+  }
+
+  @Test
+  void getDatabaseTextIssues_Utf8AndIdentity_ShouldReturnEmpty() throws SQLException {
+    // Arrange
+    Connection connection =
+        connectionWithDatabaseSettings("codeset", "UTF-8", "db_collname", "IDENTITY");
+
+    // Act
+    List<DatabaseTextIssue> actual = rdbEngineDb2.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  void getDatabaseTextIssues_UcaCollation_ShouldReturnNonBinaryCollation() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("db_collname", "UCA400_NO");
+
+    // Act
+    List<DatabaseTextIssue> actual = rdbEngineDb2.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            new DatabaseTextIssue("UCA400_NO", DatabaseTextIssue.Kind.NON_BINARY_COLLATION));
+  }
+
+  @Test
+  void getDatabaseTextIssues_CollationNotReadable_ShouldReturnEmpty() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("codeset", "UTF-8");
+
+    // Act
+    List<DatabaseTextIssue> actual = rdbEngineDb2.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  void getDatabaseTextIssues_Iso88591_ShouldReturnPartialCharacterSet() throws SQLException {
+    // Arrange
+    Connection connection = connectionWithDatabaseSettings("codeset", "ISO8859-1");
+
+    // Act
+    List<DatabaseTextIssue> actual = rdbEngineDb2.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            new DatabaseTextIssue("ISO8859-1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
+  }
+
+  @Test
+  void getDatabaseTextIssues_Iso88591AndUcaCollation_ShouldReturnBothFromOneQuery()
+      throws SQLException {
+    // Arrange
+    Connection connection =
+        connectionWithDatabaseSettings("codeset", "ISO8859-1", "db_collname", "UCA400_NO");
+
+    // Act
+    List<DatabaseTextIssue> actual = rdbEngineDb2.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            new DatabaseTextIssue("ISO8859-1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET),
+            new DatabaseTextIssue("UCA400_NO", DatabaseTextIssue.Kind.NON_BINARY_COLLATION));
+    verify(connection, times(1)).createStatement();
   }
 }
