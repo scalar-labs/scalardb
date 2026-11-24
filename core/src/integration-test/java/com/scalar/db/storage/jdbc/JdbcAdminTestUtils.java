@@ -18,6 +18,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 public class JdbcAdminTestUtils extends AdminTestUtils {
@@ -155,6 +157,10 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
     deleteAllRowsWithSql(namespace, table + "_tx_metadata");
   }
 
+  public void executeSql(String sql) throws SQLException {
+    execute(sql);
+  }
+
   private void execute(String sql) throws SQLException {
     withConnection(
         dataSource,
@@ -261,6 +267,115 @@ public class JdbcAdminTestUtils extends AdminTestUtils {
                     requiresExplicitCommit,
                     ps -> ps.setString(1, namespace),
                     ResultSet::next));
+  }
+
+  /** Returns the collation that {@link RdbEngineStrategy#textColumnCollationSql} reads. */
+  @Nullable
+  public String readTextColumnCollation(String namespace, String table, String column)
+      throws SQLException {
+    String sql = rdbEngine.textColumnCollationSql();
+    if (sql == null) {
+      throw new UnsupportedOperationException();
+    }
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, String, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    rdbEngine,
+                    sql,
+                    requiresExplicitCommit,
+                    ps -> {
+                      ps.setString(1, namespace);
+                      ps.setString(2, table);
+                      ps.setString(3, column);
+                    },
+                    rs -> rs.next() ? rs.getString(1) : null));
+  }
+
+  /**
+   * Returns the collation the catalog records for a column, or null when the engine has no
+   * per-column collation (Db2, Spanner) or the SQLite column declares none.
+   */
+  @Nullable
+  public String getColumnCollation(String namespace, String table, String column)
+      throws SQLException {
+    String sql;
+    String[] params;
+    if (JdbcTestUtils.isMysql(rdbEngine)) {
+      sql =
+          "SELECT COLLATION_NAME FROM information_schema.COLUMNS"
+              + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+      params = new String[] {namespace, table, column};
+    } else if (JdbcTestUtils.isPostgresql(rdbEngine)) {
+      sql =
+          "SELECT CASE WHEN a.attcollation = 100 THEN 'default' ELSE c.collname END"
+              + " FROM pg_attribute a"
+              + " JOIN pg_class t ON a.attrelid = t.oid"
+              + " JOIN pg_namespace n ON t.relnamespace = n.oid"
+              + " LEFT JOIN pg_collation c ON c.oid = a.attcollation"
+              + " WHERE n.nspname = ? AND t.relname = ? AND a.attname = ?";
+      params = new String[] {namespace, table, column};
+    } else if (JdbcTestUtils.isOracle(rdbEngine)) {
+      sql =
+          "SELECT COLLATION FROM ALL_TAB_COLS"
+              + " WHERE OWNER = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+      params = new String[] {namespace, table, column};
+    } else if (JdbcTestUtils.isSqlServer(rdbEngine)) {
+      sql =
+          "SELECT c.collation_name FROM sys.columns c"
+              + " JOIN sys.tables t ON c.object_id = t.object_id"
+              + " JOIN sys.schemas s ON t.schema_id = s.schema_id"
+              + " WHERE s.name = ? AND t.name = ? AND c.name = ?";
+      params = new String[] {namespace, table, column};
+    } else if (JdbcTestUtils.isSqlite(rdbEngine)) {
+      String ddl =
+          withConnection(
+              dataSource,
+              requiresExplicitCommit,
+              (ThrowableFunction<Connection, String, SQLException>)
+                  connection ->
+                      executeQuery(
+                          connection,
+                          rdbEngine,
+                          "SELECT sql FROM sqlite_master WHERE name = ?",
+                          requiresExplicitCommit,
+                          ps -> ps.setString(1, namespace + "$" + table),
+                          rs -> rs.next() ? rs.getString(1) : null));
+      if (ddl == null) {
+        return null;
+      }
+      Matcher matcher =
+          Pattern.compile("\"" + Pattern.quote(column) + "\"\\s+TEXT(?:\\s+COLLATE\\s+(\\w+))?")
+              .matcher(ddl);
+      return matcher.find() ? matcher.group(1) : null;
+    } else {
+      return null;
+    }
+
+    return withConnection(
+        dataSource,
+        requiresExplicitCommit,
+        (ThrowableFunction<Connection, String, SQLException>)
+            connection ->
+                executeQuery(
+                    connection,
+                    rdbEngine,
+                    sql,
+                    requiresExplicitCommit,
+                    ps -> {
+                      for (int i = 0; i < params.length; i++) {
+                        ps.setString(i + 1, params[i]);
+                      }
+                    },
+                    rs -> rs.next() ? rs.getString(1) : null));
+  }
+
+  public <T> T withCatalogConnection(ThrowableFunction<Connection, T, SQLException> function)
+      throws SQLException {
+    return withConnection(dataSource, requiresExplicitCommit, function);
   }
 
   @Override

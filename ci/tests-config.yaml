@@ -11,6 +11,8 @@
 #     db_healthcheck: (optional) a bash script that succeed if the database is ready. The script will be run repeatedly with a delay until it succeeds with a 10 minutes timeout. If not provided, it is assumed the database is ready before the run script is executed.
 #     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+#     test_groups: (optional) an array of test groups, each with a `label`, a `name`, a `group_commit_enabled` flag and the `tests` classes to run. Each group becomes one matrix entry that runs only its test classes, and the binary results of the groups are aggregated into one test report per group commit flag. With `versions`, each version gets a matrix entry for each group and its own test reports. Instead of `tests`, one group per group commit flag can set `remaining_tests: true` to run the test classes of `test_sources` that the other groups with the same flag do not list; with group commit enabled, only the ConsensusCommit test classes. Cannot be combined with `disable_group_commit`.
+#     test_sources: (optional) with `test_groups`, the source folders of the test classes, relative to the repository root. The CI fails if a test class of these folders is missing from the test groups, if a ConsensusCommit test class is missing from the group commit test groups, or if a test class is listed more than once for the same group commit flag. Required by `remaining_tests`.
 
 blob-storage:
   - label: blob-storage
@@ -108,9 +110,7 @@ jdbc:
     # Connect over TCP, which the entrypoint's temporary server does not listen on
     db_healthcheck: docker exec alloydb psql -h 127.0.0.1 -U postgres -c "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
-      # AlloyDB Omni forces the ICU locale provider at initdb time, so the test database takes the
-      # byte-order C locale of the libc provider, which matches the code point order ScalarDB uses for TEXT.
-      docker exec alloydb psql -U postgres -c "CREATE DATABASE test_db TEMPLATE template0 LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' ENCODING UTF8;"
+      docker exec alloydb psql -U postgres -c "CREATE DATABASE test_db TEMPLATE template0 ENCODING UTF8;"
       docker exec alloydb psql -U postgres -c "
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE test_db TO test;"
@@ -132,7 +132,7 @@ jdbc:
 
   - label: mariadb_%VERSION%
     display_name: MariaDB %VERSION%
-    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION% --character-set-server=utf8mb4 --collation-server=utf8mb4_nopad_bin
+    setup: docker run --name mariadb -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 -d mariadb:%VERSION%
     versions:
       - 10.11
       - 11.4
@@ -154,13 +154,7 @@ jdbc:
 
   - label: mysql_%VERSION%
     display_name: MySQL %VERSION%
-    # utf8mb4_0900_bin (NO PAD) is the exact match for the code point order ScalarDB uses for TEXT;
-    # it only exists on MySQL 8.x, and mysqld 5.7 exits at startup on unknown collations,
-    # so 5.7 stays on legacy utf8mb4_bin (PAD SPACE, closest available option).
-    setup: |
-      COLLATION=utf8mb4_0900_bin
-      case "%VERSION%" in 5.7*) COLLATION=utf8mb4_bin;; esac
-      docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION% --character-set-server=utf8mb4 --collation-server=$COLLATION
+    setup: docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql -p 3306:3306 mysql:%VERSION%
     versions:
       - 5.7
       - 8.0
@@ -201,6 +195,23 @@ jdbc:
     create_test_user: |
       # Oracle connection endpoint depends on the Oracle version used
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
+      # ScalarDB declares COLLATE BINARY on TEXT columns, which requires MAX_STRING_SIZE=EXTENDED
+      # (ORA-43929). The parameter is PDB-scoped and irreversible. OPEN UPGRADE and utl32k are SYSDBA
+      # operations, and the first close has to come from outside the PDB, so the migration runs on its
+      # own SYSDBA connection to the CDB root.
+      echo "WHENEVER SQLERROR EXIT FAILURE
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE ${PDB[%VERSION%]} OPEN UPGRADE;
+      ALTER SESSION SET CONTAINER=${PDB[%VERSION%]};
+      ALTER SYSTEM SET MAX_STRING_SIZE=EXTENDED;
+      @?/rdbms/admin/utl32k.sql
+      @?/rdbms/admin/utlrp.sql
+      -- utl32k.sql ends by setting WHENEVER SQLERROR CONTINUE, so re-arm the directive before the
+      -- statements below; otherwise a failure here leaves the PDB unusable and still exits zero.
+      WHENEVER SQLERROR EXIT FAILURE
+      ALTER PLUGGABLE DATABASE CLOSE IMMEDIATE;
+      ALTER PLUGGABLE DATABASE OPEN;
+      EXIT" | docker exec -i oracle sqlplus -s "/ as sysdba"
       echo "CREATE USER test IDENTIFIED BY test;
       ALTER USER test QUOTA UNLIMITED ON USERS;
       GRANT CREATE SESSION TO test;
@@ -219,12 +230,6 @@ jdbc:
       GRANT DELETE ANY TABLE TO test;
       GRANT CREATE ANY VIEW TO test;
       GRANT DROP ANY VIEW TO test;
-      -- The driver derives NLS_SORT from the JVM locale at logon, so pin binary order for every session
-      CREATE OR REPLACE TRIGGER test.nls_binary AFTER LOGON ON test.SCHEMA
-      BEGIN
-        EXECUTE IMMEDIATE 'ALTER SESSION SET NLS_SORT = BINARY NLS_COMP = BINARY';
-      END;
-      /
       EXIT" | docker exec -i oracle sqlplus -s SYSTEM/Oracle@${PDB[%VERSION%]}
     run: |
       declare -A PDB=( ["19"]="ORCLPDB1" ["21"]="XEPDB1" ["23"]="FREEPDB1");
@@ -232,7 +237,7 @@ jdbc:
 
   - label: postgresql_%VERSION%
     display_name: PostgreSQL %VERSION%
-    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--locale=C --encoding=UTF8" -p 5432:5432 postgres:%VERSION%-alpine
+    setup: docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--encoding=UTF8" -p 5432:5432 postgres:%VERSION%-alpine
     versions:
       - 13
       - 14
@@ -257,7 +262,8 @@ jdbc:
       - 2025
     db_healthcheck: docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
-      # Create the database here, not in setup, because setup runs before db_healthcheck
+      # Create the database here, not in setup, because setup runs before db_healthcheck. ScalarDB
+      # needs a UTF-8 code page (65001), which SQL Server sets through the database collation.
       docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -Q "CREATE DATABASE test_db COLLATE Latin1_General_100_BIN2_UTF8;"
       docker exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P SqlServer1 -d test_db -Q "
         CREATE LOGIN test WITH PASSWORD = 'test', DEFAULT_DATABASE = master , CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF;
@@ -300,9 +306,6 @@ jdbc:
         --store=tikv --path=127.0.0.1:2379 --log-file=/tmp/tidb.log
     db_healthcheck: mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT 1;" > /dev/null 2>&1
     create_test_user: |
-      # utf8mb4_0900_bin (NO PAD) matches the code point order ScalarDB uses for TEXT and exists
-      # from TiDB 7.4; the default utf8mb4_bin trims trailing spaces.
-      case "%VERSION%" in 6.5.*) ;; *) mysql -h 127.0.0.1 -P 4000 -u root -e "SET GLOBAL collation_server = 'utf8mb4_0900_bin';";; esac
       mysql -h 127.0.0.1 -P 4000 -u root -e "
         CREATE USER 'test'@'%%' IDENTIFIED BY 'test';
         GRANT CREATE ON *.* TO 'test'@'%%';
@@ -315,6 +318,50 @@ jdbc:
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    # The ConsensusCommitSpecific test classes take most of the time on TiDB, so each group runs at
+    # most two of them. The groups with remaining_tests run the test classes that no other group
+    # lists, so a new test class needs no change here.
+    # The source folders of the integrationTestJdbc source set in core/build.gradle
+    test_sources:
+      - core/src/integration-test/java/com/scalar/db/storage/jdbc
+      - core/src/integration-test/java/com/scalar/db/transaction/jdbc
+    test_groups:
+      - label: cc_specific_md
+        name: "CC specific (metadata decoupling) & ConditionalMutation"
+        group_commit_enabled: false
+        tests:
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+          - JdbcDatabaseConditionalMutationIntegrationTest
+
+      - label: cc_specific
+        name: "CC specific & MultipleClusteringKeyScan"
+        group_commit_enabled: false
+        tests:
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+          - JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
+
+      - label: others
+        name: "Other tests"
+        group_commit_enabled: false
+        remaining_tests: true
+
+      - label: cc_specific_md
+        name: "CC specific (metadata decoupling)"
+        group_commit_enabled: true
+        tests:
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+
+      - label: cc_specific_highest_isolation
+        name: "CC specific (highest isolation)"
+        group_commit_enabled: true
+        tests:
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+
+      - label: others
+        name: "CC specific & other tests"
+        group_commit_enabled: true
+        remaining_tests: true
 
   - label: yugabytedb
     display_name: YugabyteDB 2025.2
@@ -325,17 +372,66 @@ jdbc:
     setup: "docker run --name yugabyte -p 5433:5433 -e YSQL_USER=yugabyte -e YSQL_PASSWORD=yugabyte -d yugabytedb/yugabyte:2025.2.2.2-b11 bash -c \"bin/yugabyted start --master_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" --tserver_flags=\\\"allowed_preview_flags_csv={enable_object_locking_for_table_locks,ysql_yb_ddl_transaction_block_enabled},enable_object_locking_for_table_locks=true,ysql_yb_ddl_transaction_block_enabled=true\\\" && tail -f /dev/null\""
     db_healthcheck: docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c 'SELECT 1;'" > /dev/null 2>&1
     create_test_user: |
+      docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c 'CREATE DATABASE test_db ENCODING UTF8;'"
       docker exec yugabyte bash -c "PGPASSWORD=yugabyte ysqlsh -h \$(hostname -i) -U yugabyte -c \"
         CREATE USER test WITH PASSWORD 'test';
-        GRANT CREATE ON DATABASE postgres TO test;\""
-    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+        GRANT CREATE ON DATABASE test_db TO test;\""
+    run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/test_db?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+
+  - label: spanner
+    display_name: Spanner
+    setup: docker run -d --name spanner -p 9010:9010 -p 9020:9020 gcr.io/cloud-spanner-emulator/emulator:latest
+    db_healthcheck: curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password="
+    # Group commit only applies to **.ConsensusCommit** tests, so the group commit groups run only
+    # ConsensusCommit test classes. MultipleClusteringKeyScan, the longest test class, runs alone and
+    # the other groups are sized to finish within its duration. The groups with remaining_tests run
+    # the test classes that no other group lists, so a new test class needs no change here.
+    # The source folders of the integrationTestJdbc source set in core/build.gradle
+    test_sources:
+      - core/src/integration-test/java/com/scalar/db/storage/jdbc
+      - core/src/integration-test/java/com/scalar/db/transaction/jdbc
+    test_groups:
+      - label: mck_scan
+        name: "MultipleClusteringKeyScan"
+        group_commit_enabled: false
+        tests:
+          # Disabled on the Spanner emulator, which runs its WithSpanner subclass
+          - JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
+          - JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
+
+      - label: cond_mutation
+        name: "ConditionalMutation & CC specific (metadata decoupling)"
+        group_commit_enabled: false
+        tests:
+          # Disabled on the Spanner emulator, which runs its WithSpanner subclass
+          - JdbcDatabaseConditionalMutationIntegrationTest
+          - JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+
+      - label: others
+        name: "CC specific & other tests"
+        group_commit_enabled: false
+        remaining_tests: true
+
+      - label: cc_specific
+        name: "CC specific (metadata decoupling, highest isolation)"
+        group_commit_enabled: true
+        tests:
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+
+      - label: others
+        name: "CC specific & other tests"
+        group_commit_enabled: true
+        remaining_tests: true
 
 multi-storage:
   - label: multi-storage
     display_name: Multi-Storage
     disable_group_commit: true
     setup: |
-      docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
+      docker run -d --name postgresql -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--encoding=UTF8" -p 5432:5432 postgres:17-alpine
       # Edit cassandra.yaml before the image's entrypoint runs: the entrypoint rewrites the file in
       # place at startup, and editing it concurrently can truncate it or lose the edits
       docker run -d --name cassandra -e MAX_HEAP_SIZE=2048m -e HEAP_NEWSIZE=512m -p 9042:9042 --entrypoint bash cassandra:3.0 -c '

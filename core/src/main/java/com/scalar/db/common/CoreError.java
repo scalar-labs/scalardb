@@ -1133,6 +1133,30 @@ public enum CoreError implements ScalarDbError {
       "The condition is not properly specified. Table: %s; Expressions: %s",
       "",
       ""),
+  JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED(
+      Category.USER_ERROR,
+      "0305",
+      "Oracle accepts a column collation only when the MAX_STRING_SIZE initialization parameter is EXTENDED. ScalarDB declares the BINARY collation on every TEXT column, so set MAX_STRING_SIZE to EXTENDED, or set the property scalar.db.jdbc.column_collation.enabled to false",
+      "",
+      ""),
+  JDBC_VIRTUAL_TABLE_SOURCE_KEYS_HAVE_DIFFERENT_COLLATIONS(
+      Category.USER_ERROR,
+      "0306",
+      "The source tables must have the same collation for each TEXT primary key column, because the database cannot join keys with different collations. Column: %s; Left source table: %s; Left collation: %s; Right source table: %s; Right collation: %s",
+      "",
+      ""),
+  JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0307",
+      "Importing a table with a generated column is not supported. Table: %s; Column: %s",
+      "",
+      ""),
+  JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED(
+      Category.USER_ERROR,
+      "0308",
+      "Importing a table with an auto-increment column (e.g., AUTO_INCREMENT, IDENTITY, or AUTO_RANDOM) is not supported. Table: %s; Column: %s",
+      "",
+      ""),
 
   //
   // Errors for the concurrency error category

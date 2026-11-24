@@ -1,7 +1,11 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -9,6 +13,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.common.CoreError;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -18,15 +23,19 @@ import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class RdbEngineMysqlTest {
 
@@ -182,6 +191,8 @@ class RdbEngineMysqlTest {
     "8.0.45-0ubuntu0.22.04.1, true",
     "8.4.3, true",
     "9.1.0, true",
+    "8.0.custom_build, false",
+    "8.4.custom_build, false",
     "11.4.2-MariaDB, false",
     "'', false"
   })
@@ -195,11 +206,61 @@ class RdbEngineMysqlTest {
     assertThat(RdbEngineMysql.supportsInsertRowAlias(metaData)).isEqualTo(expected);
   }
 
+  @ParameterizedTest
+  @CsvSource({
+    "5.7.44, false",
+    "8.0.2, false",
+    "8.0.3, true",
+    "8.0.45-0ubuntu0.22.04.1, true",
+    "8.4.3, true",
+    "9.1.0, true",
+    "8.0.custom_build, true",
+    "5.7.custom_build, false",
+    "11.4.2-MariaDB, false",
+    "8.0.11-TiDB-v8.5.0, false",
+    "'', false"
+  })
+  void supportsRenameColumn_ShouldBeTrueFromMysql803AndFalseForMariaDbAndTidb(
+      String productVersion, boolean expected) throws SQLException {
+    // Arrange
+    DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+    when(metaData.getDatabaseProductVersion()).thenReturn(productVersion);
+
+    // Act Assert
+    assertThat(RdbEngineMysql.supportsRenameColumn(metaData)).isEqualTo(expected);
+  }
+
+  @Test
+  void renameColumnSql_WithRenameColumnSupported_ShouldNotRestateTheType() {
+    // Arrange
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), false, true);
+
+    // Act
+    String sql = engine.renameColumnSql("ns", "tbl", "c1", "c2", "LONGTEXT");
+
+    // Assert
+    assertThat(sql).isEqualTo("ALTER TABLE `ns`.`tbl` RENAME COLUMN `c1` TO `c2`");
+    assertThat(engine.renameColumnRestatesType()).isFalse();
+  }
+
+  @Test
+  void renameColumnSql_WithRenameColumnNotSupported_ShouldRestateTheType() {
+    // Arrange
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), false, false);
+
+    // Act
+    String sql = engine.renameColumnSql("ns", "tbl", "c1", "c2", "LONGTEXT");
+
+    // Assert
+    assertThat(sql).isEqualTo("ALTER TABLE `ns`.`tbl` CHANGE COLUMN `c1` `c2` LONGTEXT");
+    assertThat(engine.renameColumnRestatesType()).isTrue();
+  }
+
   @Test
   void buildUpsertQuery_WithRowAliasSupported_ShouldReadRowAliasAndBindEachValueOnce()
       throws SQLException {
     // Arrange
-    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true, false);
     PreparedStatement preparedStatement = mock(PreparedStatement.class);
     Map<String, Column<?>> columns = new LinkedHashMap<>();
     columns.put("v1", TextColumn.of("v1", "v1Value"));
@@ -228,7 +289,7 @@ class RdbEngineMysqlTest {
   @Test
   void buildUpsertQuery_WithRowAliasSupportedAndTableNamedNew_ShouldUseAnotherRowAlias() {
     // Arrange
-    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true, false);
 
     // Act
     String sql =
@@ -251,7 +312,7 @@ class RdbEngineMysqlTest {
   @Test
   void buildUpsertQuery_WithRowAliasSupportedAndNoValueColumns_ShouldInsertIgnore() {
     // Arrange
-    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true);
+    RdbEngineMysql engine = new RdbEngineMysql(mock(JdbcConfig.class), true, false);
 
     // Act
     String sql =
@@ -266,5 +327,320 @@ class RdbEngineMysqlTest {
 
     // Assert
     assertThat(sql).isEqualTo("INSERT IGNORE INTO `ns`.`tbl` (`p1`,`c1`) VALUES (?,?)");
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "8.0.17,utf8mb4_0900_bin",
+    "8.0.16,utf8mb4_bin",
+    "8.4.3,utf8mb4_0900_bin",
+    "9.7.0,utf8mb4_0900_bin",
+    "5.7.44-log,utf8mb4_bin",
+    "5.5.5-10.11.6-MariaDB,utf8mb4_bin",
+    "garbage,utf8mb4_bin"
+  })
+  void selectMysqlBinaryCollation_GivenVersion_ShouldReturnNoPadOnlyFrom8017(
+      String version, String expected) {
+    // Arrange Act
+    String collation = RdbEngineMysql.selectMysqlBinaryCollation(version);
+
+    // Assert
+    assertThat(collation).isEqualTo(expected);
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ForMysql_ShouldReturnNoPadBinaryClause() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEngineMysql();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ForMariaDb_ShouldReturnNopadBinClause() {
+    // Arrange
+    RdbEngineStrategy rdbEngine = new RdbEngineMariaDB();
+
+    // Act
+    String clause = rdbEngine.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("CHARACTER SET utf8mb4 COLLATE utf8mb4_nopad_bin");
+  }
+
+  @Test
+  void importColumnAttributesSql_ShouldReturnSqlToGetExtraOfColumns() {
+    // Arrange Act
+    String sql = rdbEngineMysql.importColumnAttributesSql();
+
+    // Assert
+    assertThat(sql)
+        .isEqualTo(
+            "SELECT COLUMN_NAME, EXTRA FROM INFORMATION_SCHEMA.COLUMNS"
+                + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?");
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "VIRTUAL GENERATED",
+        "STORED GENERATED",
+        "VIRTUAL GENERATED INVISIBLE",
+        "STORED GENERATED INVISIBLE",
+        // For MariaDB
+        "VIRTUAL GENERATED, INVISIBLE",
+        "STORED GENERATED, INVISIBLE",
+        // For MariaDB 10.1 or earlier
+        "VIRTUAL",
+        "PERSISTENT"
+      })
+  void validateImportColumnAttributes_GeneratedColumnGiven_ShouldThrowIllegalArgumentException(
+      String extra) throws SQLException {
+    // Arrange
+    ResultSet resultSet = mockImportColumnAttributes("col", extra);
+
+    // Act Assert
+    assertThatThrownBy(() -> rdbEngineMysql.validateImportColumnAttributes(resultSet, "ns", "tbl"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage("ns.tbl", "col"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "auto_increment",
+        "auto_increment INVISIBLE",
+        // For MariaDB
+        "auto_increment, INVISIBLE"
+      })
+  void validateImportColumnAttributes_AutoIncrementColumnGiven_ShouldThrowIllegalArgumentException(
+      String extra) throws SQLException {
+    // Arrange
+    ResultSet resultSet = mockImportColumnAttributes("col", extra);
+
+    // Act Assert
+    assertThatThrownBy(() -> rdbEngineMysql.validateImportColumnAttributes(resultSet, "ns", "tbl"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+                "ns.tbl", "col"));
+  }
+
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(
+      strings = {
+        // A column with an expression default, which is not a generated column
+        "DEFAULT_GENERATED",
+        "DEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+        "on update CURRENT_TIMESTAMP",
+        // For MariaDB
+        "on update current_timestamp()",
+        "INVISIBLE"
+      })
+  void validateImportColumnAttributes_ImportableColumnGiven_ShouldNotThrowAnyException(String extra)
+      throws SQLException {
+    // Arrange
+    ResultSet resultSet = mockImportColumnAttributes("col", extra);
+
+    // Act Assert
+    assertThatCode(() -> rdbEngineMysql.validateImportColumnAttributes(resultSet, "ns", "tbl"))
+        .doesNotThrowAnyException();
+  }
+
+  private ResultSet mockImportColumnAttributes(String columnName, String extra)
+      throws SQLException {
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.getString(1)).thenReturn(columnName);
+    when(resultSet.getString(2)).thenReturn(extra);
+    return resultSet;
+  }
+
+  @Test
+  void getCollationClause_WithCharset_ShouldReturnCharacterSetAndCollate() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("latin1_swedish_ci", "latin1");
+
+    // Act
+    String clause = rdbEngineMysql.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("CHARACTER SET latin1 COLLATE latin1_swedish_ci");
+  }
+
+  @Test
+  void getCollationClause_WithoutCharset_ShouldReturnCollateOnly() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", null);
+
+    // Act
+    String clause = rdbEngineMysql.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE utf8mb4_bin");
+  }
+
+  @Test
+  void getTextColumnCollations_ShouldReturnCollationAndCharsetByColumnName() throws SQLException {
+    // Arrange
+    Connection connection = mock(Connection.class);
+    PreparedStatement ps = mock(PreparedStatement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.prepareStatement(anyString())).thenReturn(ps);
+    when(ps.executeQuery()).thenReturn(rs);
+    when(rs.next()).thenReturn(true, true, false);
+    when(rs.getString("COLUMN_NAME")).thenReturn("c1", "c2");
+    when(rs.getString("COLLATION_NAME")).thenReturn("utf8mb4_bin", "latin1_swedish_ci");
+    when(rs.getString("CHARACTER_SET_NAME")).thenReturn("utf8mb4", "latin1");
+
+    // Act
+    Map<String, TextColumnCollation> collations =
+        rdbEngineMysql.getTextColumnCollations(connection, "ns", "tbl");
+
+    // Assert
+    assertThat(collations)
+        .containsOnly(
+            entry("c1", new TextColumnCollation("utf8mb4_bin", "utf8mb4")),
+            entry("c2", new TextColumnCollation("latin1_swedish_ci", "latin1")));
+    verify(ps).setString(1, "ns");
+    verify(ps).setString(2, "tbl");
+  }
+
+  @Test
+  void classify_Utf8mb4BinOnNoPadServer_ShouldReturnOtherOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
+  }
+
+  @Test
+  void classify_Utf8mb4BinOnPadOnlyServer_ShouldReturnCodePointOrder() {
+    // Arrange
+    RdbEngineMysql padOnlyEngine =
+        new RdbEngineMysql(mock(JdbcConfig.class), false, false, "utf8mb4_bin");
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_bin", "utf8mb4");
+
+    // Act
+    TextColumnCollationKind actual = padOnlyEngine.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
+  }
+
+  @Test
+  void classify_Utf8mb40900Bin_ShouldReturnCodePointOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
+  }
+
+  @Test
+  void classify_Utf8mb4NopadBin_ShouldReturnCodePointOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_nopad_bin", "utf8mb4");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
+  }
+
+  @Test
+  void classify_CaseInsensitiveCollation_ShouldReturnOtherOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_general_ci", "utf8mb4");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
+  }
+
+  @Test
+  void classify_Latin1Bin_ShouldReturnPartialCharacterSet() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("latin1_bin", "latin1");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngineMysql.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
+  }
+
+  @Test
+  void isFullUnicodeCharset_Utf8mb4_ShouldReturnTrue() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4");
+
+    // Act
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"utf16", "utf16le", "utf32", "gb18030"})
+  void isFullUnicodeCharset_OtherUnicodeEncoding_ShouldReturnTrue(String charset) {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation(charset + "_bin", charset);
+
+    // Act
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"ucs2", "latin1"})
+  void isFullUnicodeCharset_PartialCharset_ShouldReturnFalse(String charset) {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation(charset + "_bin", charset);
+
+    // Act
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void isFullUnicodeCharset_Utf8mb3_ShouldReturnFalse() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("utf8mb3_bin", "utf8mb3");
+
+    // Act
+    boolean actual = rdbEngineMysql.isFullUnicodeCharset(collation);
+
+    // Assert
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void getDatabaseTextIssues_ShouldReturnEmpty() throws SQLException {
+    // Arrange Act
+    List<DatabaseTextIssue> actual = rdbEngineMysql.getDatabaseTextIssues(mock(Connection.class));
+
+    // Assert
+    assertThat(actual).isEmpty();
   }
 }

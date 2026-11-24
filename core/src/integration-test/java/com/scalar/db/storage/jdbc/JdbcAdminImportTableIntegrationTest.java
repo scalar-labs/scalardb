@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.DistributedStorageAdminImportTableIntegrationTestBase;
 import com.scalar.db.api.TableMetadata;
@@ -93,6 +94,11 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @SuppressWarnings("unused")
+  private boolean isMysql() {
+    return JdbcEnv.isMysql();
+  }
+
+  @SuppressWarnings("unused")
   private boolean isTidb() {
     return testUtils.isTidb();
   }
@@ -125,11 +131,62 @@ public class JdbcAdminImportTableIntegrationTest
   }
 
   @Test
+  @DisabledIf("isImportOfNonBinaryTextColumnNotTestable")
+  public void importTable_TextColumnWithNonBinaryCollation_ShouldSucceed() throws Exception {
+    // Arrange
+    String table = "non_binary_text_table";
+    testUtils.createTableWithNonBinaryTextColumn(getNamespace(), table);
+    TableMetadata expected =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("c", DataType.TEXT)
+            .addPartitionKey("pk")
+            .build();
+
+    try {
+      // Act
+      Throwable thrown =
+          catchThrowable(() -> admin.importTable(getNamespace(), table, Collections.emptyMap()));
+
+      // Assert
+      assertThat(thrown).isNull();
+      assertThat(admin.getTableMetadata(getNamespace(), table)).isEqualTo(expected);
+    } finally {
+      admin.dropTable(getNamespace(), table);
+    }
+  }
+
+  @SuppressWarnings("unused")
+  private boolean isImportOfNonBinaryTextColumnNotTestable() {
+    return JdbcEnv.isSqlite() || JdbcEnv.isSpanner();
+  }
+
+  @Test
   @Override
   @EnabledIf("isSqlite")
   public void importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException()
       throws ExecutionException {
     super.importTable_ForUnsupportedDatabase_ShouldThrowUnsupportedOperationException();
+  }
+
+  @Test
+  @EnabledIf("isMysql")
+  public void importTable_Mysql_ForTableWithOnUpdateColumn_ShouldImportProperly() throws Exception {
+    // Arrange
+    TestData testData = testUtils.createExistingMysqlTableWithOnUpdateColumn(getNamespace());
+    testDataList.add(testData);
+
+    // Act
+    admin.importTable(
+        getNamespace(),
+        testData.getTableName(),
+        Collections.emptyMap(),
+        testData.getOverrideColumnsType());
+
+    // Assert
+    assertThat(admin.tableExists(getNamespace(), testData.getTableName())).isTrue();
+    assertThat(admin.getTableMetadata(getNamespace(), testData.getTableName()))
+        .isEqualTo(testData.getTableMetadata());
   }
 
   @Test

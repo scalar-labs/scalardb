@@ -1,6 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.LikeExpression;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.common.CoreError;
@@ -10,9 +13,11 @@ import com.scalar.db.storage.jdbc.query.InsertOnDuplicateKeyUpdateQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithLimitQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -20,6 +25,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,26 +42,68 @@ class RdbEngineMysql extends AbstractRdbEngine {
   private static final String WRAPPER_TARGET_DRIVER_DIALECT_PARAMETER =
       "wrapperTargetDriverDialect";
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineMysql.class);
-  private static final Pattern MYSQL_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
+  // UTF-16, UTF-32 and GB 18030 cover all of Unicode as utf8mb4 does. utf8mb3 and ucs2 stop at the
+  // BMP.
+  private static final ImmutableSet<String> FULL_UNICODE_CHARSETS =
+      ImmutableSet.of("utf8mb4", "utf16", "utf16le", "utf32", "gb18030");
+  // utf8mb4_0900_bin is MySQL's. The nopad_bin ones are MariaDB's, which also order UTF-16 and
+  // UTF-32 by code point.
+  private static final ImmutableSet<String> CODE_POINT_NO_PAD_COLLATIONS =
+      ImmutableSet.of(
+          "utf8mb4_0900_bin",
+          "utf8mb4_nopad_bin",
+          "utf16_nopad_bin",
+          "utf16le_nopad_bin",
+          "utf32_nopad_bin");
+  private static final Pattern MYSQL_VERSION_PATTERN =
+      Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?");
   private final String keyColumnSize;
   private final RdbEngineTimeTypeMysql timeTypeEngine;
   private final boolean rowAliasSupported;
+  private final boolean renameColumnSupported;
+  private final String binaryCollation;
 
   RdbEngineMysql(JdbcConfig config) {
-    this(config, false);
+    this(config, false, false);
   }
 
-  RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported) {
+  RdbEngineMysql(JdbcConfig config, boolean rowAliasSupported, boolean renameColumnSupported) {
+    this(config, rowAliasSupported, renameColumnSupported, "utf8mb4_bin");
+  }
+
+  RdbEngineMysql(
+      JdbcConfig config,
+      boolean rowAliasSupported,
+      boolean renameColumnSupported,
+      String binaryCollation) {
     keyColumnSize = String.valueOf(config.getMysqlVariableKeyColumnSize());
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     this.rowAliasSupported = rowAliasSupported;
+    this.renameColumnSupported = renameColumnSupported;
+    this.binaryCollation = binaryCollation;
   }
 
   @VisibleForTesting
   RdbEngineMysql() {
+    this(false, "utf8mb4_0900_bin");
+  }
+
+  RdbEngineMysql(boolean renameColumnSupported, String binaryCollation) {
     keyColumnSize = String.valueOf(JdbcConfig.DEFAULT_VARIABLE_KEY_COLUMN_SIZE);
     timeTypeEngine = new RdbEngineTimeTypeMysql();
     rowAliasSupported = false;
+    this.renameColumnSupported = renameColumnSupported;
+    this.binaryCollation = binaryCollation;
+  }
+
+  /**
+   * Returns the binary utf8mb4 collation to declare on TEXT columns. {@code utf8mb4_0900_bin} (NO
+   * PAD, so trailing spaces are significant) exists since MySQL 8.0.17.
+   */
+  static String selectMysqlBinaryCollation(String productVersion) {
+    return !productVersion.contains("MariaDB") && isAtLeastMysql80(productVersion, 17, false)
+        ? "utf8mb4_0900_bin"
+        : "utf8mb4_bin";
   }
 
   /**
@@ -62,14 +112,40 @@ class RdbEngineMysql extends AbstractRdbEngine {
    */
   static boolean supportsInsertRowAlias(DatabaseMetaData metaData) throws SQLException {
     String version = metaData.getDatabaseProductVersion();
+    return !version.contains("MariaDB") && isAtLeastMysql80(version, 19, false);
+  }
+
+  /**
+   * Returns whether the server accepts {@code ALTER TABLE ... RENAME COLUMN}, which is supported
+   * since MySQL 8.0.3. MariaDB and TiDB have their own engine classes that always support it.
+   *
+   * @see <a href="https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-3.html">MySQL 8.0.3
+   *     release notes</a>
+   */
+  static boolean supportsRenameColumn(DatabaseMetaData metaData) throws SQLException {
+    String version = metaData.getDatabaseProductVersion();
+    return !version.contains("MariaDB")
+        && !version.contains("TiDB")
+        && isAtLeastMysql80(version, 3, true);
+  }
+
+  /**
+   * Returns whether the version is MySQL 8.0.{@code minPatch} or later.
+   *
+   * @param missingPatchIsLatest how to read a version without a numeric patch, such as {@code
+   *     8.0.custom_build}: {@code true} reads it as the latest patch of its minor version, {@code
+   *     false} as unsupported
+   */
+  private static boolean isAtLeastMysql80(
+      String version, int minPatch, boolean missingPatchIsLatest) {
     Matcher matcher = MYSQL_VERSION_PATTERN.matcher(version);
-    if (version.contains("MariaDB") || !matcher.lookingAt()) {
+    if (!matcher.lookingAt() || (matcher.group(3) == null && !missingPatchIsLatest)) {
       return false;
     }
     int major = Integer.parseInt(matcher.group(1));
     int minor = Integer.parseInt(matcher.group(2));
-    int patch = Integer.parseInt(matcher.group(3));
-    return major > 8 || (major == 8 && (minor > 0 || patch >= 19));
+    int patch = matcher.group(3) == null ? Integer.MAX_VALUE : Integer.parseInt(matcher.group(3));
+    return major > 8 || (major == 8 && (minor > 0 || patch >= minPatch));
   }
 
   @Override
@@ -141,7 +217,11 @@ class RdbEngineMysql extends AbstractRdbEngine {
       String table,
       String oldColumnName,
       String newColumnName,
-      String columnType) {
+      String columnDefinition) {
+    if (renameColumnSupported) {
+      return super.renameColumnSql(
+          namespace, table, oldColumnName, newColumnName, columnDefinition);
+    }
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
         + " CHANGE COLUMN "
@@ -149,7 +229,12 @@ class RdbEngineMysql extends AbstractRdbEngine {
         + " "
         + enclose(newColumnName)
         + " "
-        + columnType;
+        + columnDefinition;
+  }
+
+  @Override
+  public boolean renameColumnRestatesType() {
+    return !renameColumnSupported;
   }
 
   @Override
@@ -162,14 +247,14 @@ class RdbEngineMysql extends AbstractRdbEngine {
 
   @Override
   public String[] alterColumnTypeSql(
-      String namespace, String table, String columnName, String columnType) {
+      String namespace, String table, String columnName, String columnDefinition) {
     return new String[] {
       "ALTER TABLE "
           + encloseFullTableName(namespace, table)
           + " MODIFY "
           + enclose(columnName)
           + " "
-          + columnType
+          + columnDefinition
     };
   }
 
@@ -444,6 +529,68 @@ class RdbEngineMysql extends AbstractRdbEngine {
   }
 
   @Override
+  public String getBinaryTextCollationClause() {
+    return "CHARACTER SET utf8mb4 COLLATE " + binaryCollation;
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    String sql =
+        "SELECT COLUMN_NAME, COLLATION_NAME, CHARACTER_SET_NAME FROM information_schema.COLUMNS"
+            + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLLATION_NAME IS NOT NULL";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          collations.put(
+              rs.getString("COLUMN_NAME"),
+              new TextColumnCollation(
+                  rs.getString("COLLATION_NAME"), rs.getString("CHARACTER_SET_NAME")));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @Override
+  public String textColumnCollationSql() {
+    // A column type restated without a collation clause takes the table collation, so a column
+    // that already has it needs no clause.
+    return "SELECT c.COLLATION_NAME, c.CHARACTER_SET_NAME FROM information_schema.COLUMNS c"
+        + " JOIN information_schema.TABLES t"
+        + " ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME"
+        + " WHERE c.TABLE_SCHEMA = ? AND c.TABLE_NAME = ? AND c.COLUMN_NAME = ?"
+        + " AND c.COLLATION_NAME <> t.TABLE_COLLATION";
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    String charset = collation.getCharset();
+    return (charset == null ? "" : "CHARACTER SET " + charset + " ")
+        + "COLLATE "
+        + collation.getCollation();
+  }
+
+  @Override
+  public TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.of(
+        isFullUnicodeCharset(collation), isBinaryCollation(collation));
+  }
+
+  private boolean isBinaryCollation(TextColumnCollation collation) {
+    String name = collation.getCollation();
+    return CODE_POINT_NO_PAD_COLLATIONS.contains(name) || name.equals(binaryCollation);
+  }
+
+  protected boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    return FULL_UNICODE_CHARSETS.contains(collation.getCharset());
+  }
+
+  @Override
   public String getTextType(int charLength, boolean isKey) {
     return String.format("VARCHAR(%s)", charLength);
   }
@@ -497,6 +644,52 @@ class RdbEngineMysql extends AbstractRdbEngine {
     // might be able to set `databaseTerm` property to `SCHEMA` so that a return value from this
     // method is used for filtering.
     return namespace;
+  }
+
+  @Override
+  public String importColumnAttributesSql() {
+    // MariaDB Connector/J, which we also use for MySQL and TiDB, decides IS_GENERATEDCOLUMN and
+    // IS_AUTOINCREMENT of DatabaseMetaData.getColumns() by an exact match on the EXTRA column, so
+    // it misses a column whose EXTRA has another attribute as well, e.g., "VIRTUAL GENERATED
+    // INVISIBLE" and "auto_increment INVISIBLE" for invisible columns. Therefore, we check the
+    // EXTRA column ourselves.
+    return "SELECT COLUMN_NAME, EXTRA FROM INFORMATION_SCHEMA.COLUMNS"
+        + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
+  }
+
+  @Override
+  public void validateImportColumnAttributes(ResultSet resultSet, String namespace, String table)
+      throws SQLException {
+    String columnName = resultSet.getString(1);
+    String extra = resultSet.getString(2);
+    if (extra == null) {
+      return;
+    }
+    String attributes = extra.toLowerCase(Locale.ROOT);
+
+    // Generated columns are "VIRTUAL GENERATED" or "STORED GENERATED" in MySQL, TiDB, and MariaDB
+    // 10.2 or later, and "VIRTUAL" or "PERSISTENT" in older MariaDB. Note that "DEFAULT_GENERATED"
+    // is not for a generated column but for a column with an expression default
+    if (attributes.contains("virtual")
+        || attributes.contains("stored generated")
+        || attributes.contains("persistent")) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage(
+              getFullTableName(namespace, table), columnName));
+    }
+    if (attributes.contains("auto_increment")) {
+      throw new IllegalArgumentException(
+          CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+              getFullTableName(namespace, table), columnName));
+    }
+    if (attributes.contains("on update")) {
+      logger.warn(
+          "The column has the ON UPDATE attribute, so the underlying database updates its value "
+              + "whenever ScalarDB updates the record, including when ScalarDB commits, rolls "
+              + "back, or recovers a transaction: {} {}",
+          getFullTableName(namespace, table),
+          columnName);
+    }
   }
 
   @Override

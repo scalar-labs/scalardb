@@ -38,6 +38,20 @@ public interface RdbEngineStrategy {
 
   boolean isDuplicateTableError(SQLException e);
 
+  default boolean isCollationClauseRejectedError(SQLException e) {
+    return false;
+  }
+
+  /**
+   * Throws if the exception is caused by the database rejecting a column collation clause.
+   *
+   * @param e the exception that a DDL statement raised
+   * @throws SQLException if the database rejected a column collation clause
+   */
+  default void throwIfCollationClauseRejectedError(SQLException e) throws SQLException {
+    // Do nothing
+  }
+
   boolean isDuplicateKeyError(SQLException e);
 
   boolean isConflict(SQLException e);
@@ -63,6 +77,111 @@ public interface RdbEngineStrategy {
   int getSqlTypes(DataType dataType);
 
   String getTextType(int charLength, boolean isKey);
+
+  /**
+   * Returns the clause that makes a TEXT column compare and sort by UTF-8 bytes.
+   *
+   * @return the clause, or "" when the engine has no column collation clause
+   */
+  default String getBinaryTextCollationClause() {
+    return "";
+  }
+
+  /**
+   * Returns a query that reads the collation of a character column, or null when the engine does
+   * not restate column collations. The query binds the namespace, the table and the column, and
+   * returns at most one row with the collation and the charset, the latter of which may be null.
+   *
+   * @return the query, or null
+   */
+  @Nullable
+  default String textColumnCollationSql() {
+    return null;
+  }
+
+  /**
+   * Returns the collation and charset of the character columns of a table, keyed by column name as
+   * stored. Columns that are not character columns are absent.
+   *
+   * @param connection the connection to read the catalog with
+   * @param namespace the namespace of the table
+   * @param table the table name
+   * @return the collation of each character column, keyed by column name
+   * @throws SQLException if the catalog query fails
+   */
+  default Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Throws an exception if the database rejects every column collation clause.
+   *
+   * @param connection the connection to read the database setting with
+   * @throws SQLException if a column collation clause fails on this database, or if reading the
+   *     database setting fails
+   */
+  default void throwIfCollationClausesRejected(Connection connection) throws SQLException {
+    // Do nothing
+  }
+
+  /**
+   * Returns the collation that columns of the schema get when they declare none, on engines whose
+   * column collation clause depends on a database setting.
+   *
+   * @param connection the connection to read the catalog with
+   * @param namespace the schema to read the default collation of
+   * @return the default collation, or null when the engine does not read it
+   * @throws SQLException if the catalog query fails
+   */
+  @Nullable
+  default String getSchemaDefaultCollation(Connection connection, String namespace)
+      throws SQLException {
+    return null;
+  }
+
+  /**
+   * Returns the clause that declares the given collation on a column.
+   *
+   * @param collation a collation read by {@link #textColumnCollationSql} or {@link
+   *     #getTextColumnCollations}
+   * @return the clause, or "" when the engine has no column collation clause
+   */
+  default String getCollationClause(TextColumnCollation collation) {
+    return "";
+  }
+
+  /**
+   * Returns how a TEXT column with the collation orders and stores values.
+   *
+   * @param collation a collation read by {@link #getTextColumnCollations}
+   * @return the kind of the collation
+   */
+  default TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.CODE_POINT_ORDER;
+  }
+
+  /**
+   * Returns the database settings that keep TEXT columns from behaving as ScalarDB expects, on
+   * engines whose columns cannot choose their encoding or their collation.
+   *
+   * @param connection the connection to read the settings with
+   * @return the issues, empty when the settings have none or the engine does not read them
+   * @throws SQLException if the query fails
+   */
+  default List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Returns whether importing a table also checks the database encoding, on engines whose column
+   * character sets do not reflect the encoding that string parameters go through.
+   *
+   * @return {@code true} if {@link #getDatabaseTextIssues} applies to imported tables
+   */
+  default boolean checksDatabaseEncodingOnImport() {
+    return false;
+  }
 
   String computeBooleanValue(boolean value);
 
@@ -110,7 +229,7 @@ public interface RdbEngineStrategy {
       String table,
       String oldColumnName,
       String newColumnName,
-      String columnType) {
+      String columnDefinition) {
     return "ALTER TABLE "
         + encloseFullTableName(namespace, table)
         + " RENAME COLUMN "
@@ -119,9 +238,19 @@ public interface RdbEngineStrategy {
         + enclose(newColumnName);
   }
 
+  /**
+   * Returns whether {@link #renameColumnSql} uses its {@code columnDefinition} argument.
+   *
+   * @return {@code true} if the rename statement restates the column type
+   */
+  default boolean renameColumnRestatesType() {
+    return false;
+  }
+
   String renameTableSql(String namespace, String oldTableName, String newTableName);
 
-  String[] alterColumnTypeSql(String namespace, String table, String columnName, String columnType);
+  String[] alterColumnTypeSql(
+      String namespace, String table, String columnName, String columnDefinition);
 
   /**
    * Returns a parameterized SQL that checks whether the specified table exists by querying the
@@ -213,6 +342,38 @@ public interface RdbEngineStrategy {
   String getDriverClassName();
 
   default void throwIfImportNotSupported() {}
+
+  /**
+   * Returns a SQL statement that retrieves the engine-specific attributes of the columns of a table
+   * to import, or {@code null} if the standard JDBC metadata ({@code IS_GENERATEDCOLUMN} and {@code
+   * IS_AUTOINCREMENT} of {@link java.sql.DatabaseMetaData#getColumns(String, String, String,
+   * String)}) is enough to detect the columns that prevent the table from being imported.
+   *
+   * <p>The statement takes two placeholders, the schema name and the table name in this order, and
+   * returns one row per column. Each row is passed to {@link
+   * #validateImportColumnAttributes(ResultSet, String, String)}.
+   *
+   * @return a SQL statement with {@code ?} placeholders, or {@code null} if the engine does not
+   *     need an engine-specific check
+   */
+  @Nullable
+  default String importColumnAttributesSql() {
+    return null;
+  }
+
+  /**
+   * Validates a row of the result set of {@link #importColumnAttributesSql()}, i.e., the
+   * engine-specific attributes of a column of a table to import.
+   *
+   * @param resultSet a result set positioned at the row to validate
+   * @param namespace the namespace of the table to import
+   * @param table the name of the table to import
+   * @throws IllegalArgumentException if the column prevents the table from being imported, e.g., a
+   *     generated column or an auto-increment column
+   * @throws SQLException if reading the result set fails
+   */
+  default void validateImportColumnAttributes(ResultSet resultSet, String namespace, String table)
+      throws SQLException {}
 
   /**
    * Return properly-preprocessed like pattern for each underlying database.

@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -12,12 +13,15 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TimestampTZColumn;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -116,5 +120,103 @@ class RdbEngineSqlServerTest {
 
     // Assert
     assertThat(properties).containsEntry("sendStringParametersAsUnicode", "false");
+  }
+
+  @Test
+  void getBinaryTextCollationClause_ShouldReturnBin2Utf8Collation() {
+    // Arrange
+    RdbEngineStrategy strategy = rdbEngine;
+
+    // Act
+    String clause = strategy.getBinaryTextCollationClause();
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE Latin1_General_100_BIN2_UTF8");
+  }
+
+  @Test
+  void classify_BinOnUtf8_ShouldReturnOtherOrder() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN", "UTF-8");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.OTHER_ORDER);
+  }
+
+  @Test
+  void classify_Bin2InAnyCaseOnUtf8_ShouldReturnCodePointOrder() {
+    // Arrange
+    TextColumnCollation collation =
+        new TextColumnCollation("Latin1_General_100_Bin2_UTF8", "UTF-8");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.CODE_POINT_ORDER);
+  }
+
+  @Test
+  void classify_CodePage_ShouldReturnPartialCharacterSet() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Latin1_General_BIN2", "CP1252");
+
+    // Act
+    TextColumnCollationKind actual = rdbEngine.classify(collation);
+
+    // Assert
+    assertThat(actual).isEqualTo(TextColumnCollationKind.PARTIAL_CHARACTER_SET);
+  }
+
+  @Test
+  void getCollationClause_ShouldReturnCollate() {
+    // Arrange
+    TextColumnCollation collation = new TextColumnCollation("Japanese_BIN2", "CP932");
+
+    // Act
+    String clause = rdbEngine.getCollationClause(collation);
+
+    // Assert
+    assertThat(clause).isEqualTo("COLLATE Japanese_BIN2");
+  }
+
+  @Test
+  void getDatabaseTextIssues_Cp1252_ShouldReturnPartialCharacterSet() throws SQLException {
+    // Arrange
+    Connection connection = mockDatabaseCodePage(1252);
+
+    // Act
+    List<DatabaseTextIssue> actual = rdbEngine.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            new DatabaseTextIssue("CP1252", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
+  }
+
+  @Test
+  void getDatabaseTextIssues_Utf8_ShouldReturnEmpty() throws SQLException {
+    // Arrange
+    Connection connection = mockDatabaseCodePage(65001);
+
+    // Act
+    List<DatabaseTextIssue> actual = rdbEngine.getDatabaseTextIssues(connection);
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  private static Connection mockDatabaseCodePage(int codePage) throws SQLException {
+    Connection connection = mock(Connection.class);
+    Statement statement = mock(Statement.class);
+    ResultSet rs = mock(ResultSet.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(statement.executeQuery(anyString())).thenReturn(rs);
+    when(rs.next()).thenReturn(true);
+    when(rs.getInt(1)).thenReturn(codePage);
+    return connection;
   }
 }

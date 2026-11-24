@@ -103,7 +103,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v6.2.0
+        uses: actions/setup-java@v6.3.0
         with:
           java-version: 8
           distribution: temurin
@@ -164,7 +164,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v6.2.0
+        uses: actions/setup-java@v6.3.0
         with:
           java-version: 8
           distribution: temurin
@@ -195,6 +195,7 @@ jobs:
       EXPANDED_TESTS_CONFIG_FILE: expanded-tests-config.json
     outputs:
       test_matrix: ${{ steps.generate-matrix-for-wf-dispatch.outputs.matrix }}
+      report_groups: ${{ steps.list-report-groups.outputs.report_groups }}
     steps:
       - uses: actions/checkout@v7
 
@@ -236,6 +237,12 @@ jobs:
           # Generate minimal JSON matrix (stdout) and full JSON config ($EXPANDED_TESTS_CONFIG_FILE)
           MATRIX_JSON=$(groovy ci/generate-test-matrix.groovy)
           echo "matrix=${MATRIX_JSON}" >> $GITHUB_OUTPUT
+
+      - name: List the test groups whose reports are aggregated
+        id: list-report-groups
+        run: |
+          REPORT_GROUPS=$(jq -c '[.[] | select(.report_group) | {report_group, flavor: (if .group_commit_enabled == "true" then "group_commit" else "default" end), label}] | group_by([.report_group, .flavor]) | map({report_group: .[0].report_group, flavor: .[0].flavor, labels: map(.label)})' "$EXPANDED_TESTS_CONFIG_FILE")
+          echo "report_groups=${REPORT_GROUPS}" >> "$GITHUB_OUTPUT"
 
 #       Github does not allow outputting passwords, contained in setup and run scripts of the tests configuration,
 #       directly as matrix strategy parameters because they are flagged as sensitive data.
@@ -309,18 +316,21 @@ jobs:
           echo "$RUN_CMD" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+          REPORT_GROUP=$(echo "$CONFIG" | jq -r '.report_group // ""')
+          echo "REPORT_GROUP=$REPORT_GROUP" >> "$GITHUB_ENV"
+
       - name: Set up the database
         run: ${{ env.SETUP_CMD }}
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v6.2.0
+        uses: actions/setup-java@v6.3.0
         with:
           java-version: 8
           distribution: temurin
 
       - name: Set up JDK ${{ env.INT_TEST_JAVA_RUNTIME_VERSION }} (${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}) to run integration test
         id: setup-int-test-jdk
-        uses: actions/setup-java@v6.2.0
+        uses: actions/setup-java@v6.3.0
         # On Linux runner, skip if Oracle JDK is specified
         # On Windows runner, skip if Oracle JDK 8 or 11 is specified
         if: ${{ (runner.os == 'Linux' && env.INT_TEST_JAVA_RUNTIME_VENDOR != 'oracle') || (runner.os == 'Windows' && !(env.INT_TEST_JAVA_RUNTIME_VENDOR == 'oracle' && (env.INT_TEST_JAVA_RUNTIME_VERSION == '8' || env.INT_TEST_JAVA_RUNTIME_VERSION == '11')))  }}
@@ -386,8 +396,27 @@ jobs:
           ORG_GRADLE_PROJECT_javaVendor: 'temurin'
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVersion: "${{ env.INT_TEST_JAVA_RUNTIME_VERSION }}"
           ORG_GRADLE_PROJECT_integrationTestJavaRuntimeVendor: "${{ env.INT_TEST_JAVA_RUNTIME_VENDOR }}"
-          GROUP_COMMIT_OPTIONS: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000" --tests "**.ConsensusCommit**"'
-        run: ${{ env.RUN_CMD }} ${{ matrix.group_commit_enabled == 'true' && env.GROUP_COMMIT_OPTIONS || '' }}
+          GROUP_COMMIT_PROPERTIES: '"-Dscalardb.consensus_commit.coordinator.group_commit.enabled=true" "-Dscalardb.consensus_commit.coordinator.group_commit.old_group_abort_timeout_millis=15000"'
+        # Gradle runs the union of several --tests filters, so a test group job, which already selects
+        # its classes, must not get the ConsensusCommit filter
+        run: >-
+          ${{ env.RUN_CMD }}
+          ${{ matrix.group_commit_enabled == 'true' && env.GROUP_COMMIT_PROPERTIES || '' }}
+          ${{ matrix.group_commit_enabled == 'true' && env.REPORT_GROUP == '' && '--tests "**.ConsensusCommit**"' || '' }}
+
+      - name: Record the integration test outcome of the test group
+        if: ${{ always() && env.REPORT_GROUP != '' }}
+        run: |
+          mkdir -p core/build/test-results
+          echo "${{ steps.run-integration-test.outcome }}" > "core/build/test-results/outcome-${{ matrix.label }}"
+
+      - name: Upload binary test results of the test group
+        if: ${{ always() && env.REPORT_GROUP != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: internal_test-results_${{ env.ARTIFACT_SUFFIX }}_${{ env.REPORT_GROUP }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}_${{ matrix.label }}
+          path: core/build/test-results/
+          overwrite: true
 
       - name: Detect test report folder
         id: detect-report-folder
@@ -411,6 +440,110 @@ jobs:
           name: ${{ steps.run-integration-test.outcome == 'success' && 'success' || 'failure' }}_${{ matrix.label }}_${{ matrix.group_commit_enabled == 'true' && 'group_commit' || 'default' }}_test_${{ env.ARTIFACT_SUFFIX }}
           path: ${{ steps.detect-report-folder.outputs.report_path }}
 
+  aggregate-test-reports:
+    if: ${{ always() && needs.integration-test-jobs-planner.result == 'success' && needs.integration-test-jobs-planner.outputs.report_groups != '[]' }}
+    name: Aggregate ${{ matrix.report_group }} test report (${{ matrix.flavor }})
+    runs-on: ubuntu-latest
+    needs:
+      - integration-test-jobs-planner
+      - integration-test
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.integration-test-jobs-planner.outputs.report_groups) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v6.3.0
+        with:
+          java-version: 8
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.4.1
+
+      - name: Download the binary test results of the test groups
+        uses: actions/download-artifact@v8
+        with:
+          pattern: internal_test-results_${{ env.ARTIFACT_SUFFIX }}_${{ matrix.report_group }}_${{ matrix.flavor }}_*
+          path: downloaded-results/
+
+      - name: Generate aggregated HTML report
+        id: aggregate-report
+        env:
+          REPORT_GROUP: ${{ matrix.report_group }}
+          FLAVOR: ${{ matrix.flavor }}
+          EXPECTED_LABELS: ${{ join(matrix.labels, ' ') }}
+        run: |
+          # On "Re-run failed jobs", a flavor that succeeded in an earlier attempt has no binary results left
+          if [ ! -d downloaded-results ]; then
+            echo "No binary test results to aggregate"
+            exit 0
+          fi
+
+          # A job that fails before loading its configuration, or whose runner is lost, uploads no
+          # binary results, so the expected jobs come from the planner
+          # When the pattern matches a single artifact, download-artifact puts its files directly in
+          # downloaded-results, so the markers are found by name rather than by artifact folder
+          outcome=success
+          for label in $EXPECTED_LABELS; do
+            marker=$(find downloaded-results -name "outcome-${label}" | head -n 1)
+            job_outcome=$([ -n "$marker" ] && cat "$marker" || true)
+            job_outcome=${job_outcome:-missing}
+            [ "$job_outcome" = success ] || outcome=failure
+            echo "${label}: ${job_outcome}"
+          done > "$RUNNER_TEMP/job-outcomes.txt"
+          echo "outcome=${outcome}" >> "$GITHUB_OUTPUT"
+
+          cat > "$RUNNER_TEMP/aggregate-init.gradle" << 'EOF'
+          import org.gradle.api.tasks.testing.TestReport
+
+          rootProject {
+              tasks.register('aggregateTestReport', TestReport) {
+                  destinationDirectory = layout.buildDirectory.dir('reports/tests/aggregated')
+                  def resultsDir = file("${rootDir}/downloaded-results")
+                  resultsDir.eachDirRecurse { dir ->
+                      if (dir.name == 'binary') {
+                          testResults.from(dir)
+                      }
+                  }
+              }
+          }
+          EOF
+
+          ./gradlew -I "$RUNNER_TEMP/aggregate-init.gradle" aggregateTestReport
+
+          # A job that fails before its tests run leaves no binary results, so the report would be
+          # missing without this list
+          mkdir -p build/reports/tests/aggregated
+          cp "$RUNNER_TEMP/job-outcomes.txt" build/reports/tests/aggregated/
+
+      - name: Upload aggregated HTML report
+        if: ${{ always() && steps.aggregate-report.outputs.outcome != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.aggregate-report.outputs.outcome }}_${{ matrix.report_group }}_${{ matrix.flavor }}_aggregated_test_${{ env.ARTIFACT_SUFFIX }}
+          path: build/reports/tests/aggregated/
+
+      # The pattern of the per-job HTML reports ends with "_<flavor>_test_<suffix>", which the
+      # aggregated report name does not match
+      - name: Delete the per-job HTML reports of the test groups
+        if: ${{ steps.aggregate-report.outcome == 'success' && steps.aggregate-report.outputs.outcome != '' }}
+        uses: geekyeggo/delete-artifact@v6
+        with:
+          name: "*_${{ matrix.report_group }}_*_${{ matrix.flavor }}_test_${{ env.ARTIFACT_SUFFIX }}"
+          failOnError: false
+
+      # A failed flavor keeps its binary results, so that "Re-run failed jobs" aggregates the results
+      # of every job of the flavor, not only the re-run ones
+      - name: Delete the binary test results of the test groups
+        if: ${{ steps.aggregate-report.outcome == 'success' && steps.aggregate-report.outputs.outcome == 'success' }}
+        uses: geekyeggo/delete-artifact@v6
+        with:
+          name: internal_test-results_${{ env.ARTIFACT_SUFFIX }}_${{ matrix.report_group }}_${{ matrix.flavor }}_*
+          failOnError: false
+
   merge-artifacts:
     if: always()
     name: Merge all artifacts
@@ -419,6 +552,7 @@ jobs:
       - check
       - dockerfile-lint
       - integration-test
+      - aggregate-test-reports
     steps:
       - name: Delete test configuration
         uses: geekyeggo/delete-artifact@v6

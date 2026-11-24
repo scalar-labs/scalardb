@@ -4,6 +4,8 @@ import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_COLUMN_SIZE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DATA_TYPE;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_DECIMAL_DIGITS;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_IS_AUTOINCREMENT;
+import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_IS_GENERATEDCOLUMN;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_KEY_SEQ;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.JDBC_COL_TYPE_NAME;
 import static com.scalar.db.storage.jdbc.JdbcAdmin.hasDifferentClusteringOrders;
@@ -18,6 +20,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -64,11 +68,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.EnumSource.Mode;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -100,6 +107,7 @@ public class JdbcAdminTest {
 
   @Mock private HikariDataSource dataSource;
   @Mock private Connection connection;
+  @Mock private PreparedStatement catalogStatement;
   @Mock private JdbcConfig config;
   @Mock private TableMetadataService tableMetadataService;
   @Mock private NamespaceMetadataService namespaceMetadataService;
@@ -111,6 +119,7 @@ public class JdbcAdminTest {
 
     // Arrange
     when(config.getMetadataSchema()).thenReturn(METADATA_SCHEMA);
+    when(config.isColumnCollationEnabled()).thenReturn(true);
   }
 
   private JdbcAdmin createJdbcAdminFor(RdbEngine rdbEngine) {
@@ -141,6 +150,16 @@ public class JdbcAdminTest {
     }
   }
 
+  // Only the engines that read the catalog need the stub. The others run their real strategy.
+  private JdbcAdmin createJdbcAdminWithoutCatalogCollations(RdbEngine rdbEngine) {
+    RdbEngineStrategy strategy = RdbEngine.createRdbEngineStrategy(rdbEngine);
+    if (strategy instanceof RdbEngineMysql || strategy instanceof RdbEnginePostgresql) {
+      strategy = spy(strategy);
+      doReturn(null).when(strategy).textColumnCollationSql();
+    }
+    return createJdbcAdminFor(strategy);
+  }
+
   private JdbcAdmin createJdbcAdminFor(RdbEngineStrategy rdbEngineStrategy) {
     // Arrange
     try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
@@ -164,6 +183,27 @@ public class JdbcAdminTest {
           virtualTableMetadataService,
           false);
     }
+  }
+
+  private JdbcAdmin createJdbcAdminWithMetadataServicesFor(RdbEngineStrategy rdbEngineStrategy) {
+    try (MockedStatic<RdbEngineFactory> mocked = mockStatic(RdbEngineFactory.class)) {
+      mocked
+          .when(() -> RdbEngineFactory.create(any(JdbcConfig.class)))
+          .thenReturn(rdbEngineStrategy);
+      return new JdbcAdmin(
+          dataSource,
+          config,
+          tableMetadataService,
+          namespaceMetadataService,
+          virtualTableMetadataService,
+          false);
+    }
+  }
+
+  private void mockEmptyCatalogQueries() throws SQLException {
+    PreparedStatement catalogStatement = mock(PreparedStatement.class);
+    when(catalogStatement.executeQuery()).thenReturn(mock(ResultSet.class));
+    when(connection.prepareStatement(anyString())).thenReturn(catalogStatement);
   }
 
   private ResultSet mockResultSet(SelectAllFromMetadataTableResultSetMocker.Row... rows)
@@ -480,7 +520,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -494,7 +534,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -508,7 +548,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -526,7 +566,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM ALL_TABLES WHERE OWNER = ? AND TABLE_NAME = ?",
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -540,7 +580,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
@@ -684,7 +724,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForMysql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.MYSQL,
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -696,7 +736,7 @@ public class JdbcAdminTest {
     when(config.getMysqlVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineMysql(config),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -705,7 +745,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForPostgresql_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760) COLLATE \"C\",\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -715,7 +755,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlServer_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_100_BIN2_UTF8,[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -724,7 +764,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForOracle_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128) COLLATE BINARY,\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -738,7 +778,7 @@ public class JdbcAdminTest {
     when(config.getOracleVariableKeyColumnSize()).thenReturn(64);
     createTableInternal_ForX_CreateTableAndIndexes(
         new RdbEngineOracle(config),
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64) COLLATE BINARY,\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -749,7 +789,7 @@ public class JdbcAdminTest {
   public void createTableInternal_ForSqlite_ShouldCreateTableAndIndexes() throws SQLException {
     createTableInternal_ForX_CreateTableAndIndexes(
         RdbEngine.SQLITE,
-        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT COLLATE BINARY,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE INDEX \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -834,7 +874,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.MYSQL,
-        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128),`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
+        "CREATE TABLE IF NOT EXISTS `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,`c5` INT,`c2` BIGINT,`c4` LONGBLOB,`c6` DOUBLE,`c7` REAL,`c8` DATE,`c9` TIME(6),`c10` DATETIME(3),`c11` DATETIME(3), PRIMARY KEY (`c3` ASC,`c1` DESC,`c5` ASC))",
         "CREATE INDEX `index_my_ns_foo_table_c5` ON `my_ns`.`foo_table` (`c5`)",
         "CREATE INDEX `index_my_ns_foo_table_c1` ON `my_ns`.`foo_table` (`c1`)");
   }
@@ -844,7 +884,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.POSTGRESQL,
-        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760) COLLATE \"C\",\"c5\" INT,\"c2\" BIGINT,\"c4\" BYTEA,\"c6\" DOUBLE PRECISION,\"c7\" REAL,\"c8\" DATE,\"c9\" TIME,\"c10\" TIMESTAMP,\"c11\" TIMESTAMP WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE UNIQUE INDEX IF NOT EXISTS \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns\".\"foo_table\" (\"c1\")");
@@ -855,7 +895,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQL_SERVER,
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_100_BIN2_UTF8,[c5] INT,[c2] BIGINT,[c4] VARBINARY(8000),[c6] FLOAT,[c7] FLOAT(24),[c8] DATE,[c9] TIME(6),[c10] DATETIME2(3),[c11] DATETIMEOFFSET(3), PRIMARY KEY ([c3] ASC,[c1] DESC,[c5] ASC))",
         "CREATE INDEX [index_my_ns_foo_table_c5] ON [my_ns].[foo_table] ([c5])",
         "CREATE INDEX [index_my_ns_foo_table_c1] ON [my_ns].[foo_table] ([c1])");
   }
@@ -865,7 +905,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.ORACLE,
-        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128),\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(128) COLLATE BINARY,\"c5\" NUMBER(10),\"c2\" NUMBER(19),\"c4\" BLOB,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT,\"c8\" DATE,\"c9\" TIMESTAMP(6),\"c10\" TIMESTAMP(3),\"c11\" TIMESTAMP(3) WITH TIME ZONE, PRIMARY KEY (\"c3\",\"c1\",\"c5\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE UNIQUE INDEX \"index_clustering_order_my_ns_foo_table\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c5\" ASC)",
         "CREATE INDEX \"my_ns\".\"index_my_ns_foo_table_c5\" ON \"my_ns\".\"foo_table\" (\"c5\")",
@@ -877,7 +917,7 @@ public class JdbcAdminTest {
       throws SQLException {
     createTableInternal_IfNotExistsForX_createTableAndIndexesIfNotExists(
         RdbEngine.SQLITE,
-        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
+        "CREATE TABLE IF NOT EXISTS \"my_ns$foo_table\"(\"c3\" BOOLEAN,\"c1\" TEXT COLLATE BINARY,\"c5\" INT,\"c2\" BIGINT,\"c4\" BLOB,\"c6\" DOUBLE,\"c7\" FLOAT,\"c8\" INT,\"c9\" BIGINT,\"c10\" BIGINT,\"c11\" BIGINT, PRIMARY KEY (\"c3\",\"c1\",\"c5\"))",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c5\" ON \"my_ns$foo_table\" (\"c5\")",
         "CREATE INDEX IF NOT EXISTS \"index_my_ns_foo_table_c1\" ON \"my_ns$foo_table\" (\"c1\")");
   }
@@ -1078,11 +1118,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
-            + "`full_table_name` VARCHAR(128),"
-            + "`column_name` VARCHAR(128),"
-            + "`data_type` VARCHAR(20) NOT NULL,"
-            + "`key_type` VARCHAR(20),"
-            + "`clustering_order` VARCHAR(10),"
+            + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`column_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`data_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,"
+            + "`key_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`clustering_order` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
@@ -1105,11 +1145,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128),"
-            + "\"column_name\" VARCHAR(128),"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
+            + "\"full_table_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"column_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"data_type\" VARCHAR(20) COLLATE \"C\" NOT NULL,"
+            + "\"key_type\" VARCHAR(20) COLLATE \"C\","
+            + "\"clustering_order\" VARCHAR(10) COLLATE \"C\","
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1132,11 +1172,11 @@ public class JdbcAdminTest {
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[metadata]("
-            + "[full_table_name] VARCHAR(128),"
-            + "[column_name] VARCHAR(128),"
-            + "[data_type] VARCHAR(20) NOT NULL,"
-            + "[key_type] VARCHAR(20),"
-            + "[clustering_order] VARCHAR(10),"
+            + "[full_table_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[column_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[data_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8 NOT NULL,"
+            + "[key_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[clustering_order] VARCHAR(10) COLLATE Latin1_General_100_BIN2_UTF8,"
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
@@ -1158,7 +1198,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128) COLLATE BINARY,\"column_name\" VARCHAR2(128) COLLATE BINARY,\"data_type\" VARCHAR2(20) COLLATE BINARY NOT NULL,\"key_type\" VARCHAR2(20) COLLATE BINARY,\"clustering_order\" VARCHAR2(10) COLLATE BINARY,\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "DELETE FROM \""
             + METADATA_SCHEMA
             + "\".\"metadata\" WHERE \"full_table_name\" = 'my_ns.foo_table'",
@@ -1178,11 +1218,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$metadata\"("
-            + "\"full_table_name\" TEXT,"
-            + "\"column_name\" TEXT,"
-            + "\"data_type\" TEXT NOT NULL,"
-            + "\"key_type\" TEXT,"
-            + "\"clustering_order\" TEXT,"
+            + "\"full_table_name\" TEXT COLLATE BINARY,"
+            + "\"column_name\" TEXT COLLATE BINARY,"
+            + "\"data_type\" TEXT COLLATE BINARY NOT NULL,"
+            + "\"key_type\" TEXT COLLATE BINARY,"
+            + "\"clustering_order\" TEXT COLLATE BINARY,"
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1266,11 +1306,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
             + "`.`metadata`("
-            + "`full_table_name` VARCHAR(128),"
-            + "`column_name` VARCHAR(128),"
-            + "`data_type` VARCHAR(20) NOT NULL,"
-            + "`key_type` VARCHAR(20),"
-            + "`clustering_order` VARCHAR(10),"
+            + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`column_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`data_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,"
+            + "`key_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
+            + "`clustering_order` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,"
             + "`indexed` BOOLEAN NOT NULL,"
             + "`ordinal_position` INTEGER NOT NULL,"
             + "PRIMARY KEY (`full_table_name`, `column_name`))",
@@ -1310,11 +1350,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "\".\"metadata\"("
-            + "\"full_table_name\" VARCHAR(128),"
-            + "\"column_name\" VARCHAR(128),"
-            + "\"data_type\" VARCHAR(20) NOT NULL,"
-            + "\"key_type\" VARCHAR(20),"
-            + "\"clustering_order\" VARCHAR(10),"
+            + "\"full_table_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"column_name\" VARCHAR(128) COLLATE \"C\","
+            + "\"data_type\" VARCHAR(20) COLLATE \"C\" NOT NULL,"
+            + "\"key_type\" VARCHAR(20) COLLATE \"C\","
+            + "\"clustering_order\" VARCHAR(10) COLLATE \"C\","
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1353,11 +1393,11 @@ public class JdbcAdminTest {
         "CREATE TABLE ["
             + METADATA_SCHEMA
             + "].[metadata]("
-            + "[full_table_name] VARCHAR(128),"
-            + "[column_name] VARCHAR(128),"
-            + "[data_type] VARCHAR(20) NOT NULL,"
-            + "[key_type] VARCHAR(20),"
-            + "[clustering_order] VARCHAR(10),"
+            + "[full_table_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[column_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[data_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8 NOT NULL,"
+            + "[key_type] VARCHAR(20) COLLATE Latin1_General_100_BIN2_UTF8,"
+            + "[clustering_order] VARCHAR(10) COLLATE Latin1_General_100_BIN2_UTF8,"
             + "[indexed] BIT NOT NULL,"
             + "[ordinal_position] INTEGER NOT NULL,"
             + "PRIMARY KEY ([full_table_name], [column_name]))",
@@ -1395,7 +1435,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+            + "\".\"metadata\"(\"full_table_name\" VARCHAR2(128) COLLATE BINARY,\"column_name\" VARCHAR2(128) COLLATE BINARY,\"data_type\" VARCHAR2(20) COLLATE BINARY NOT NULL,\"key_type\" VARCHAR2(20) COLLATE BINARY,\"clustering_order\" VARCHAR2(10) COLLATE BINARY,\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
         "INSERT INTO \""
             + METADATA_SCHEMA
             + "\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
@@ -1431,11 +1471,11 @@ public class JdbcAdminTest {
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
             + "$metadata\"("
-            + "\"full_table_name\" TEXT,"
-            + "\"column_name\" TEXT,"
-            + "\"data_type\" TEXT NOT NULL,"
-            + "\"key_type\" TEXT,"
-            + "\"clustering_order\" TEXT,"
+            + "\"full_table_name\" TEXT COLLATE BINARY,"
+            + "\"column_name\" TEXT COLLATE BINARY,"
+            + "\"data_type\" TEXT COLLATE BINARY NOT NULL,"
+            + "\"key_type\" TEXT COLLATE BINARY,"
+            + "\"clustering_order\" TEXT COLLATE BINARY,"
             + "\"indexed\" BOOLEAN NOT NULL,"
             + "\"ordinal_position\" INTEGER NOT NULL,"
             + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
@@ -1584,14 +1624,141 @@ public class JdbcAdminTest {
     when(connection.createStatement()).thenReturn(mock(Statement.class));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngine));
+    RdbEngineStrategy rdbEngineStrategy = spy(RdbEngine.createRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
 
     // Act
     adminSpy.createTable(namespace, table, metadata, Collections.emptyMap());
 
     // Assert
-    verify(adminSpy).createTableInternal(connection, namespace, table, metadata, false);
+    verify(adminSpy)
+        .createTableInternal(connection, namespace, table, metadata, false, Collections.emptyMap());
     verify(adminSpy).addTableMetadata(connection, namespace, table, metadata, true, false);
+  }
+
+  @Test
+  public void createTable_WithKeyCollationSourceTable_ShouldUseSourceKeyCollations()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    doReturn(
+            ImmutableMap.of(
+                "pk", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4"),
+                "col", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    String createTable =
+        sql.getAllValues().stream()
+            .filter(s -> s.startsWith("CREATE TABLE `my_ns`.`foo_table`"))
+            .findFirst()
+            .orElseThrow(AssertionError::new);
+    assertThat(createTable)
+        .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        .doesNotContain("`col` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        .contains("`col` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
+  }
+
+  @Test
+  public void createTable_WithMissingKeyCollationSourceTable_ShouldUseBinaryCollationOnKeys()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("missing_table"));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "missing_table"));
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .anySatisfy(
+            s ->
+                assertThat(s)
+                    .startsWith("CREATE TABLE `my_ns`.`foo_table`")
+                    .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin"));
+  }
+
+  @Test
+  public void createTable_WithKeyCollationSourceTableOnDb2_ShouldNotReadCatalogCollations()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineDb2());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getTextColumnCollations(any(), anyString(), anyString());
+  }
+
+  @Test
+  public void createTable_WithNullOptions_ShouldCreateTable()
+      throws SQLException, ExecutionException {
+    // Arrange
+    TableMetadata metadata = textTableMetadata();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+
+    // Act
+    adminSpy.createTable("ns", "tbl", metadata, null);
+
+    // Assert
+    verify(adminSpy)
+        .createTableInternal(connection, "ns", "tbl", metadata, false, Collections.emptyMap());
   }
 
   @ParameterizedTest
@@ -3274,7 +3441,7 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    JdbcAdmin admin = createJdbcAdminWithoutCatalogCollations(rdbEngine);
 
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
@@ -3765,7 +3932,7 @@ public class JdbcAdminTest {
     String namespace = "my_ns";
     String table = "my_tbl";
     String indexColumn = "my_column";
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    JdbcAdmin admin = createJdbcAdminWithoutCatalogCollations(rdbEngine);
 
     PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
     ResultSet checkResultSet = mock(ResultSet.class);
@@ -3803,6 +3970,185 @@ public class JdbcAdminTest {
     }
     assertThat(captor.getAllValues().get(expectedAlterColumnStatements.length + 1))
         .isEqualTo(expectedUpdateTableMetadataStatement);
+  }
+
+  @Test
+  public void createIndex_PostgresqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangePostgresqlTextColumnWithUndIcuCollation();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE \"my_ns\".\"foo_table\" ALTER COLUMN \"c1\" TYPE VARCHAR(10485760) COLLATE \"pg_catalog\".\"und-x-icu\"");
+  }
+
+  @Test
+  public void dropIndex_PostgresqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangePostgresqlTextColumnWithUndIcuCollation();
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.dropIndex("my_ns", "foo_table", "c1");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE \"my_ns\".\"foo_table\" ALTER COLUMN \"c1\" TYPE TEXT COLLATE \"pg_catalog\".\"und-x-icu\"");
+  }
+
+  private Statement arrangePostgresqlTextColumnWithUndIcuCollation() throws SQLException {
+    return arrangePostgresqlTextColumnWithCollation("\"pg_catalog\".\"und-x-icu\"");
+  }
+
+  private Statement arrangePostgresqlTextColumnWithCollation(String collation) throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c0", DataType.INT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    ResultSet catalogResultSet = mock(ResultSet.class);
+    when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    when(catalogResultSet.next()).thenReturn(true, false);
+    when(catalogResultSet.getString(1)).thenReturn(collation);
+
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    return statement;
+  }
+
+  @Test
+  public void createIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void dropIndex_MysqlTextColumnWithNonBinaryCollation_ShouldKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.dropIndex("my_ns", "foo_table", "c1");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void createIndex_MysqlTextColumn_ShouldReadTheCatalogForThatColumnOnly()
+      throws SQLException, ExecutionException {
+    // Arrange
+    arrangeMysqlTextColumnWithCatalogCollation(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(catalogStatement).setString(1, "my_ns");
+    verify(catalogStatement).setString(2, "foo_table");
+    verify(catalogStatement).setString(3, "c1");
+  }
+
+  @Test
+  public void createIndex_MysqlCatalogReadHitsLockWaitTimeout_ShouldRetryAndKeepCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    SQLException lockWaitTimeout = new SQLException("Lock wait timeout exceeded", "HY000", 1205);
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true, lockWaitTimeout);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void createIndex_ForColumnMissingFromCatalog_ShouldRestateBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(false);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128)");
+  }
+
+  private Statement arrangeMysqlTextColumnWithCatalogCollation(
+      boolean columnInCatalog, SQLException... catalogReadFailures) throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c0", DataType.INT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    ResultSet catalogResultSet = mock(ResultSet.class);
+    if (catalogReadFailures.length == 0) {
+      when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    } else {
+      when(catalogStatement.executeQuery())
+          .thenThrow(catalogReadFailures)
+          .thenReturn(catalogResultSet);
+    }
+    when(catalogResultSet.next()).thenReturn(columnInCatalog);
+    when(catalogResultSet.getString(1)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4");
+
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    return statement;
   }
 
   @Test
@@ -4256,6 +4602,36 @@ public class JdbcAdminTest {
   }
 
   @Test
+  public void addNewColumnToTable_TextColumn_ShouldUseBinaryCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.INT.toString(), "PARTITION", null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.addNewColumnToTable("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `ns`.`table` ADD `c2` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin");
+  }
+
+  @Test
   public void dropColumnFromTable_ForMysql_ShouldWorkProperly()
       throws SQLException, ExecutionException {
     dropColumnFromTable_ForX_ShouldWorkProperly(
@@ -4557,6 +4933,86 @@ public class JdbcAdminTest {
     }
   }
 
+  private JdbcAdmin prepareRenameOfTextColumn(
+      RdbEngineStrategy strategy, boolean indexed, Statement statement) throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c0", DataType.INT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), null, null, indexed));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+
+    ResultSet catalogResultSet = mock(ResultSet.class);
+    when(catalogStatement.executeQuery()).thenReturn(catalogResultSet);
+    when(catalogResultSet.next()).thenReturn(true, false);
+    when(catalogResultSet.getString(1)).thenReturn("utf8mb4_0900_ai_ci");
+    when(catalogResultSet.getString(2)).thenReturn("utf8mb4");
+
+    when(connection.prepareStatement(any()))
+        .thenReturn(checkPreparedStatement, selectStatement, catalogStatement);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    return createJdbcAdminFor(strategy);
+  }
+
+  @Test
+  public void renameColumn_MysqlWithRenameColumnSupported_ShouldNotReadTheCatalog()
+      throws SQLException, ExecutionException {
+    // Arrange
+    JdbcConfig mysqlConfig = mock(JdbcConfig.class);
+    when(mysqlConfig.getMysqlVariableKeyColumnSize()).thenReturn(128);
+    Statement statement = mock(Statement.class);
+    JdbcAdmin admin =
+        prepareRenameOfTextColumn(new RdbEngineMysql(mysqlConfig, false, true), false, statement);
+
+    // Act
+    admin.renameColumn("ns", "table", "c1", "c2");
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `ns`.`table` RENAME COLUMN `c1` TO `c2`");
+    verify(connection, times(2)).prepareStatement(any());
+  }
+
+  @Test
+  public void renameColumn_MysqlWithoutRenameColumnSupportAndTextColumn_ShouldRestateCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    JdbcAdmin admin = prepareRenameOfTextColumn(new RdbEngineMysql(), false, statement);
+
+    // Act
+    admin.renameColumn("ns", "table", "c1", "c2");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `ns`.`table` CHANGE COLUMN `c1` `c2` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void
+      renameColumn_MysqlWithoutRenameColumnSupportAndIndexedTextColumn_ShouldRestateIndexTypeAndCollation()
+          throws SQLException, ExecutionException {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    JdbcAdmin admin = prepareRenameOfTextColumn(new RdbEngineMysql(), true, statement);
+
+    // Act
+    admin.renameColumn("ns", "table", "c1", "c2");
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `ns`.`table` CHANGE COLUMN `c1` `c2` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
   @Test
   public void renameColumn_WithLongIndexNameAndUndefinedIndexError_ShouldFallbackToOriginalName()
       throws Exception {
@@ -4793,6 +5249,71 @@ public class JdbcAdminTest {
     for (int i = 0; i < expectedSqlStatements.length; i++) {
       verify(expectedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
+  }
+
+  @Test
+  public void alterColumnType_IntToText_ShouldUseBinaryCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c2", DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.alterColumnType("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(connection, times(2)).prepareStatement(any());
+    verify(statement)
+        .execute("ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE TEXT COLLATE \"C\"");
+  }
+
+  @Test
+  public void alterColumnType_IntToTextOnEngineNotRestatingCollations_ShouldUseBinaryCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c2", DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEnginePostgresql());
+    doReturn(null).when(rdbEngineStrategy).textColumnCollationSql();
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.alterColumnType("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement)
+        .execute("ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE TEXT COLLATE \"C\"");
   }
 
   @Test
@@ -5180,7 +5701,16 @@ public class JdbcAdminTest {
         .thenReturn("");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0).thenReturn(0).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0).thenReturn(0).thenReturn(0);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("NO");
     RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
+    ResultSet columnAttributeResults = mock(ResultSet.class);
+    when(columnAttributeResults.next()).thenReturn(true).thenReturn(false);
+    PreparedStatement columnAttributeStatement =
+        stubImportColumnAttributesQuery(rdbEngineStrategy, columnAttributeResults);
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -5205,6 +5735,12 @@ public class JdbcAdminTest {
     assertThat(actual.getPartitionKeyNames()).hasSameElementsAs(ImmutableSet.of("pk1", "pk2"));
     assertThat(actual.getColumnDataTypes()).containsExactlyEntriesOf(expectedColumns);
     verifyConnectionSetToReadOnly(connection, rdbEngine);
+    if (columnAttributeStatement != null) {
+      verify(columnAttributeStatement, description(description)).setString(1, NAMESPACE);
+      verify(columnAttributeStatement, description(description)).setString(2, TABLE);
+      verify(rdbEngineStrategy, description(description))
+          .validateImportColumnAttributes(columnAttributeResults, NAMESPACE, TABLE);
+    }
     verify(rdbEngineStrategy)
         .getDataTypeForScalarDb(
             any(JDBCType.class),
@@ -5273,7 +5809,10 @@ public class JdbcAdminTest {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
     when(columnResults.getInt(JDBC_COL_COLUMN_SIZE)).thenReturn(0);
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -5281,6 +5820,7 @@ public class JdbcAdminTest {
       when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
     }
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
     JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
@@ -5404,6 +5944,7 @@ public class JdbcAdminTest {
     when(columnResults.getInt(JDBC_COL_DECIMAL_DIGITS)).thenReturn(0);
 
     RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
     if (rdbEngineStrategy instanceof RdbEngineMysql) {
       when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
       when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
@@ -5432,6 +5973,193 @@ public class JdbcAdminTest {
       names = {
         "SQLITE",
       })
+  public void
+      getImportTableMetadata_GeneratedColumnGivenForXBesidesSqlite_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO").thenReturn("YES");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("NO");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "col"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void
+      getImportTableMetadata_AutoIncrementColumnGivenForXBesidesSqlite_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("YES");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "pk"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
+  public void
+      getImportTableMetadata_GeneratedAndAutoIncrementColumnsNotDeterminedByJdbcMetadataForXBesidesSqlite_ShouldWorkProperly(
+          RdbEngine rdbEngine) throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    // JDBC drivers return an empty string if they cannot determine whether a column is a generated
+    // column or an auto-increment column, and some drivers may return null
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn(null).thenReturn("");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn(null).thenReturn("");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap());
+
+    // Assert
+    assertThat(actual.getPartitionKeyNames()).containsExactly("pk");
+    assertThat(actual.getColumnNames()).containsExactly("pk", "col");
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      names = {"MYSQL", "MARIADB"})
+  public void
+      getImportTableMetadata_GeneratedColumnNotReportedByJdbcMetadataGivenForMysqlAndMariaDb_ShouldThrowIllegalArgumentException(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("NO");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("NO");
+    ResultSet columnAttributeResults = mock(ResultSet.class);
+    when(columnAttributeResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(columnAttributeResults.getString(1)).thenReturn("pk").thenReturn("col");
+    when(columnAttributeResults.getString(2))
+        .thenReturn("")
+        .thenReturn("VIRTUAL GENERATED INVISIBLE");
+    stubImportColumnAttributesQuery(rdbEngineStrategy, columnAttributeResults);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_GENERATED_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "col"));
+  }
+
+  @Test
+  public void
+      getImportTableMetadata_IdentityColumnGivenForDb2_ShouldThrowIllegalArgumentExceptionForAutoIncrementColumn()
+          throws SQLException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(RdbEngine.DB2);
+    ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
+    // The Db2 JDBC driver reports identity columns as generated columns as well
+    when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn("YES");
+    when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn("YES");
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.DB2);
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_IMPORT_AUTO_INCREMENT_COLUMN_NOT_SUPPORTED.buildMessage(
+                getFullTableName(NAMESPACE, TABLE), "pk"));
+  }
+
+  /**
+   * Prepares the mocks for importing a table that has a primary key column "pk" and a non-primary
+   * key column "col", and returns the result set of {@link DatabaseMetaData#getColumns(String,
+   * String, String, String)} so that the caller can stub the attributes of the columns.
+   */
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
+  private ResultSet prepareImportTableWithNonPrimaryKeyColumn(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException {
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk").thenReturn("col");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE))
+        .thenReturn(rdbEngineStrategy instanceof RdbEngineSpanner ? Types.NVARCHAR : Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
+    if (rdbEngineStrategy instanceof RdbEngineMysql) {
+      when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    } else {
+      when(metadata.getPrimaryKeys(null, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+      when(metadata.getColumns(null, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    }
+    return columnResults;
+  }
+
+  /**
+   * Stubs the engine-specific query that checks the attributes of the columns of a table to import,
+   * if the engine has such a query. This must be called after stubbing {@code
+   * connection.prepareStatement(anyString())} since the last stubbing takes precedence.
+   *
+   * @return the statement for the query, or {@code null} if the engine does not have such a query
+   */
+  @Nullable
+  private PreparedStatement stubImportColumnAttributesQuery(
+      RdbEngineStrategy rdbEngineStrategy, ResultSet columnAttributeResults) throws SQLException {
+    String sql = rdbEngineStrategy.importColumnAttributesSql();
+    if (sql == null) {
+      return null;
+    }
+    PreparedStatement columnAttributeStatement = mock(PreparedStatement.class);
+    when(connection.prepareStatement(sql)).thenReturn(columnAttributeStatement);
+    when(columnAttributeStatement.executeQuery()).thenReturn(columnAttributeResults);
+    return columnAttributeStatement;
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = RdbEngine.class,
+      mode = Mode.EXCLUDE,
+      names = {
+        "SQLITE",
+      })
   public void importTable_ForXBesidesSqlite_ShouldWorkProperly(RdbEngine rdbEngine)
       throws SQLException, ExecutionException {
     // Arrange
@@ -5440,6 +6168,12 @@ public class JdbcAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
     Statement mockStatement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(mockStatement);
+    PreparedStatement maxStringSizeStatement = mock(PreparedStatement.class);
+    ResultSet maxStringSizeResultSet = mock(ResultSet.class);
+    when(connection.prepareStatement(anyString())).thenReturn(maxStringSizeStatement);
+    when(maxStringSizeStatement.executeQuery()).thenReturn(maxStringSizeResultSet);
+    when(maxStringSizeResultSet.next()).thenReturn(true);
+    when(maxStringSizeResultSet.getString(1)).thenReturn("EXTENDED");
     TableMetadata importedTableMetadata = mock(TableMetadata.class);
     doReturn(importedTableMetadata)
         .when(adminSpy)
@@ -5496,7 +6230,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -5510,7 +6244,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5524,7 +6258,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -5542,7 +6276,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM ALL_TABLES WHERE OWNER = ? AND TABLE_NAME = ?",
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5584,7 +6318,7 @@ public class JdbcAdminTest {
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
@@ -5687,7 +6421,7 @@ public class JdbcAdminTest {
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS `" + METADATA_SCHEMA + "`"),
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -5700,7 +6434,7 @@ public class JdbcAdminTest {
         ImmutableList.of("CREATE SCHEMA IF NOT EXISTS \"" + METADATA_SCHEMA + "\""),
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5715,7 +6449,7 @@ public class JdbcAdminTest {
             "ALTER USER \"" + METADATA_SCHEMA + "\" quota unlimited on USERS"),
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -5728,7 +6462,7 @@ public class JdbcAdminTest {
         ImmutableList.of("CREATE SCHEMA [" + METADATA_SCHEMA + "]"),
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -5741,7 +6475,7 @@ public class JdbcAdminTest {
         Collections.emptyList(),
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
@@ -6035,7 +6769,7 @@ public class JdbcAdminTest {
         RdbEngine.MYSQL,
         "CREATE TABLE IF NOT EXISTS `"
             + METADATA_SCHEMA
-            + "`.`namespaces`(`namespace_name` VARCHAR(128), PRIMARY KEY (`namespace_name`))",
+            + "`.`namespaces`(`namespace_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, PRIMARY KEY (`namespace_name`))",
         "INSERT INTO `" + METADATA_SCHEMA + "`.`namespaces` VALUES (?)");
   }
 
@@ -6047,7 +6781,7 @@ public class JdbcAdminTest {
         RdbEngine.POSTGRESQL,
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR(128) COLLATE \"C\", PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -6059,7 +6793,7 @@ public class JdbcAdminTest {
         RdbEngine.SQL_SERVER,
         "CREATE TABLE ["
             + METADATA_SCHEMA
-            + "].[namespaces]([namespace_name] VARCHAR(128), PRIMARY KEY ([namespace_name]))",
+            + "].[namespaces]([namespace_name] VARCHAR(128) COLLATE Latin1_General_100_BIN2_UTF8, PRIMARY KEY ([namespace_name]))",
         "INSERT INTO [" + METADATA_SCHEMA + "].[namespaces] VALUES (?)");
   }
 
@@ -6071,7 +6805,7 @@ public class JdbcAdminTest {
         RdbEngine.ORACLE,
         "CREATE TABLE \""
             + METADATA_SCHEMA
-            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128), PRIMARY KEY (\"namespace_name\"))",
+            + "\".\"namespaces\"(\"namespace_name\" VARCHAR2(128) COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "\".\"namespaces\" VALUES (?)");
   }
 
@@ -6083,7 +6817,7 @@ public class JdbcAdminTest {
         RdbEngine.SQLITE,
         "CREATE TABLE IF NOT EXISTS \""
             + METADATA_SCHEMA
-            + "$namespaces\"(\"namespace_name\" TEXT, PRIMARY KEY (\"namespace_name\"))",
+            + "$namespaces\"(\"namespace_name\" TEXT COLLATE BINARY, PRIMARY KEY (\"namespace_name\"))",
         "INSERT INTO \"" + METADATA_SCHEMA + "$namespaces\" VALUES (?)");
   }
 
@@ -6427,6 +7161,96 @@ public class JdbcAdminTest {
         .hasMessageContainingAll("BLOB", "index");
   }
 
+  private RdbEngineStrategy mysqlWithSourceKeyCollations(
+      String leftKeyCollation, String rightKeyCollation) throws SQLException {
+    TableMetadata leftSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col1", DataType.INT)
+            .build();
+    TableMetadata rightSourceTableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col2", DataType.INT)
+            .build();
+    when(tableMetadataService.getTableMetadata(any(Connection.class), eq("ns"), eq("left_table")))
+        .thenReturn(leftSourceTableMetadata);
+    when(tableMetadataService.getTableMetadata(any(Connection.class), eq("ns"), eq("right_table")))
+        .thenReturn(rightSourceTableMetadata);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(ImmutableMap.of("pk", new TextColumnCollation(leftKeyCollation, "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("ns"), eq("left_table"));
+    doReturn(ImmutableMap.of("pk", new TextColumnCollation(rightKeyCollation, "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("ns"), eq("right_table"));
+    return rdbEngineStrategy;
+  }
+
+  @Test
+  public void
+      createVirtualTable_SourceTextKeysWithDifferentCollations_ShouldThrowIllegalArgumentException()
+          throws Exception {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    JdbcAdmin admin =
+        createJdbcAdminWithMetadataServicesFor(
+            mysqlWithSourceKeyCollations("utf8mb4_bin", "utf8mb4_0900_bin"));
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.createVirtualTable(
+                    "ns",
+                    "vtable",
+                    "ns",
+                    "left_table",
+                    "ns",
+                    "right_table",
+                    VirtualTableJoinType.INNER,
+                    Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            CoreError.JDBC_VIRTUAL_TABLE_SOURCE_KEYS_HAVE_DIFFERENT_COLLATIONS.buildMessage(
+                "pk", "ns.left_table", "utf8mb4_bin", "ns.right_table", "utf8mb4_0900_bin"));
+    verify(statement, never()).execute(anyString());
+  }
+
+  @Test
+  public void createVirtualTable_SourceTextKeysWithSameCollation_ShouldCreateView()
+      throws Exception {
+    // Arrange
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    JdbcAdmin admin =
+        spy(
+            createJdbcAdminWithMetadataServicesFor(
+                mysqlWithSourceKeyCollations("utf8mb4_bin", "utf8mb4_bin")));
+    doNothing().when(admin).createMetadataSchemaIfNotExists(any(Connection.class));
+
+    // Act
+    admin.createVirtualTable(
+        "ns",
+        "vtable",
+        "ns",
+        "left_table",
+        "ns",
+        "right_table",
+        VirtualTableJoinType.INNER,
+        Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute(startsWith("CREATE VIEW"));
+  }
+
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   @Test
   public void createVirtualTable_WithInnerJoin_ShouldCreateViewWithInnerJoin() throws Exception {
@@ -6467,6 +7291,7 @@ public class JdbcAdminTest {
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
+    mockEmptyCatalogQueries();
     doNothing()
         .when(virtualTableMetadataService)
         .createVirtualTablesTableIfNotExists(any(Connection.class));
@@ -6594,6 +7419,7 @@ public class JdbcAdminTest {
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
+    mockEmptyCatalogQueries();
     doNothing()
         .when(virtualTableMetadataService)
         .createVirtualTablesTableIfNotExists(any(Connection.class));
@@ -6695,6 +7521,7 @@ public class JdbcAdminTest {
     Statement statement = mock(Statement.class);
     when(dataSource.getConnection()).thenReturn(connection);
     when(connection.createStatement()).thenReturn(statement);
+    mockEmptyCatalogQueries();
 
     TableMetadata leftSourceTableMetadata =
         TableMetadata.newBuilder()
@@ -7032,5 +7859,1116 @@ public class JdbcAdminTest {
         this.namespaceName = namespaceName;
       }
     }
+  }
+
+  private static final String ORACLE_MAX_STRING_SIZE_MESSAGE =
+      CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage();
+
+  private void mockOracleRejectingCreateTableWithOra43929(boolean tableExists) throws SQLException {
+    Statement statement = mock(Statement.class);
+    when(statement.execute(startsWith("CREATE TABLE")))
+        .thenThrow(new SQLException("ORA-43929", "99999", 43929));
+    when(connection.createStatement()).thenReturn(statement);
+    ResultSet existsResultSet = mock(ResultSet.class);
+    when(existsResultSet.next()).thenReturn(tableExists);
+    PreparedStatement existsStatement = mock(PreparedStatement.class);
+    when(existsStatement.executeQuery()).thenReturn(existsResultSet);
+    when(connection.prepareStatement(anyString())).thenReturn(existsStatement);
+    when(dataSource.getConnection()).thenReturn(connection);
+  }
+
+  private TableMetadata oracleCollationTestMetadata() {
+    return TableMetadata.newBuilder()
+        .addPartitionKey("c1")
+        .addColumn("c1", DataType.TEXT)
+        .addColumn("c2", DataType.INT)
+        .build();
+  }
+
+  @Test
+  public void createTable_OracleRejectsCollationWithOra43929_ShouldThrowWithMaxStringSizeMessage()
+      throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.createTable(
+                    "my_ns", "foo_table", oracleCollationTestMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(ExecutionException.class);
+    assertThat(thrown.getCause())
+        .isInstanceOfSatisfying(
+            SQLException.class,
+            cause -> {
+              assertThat(cause.getMessage()).isEqualTo(ORACLE_MAX_STRING_SIZE_MESSAGE);
+              assertThat(cause.getErrorCode()).isEqualTo(43929);
+            });
+  }
+
+  @Test
+  public void repairTable_OracleRejectsCollationWithOra43929AndTableExists_ShouldNotThrow()
+      throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.repairTable(
+                    "my_ns", "foo_table", oracleCollationTestMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isNull();
+  }
+
+  @Test
+  public void
+      repairTable_OracleRejectsCollationWithOra43929AndTableMissing_ShouldThrowWithMaxStringSizeMessage()
+          throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(false);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                admin.repairTable(
+                    "my_ns", "foo_table", oracleCollationTestMetadata(), Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(ExecutionException.class);
+    assertThat(thrown.getCause())
+        .isInstanceOfSatisfying(
+            SQLException.class,
+            cause -> assertThat(cause.getMessage()).isEqualTo(ORACLE_MAX_STRING_SIZE_MESSAGE));
+  }
+
+  @Test
+  public void createMetadataTables_OracleRejectsCollationWithOra43929AndTablesExist_ShouldNotThrow()
+      throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () -> {
+              admin.createTableMetadataTableIfNotExists(connection);
+              admin.createNamespacesTableIfNotExists(connection);
+            });
+
+    // Assert
+    assertThat(thrown).isNull();
+  }
+
+  @Test
+  public void
+      createMetadataTables_OracleRejectsCollationWithOra43929AndTableMissing_ShouldThrowWithMaxStringSizeMessage()
+          throws SQLException {
+    // Arrange
+    mockOracleRejectingCreateTableWithOra43929(false);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.ORACLE);
+
+    // Act
+    Throwable metadataThrown =
+        catchThrowable(() -> admin.createTableMetadataTableIfNotExists(connection));
+    Throwable namespacesThrown =
+        catchThrowable(() -> admin.createNamespacesTableIfNotExists(connection));
+
+    // Assert
+    assertThat(metadataThrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(ORACLE_MAX_STRING_SIZE_MESSAGE);
+    assertThat(namespacesThrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(ORACLE_MAX_STRING_SIZE_MESSAGE);
+  }
+
+  @Test
+  public void appendCollationClause_ShouldAppendNonEmptyClauseOnly() {
+    // Arrange Act
+    String withClause = JdbcAdmin.appendCollationClause("VARCHAR(10)", "COLLATE c");
+    String withoutClause = JdbcAdmin.appendCollationClause("VARCHAR(10)", "");
+
+    // Assert
+    assertThat(withClause).isEqualTo("VARCHAR(10) COLLATE c");
+    assertThat(withoutClause).isEqualTo("VARCHAR(10)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_AllBinaryUtf8_ShouldReturnEmpty() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void
+      buildImportTextColumnWarnings_PartialCharsetBinaryCollation_ShouldReturnBothWarnings() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("c").addColumn("c", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("c", new TextColumnCollation("latin1_bin", "latin1"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual).hasSize(2);
+    assertThat(actual.get(0)).contains("c (collation latin1_bin, character set latin1)");
+    assertThat(actual.get(1)).contains("c (character set latin1)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_MysqlPadSpaceBin_ShouldReturnCollationWarning() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("utf8mb4_bin", "utf8mb4"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation utf8mb4_bin, character set utf8mb4)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_OracleNclob_ShouldReturnCollationWarning() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("BINARY", "AL16UTF16"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineOracle());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation BINARY, character set AL16UTF16)");
+  }
+
+  @Test
+  public void
+      buildImportTextColumnWarnings_PostgresqlDefaultOnIcuDatabase_ShouldNameResolvedLocale() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("default", "UTF8", "icu:en-US"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEnginePostgresql());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation default resolved to icu:en-US, character set UTF8)");
+  }
+
+  @Test
+  public void
+      buildImportTextColumnWarnings_OracleUsingNlsCompGermanSort_ShouldNameResolvedNlsSort() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("USING_NLS_COMP", "AL32UTF8", "GERMAN"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineOracle());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation USING_NLS_COMP resolved to GERMAN, character set AL32UTF8)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_MysqlLatin1_ShouldReturnBothWarnings() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("latin1_bin", "latin1"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation latin1_bin, character set latin1)",
+            "The ns.tbl table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: pk (character set latin1)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_SqlServerBin2OnCodePage_ShouldReturnBothWarnings() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("Latin1_General_100_BIN2", "CP1252"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineSqlServer());
+
+    // Assert
+    assertThat(actual)
+        .containsExactly(
+            "The ns.tbl table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: pk (collation Latin1_General_100_BIN2, character set CP1252)",
+            "The ns.tbl table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: pk (character set CP1252)");
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_MariaDbUtf16NopadBin_ShouldReturnEmpty() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of("pk", new TextColumnCollation("utf16_nopad_bin", "utf16"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMariaDB());
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void buildImportTextColumnWarnings_NonTextColumnInMap_ShouldIgnoreIt() {
+    // Arrange
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("blob_col", DataType.BLOB)
+            .build();
+    Map<String, TextColumnCollation> collations =
+        ImmutableMap.of(
+            "pk",
+            new TextColumnCollation("utf8mb4_0900_bin", "utf8mb4"),
+            "blob_col",
+            new TextColumnCollation("latin1_swedish_ci", "latin1"));
+
+    // Act
+    List<String> actual =
+        JdbcAdmin.buildImportTextColumnWarnings(
+            "ns.tbl", metadata, collations, new RdbEngineMysql());
+
+    // Assert
+    assertThat(actual).isEmpty();
+  }
+
+  private static Stream<Exception> catalogReadFailures() {
+    return Stream.of(new SQLException("catalog failure"), new RuntimeException("catalog failure"));
+  }
+
+  @ParameterizedTest
+  @MethodSource("catalogReadFailures")
+  public void importTable_CollationReadFails_ShouldStillImport(Exception failure)
+      throws SQLException, ExecutionException {
+    // Arrange
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
+    when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    doThrow(failure)
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    doNothing().when(adminSpy).createMetadataSchemaIfNotExists(any());
+    doNothing().when(adminSpy).createNamespacesTableIfNotExists(any());
+    doNothing().when(adminSpy).upsertIntoNamespacesTable(any(), anyString());
+    doNothing()
+        .when(adminSpy)
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+
+    // Act
+    Throwable thrown =
+        catchThrowable(
+            () ->
+                adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of()));
+
+    // Assert
+    assertThat(thrown).isNull();
+    verify(adminSpy)
+        .addTableMetadata(
+            eq(connection),
+            eq(NAMESPACE),
+            eq(TABLE),
+            any(TableMetadata.class),
+            eq(true),
+            eq(false));
+  }
+
+  private void importSingleTextColumnTable(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException, ExecutionException {
+    spyAdminForSingleTextColumnImport(rdbEngineStrategy)
+        .importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+  }
+
+  private JdbcAdmin spyAdminForSingleTextColumnImport(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException, ExecutionException {
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("varchar");
+    when(metadata.getPrimaryKeys(any(), any(), eq(TABLE))).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(any(), any(), eq(TABLE), eq("%"))).thenReturn(columnResults);
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    doNothing().when(adminSpy).createMetadataSchemaIfNotExists(any());
+    doNothing().when(adminSpy).createNamespacesTableIfNotExists(any());
+    doNothing().when(adminSpy).upsertIntoNamespacesTable(any(), anyString());
+    doNothing()
+        .when(adminSpy)
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+    return adminSpy;
+  }
+
+  @Test
+  public void importTable_ForSqlServer_ShouldCheckDatabaseEncoding()
+      throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineSqlServer());
+
+    // Act
+    importSingleTextColumnTable(rdbEngineStrategy);
+
+    // Assert
+    verify(rdbEngineStrategy).getDatabaseTextIssues(connection);
+  }
+
+  @Test
+  public void importTable_ForMysql_ShouldNotCheckDatabaseEncoding()
+      throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+
+    // Act
+    importSingleTextColumnTable(rdbEngineStrategy);
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
+  }
+
+  @Test
+  public void importTable_ForOracleRejectingCollationClauses_ShouldFailBeforeRegisteringTable()
+      throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
+    doThrow(
+            new SQLException(
+                CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage()))
+        .when(rdbEngineStrategy)
+        .throwIfCollationClausesRejected(any());
+    JdbcAdmin adminSpy = spyAdminForSingleTextColumnImport(rdbEngineStrategy);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of()))
+        .isInstanceOf(ExecutionException.class)
+        .hasRootCauseMessage(
+            CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+    verify(adminSpy, never()).createMetadataSchemaIfNotExists(any());
+    verify(adminSpy, never())
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+  }
+
+  @Test
+  public void
+      importTable_ForOracleRejectingCollationClausesWithColumnCollationDisabled_ShouldRegisterTable()
+          throws SQLException, ExecutionException {
+    // Arrange
+    when(config.isColumnCollationEnabled()).thenReturn(false);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
+    doThrow(
+            new SQLException(
+                CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage()))
+        .when(rdbEngineStrategy)
+        .throwIfCollationClausesRejected(any());
+    JdbcAdmin adminSpy = spyAdminForSingleTextColumnImport(rdbEngineStrategy);
+
+    // Act
+    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).throwIfCollationClausesRejected(any());
+    verify(adminSpy).addTableMetadata(any(), eq(NAMESPACE), eq(TABLE), any(), eq(true), eq(false));
+  }
+
+  private TableMetadata textTableMetadata() {
+    return TableMetadata.newBuilder()
+        .addPartitionKey("pk")
+        .addColumn("pk", DataType.TEXT)
+        .addColumn("c", DataType.INT)
+        .build();
+  }
+
+  @Test
+  public void createTable_TextColumnOnNonUnicodeDatabase_ShouldCallTextSettingsCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(
+            ImmutableList.of(
+                new DatabaseTextIssue("latin1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET)))
+        .when(rdbEngineStrategy)
+        .getDatabaseTextIssues(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
+
+    // Assert
+    verify(rdbEngineStrategy).getDatabaseTextIssues(connection);
+  }
+
+  @Test
+  public void buildDatabaseTextWarning_PartialCharacterSet_ShouldSayValuesAreRejectedOrReplaced() {
+    // Arrange
+    DatabaseTextIssue issue =
+        new DatabaseTextIssue("LATIN1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET);
+
+    // Act
+    String actual = JdbcAdmin.buildDatabaseTextWarning(issue, "ns.tbl");
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            "The database encoding is LATIN1, so TEXT columns of the ns.tbl table cannot store every Unicode character, the database rejects or replaces a value that holds a character outside it, and it can order the values it stores differently from ScalarDB");
+  }
+
+  @Test
+  public void
+      buildDatabaseTextWarning_EncodingByteOrder_ShouldSayValuesAreOrderedByEncodingBytes() {
+    // Arrange
+    DatabaseTextIssue issue =
+        new DatabaseTextIssue("UTF-16le", DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER);
+
+    // Act
+    String actual = JdbcAdmin.buildDatabaseTextWarning(issue, "ns.tbl");
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            "The database encoding is UTF-16le, so the database orders the TEXT values of the ns.tbl table by the bytes of that encoding, not by Unicode code point like ScalarDB");
+  }
+
+  @Test
+  public void buildDatabaseTextWarning_NonBinaryCollation_ShouldSayValuesCanBeOrderedDifferently() {
+    // Arrange
+    DatabaseTextIssue issue =
+        new DatabaseTextIssue("UCA400_NO", DatabaseTextIssue.Kind.NON_BINARY_COLLATION);
+
+    // Act
+    String actual = JdbcAdmin.buildDatabaseTextWarning(issue, "ns.tbl");
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            "The database collation is UCA400_NO, not binary, so the database can order and compare the TEXT values of the ns.tbl table differently from ScalarDB");
+  }
+
+  private void disableColumnCollation() {
+    when(config.isColumnCollationEnabled()).thenReturn(false);
+  }
+
+  @Test
+  public void createTable_BinaryCollationDisabledOnMysql_ShouldNotDeclareCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+
+    // Act
+    admin.createTable("my_ns", "foo_table", metadata, Collections.emptyMap());
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .filteredOn(s -> s.startsWith("CREATE TABLE `my_ns`.`foo_table`"))
+        .singleElement()
+        .asString()
+        .contains("`pk` VARCHAR(128)", "`col` LONGTEXT")
+        .doesNotContain("COLLATE", "CHARACTER SET");
+  }
+
+  private static Stream<RdbEngine> enginesWithBinaryTextCollationClause() {
+    return Arrays.stream(RdbEngine.values())
+        .filter(
+            e -> !RdbEngine.createRdbEngineStrategy(e).getBinaryTextCollationClause().isEmpty());
+  }
+
+  @ParameterizedTest
+  @MethodSource("enginesWithBinaryTextCollationClause")
+  public void createTable_BinaryCollationDisabled_ShouldNotDeclareCollation(RdbEngine rdbEngine)
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+
+    // Act
+    admin.createTable("my_ns", "foo_table", textTableMetadata(), Collections.emptyMap());
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .filteredOn(s -> s.startsWith("CREATE TABLE") && s.contains("foo_table"))
+        .singleElement()
+        .asString()
+        .doesNotContain("COLLATE");
+  }
+
+  @Test
+  public void
+      createTable_BinaryCollationDisabledWithKeyCollationSource_ShouldCopyOnlyKeyCollations()
+          throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("pk")
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.TEXT)
+            .build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(
+            ImmutableMap.of(
+                "pk", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4"),
+                "col", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .filteredOn(s -> s.startsWith("CREATE TABLE `my_ns`.`foo_table`"))
+        .singleElement()
+        .asString()
+        .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        .contains("`col` LONGTEXT")
+        .doesNotContain("`col` LONGTEXT CHARACTER SET");
+  }
+
+  private RdbEngineStrategy oracleWithKeyCollationSource(
+      String sourceCollation, String schemaDefault) throws SQLException {
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineOracle());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    doReturn(ImmutableMap.of("pk", new TextColumnCollation(sourceCollation, "AL32UTF8")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
+    doReturn(schemaDefault).when(rdbEngineStrategy).getSchemaDefaultCollation(any(), eq("my_ns"));
+    return rdbEngineStrategy;
+  }
+
+  private String createOracleTableWithKeyCollationSource(RdbEngineStrategy rdbEngineStrategy)
+      throws SQLException, ExecutionException {
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
+
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    return sql.getAllValues().stream()
+        .filter(s -> s.startsWith("CREATE TABLE \"my_ns\".\"foo_table\""))
+        .findFirst()
+        .orElseThrow(AssertionError::new);
+  }
+
+  @Test
+  public void
+      createTable_BinaryCollationDisabledOnOracleKeyMatchingSchemaDefault_ShouldOmitCollate()
+          throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("USING_NLS_COMP", "USING_NLS_COMP");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
+
+    // Assert
+    assertThat(createTable).contains("\"pk\" VARCHAR2(128)").doesNotContain("COLLATE");
+    verify(rdbEngineStrategy, times(1)).getSchemaDefaultCollation(any(), eq("my_ns"));
+  }
+
+  @Test
+  public void
+      createTable_BinaryCollationDisabledOnOracleKeyDifferingFromSchemaDefault_ShouldCopyCollate()
+          throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("BINARY_CI", "USING_NLS_COMP");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
+
+    // Assert
+    assertThat(createTable).contains("\"pk\" VARCHAR2(128) COLLATE BINARY_CI");
+    verify(rdbEngineStrategy, times(1)).getSchemaDefaultCollation(any(), eq("my_ns"));
+  }
+
+  @Test
+  public void
+      createTable_BinaryCollationDisabledOnOracleUsingNlsCompKeyWithOtherDefault_ShouldCopyCollate()
+          throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("USING_NLS_COMP", "BINARY_CI");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
+
+    // Assert
+    assertThat(createTable).contains("\"pk\" VARCHAR2(128) COLLATE USING_NLS_COMP");
+    verify(rdbEngineStrategy, times(1)).getSchemaDefaultCollation(any(), eq("my_ns"));
+  }
+
+  @Test
+  public void createTable_BinaryCollationEnabledOnOracleWithKeySource_ShouldNotReadSchemaDefault()
+      throws SQLException, ExecutionException {
+    // Arrange
+    RdbEngineStrategy rdbEngineStrategy =
+        oracleWithKeyCollationSource("USING_NLS_COMP", "USING_NLS_COMP");
+
+    // Act
+    String createTable = createOracleTableWithKeyCollationSource(rdbEngineStrategy);
+
+    // Assert
+    assertThat(createTable).contains("\"pk\" VARCHAR2(128) COLLATE USING_NLS_COMP");
+    verify(rdbEngineStrategy, never()).getSchemaDefaultCollation(any(), anyString());
+  }
+
+  @Test
+  public void createTable_BinaryCollationDisabledOnMysqlWithKeySource_ShouldCopySourceKeyCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.TEXT).build();
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(ImmutableMap.of("pk", new TextColumnCollation("utf8mb4_0900_ai_ci", "utf8mb4")))
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), eq("my_ns"), eq("source_table"));
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable(
+        "my_ns",
+        "foo_table",
+        metadata,
+        ImmutableMap.of(JdbcAdmin.COLLATION_SOURCE_TABLE, "source_table"));
+
+    // Assert
+    ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    verify(statement, atLeastOnce()).execute(sql.capture());
+    assertThat(sql.getAllValues())
+        .filteredOn(s -> s.startsWith("CREATE TABLE `my_ns`.`foo_table`"))
+        .singleElement()
+        .asString()
+        .contains("`pk` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void createTable_BinaryCollationDisabled_ShouldNotCallTextSettingsCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.createTable("ns", "tbl", textTableMetadata(), Collections.emptyMap());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
+  }
+
+  @Test
+  public void importTable_BinaryCollationDisabled_ShouldNotReadTextColumnCollations()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    PreparedStatement checkTableExistStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+    ResultSet primaryKeyResults = mock(ResultSet.class);
+    ResultSet columnResults = mock(ResultSet.class);
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(anyString())).thenReturn(checkTableExistStatement);
+    when(connection.getMetaData()).thenReturn(metadata);
+    when(checkTableExistStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    when(primaryKeyResults.next()).thenReturn(true).thenReturn(false);
+    when(primaryKeyResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.next()).thenReturn(true).thenReturn(false);
+    when(columnResults.getString(JDBC_COL_COLUMN_NAME)).thenReturn("pk");
+    when(columnResults.getInt(JDBC_COL_DATA_TYPE)).thenReturn(Types.VARCHAR);
+    when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("VARCHAR");
+    when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
+    when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    doNothing().when(adminSpy).createMetadataSchemaIfNotExists(any());
+    doNothing().when(adminSpy).createNamespacesTableIfNotExists(any());
+    doNothing().when(adminSpy).upsertIntoNamespacesTable(any(), anyString());
+    doNothing()
+        .when(adminSpy)
+        .addTableMetadata(any(), anyString(), anyString(), any(), anyBoolean(), anyBoolean());
+
+    // Act
+    adminSpy.importTable(NAMESPACE, TABLE, Collections.emptyMap(), ImmutableMap.of());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getTextColumnCollations(any(), anyString(), anyString());
+  }
+
+  @Test
+  public void addNewColumnToTable_BinaryCollationDisabledAndTextColumn_ShouldUseBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.INT.toString(), "PARTITION", null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.addNewColumnToTable("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `ns`.`table` ADD `c2` LONGTEXT");
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
+  }
+
+  @Test
+  public void alterColumnType_BinaryCollationDisabledAndIntToText_ShouldUseBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.TEXT.toString(), "PARTITION", null, false),
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c2", DataType.INT.toString(), null, null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    Statement statement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(statement);
+    when(dataSource.getConnection()).thenReturn(connection);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.POSTGRESQL);
+
+    // Act
+    admin.alterColumnType("ns", "table", "c2", DataType.TEXT);
+
+    // Assert
+    verify(statement).execute("ALTER TABLE \"ns\".\"table\" ALTER COLUMN \"c2\" TYPE TEXT");
+  }
+
+  @Test
+  public void createIndex_BinaryCollationDisabledOnMysql_ShouldKeepCatalogCollation()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(true);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement)
+        .execute(
+            "ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+  }
+
+  @Test
+  public void createIndex_BinaryCollationDisabledAndColumnMissingFromCatalog_ShouldUseBareType()
+      throws SQLException, ExecutionException {
+    // Arrange
+    disableColumnCollation();
+    Statement statement = arrangeMysqlTextColumnWithCatalogCollation(false);
+    JdbcAdmin admin = createJdbcAdminFor(RdbEngine.MYSQL);
+
+    // Act
+    admin.createIndex("my_ns", "foo_table", "c1", Collections.emptyMap());
+
+    // Assert
+    verify(statement).execute("ALTER TABLE `my_ns`.`foo_table` MODIFY `c1` VARCHAR(128)");
+  }
+
+  @Test
+  public void createTable_NoTextColumn_ShouldNotCallTextSettingsCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+    TableMetadata metadata =
+        TableMetadata.newBuilder().addPartitionKey("pk").addColumn("pk", DataType.INT).build();
+
+    // Act
+    admin.createTable("ns", "tbl", metadata, Collections.emptyMap());
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
+  }
+
+  @ParameterizedTest
+  @MethodSource("catalogReadFailures")
+  public void createTable_TextSettingsCheckThrows_ShouldStillCreateTable(Exception failure)
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doThrow(failure).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+    TableMetadata metadata = textTableMetadata();
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> adminSpy.createTable("ns", "tbl", metadata, Collections.emptyMap()));
+
+    // Assert
+    assertThat(thrown).isNull();
+    verify(adminSpy)
+        .createTableInternal(connection, "ns", "tbl", metadata, false, Collections.emptyMap());
+    verify(adminSpy).addTableMetadata(connection, "ns", "tbl", metadata, true, false);
+  }
+
+  private void prepareAddNewColumnToTable() throws SQLException {
+    PreparedStatement checkPreparedStatement = mock(PreparedStatement.class);
+    ResultSet checkResultSet = mock(ResultSet.class);
+    when(checkPreparedStatement.executeQuery()).thenReturn(checkResultSet);
+    when(checkResultSet.next()).thenReturn(true);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet resultSet =
+        mockResultSet(
+            new SelectAllFromMetadataTableResultSetMocker.Row(
+                "c1", DataType.INT.toString(), "PARTITION", null, false));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(any())).thenReturn(checkPreparedStatement, selectStatement);
+    when(connection.createStatement()).thenReturn(mock(Statement.class));
+    when(dataSource.getConnection()).thenReturn(connection);
+  }
+
+  @Test
+  public void addNewColumnToTable_TextColumn_ShouldCallTextSettingsCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(
+            ImmutableList.of(
+                new DatabaseTextIssue("latin1", DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET)))
+        .when(rdbEngineStrategy)
+        .getDatabaseTextIssues(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
+
+    // Assert
+    verify(rdbEngineStrategy).getDatabaseTextIssues(connection);
+  }
+
+  @Test
+  public void addNewColumnToTable_TwoTextColumnsOnSameTable_ShouldCheckDatabaseSettingsOnce()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doReturn(Collections.emptyList()).when(rdbEngineStrategy).getDatabaseTextIssues(any());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT);
+    prepareAddNewColumnToTable();
+
+    // Act
+    admin.addNewColumnToTable("ns", "tbl", "c3", DataType.TEXT);
+
+    // Assert
+    verify(rdbEngineStrategy, times(1)).getDatabaseTextIssues(any());
+  }
+
+  @Test
+  public void addNewColumnToTable_IntColumn_ShouldNotCallTextSettingsCheck()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
+
+    // Act
+    admin.addNewColumnToTable("ns", "tbl", "c2", DataType.INT);
+
+    // Assert
+    verify(rdbEngineStrategy, never()).getDatabaseTextIssues(any());
+  }
+
+  @Test
+  public void addNewColumnToTable_TextSettingsCheckThrows_ShouldStillAddColumn()
+      throws SQLException, ExecutionException {
+    // Arrange
+    prepareAddNewColumnToTable();
+    RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    doThrow(new SQLException("catalog failure"))
+        .when(rdbEngineStrategy)
+        .getDatabaseTextIssues(any());
+    JdbcAdmin adminSpy = spy(createJdbcAdminFor(rdbEngineStrategy));
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> adminSpy.addNewColumnToTable("ns", "tbl", "c2", DataType.TEXT));
+
+    // Assert
+    assertThat(thrown).isNull();
+    verify(adminSpy)
+        .addTableMetadata(
+            eq(connection), eq("ns"), eq("tbl"), any(TableMetadata.class), eq(false), eq(true));
   }
 }
