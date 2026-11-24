@@ -31,6 +31,7 @@ import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
+import com.azure.cosmos.models.CosmosStoredProcedureResponse;
 import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
@@ -767,7 +768,7 @@ public abstract class CosmosAdminTestBase {
   }
 
   @Test
-  public void repairTable_withStoredProcedure_ShouldNotAddStoredProcedure()
+  public void repairTable_withUpToDateStoredProcedure_ShouldNotAddOrReplaceStoredProcedure()
       throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -800,6 +801,8 @@ public abstract class CosmosAdminTestBase {
     CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
     when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
         .thenReturn(storedProcedure);
+    stubStoredProcedure(
+        storedProcedure, admin.computeContainerStoredProcedureProperties().getBody());
 
     // Existing container properties (for updateIndexingPolicy)
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
@@ -818,8 +821,72 @@ public abstract class CosmosAdminTestBase {
     verify(metadataDatabase).createContainerIfNotExists(any());
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
     verify(storedProcedure).read();
-    // The stored procedure already exists, so it must not be created again
+    // The stored procedure already exists and is the one of this version, so it must be neither
+    // created again nor replaced
     verify(scripts, never()).createStoredProcedure(any());
+    verify(storedProcedure, never()).replace(any(CosmosStoredProcedureProperties.class));
+  }
+
+  @Test
+  public void repairTable_withOutdatedStoredProcedure_ShouldReplaceStoredProcedure()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tbl";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.BIGINT)
+            .addPartitionKey("c1")
+            .build();
+    CosmosTableMetadata cosmosTableMetadata =
+        CosmosTableMetadata.newBuilder()
+            .id(getFullTableName(namespace, table))
+            .partitionKeyNames(Sets.newLinkedHashSet("c1"))
+            .columns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"))
+            .build();
+
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
+
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+
+    CosmosScripts scripts = mock(CosmosScripts.class);
+    when(container.getScripts()).thenReturn(scripts);
+    CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
+    when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
+        .thenReturn(storedProcedure);
+    CosmosStoredProcedureProperties storedProcedureProperties =
+        stubStoredProcedure(storedProcedure, "function mutate() {}");
+
+    // Existing container properties
+    CosmosContainerResponse response = mock(CosmosContainerResponse.class);
+    when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
+        .thenReturn(response);
+    CosmosContainerProperties properties = mock(CosmosContainerProperties.class);
+    when(response.getProperties()).thenReturn(properties);
+    when(properties.getIndexingPolicy()).thenReturn(new IndexingPolicy());
+
+    // Act
+    admin.repairTable(namespace, table, tableMetadata, Collections.emptyMap());
+
+    // Assert
+    verify(client).createDatabaseIfNotExists(eq(metadataDatabaseName), any());
+
+    verify(metadataDatabase).createContainerIfNotExists(any());
+    verify(metadataContainer).upsertItem(cosmosTableMetadata);
+    verify(storedProcedure).read();
+    // The stored procedure already exists but differs from the one of this version, so it must
+    // be replaced, not created again. The replacement must use the properties read from Cosmos DB
+    verify(scripts, never()).createStoredProcedure(any());
+    verify(storedProcedure).replace(storedProcedureProperties);
+    assertThat(storedProcedureProperties.getBody())
+        .isEqualTo(admin.computeContainerStoredProcedureProperties().getBody());
   }
 
   @Test
@@ -989,6 +1056,16 @@ public abstract class CosmosAdminTestBase {
     repairContainerProperties = properties;
 
     return metadataContainer;
+  }
+
+  private CosmosStoredProcedureProperties stubStoredProcedure(
+      CosmosStoredProcedure storedProcedure, String body) {
+    CosmosStoredProcedureProperties properties =
+        new CosmosStoredProcedureProperties(CosmosAdmin.STORED_PROCEDURE_FILE_NAME, body);
+    CosmosStoredProcedureResponse response = mock(CosmosStoredProcedureResponse.class);
+    when(storedProcedure.read()).thenReturn(response);
+    when(response.getProperties()).thenReturn(properties);
+    return properties;
   }
 
   @SuppressWarnings("unchecked")
@@ -1356,6 +1433,8 @@ public abstract class CosmosAdminTestBase {
     CosmosStoredProcedure storedProcedure = mock(CosmosStoredProcedure.class);
     when(scripts.getStoredProcedure(CosmosAdmin.STORED_PROCEDURE_FILE_NAME))
         .thenReturn(storedProcedure);
+    stubStoredProcedure(
+        storedProcedure, admin.computeContainerStoredProcedureProperties().getBody());
     // Existing container properties
     CosmosContainerResponse response = mock(CosmosContainerResponse.class);
     when(database.createContainerIfNotExists(table, "/concatenatedPartitionKey"))
