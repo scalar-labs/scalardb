@@ -161,6 +161,47 @@ public class JdbcCrudServiceTest {
   }
 
   @Test
+  public void multiGet_RecordMatchingNoGetOnIntKeyGiven_ShouldCheckTheMissedGetsAgain()
+      throws Exception {
+    // Arrange
+    when(tableMetadataManager.getTableMetadata(any(Operation.class)))
+        .thenReturn(
+            TableMetadata.newBuilder()
+                .addColumn("p1", DataType.INT)
+                .addColumn("v1", DataType.TEXT)
+                .addPartitionKey("p1")
+                .build());
+    when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(anyList(), anyList())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any(), any(), anySet())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.build()).thenReturn(selectQuery);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    // The IN-list queries return a record that matches neither Get; the single Gets find nothing
+    when(resultSet.next()).thenReturn(true, false, true, false, false, false);
+    when(resultSet.getInt("p1")).thenReturn(3);
+    when(resultSet.getString("v1")).thenReturn("x");
+    List<Get> gets = new ArrayList<>();
+    for (int p1 : new int[] {1, 2}) {
+      gets.add(
+          Get.newBuilder()
+              .namespace(NAMESPACE)
+              .table(TABLE)
+              .partitionKey(Key.ofInt("p1", p1))
+              .build());
+    }
+
+    // Act
+    List<Optional<Result>> results = jdbcCrudService.multiGet(gets, connection);
+
+    // Assert
+    assertThat(results).hasSize(2).allMatch(r -> !r.isPresent());
+    // The IN list, the IN list of the missed values, and each Get by itself
+    verify(connection, times(4)).prepareStatement(any());
+  }
+
+  @Test
   public void whenGetScannerExecuted_withScan_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);

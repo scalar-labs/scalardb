@@ -154,10 +154,7 @@ public class JdbcCrudService {
         results[i] = get(get, connection);
         continue;
       }
-      List<Column<?>> keyColumns = keyColumns(get);
-      List<Object> group = new ArrayList<>(keyColumns.subList(0, keyColumns.size() - 1));
-      group.add(0, get.forFullTableName().get());
-      groups.computeIfAbsent(group, g -> new ArrayList<>()).add(i);
+      groups.computeIfAbsent(ScalarDbUtils.getMultiGetGroup(get), g -> new ArrayList<>()).add(i);
     }
 
     for (List<Integer> group : groups.values()) {
@@ -172,19 +169,13 @@ public class JdbcCrudService {
     return Arrays.asList(results);
   }
 
-  private static List<Column<?>> keyColumns(Get get) {
-    List<Column<?>> keyColumns = new ArrayList<>(get.getPartitionKey().getColumns());
-    get.getClusteringKey().ifPresent(k -> keyColumns.addAll(k.getColumns()));
-    return keyColumns;
-  }
-
   private void getWithInList(
       List<Get> gets, List<Integer> indexes, Optional<Result>[] results, Connection connection)
       throws SQLException, ExecutionException {
     // The Gets by their value of the last primary key column; duplicate Gets share a value
     Map<Column<?>, List<Integer>> indexesByLastKey = new LinkedHashMap<>();
     for (int i : indexes) {
-      List<Column<?>> keyColumns = keyColumns(gets.get(i));
+      List<Column<?>> keyColumns = ScalarDbUtils.getPrimaryKeyColumns(gets.get(i));
       indexesByLastKey
           .computeIfAbsent(keyColumns.get(keyColumns.size() - 1), k -> new ArrayList<>())
           .add(i);
@@ -199,7 +190,7 @@ public class JdbcCrudService {
 
     Get first = gets.get(indexes.get(0));
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(first);
-    List<Column<?>> leadingKeyColumns = keyColumns(first);
+    List<Column<?>> leadingKeyColumns = ScalarDbUtils.getPrimaryKeyColumns(first);
     Column<?> lastKeyColumn = leadingKeyColumns.remove(leadingKeyColumns.size() - 1);
     InListRows rows =
         selectWithInList(
@@ -220,12 +211,14 @@ public class JdbcCrudService {
             .addAll(entry.getValue());
       }
     }
+    boolean unmatchedRecord = false;
     for (Result result : rows.results) {
       Column<?> value = result.getColumns().get(lastKeyColumn.getName());
       List<Integer> matched =
           indexesByMatchKey.get(rows.blankPadded ? withoutTrailingSpaces(value) : value);
       if (matched == null) {
         // Equal in SQL but not in value; handled with the Gets that match no record below
+        unmatchedRecord = true;
         continue;
       }
       for (int i : matched) {
@@ -249,9 +242,11 @@ public class JdbcCrudService {
     // For a type whose SQL equality can differ from the value's, a Get that matches no record may
     // still match one in SQL (e.g., "A" a record "a" under a case-insensitive collation). Any such
     // record is in the result of an IN list of the missed values alone: when that is empty, the
-    // missed Gets have no record; otherwise they are read again one by one
+    // missed Gets have no record; otherwise they are read again one by one. For a type whose SQL
+    // equality is equality of the values, this is needed only if a record matched no Get, which is
+    // not expected
     if (missed.isEmpty()
-        || isExactMatchType(lastKeyColumn.getDataType())
+        || (isExactMatchType(lastKeyColumn.getDataType()) && !unmatchedRecord)
         || (missed.size() > 1
             && selectWithInList(first, tableMetadata, leadingKeyColumns, missed, connection)
                 .results

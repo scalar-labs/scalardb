@@ -245,6 +245,23 @@ public class CrudHandlerTest {
     };
   }
 
+  /** Makes the parallel executor run the batch Get tasks it gets, and returns them. */
+  private List<ParallelExecutor.ParallelExecutorTask> captureParallelBatchGetTasks() {
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
+              parallelTasks.addAll(tasks);
+              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
+                task.run();
+              }
+              return null;
+            })
+        .when(parallelExecutor)
+        .executeBatchGets(any(), eq(ANY_ID_1));
+    return parallelTasks;
+  }
+
   private TransactionResult prepareResult(TransactionState state) {
     return prepareResult(ANY_TEXT_1, ANY_TEXT_2, state);
   }
@@ -838,18 +855,7 @@ public class CrudHandlerTest {
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
     when(parallelExecutor.isParallelBatchGetEnabled()).thenReturn(true);
-    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
-    doAnswer(
-            invocation -> {
-              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
-              parallelTasks.addAll(tasks);
-              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
-                task.run();
-              }
-              return null;
-            })
-        .when(parallelExecutor)
-        .executeBatchGets(any(), eq(ANY_ID_1));
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = captureParallelBatchGetTasks();
 
     // Act
     List<Optional<Result>> results =
@@ -898,18 +904,7 @@ public class CrudHandlerTest {
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
     when(parallelExecutor.isParallelBatchGetEnabled()).thenReturn(true);
-    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
-    doAnswer(
-            invocation -> {
-              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
-              parallelTasks.addAll(tasks);
-              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
-                task.run();
-              }
-              return null;
-            })
-        .when(parallelExecutor)
-        .executeBatchGets(any(), eq(ANY_ID_1));
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = captureParallelBatchGetTasks();
 
     // Act
     List<Optional<Result>> results = handler.batchGet(Arrays.asList(a1, b1, c, a2, b2), context);
@@ -934,18 +929,7 @@ public class CrudHandlerTest {
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
     when(parallelExecutor.isParallelBatchGetEnabled()).thenReturn(true);
-    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
-    doAnswer(
-            invocation -> {
-              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
-              parallelTasks.addAll(tasks);
-              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
-                task.run();
-              }
-              return null;
-            })
-        .when(parallelExecutor)
-        .executeBatchGets(any(), eq(ANY_ID_1));
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = captureParallelBatchGetTasks();
 
     // Act
     handler.batchGet(Arrays.asList(get1, get2, get3), context);
@@ -969,18 +953,7 @@ public class CrudHandlerTest {
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
     when(parallelExecutor.isParallelBatchGetEnabled()).thenReturn(true);
-    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
-    doAnswer(
-            invocation -> {
-              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
-              parallelTasks.addAll(tasks);
-              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
-                task.run();
-              }
-              return null;
-            })
-        .when(parallelExecutor)
-        .executeBatchGets(any(), eq(ANY_ID_1));
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = captureParallelBatchGetTasks();
 
     // Act
     handler.batchGet(Arrays.asList(get1, get2, get3), context);
@@ -992,7 +965,7 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void batchGet_GetInGroupFailsAfterMultiGet_ShouldThrowItsFailure()
+  public void batchGet_MultiGetReturnsWrongNumberOfResults_ShouldThrowIllegalStateException()
       throws ExecutionException {
     // Arrange
     Get get1 = prepareGet();

@@ -31,9 +31,11 @@ public interface StorageInfo {
 
   /**
    * Returns whether the storage reads the records of several {@link Get} operations with one
-   * request in {@link DistributedStorage#multiGet(java.util.List)}, for Gets on one table that
-   * differ only in the last primary key column. When it does not, {@link
-   * DistributedStorage#multiGet( java.util.List)} executes the Gets one by one.
+   * request in {@code DistributedStorage.multiGet()}. When it does not, {@code multiGet()} executes
+   * the Gets one by one.
+   *
+   * <p>Currently, JDBC databases support it for Gets on one table whose primary keys differ only in
+   * the last column. This may be extended.
    *
    * @return true if the storage reads several records with one request, false otherwise
    */

@@ -150,10 +150,15 @@ public interface DistributedStorage extends AutoCloseable {
    * Retrieves the results of the specified {@link Get} or {@link GetWithIndex} commands, each as
    * {@link #get(Get)} would retrieve it, in the order of the commands.
    *
-   * <p>A storage that can read several records with one request does so. For example, JDBC
-   * databases read the Gets on one table that differ only in the last primary key column with one
-   * statement. Otherwise, the commands are executed one by one. The commands are not executed
-   * atomically: when one of them fails, others may have been executed.
+   * <p>A storage that can read several records with one request does so (see {@link
+   * StorageInfo#isMultiGetSupported()}); otherwise, the commands are executed one by one. How the
+   * commands are split into requests is up to the storage and may change.
+   *
+   * <p>The commands are not executed atomically: when one of them fails, others may have been
+   * executed. The results are not guaranteed to come from one consistent read across the commands.
+   *
+   * <p>An implementation that wraps another storage should forward this method, so that the
+   * commands are still read with as few requests as the wrapped storage can.
    *
    * @param gets a list of {@link Get} or {@link GetWithIndex} commands
    * @return a list with an {@code Optional} with the returned result for each command, in the order

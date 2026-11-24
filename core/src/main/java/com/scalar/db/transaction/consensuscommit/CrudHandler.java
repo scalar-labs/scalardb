@@ -196,66 +196,47 @@ public class CrudHandler {
       } else if (get.getConjunctions().isEmpty()
           && !context.snapshot.containsKeyInGetSet(get)
           && isMultiGetSupported(get, context)) {
-        groups.computeIfAbsent(multiGetGroup(get), g -> new ArrayList<>()).add(i);
+        groups.computeIfAbsent(ScalarDbUtils.getMultiGetGroup(get), g -> new ArrayList<>()).add(i);
       } else {
         units.add(Collections.singletonList(i));
       }
     }
     units.addAll(groups.values());
 
+    CrudException[] failures = new CrudException[gets.size()];
     if (units.size() < 2 || !parallelExecutor.isParallelBatchGetEnabled()) {
       // Everything one by one, in the order of the (first) Gets
       for (int i : serial) {
         units.add(Collections.singletonList(i));
       }
       units.sort(Comparator.comparing(unit -> unit.get(0)));
-      int[] current = new int[1];
       for (List<Integer> unit : units) {
-        read(unit, gets, metadata, context, results, current);
+        if (!read(unit, gets, metadata, context, results, failures)) {
+          break;
+        }
       }
+      throwFirstFailure(failures);
       return Arrays.asList(results);
     }
 
-    CrudException[] failures = new CrudException[gets.size()];
     AtomicBoolean failed = new AtomicBoolean();
     List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>(units.size());
     for (List<Integer> unit : units) {
       tasks.add(
           () -> {
             // Once a unit fails, the units that have not started yet are skipped
-            if (failed.get()) {
-              return;
-            }
-            int[] current = new int[1];
-            try {
-              read(unit, gets, metadata, context, results, current);
-            } catch (CrudException e) {
-              failures[current[0]] = e;
+            if (!failed.get() && !read(unit, gets, metadata, context, results, failures)) {
               failed.set(true);
             }
           });
     }
     parallelExecutor.executeBatchGets(tasks, context.transactionId);
-    for (CrudException failure : failures) {
-      if (failure != null) {
-        throw failure;
-      }
-    }
+    throwFirstFailure(failures);
 
     for (int i : serial) {
       results[i] = get(gets.get(i), context);
     }
     return Arrays.asList(results);
-  }
-
-  /** The table and the values of every primary key column but the last of a Get. */
-  private static List<Object> multiGetGroup(Get get) {
-    List<Object> group = new ArrayList<>();
-    group.add(get.forFullTableName().get());
-    List<Column<?>> keyColumns = new ArrayList<>(get.getPartitionKey().getColumns());
-    get.getClusteringKey().ifPresent(k -> keyColumns.addAll(k.getColumns()));
-    group.addAll(keyColumns.subList(0, keyColumns.size() - 1));
-    return group;
   }
 
   private boolean isMultiGetSupported(Get get, TransactionContext context) throws CrudException {
@@ -268,46 +249,61 @@ public class CrudHandler {
 
   /**
    * Runs the Gets of a unit of {@link #batchGet}: a single Get by itself, or a group of Gets with
-   * their records read with one {@link DistributedStorage#multiGet(List)}. {@code current[0]} is
-   * set to the index of the Get that runs, so that a failure can be attributed to it.
+   * their records read with one {@link DistributedStorage#multiGet(List)}. A failure is recorded at
+   * the index of the Get that fails (of the first Get when the multi-get fails).
+   *
+   * @return false if a Get failed
    */
-  private void read(
+  private boolean read(
       List<Integer> unit,
       List<Get> gets,
       TableMetadata[] metadata,
       TransactionContext context,
       Optional<Result>[] results,
-      int[] current)
-      throws CrudException {
-    current[0] = unit.get(0);
-    if (unit.size() == 1) {
-      results[unit.get(0)] = get(gets.get(unit.get(0)), context);
-      return;
-    }
-
-    List<Get> storageGets = new ArrayList<>(unit.size());
-    for (int i : unit) {
-      storageGets.add(ConsensusCommitUtils.prepareGetForStorage(gets.get(i), metadata[i]));
-    }
-    List<Optional<Result>> fetched;
+      CrudException[] failures) {
+    int current = unit.get(0);
     try {
-      fetched = storage.multiGet(storageGets);
-    } catch (ExecutionException e) {
-      throw new CrudException(
-          CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(
-              e.getMessage()),
-          e,
-          context.transactionId);
+      if (unit.size() == 1) {
+        results[current] = get(gets.get(current), context);
+        return true;
+      }
+
+      List<Get> storageGets = new ArrayList<>(unit.size());
+      for (int i : unit) {
+        storageGets.add(ConsensusCommitUtils.prepareGetForStorage(gets.get(i), metadata[i]));
+      }
+      List<Optional<Result>> fetched;
+      try {
+        fetched = storage.multiGet(storageGets);
+      } catch (ExecutionException e) {
+        throw new CrudException(
+            CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(
+                e.getMessage()),
+            e,
+            context.transactionId);
+      }
+      checkState(
+          fetched.size() == unit.size(),
+          "The storage returned %s results for %s Gets",
+          fetched.size(),
+          unit.size());
+      for (int k = 0; k < unit.size(); k++) {
+        current = unit.get(k);
+        results[current] =
+            get(gets.get(current), context, fetched.get(k).map(TransactionResult::new));
+      }
+      return true;
+    } catch (CrudException e) {
+      failures[current] = e;
+      return false;
     }
-    checkState(
-        fetched.size() == unit.size(),
-        "The storage returned %s results for %s Gets",
-        fetched.size(),
-        unit.size());
-    for (int k = 0; k < unit.size(); k++) {
-      int i = unit.get(k);
-      current[0] = i;
-      results[i] = get(gets.get(i), context, fetched.get(k).map(TransactionResult::new));
+  }
+
+  private static void throwFirstFailure(CrudException[] failures) throws CrudException {
+    for (CrudException failure : failures) {
+      if (failure != null) {
+        throw failure;
+      }
     }
   }
 

@@ -232,12 +232,7 @@ public class JdbcDatabaseMultiGetIntegrationTest {
     List<Optional<Result>> results = storage.multiGet(gets);
 
     // Assert
-    for (int i = 0; i < gets.size(); i++) {
-      Optional<Result> expected = storage.get(gets.get(i));
-      assertThat(results.get(i).map(r -> r.getText("v")))
-          .as("Get %s", gets.get(i).getPartitionKey())
-          .isEqualTo(expected.map(r -> r.getText("v")));
-    }
+    assertSameAsSingleGets(gets, results);
     assertThat(results.get(0).get().getText("v")).isEqualTo("a");
     assertThat(results.get(6)).isEmpty();
     if (caseInsensitive) {
@@ -306,13 +301,7 @@ public class JdbcDatabaseMultiGetIntegrationTest {
     List<Optional<Result>> results = storage.multiGet(gets);
 
     // Assert
-    assertThat(results).hasSize(gets.size());
-    for (int i = 0; i < gets.size(); i++) {
-      Optional<Result> expected = storage.get(gets.get(i));
-      assertThat(results.get(i).map(r -> r.getText("v")))
-          .as("Get %s", gets.get(i).getClusteringKey())
-          .isEqualTo(expected.map(r -> r.getText("v")));
-    }
+    assertSameAsSingleGets(gets, results);
     // The stored keys come first in getKeys(), and each of them finds its record
     for (int i = 0; i < stored.size(); i++) {
       assertThat(results.get(i).map(r -> r.getText("v"))).hasValue("v" + i);
@@ -432,15 +421,22 @@ public class JdbcDatabaseMultiGetIntegrationTest {
     List<Optional<Result>> results = storage.multiGet(gets);
 
     // Assert
-    for (int i = 0; i < gets.size(); i++) {
-      Optional<Result> expected = storage.get(gets.get(i));
-      assertThat(results.get(i).map(r -> r.getText("v")))
-          .as("Get %s", gets.get(i).getPartitionKey())
-          .isEqualTo(expected.map(r -> r.getText("v")));
-    }
+    assertSameAsSingleGets(gets, results);
     assertThat(results.get(0).map(r -> r.getText("v"))).hasValue("v-a");
     assertThat(results.get(1).map(r -> r.getText("v"))).hasValue("v-bb");
     assertThat(results.get(2).map(r -> r.getText("v"))).hasValue("v-ccc");
     assertThat(results.get(4)).isEmpty();
+  }
+
+  /** Asserts that each result is what its Get retrieves by itself. */
+  private void assertSameAsSingleGets(List<Get> gets, List<Optional<Result>> results)
+      throws ExecutionException {
+    assertThat(results).hasSize(gets.size());
+    for (int i = 0; i < gets.size(); i++) {
+      Optional<Result> expected = storage.get(gets.get(i));
+      assertThat(results.get(i).map(r -> r.getText("v")))
+          .as("Get %s", gets.get(i))
+          .isEqualTo(expected.map(r -> r.getText("v")));
+    }
   }
 }
