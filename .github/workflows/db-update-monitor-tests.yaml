@@ -1,0 +1,42 @@
+name: Database Update Monitor Tests
+
+# Unit tests for ci/db-update-monitor. The weekly monitor itself is in db-update-monitor.yaml.
+on:
+  pull_request:
+    paths:
+      - 'ci/db-update-monitor/**'
+      - '.github/workflows/db-update-monitor.yaml'
+      - '.github/workflows/db-update-monitor-tests.yaml'
+      # The monitor reads ScalarDB's versions from these; the tests check every pin still resolves.
+      - 'build.gradle'
+      - 'ci/tests-config.yaml'
+
+permissions:
+  contents: read
+
+# One run per pull request; a new push cancels the outdated run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ci/db-update-monitor/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r ci/db-update-monitor/requirements.txt
+
+      - name: Run tests
+        working-directory: ci/db-update-monitor
+        run: pytest
