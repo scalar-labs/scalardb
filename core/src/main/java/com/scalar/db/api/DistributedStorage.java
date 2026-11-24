@@ -3,6 +3,7 @@ package com.scalar.db.api;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -144,6 +145,28 @@ public interface DistributedStorage extends AutoCloseable {
    * @throws ExecutionException if the operation fails
    */
   Optional<Result> get(Get get) throws ExecutionException;
+
+  /**
+   * Retrieves the results of the specified {@link Get} or {@link GetWithIndex} commands, each as
+   * {@link #get(Get)} would retrieve it, in the order of the commands.
+   *
+   * <p>A storage that can read several records with one request does so. For example, JDBC
+   * databases read the Gets on one table that differ only in the last primary key column with one
+   * statement. Otherwise, the commands are executed one by one. The commands are not executed
+   * atomically: when one of them fails, others may have been executed.
+   *
+   * @param gets a list of {@link Get} or {@link GetWithIndex} commands
+   * @return a list with an {@code Optional} with the returned result for each command, in the order
+   *     of the commands
+   * @throws ExecutionException if the operation fails
+   */
+  default List<Optional<Result>> multiGet(List<Get> gets) throws ExecutionException {
+    List<Optional<Result>> results = new ArrayList<>(gets.size());
+    for (Get get : gets) {
+      results.add(get(get));
+    }
+    return results;
+  }
 
   /**
    * Retrieves results from the underlying storage with the specified {@link Scan}, {@link ScanAll},

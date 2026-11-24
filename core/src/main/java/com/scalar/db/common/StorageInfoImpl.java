@@ -12,16 +12,32 @@ public class StorageInfoImpl implements StorageInfo {
   private final MutationAtomicityUnit mutationAtomicityUnit;
   private final int maxAtomicMutationsCount;
   private final boolean consistentVirtualTableReadGuaranteed;
+  private final boolean multiGetSupported;
 
   public StorageInfoImpl(
       String storageName,
       MutationAtomicityUnit mutationAtomicityUnit,
       int maxAtomicMutationsCount,
       boolean consistentVirtualTableReadGuaranteed) {
+    this(
+        storageName,
+        mutationAtomicityUnit,
+        maxAtomicMutationsCount,
+        consistentVirtualTableReadGuaranteed,
+        false);
+  }
+
+  public StorageInfoImpl(
+      String storageName,
+      MutationAtomicityUnit mutationAtomicityUnit,
+      int maxAtomicMutationsCount,
+      boolean consistentVirtualTableReadGuaranteed,
+      boolean multiGetSupported) {
     this.storageName = storageName;
     this.mutationAtomicityUnit = mutationAtomicityUnit;
     this.maxAtomicMutationsCount = maxAtomicMutationsCount;
     this.consistentVirtualTableReadGuaranteed = consistentVirtualTableReadGuaranteed;
+    this.multiGetSupported = multiGetSupported;
   }
 
   @Override
@@ -45,6 +61,11 @@ public class StorageInfoImpl implements StorageInfo {
   }
 
   @Override
+  public boolean isMultiGetSupported() {
+    return multiGetSupported;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -56,8 +77,8 @@ public class StorageInfoImpl implements StorageInfo {
     return getMaxAtomicMutationsCount() == that.getMaxAtomicMutationsCount()
         && Objects.equals(getStorageName(), that.getStorageName())
         && getMutationAtomicityUnit() == that.getMutationAtomicityUnit()
-        && isConsistentVirtualTableReadGuaranteed()
-            == that.isConsistentVirtualTableReadGuaranteed();
+        && isConsistentVirtualTableReadGuaranteed() == that.isConsistentVirtualTableReadGuaranteed()
+        && isMultiGetSupported() == that.isMultiGetSupported();
   }
 
   @Override
@@ -66,7 +87,8 @@ public class StorageInfoImpl implements StorageInfo {
         getStorageName(),
         getMutationAtomicityUnit(),
         getMaxAtomicMutationsCount(),
-        isConsistentVirtualTableReadGuaranteed());
+        isConsistentVirtualTableReadGuaranteed(),
+        isMultiGetSupported());
   }
 
   @Override
@@ -76,6 +98,7 @@ public class StorageInfoImpl implements StorageInfo {
         .add("mutationAtomicityUnit", mutationAtomicityUnit)
         .add("maxAtomicMutationsCount", maxAtomicMutationsCount)
         .add("consistentVirtualTableReadGuaranteed", consistentVirtualTableReadGuaranteed)
+        .add("multiGetSupported", multiGetSupported)
         .toString();
   }
 }

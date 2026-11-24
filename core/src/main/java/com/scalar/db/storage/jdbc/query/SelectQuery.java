@@ -1,5 +1,8 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection.Conjunction;
@@ -35,6 +38,8 @@ public interface SelectQuery extends Query {
     boolean isConditionalQuery;
     boolean isCrossPartitionQuery;
     Set<Conjunction> conjunctions = Collections.emptySet();
+    List<Column<?>> leadingKeyColumns = Collections.emptyList();
+    List<Column<?>> lastKeyColumnValues = Collections.emptyList();
 
     Builder(RdbEngineStrategy rdbEngine, List<String> projections) {
       this.rdbEngine = rdbEngine;
@@ -58,6 +63,19 @@ public interface SelectQuery extends Query {
       this.clusteringKey = clusteringKey;
       this.conjunctions = ImmutableSet.copyOf(conjunctions);
       setIndexInfoIfUsed(partitionKey);
+      return this;
+    }
+
+    /*
+     * Assumes this is called by multi-get operations: selects the records whose primary key
+     * columns but the last equal leadingKeyColumns and whose last primary key column is one of
+     * lastKeyColumnValues (all on the same column, at least one)
+     */
+    public Builder where(List<Column<?>> leadingKeyColumns, List<Column<?>> lastKeyColumnValues) {
+      checkArgument(!lastKeyColumnValues.isEmpty());
+      isConditionalQuery = true;
+      this.leadingKeyColumns = ImmutableList.copyOf(leadingKeyColumns);
+      this.lastKeyColumnValues = ImmutableList.copyOf(lastKeyColumnValues);
       return this;
     }
 

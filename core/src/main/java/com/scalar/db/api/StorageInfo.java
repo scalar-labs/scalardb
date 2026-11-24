@@ -30,6 +30,18 @@ public interface StorageInfo {
   boolean isConsistentVirtualTableReadGuaranteed();
 
   /**
+   * Returns whether the storage reads the records of several {@link Get} operations with one
+   * request in {@link DistributedStorage#multiGet(java.util.List)}, for Gets on one table that
+   * differ only in the last primary key column. When it does not, {@link
+   * DistributedStorage#multiGet( java.util.List)} executes the Gets one by one.
+   *
+   * @return true if the storage reads several records with one request, false otherwise
+   */
+  default boolean isMultiGetSupported() {
+    return false;
+  }
+
+  /**
    * The mutation atomicity unit of the storage.
    *
    * <p>This enum defines the atomicity unit for mutations in the storage. It determines the scope

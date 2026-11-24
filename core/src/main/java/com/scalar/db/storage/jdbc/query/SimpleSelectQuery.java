@@ -12,6 +12,7 @@ import com.scalar.db.storage.jdbc.RdbEngineStrategy;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -39,6 +40,8 @@ public class SimpleSelectQuery implements SelectQuery {
   private final boolean isConditionalQuery;
   private final boolean isCrossPartitionQuery;
   private final Set<Conjunction> conjunctions;
+  private final List<Column<?>> leadingKeyColumns;
+  private final List<Column<?>> lastKeyColumnValues;
 
   SimpleSelectQuery(Builder builder) {
     projections = builder.projections;
@@ -59,6 +62,8 @@ public class SimpleSelectQuery implements SelectQuery {
     isConditionalQuery = builder.isConditionalQuery;
     isCrossPartitionQuery = builder.isCrossPartitionQuery;
     conjunctions = builder.conjunctions;
+    leadingKeyColumns = builder.leadingKeyColumns;
+    lastKeyColumnValues = builder.lastKeyColumnValues;
   }
 
   @Override
@@ -96,6 +101,14 @@ public class SimpleSelectQuery implements SelectQuery {
         c -> conditions.add(rdbEngine.enclose(c.getName()) + (startInclusive ? ">=?" : ">?")));
     endColumn.ifPresent(
         c -> conditions.add(rdbEngine.enclose(c.getName()) + (endInclusive ? "<=?" : "<?")));
+    leadingKeyColumns.forEach(c -> conditions.add(rdbEngine.enclose(c.getName()) + "=?"));
+    if (!lastKeyColumnValues.isEmpty()) {
+      conditions.add(
+          rdbEngine.enclose(lastKeyColumnValues.get(0).getName())
+              + " IN ("
+              + String.join(",", Collections.nCopies(lastKeyColumnValues.size(), "?"))
+              + ")");
+    }
 
     if (conjunctions.isEmpty()) {
       return String.join(" AND ", conditions);
@@ -256,6 +269,16 @@ public class SimpleSelectQuery implements SelectQuery {
 
     if (endColumn.isPresent()) {
       endColumn.get().accept(binder);
+      binder.throwSQLExceptionIfOccurred();
+    }
+
+    for (Column<?> column : leadingKeyColumns) {
+      column.accept(binder);
+      binder.throwSQLExceptionIfOccurred();
+    }
+
+    for (Column<?> column : lastKeyColumnValues) {
+      column.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 

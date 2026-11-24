@@ -12,6 +12,7 @@ import com.scalar.db.api.Selection.Conjunction;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.IntColumn;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextColumn;
 import com.scalar.db.storage.jdbc.RdbEngine;
@@ -906,6 +907,58 @@ public class QueryBuilderTest {
     query.bind(preparedStatement);
     verify(preparedStatement).setString(1, "p1Value");
     verify(preparedStatement).setString(2, "p2Value");
+  }
+
+  @ParameterizedTest
+  @EnumSource(RdbEngine.class)
+  public void selectQueryWithInListTest(RdbEngine rdbEngineType) throws SQLException {
+    RdbEngineStrategy rdbEngine = RdbEngine.createRdbEngineStrategy(rdbEngineType);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+
+    SelectQuery query;
+    PreparedStatement preparedStatement;
+
+    // The leading primary key columns and the last one, a clustering key column
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                Arrays.asList(
+                    TextColumn.of("p1", "p1Value"),
+                    IntColumn.of("p2", 2),
+                    TextColumn.of("c1", "c1Value")),
+                Arrays.asList(
+                    TextColumn.of("c2", "a"), TextColumn.of("c2", "b"), TextColumn.of("c2", "c")))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(
+            encloseSql(
+                "SELECT * FROM n1.t1 WHERE p1=? AND p2=? AND c1=? AND c2 IN (?,?,?)", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setInt(2, 2);
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "a");
+    verify(preparedStatement).setString(5, "b");
+    verify(preparedStatement).setString(6, "c");
+
+    // A single-column primary key
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, CROSS_PARTITION_TABLE_METADATA)
+            .where(
+                Collections.emptyList(),
+                Arrays.asList(TextColumn.of("p1", "x"), TextColumn.of("p1", "y")))
+            .build();
+    assertThat(query.sql())
+        .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1 IN (?,?)", rdbEngine));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "x");
+    verify(preparedStatement).setString(2, "y");
   }
 
   @ParameterizedTest

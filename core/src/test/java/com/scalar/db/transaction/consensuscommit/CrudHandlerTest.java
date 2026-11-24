@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
@@ -36,11 +38,13 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.common.CoreError;
 import com.scalar.db.common.ResultImpl;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -110,6 +114,8 @@ public class CrudHandlerTest {
   @Mock private RecoveryExecutor recoveryExecutor;
   @Mock private TransactionTableMetadataManager tableMetadataManager;
   @Mock private MutationConditionsValidator mutationConditionsValidator;
+  @Mock private StorageInfoProvider storageInfoProvider;
+  @Mock private StorageInfo storageInfo;
   @Mock private ParallelExecutor parallelExecutor;
 
   @Mock private Snapshot snapshot;
@@ -127,9 +133,12 @@ public class CrudHandlerTest {
             false,
             false,
             mutationConditionsValidator,
-            parallelExecutor);
+            parallelExecutor,
+            storageInfoProvider);
 
     // Arrange
+    when(storageInfoProvider.getStorageInfo(any())).thenReturn(storageInfo);
+    when(storageInfo.isMultiGetSupported()).thenReturn(true);
     when(tableMetadataManager.getTransactionTableMetadata(any()))
         .thenReturn(TRANSACTION_TABLE_METADATA);
     when(tableMetadataManager.getTransactionTableMetadata(any(), any()))
@@ -809,17 +818,22 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void batchGet_GetsGiven_ShouldReadDistinctRecordsInParallelAndTheOthersOneByOne()
+  public void batchGet_GetsGiven_ShouldReadGetsOnPrimaryKeysWithOneMultiGetAndTheOthersAsBefore()
       throws ExecutionException, CrudException {
     // Arrange
     Get get1 = prepareGet();
     Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
     Get get3 = prepareGet(); // The same record as get1
     Get get4 = prepareGetWithIndex();
-    when(storage.get(toGetForStorageFrom(get1)))
-        .thenReturn(Optional.of(prepareResult(TransactionState.COMMITTED)));
-    when(storage.get(toGetForStorageFrom(get2)))
-        .thenReturn(Optional.of(prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED)));
+    Get get5 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_4)).build();
+    when(storage.multiGet(
+            Arrays.asList(
+                toGetForStorageFrom(get1), toGetForStorageFrom(get2), toGetForStorageFrom(get5))))
+        .thenReturn(
+            Arrays.asList(
+                Optional.of(prepareResult(TransactionState.COMMITTED)),
+                Optional.of(prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED)),
+                Optional.empty()));
     snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -839,29 +853,226 @@ public class CrudHandlerTest {
 
     // Act
     List<Optional<Result>> results =
-        handler.batchGet(Arrays.asList(get1, get2, get3, get4), context);
+        handler.batchGet(Arrays.asList(get1, get2, get3, get4, get5), context);
 
     // Assert
-    assertThat(parallelTasks).hasSize(2);
-    assertThat(results).hasSize(4);
+    // One unit only (the group of get1, get2 and get5), so nothing runs in parallel; get3 on the
+    // same record as get1 and get4 with index run after it
+    assertThat(parallelTasks).isEmpty();
+    assertThat(results).hasSize(5);
     assertThat(results.get(0)).isPresent();
     assertThat(results.get(1)).isPresent();
     assertThat(results.get(0)).isNotEqualTo(results.get(1));
     assertThat(results.get(2)).isEqualTo(results.get(0));
     assertThat(results.get(3)).isEmpty();
+    assertThat(results.get(4)).isEmpty();
+    assertThat(snapshot.containsKeyInGetSet(get5)).isTrue();
+    verify(storage).multiGet(anyList());
+    verify(storage, never()).get(any());
+  }
+
+  @Test
+  public void batchGet_GetsInDifferentGroupsGiven_ShouldReadEachGroupAndEachOtherGetInParallel()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get a1 = prepareGet(); // Partition text1
+    Get a2 = Get.newBuilder(a1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    Get b1 = Get.newBuilder(a1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4)).build();
+    Get b2 =
+        Get.newBuilder(b1)
+            .clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3))
+            .build(); // Partition text4
+    Get c = Get.newBuilder(a1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_5)).build(); // Alone
+    when(storage.multiGet(anyList()))
+        .thenAnswer(
+            invocation -> {
+              List<Get> storageGets = invocation.getArgument(0);
+              List<Optional<Result>> fetched = new ArrayList<>();
+              for (int i = 0; i < storageGets.size(); i++) {
+                fetched.add(Optional.empty());
+              }
+              return fetched;
+            });
+    when(storage.get(any())).thenReturn(Optional.empty());
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    when(parallelExecutor.isParallelBatchGetEnabled()).thenReturn(true);
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
+              parallelTasks.addAll(tasks);
+              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
+                task.run();
+              }
+              return null;
+            })
+        .when(parallelExecutor)
+        .executeBatchGets(any(), eq(ANY_ID_1));
+
+    // Act
+    List<Optional<Result>> results = handler.batchGet(Arrays.asList(a1, b1, c, a2, b2), context);
+
+    // Assert
+    assertThat(results).hasSize(5).allMatch(r -> !r.isPresent());
+    assertThat(parallelTasks).hasSize(3); // {a1, a2}, {b1, b2} and c
+    verify(storage).multiGet(Arrays.asList(toGetForStorageFrom(a1), toGetForStorageFrom(a2)));
+    verify(storage).multiGet(Arrays.asList(toGetForStorageFrom(b1), toGetForStorageFrom(b2)));
+    verify(storage).get(toGetForStorageFrom(c));
+  }
+
+  @Test
+  public void batchGet_GetsOnDifferentPartitionsGiven_ShouldRunThemInParallelWithoutMultiGet()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_4)).build();
+    Get get3 = Get.newBuilder(get1).partitionKey(Key.ofText(ANY_NAME_1, ANY_TEXT_5)).build();
+    when(storage.get(any())).thenReturn(Optional.empty());
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    when(parallelExecutor.isParallelBatchGetEnabled()).thenReturn(true);
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
+              parallelTasks.addAll(tasks);
+              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
+                task.run();
+              }
+              return null;
+            })
+        .when(parallelExecutor)
+        .executeBatchGets(any(), eq(ANY_ID_1));
+
+    // Act
+    handler.batchGet(Arrays.asList(get1, get2, get3), context);
+
+    // Assert
+    assertThat(parallelTasks).hasSize(3);
+    verify(storage, times(3)).get(any());
+    verify(storage, never()).multiGet(anyList());
+  }
+
+  @Test
+  public void batchGet_StorageWithoutMultiGetGiven_ShouldRunEachGetInParallel()
+      throws ExecutionException, CrudException {
+    // Arrange
+    when(storageInfo.isMultiGetSupported()).thenReturn(false);
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    Get get3 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_4)).build();
+    when(storage.get(any())).thenReturn(Optional.empty());
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    when(parallelExecutor.isParallelBatchGetEnabled()).thenReturn(true);
+    List<ParallelExecutor.ParallelExecutorTask> parallelTasks = new ArrayList<>();
+    doAnswer(
+            invocation -> {
+              List<ParallelExecutor.ParallelExecutorTask> tasks = invocation.getArgument(0);
+              parallelTasks.addAll(tasks);
+              for (ParallelExecutor.ParallelExecutorTask task : tasks) {
+                task.run();
+              }
+              return null;
+            })
+        .when(parallelExecutor)
+        .executeBatchGets(any(), eq(ANY_ID_1));
+
+    // Act
+    handler.batchGet(Arrays.asList(get1, get2, get3), context);
+
+    // Assert
+    assertThat(parallelTasks).hasSize(3);
+    verify(storage, times(3)).get(any());
+    verify(storage, never()).multiGet(anyList());
+  }
+
+  @Test
+  public void batchGet_GetInGroupFailsAfterMultiGet_ShouldThrowItsFailure()
+      throws ExecutionException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    when(storage.multiGet(anyList()))
+        .thenReturn(Collections.singletonList(Optional.empty())); // One result for two Gets
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.batchGet(Arrays.asList(get1, get2), context))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void batchGet_GetAlreadyRead_ShouldNotReadItWithMultiGet()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    Get get3 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_4)).build();
+    when(storage.get(toGetForStorageFrom(get1)))
+        .thenReturn(Optional.of(prepareResult(TransactionState.COMMITTED)));
+    when(storage.multiGet(Arrays.asList(toGetForStorageFrom(get2), toGetForStorageFrom(get3))))
+        .thenReturn(
+            Arrays.asList(
+                Optional.of(prepareResult(ANY_TEXT_1, ANY_TEXT_3, TransactionState.COMMITTED)),
+                Optional.empty()));
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+    Optional<Result> first = handler.get(get1, context);
+
+    // Act
+    List<Optional<Result>> results = handler.batchGet(Arrays.asList(get1, get2, get3), context);
+
+    // Assert
+    assertThat(results.get(0)).isEqualTo(first);
+    assertThat(results.get(1)).isPresent();
+    assertThat(results.get(2)).isEmpty();
     verify(storage).get(toGetForStorageFrom(get1));
-    verify(storage).get(toGetForStorageFrom(get2));
+    verify(storage).multiGet(Arrays.asList(toGetForStorageFrom(get2), toGetForStorageFrom(get3)));
+  }
+
+  @Test
+  public void batchGet_MultiGetFails_ShouldThrowCrudException() throws ExecutionException {
+    // Arrange
+    Get get1 = prepareGet();
+    Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
+    ExecutionException failure = new ExecutionException("error");
+    when(storage.multiGet(anyList())).thenThrow(failure);
+    snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
+    TransactionContext context =
+        new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.batchGet(Arrays.asList(get1, get2), context))
+        .isInstanceOf(CrudException.class)
+        .hasCause(failure);
   }
 
   @Test
   public void batchGet_GetFails_ShouldSkipTheGetsNotStartedYetAndThrowTheFailure()
       throws ExecutionException {
     // Arrange
-    Get get1 = prepareGet();
+    // Gets with conditions, which are not read with a multi-get but in parallel
+    Get get1 = Get.newBuilder(prepareGet()).where(column(ANY_NAME_4).isEqualToInt(1)).build();
     Get get2 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_3)).build();
     Get get3 = Get.newBuilder(get1).clusteringKey(Key.ofText(ANY_NAME_2, ANY_TEXT_4)).build();
     ExecutionException failure = new ExecutionException("error");
-    when(storage.get(toGetForStorageFrom(get2))).thenThrow(failure);
+    when(storage.get(any()))
+        .thenAnswer(
+            invocation -> {
+              Get get = invocation.getArgument(0);
+              if (get.getClusteringKey().equals(get2.getClusteringKey())) {
+                throw failure;
+              }
+              return Optional.empty();
+            });
     snapshot = new Snapshot(ANY_ID_1, tableMetadataManager, parallelExecutor);
     TransactionContext context =
         new TransactionContext(ANY_ID_1, snapshot, Isolation.SNAPSHOT, false, false);
@@ -883,9 +1094,10 @@ public class CrudHandlerTest {
     assertThatThrownBy(() -> handler.batchGet(Arrays.asList(get1, get2, get3), context))
         .isInstanceOf(CrudException.class)
         .hasCause(failure);
-    verify(storage, never()).get(toGetForStorageFrom(get1));
-    verify(storage).get(toGetForStorageFrom(get2));
-    verify(storage).get(toGetForStorageFrom(get3));
+    verify(storage, never())
+        .get(argThat((Get get) -> get.getClusteringKey().equals(get1.getClusteringKey())));
+    verify(storage, times(2)).get(any()); // get2 and get3
+    verify(storage, never()).multiGet(anyList());
   }
 
   @Test
@@ -2851,7 +3063,7 @@ public class CrudHandlerTest {
 
     // Assert
     verify(storage).scan(toIndexScanForStorageFrom(getWithIndex));
-    verify(storage, never()).get(any(Get.class));
+    verify(storage, never()).get(any());
     verify(snapshot, never()).putIntoReadSet(any(), any());
     verify(snapshot).putIntoGetSet(getWithIndex, Optional.empty());
   }
@@ -3234,7 +3446,8 @@ public class CrudHandlerTest {
             false,
             true,
             mutationConditionsValidator,
-            parallelExecutor);
+            parallelExecutor,
+            storageInfoProvider);
     Get getWithIndex = prepareGetWithIndex();
     Scan scanWithIndex = prepareScanWithIndex();
     Scan scanAll =
@@ -4517,7 +4730,7 @@ public class CrudHandlerTest {
             Optional.of(
                 new FilteredResult(cached.get(), Collections.emptyList(), TABLE_METADATA, false)));
     verify(storage, never()).scan(any(Scan.class));
-    verify(storage, never()).get(any(Get.class));
+    verify(storage, never()).get(any());
   }
 
   @ParameterizedTest

@@ -99,6 +99,7 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
     RecoveryHandler recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
     this.recoveryExecutor =
         new RecoveryExecutor(storage, coordinator, recovery, tableMetadataManager);
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     this.crud =
         new CrudHandler(
             storage,
@@ -106,8 +107,8 @@ public class ConsensusCommitParticipant implements TwoPhaseCommitParticipant {
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
-    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+            parallelExecutor,
+            storageInfoProvider);
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     this.commit =

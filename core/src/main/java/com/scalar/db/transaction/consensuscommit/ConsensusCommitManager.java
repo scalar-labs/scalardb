@@ -96,6 +96,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     crud =
         new CrudHandler(
             storage,
@@ -103,8 +104,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
-    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+            parallelExecutor,
+            storageInfoProvider);
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     commit = createCommitHandler(config, storageInfoProvider, virtualTableInfoManager);
@@ -137,6 +138,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     groupCommitter = CoordinatorGroupCommitter.from(config).orElse(null);
     coordinatorWriteOmissionOnReadOnlyEnabled =
         config.isCoordinatorWriteOmissionOnReadOnlyEnabled();
+    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
     crud =
         new CrudHandler(
             storage,
@@ -144,8 +146,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
             tableMetadataManager,
             config.isIncludeMetadataEnabled(),
             config.isIndexEventuallyConsistentReadEnabled(),
-            parallelExecutor);
-    StorageInfoProvider storageInfoProvider = new StorageInfoProvider(admin);
+            parallelExecutor,
+            storageInfoProvider);
     VirtualTableInfoManager virtualTableInfoManager =
         new VirtualTableInfoManager(admin, databaseConfig.getMetadataCacheExpirationTimeSecs());
     commit = createCommitHandler(config, storageInfoProvider, virtualTableInfoManager);

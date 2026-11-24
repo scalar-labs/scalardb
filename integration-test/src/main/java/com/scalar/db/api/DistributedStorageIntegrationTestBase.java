@@ -323,6 +323,61 @@ public abstract class DistributedStorageIntegrationTestBase {
   }
 
   @Test
+  public void multiGet_MultipleGetsGiven_ShouldRetrieveTheResultOfEachGetInOrder()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    List<Get> gets =
+        Arrays.asList(
+            prepareGet(0, 2),
+            prepareGet(0, 0),
+            prepareGet(1, 1),
+            prepareGet(0, 5), // Not found
+            prepareGet(0, 0), // The same record as another Get
+            prepareGet(9, 0), // Not found
+            Get.newBuilder(prepareGet(2, 1)).projections(getColumnName2()).build(),
+            Get.newBuilder(prepareGet(3, 1))
+                .where(ConditionBuilder.column(getColumnName3()).isEqualToInt(3))
+                .build(), // Unmatched conjunction
+            Get.newBuilder()
+                .namespace(namespace)
+                .table(getTableName())
+                .indexKey(Key.ofInt(getColumnName3(), 6))
+                .build(),
+            prepareGet(4, 2));
+
+    // Act
+    List<Optional<Result>> actual = storage.multiGet(gets);
+
+    // Assert
+    assertThat(actual).hasSize(gets.size());
+    for (int i = 0; i < gets.size(); i++) {
+      Optional<Result> expected = storage.get(gets.get(i));
+      assertThat(actual.get(i).isPresent()).as("Get %d", i).isEqualTo(expected.isPresent());
+      if (expected.isPresent()) {
+        assertThat(actual.get(i).get().getColumns())
+            .as("Get %d", i)
+            .isEqualTo(expected.get().getColumns());
+      }
+    }
+    assertThat(actual.get(0).get().getInt(getColumnName4())).isEqualTo(2);
+    assertThat(actual.get(1).get().getInt(getColumnName1())).isEqualTo(0);
+    assertThat(actual.get(2).get().getText(getColumnName2())).isEqualTo("2");
+    assertThat(actual.get(3)).isEmpty();
+    assertThat(actual.get(5)).isEmpty();
+    assertThat(actual.get(6).get().getContainedColumnNames()).containsOnly(getColumnName2());
+    assertThat(actual.get(7)).isEmpty();
+    assertThat(actual.get(8).get().getInt(getColumnName3())).isEqualTo(6);
+    assertThat(actual.get(9).get().getInt(getColumnName1())).isEqualTo(4);
+  }
+
+  @Test
+  public void multiGet_EmptyGetsGiven_ShouldReturnEmptyList() throws ExecutionException {
+    // Act Assert
+    assertThat(storage.multiGet(Collections.<Get>emptyList())).isEmpty();
+  }
+
+  @Test
   public void get_GetWithoutPartitionKeyGiven_ShouldThrowInvalidUsageException() {
     // Arrange
     populateRecords();

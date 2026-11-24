@@ -1344,7 +1344,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           StorageInfo.MutationAtomicityUnit.STORAGE,
           // No limit on the number of mutations
           Integer.MAX_VALUE,
-          consistentVirtualTableReadGuaranteed);
+          consistentVirtualTableReadGuaranteed,
+          // One IN-list statement per group of Gets (see JdbcCrudService#multiGet(List,
+          // Connection))
+          true);
     } catch (SQLException e) {
       throw new ExecutionException("Getting the transaction isolation level failed", e);
     }

@@ -1,14 +1,19 @@
 package com.scalar.db.storage.multistorage;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -16,7 +21,9 @@ import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -77,7 +84,47 @@ public class MultiStorageTest {
     multiStorage.get(get);
 
     // Assert
-    verify(storage1).get(any(Get.class));
+    verify(storage1).get(any());
+  }
+
+  @Test
+  public void multiGet_GetsOnTablesInDifferentStorages_ShouldCallEachStorageOnceAndKeepTheOrder()
+      throws ExecutionException {
+    // Arrange
+    Get get1 =
+        Get.newBuilder()
+            .namespace(NAMESPACE1)
+            .table(TABLE1)
+            .partitionKey(Key.ofInt(COL_NAME1, 1))
+            .build();
+    Get get2 =
+        Get.newBuilder()
+            .namespace(NAMESPACE1)
+            .table(TABLE2)
+            .partitionKey(Key.ofInt(COL_NAME1, 2))
+            .build();
+    Get get3 =
+        Get.newBuilder()
+            .namespace(NAMESPACE1)
+            .table(TABLE1)
+            .partitionKey(Key.ofInt(COL_NAME1, 3))
+            .build();
+    Result result1 = mock(Result.class);
+    Result result2 = mock(Result.class);
+    when(storage1.multiGet(Arrays.asList(get1, get3)))
+        .thenReturn(Arrays.asList(Optional.of(result1), Optional.empty()));
+    when(storage2.multiGet(Collections.singletonList(get2)))
+        .thenReturn(Collections.singletonList(Optional.of(result2)));
+
+    // Act
+    List<Optional<Result>> results = multiStorage.multiGet(Arrays.asList(get1, get2, get3));
+
+    // Assert
+    assertThat(results)
+        .containsExactly(Optional.of(result1), Optional.of(result2), Optional.empty());
+    verify(storage1).multiGet(Arrays.asList(get1, get3));
+    verify(storage2).multiGet(Collections.singletonList(get2));
+    verify(storage3, never()).multiGet(anyList());
   }
 
   @Test
@@ -99,7 +146,7 @@ public class MultiStorageTest {
     multiStorage.get(get);
 
     // Assert
-    verify(storage2).get(any(Get.class));
+    verify(storage2).get(any());
   }
 
   @Test
@@ -122,7 +169,7 @@ public class MultiStorageTest {
     multiStorage.get(get);
 
     // Assert
-    verify(storage3).get(any(Get.class));
+    verify(storage3).get(any());
   }
 
   @Test
@@ -427,7 +474,7 @@ public class MultiStorageTest {
     multiStorage.get(get);
 
     // Assert
-    verify(storage2).get(any(Get.class));
+    verify(storage2).get(any());
   }
 
   @Test

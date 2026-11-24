@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitOperationAttributes.isImplicitPreReadEnabled;
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils.createGet;
 
@@ -16,10 +17,12 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.ScanAll;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.StorageInfo;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionCrudOperable;
 import com.scalar.db.common.AbstractTransactionCrudOperableScanner;
 import com.scalar.db.common.CoreError;
+import com.scalar.db.common.StorageInfoProvider;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -31,6 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -58,6 +62,7 @@ public class CrudHandler {
   private final boolean isIndexEventuallyConsistentReadEnabled;
   private final MutationConditionsValidator mutationConditionsValidator;
   private final ParallelExecutor parallelExecutor;
+  private final StorageInfoProvider storageInfoProvider;
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public CrudHandler(
@@ -66,7 +71,8 @@ public class CrudHandler {
       TransactionTableMetadataManager tableMetadataManager,
       boolean isIncludeMetadataEnabled,
       boolean isIndexEventuallyConsistentReadEnabled,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      StorageInfoProvider storageInfoProvider) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -74,6 +80,7 @@ public class CrudHandler {
     this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
     this.mutationConditionsValidator = new MutationConditionsValidator();
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.storageInfoProvider = checkNotNull(storageInfoProvider);
   }
 
   @VisibleForTesting
@@ -84,7 +91,8 @@ public class CrudHandler {
       boolean isIncludeMetadataEnabled,
       boolean isIndexEventuallyConsistentReadEnabled,
       MutationConditionsValidator mutationConditionsValidator,
-      ParallelExecutor parallelExecutor) {
+      ParallelExecutor parallelExecutor,
+      StorageInfoProvider storageInfoProvider) {
     this.storage = checkNotNull(storage);
     this.recoveryExecutor = checkNotNull(recoveryExecutor);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
@@ -92,9 +100,20 @@ public class CrudHandler {
     this.isIndexEventuallyConsistentReadEnabled = isIndexEventuallyConsistentReadEnabled;
     this.mutationConditionsValidator = checkNotNull(mutationConditionsValidator);
     this.parallelExecutor = checkNotNull(parallelExecutor);
+    this.storageInfoProvider = checkNotNull(storageInfoProvider);
   }
 
   public Optional<Result> get(Get get, TransactionContext context) throws CrudException {
+    return get(get, context, null);
+  }
+
+  /**
+   * {@link #get(Get, TransactionContext)}, with the record of {@code get} already read from storage
+   * when {@code prefetched} is not null (see {@link #batchGet}).
+   */
+  private Optional<Result> get(
+      Get get, TransactionContext context, @Nullable Optional<TransactionResult> prefetched)
+      throws CrudException {
     TransactionTableMetadata txMetadata = getTransactionTableMetadata(get, context.transactionId);
     TableMetadata metadata = txMetadata.getTableMetadata();
 
@@ -107,14 +126,14 @@ public class CrudHandler {
     }
 
     if (isSnapshotReadRequired(context)) {
-      readUnread(key, get, context, txMetadata);
+      readUnread(key, get, context, txMetadata, prefetched);
       return context
           .snapshot
           .getResult(key, get)
           .map(
               r -> new FilteredResult(r, get.getProjections(), metadata, isIncludeMetadataEnabled));
     } else {
-      Optional<TransactionResult> result = read(key, get, context, txMetadata);
+      Optional<TransactionResult> result = read(key, get, context, txMetadata, prefetched);
       return context
           .snapshot
           .mergeResult(key, result, get.getConjunctions())
@@ -124,20 +143,33 @@ public class CrudHandler {
   }
 
   /**
-   * Executes the Gets as {@link #get(Get, TransactionContext)} would one by one, but runs the Gets
-   * on distinct records in parallel. Gets of the same transaction can run concurrently because they
-   * only add to the read set and the get set, which are concurrent maps, and to the recovery
-   * results, a concurrent list, while the write set and the delete set stay unchanged. Two Gets on
-   * the same record, however, would race on the read set, so a Get on a record that another Get of
-   * the list already reads, and a Get with index, whose record is unknown until it is read, run one
-   * by one after the others. When parallel batch Gets are disabled, the Gets all run one by one in
-   * order.
+   * Executes the Gets as {@link #get(Get, TransactionContext)} would one by one, but reads the
+   * records of several Gets with one {@link DistributedStorage#multiGet(List)} where it can, and
+   * runs the Gets on distinct records in parallel.
    *
-   * <p>When some of the parallel Gets fail, the ones that have not started yet are skipped, and
-   * this waits for the running ones to finish, so that none of them is left running on the
-   * transaction. It then throws the failure of the first failed Get in the order of the Gets.
+   * <p>On a storage that reads several records with one request ({@link
+   * StorageInfo#isMultiGetSupported()}), the Gets that have no conditions and whose records are not
+   * read yet in the transaction are grouped by table and by the values of every primary key column
+   * but the last; these are the Gets that the storage reads with one request (with one {@code IN}
+   * list for JDBC databases). A group of two or more Gets is read with one {@link
+   * DistributedStorage#multiGet(List)}, and each of its Gets then goes through recovery, the read
+   * set and the get set as a single Get does, in the order of the Gets. Each other Get runs by
+   * itself.
+   *
+   * <p>The groups and the other Gets run in parallel. Gets of the same transaction can run
+   * concurrently because they only add to the read set and the get set, which are concurrent maps,
+   * and to the recovery results, a concurrent list, while the write set and the delete set stay
+   * unchanged. Two Gets on the same record, however, would race on the read set, so a Get on a
+   * record that another Get of the list already reads, and a Get with index, whose record is
+   * unknown until it is read, run one by one after the others. When parallel batch Gets are
+   * disabled, the groups and the Gets all run one by one in the order of their (first) Gets.
+   *
+   * <p>When some of the parallel groups or Gets fail, the ones that have not started yet are
+   * skipped, and this waits for the running ones to finish, so that none of them is left running on
+   * the transaction. It then throws the failure of the first failed Get in the order of the Gets.
    * Unlike in a serial run, Gets after it in the order may have run as well, and the failure thrown
-   * may not be the one a serial run would hit first.
+   * may not be the one a serial run would hit first. This also holds when parallel batch Gets are
+   * disabled: the Gets of a group run together, at the position of the group's first Get.
    *
    * @param gets the Gets
    * @param context the transaction context
@@ -148,55 +180,135 @@ public class CrudHandler {
       throws CrudException {
     @SuppressWarnings("unchecked")
     Optional<Result>[] results = new Optional[gets.size()];
-    if (gets.size() < 2 || !parallelExecutor.isParallelBatchGetEnabled()) {
-      for (int i = 0; i < gets.size(); i++) {
-        results[i] = get(gets.get(i), context);
+
+    // Units that run in parallel: a group of Gets read with one multi-get, or a single Get
+    List<List<Integer>> units = new ArrayList<>();
+    Map<List<Object>, List<Integer>> groups = new LinkedHashMap<>();
+    List<Integer> serial = new ArrayList<>();
+    Set<Snapshot.Key> keys = new HashSet<>();
+    TableMetadata[] metadata = new TableMetadata[gets.size()];
+    for (int i = 0; i < gets.size(); i++) {
+      Get get = gets.get(i);
+      metadata[i] = getTransactionTableMetadata(get, context.transactionId).getTableMetadata();
+      if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata[i])
+          || !keys.add(new Snapshot.Key(get))) {
+        serial.add(i);
+      } else if (get.getConjunctions().isEmpty()
+          && !context.snapshot.containsKeyInGetSet(get)
+          && isMultiGetSupported(get, context)) {
+        groups.computeIfAbsent(multiGetGroup(get), g -> new ArrayList<>()).add(i);
+      } else {
+        units.add(Collections.singletonList(i));
+      }
+    }
+    units.addAll(groups.values());
+
+    if (units.size() < 2 || !parallelExecutor.isParallelBatchGetEnabled()) {
+      // Everything one by one, in the order of the (first) Gets
+      for (int i : serial) {
+        units.add(Collections.singletonList(i));
+      }
+      units.sort(Comparator.comparing(unit -> unit.get(0)));
+      int[] current = new int[1];
+      for (List<Integer> unit : units) {
+        read(unit, gets, metadata, context, results, current);
       }
       return Arrays.asList(results);
     }
 
     CrudException[] failures = new CrudException[gets.size()];
     AtomicBoolean failed = new AtomicBoolean();
-    List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>();
-    List<Integer> serial = new ArrayList<>();
-    Set<Snapshot.Key> keys = new HashSet<>();
-    for (int i = 0; i < gets.size(); i++) {
-      Get get = gets.get(i);
-      TableMetadata metadata =
-          getTransactionTableMetadata(get, context.transactionId).getTableMetadata();
-      if (!ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)
-          && keys.add(new Snapshot.Key(get))) {
-        int index = i;
-        tasks.add(
-            () -> {
-              // Once a Get fails, the Gets that have not started yet are skipped
-              if (failed.get()) {
-                return;
-              }
-              try {
-                results[index] = get(get, context);
-              } catch (CrudException e) {
-                failures[index] = e;
-                failed.set(true);
-              }
-            });
-      } else {
-        serial.add(i);
-      }
+    List<ParallelExecutor.ParallelExecutorTask> tasks = new ArrayList<>(units.size());
+    for (List<Integer> unit : units) {
+      tasks.add(
+          () -> {
+            // Once a unit fails, the units that have not started yet are skipped
+            if (failed.get()) {
+              return;
+            }
+            int[] current = new int[1];
+            try {
+              read(unit, gets, metadata, context, results, current);
+            } catch (CrudException e) {
+              failures[current[0]] = e;
+              failed.set(true);
+            }
+          });
     }
-
-    if (!tasks.isEmpty()) {
-      parallelExecutor.executeBatchGets(tasks, context.transactionId);
-    }
+    parallelExecutor.executeBatchGets(tasks, context.transactionId);
     for (CrudException failure : failures) {
       if (failure != null) {
         throw failure;
       }
     }
+
     for (int i : serial) {
       results[i] = get(gets.get(i), context);
     }
     return Arrays.asList(results);
+  }
+
+  /** The table and the values of every primary key column but the last of a Get. */
+  private static List<Object> multiGetGroup(Get get) {
+    List<Object> group = new ArrayList<>();
+    group.add(get.forFullTableName().get());
+    List<Column<?>> keyColumns = new ArrayList<>(get.getPartitionKey().getColumns());
+    get.getClusteringKey().ifPresent(k -> keyColumns.addAll(k.getColumns()));
+    group.addAll(keyColumns.subList(0, keyColumns.size() - 1));
+    return group;
+  }
+
+  private boolean isMultiGetSupported(Get get, TransactionContext context) throws CrudException {
+    try {
+      return storageInfoProvider.getStorageInfo(get.forNamespace().get()).isMultiGetSupported();
+    } catch (ExecutionException e) {
+      throw new CrudException(e.getMessage(), e, context.transactionId);
+    }
+  }
+
+  /**
+   * Runs the Gets of a unit of {@link #batchGet}: a single Get by itself, or a group of Gets with
+   * their records read with one {@link DistributedStorage#multiGet(List)}. {@code current[0]} is
+   * set to the index of the Get that runs, so that a failure can be attributed to it.
+   */
+  private void read(
+      List<Integer> unit,
+      List<Get> gets,
+      TableMetadata[] metadata,
+      TransactionContext context,
+      Optional<Result>[] results,
+      int[] current)
+      throws CrudException {
+    current[0] = unit.get(0);
+    if (unit.size() == 1) {
+      results[unit.get(0)] = get(gets.get(unit.get(0)), context);
+      return;
+    }
+
+    List<Get> storageGets = new ArrayList<>(unit.size());
+    for (int i : unit) {
+      storageGets.add(ConsensusCommitUtils.prepareGetForStorage(gets.get(i), metadata[i]));
+    }
+    List<Optional<Result>> fetched;
+    try {
+      fetched = storage.multiGet(storageGets);
+    } catch (ExecutionException e) {
+      throw new CrudException(
+          CoreError.CONSENSUS_COMMIT_READING_RECORD_FROM_STORAGE_FAILED.buildMessage(
+              e.getMessage()),
+          e,
+          context.transactionId);
+    }
+    checkState(
+        fetched.size() == unit.size(),
+        "The storage returned %s results for %s Gets",
+        fetched.size(),
+        unit.size());
+    for (int k = 0; k < unit.size(); k++) {
+      int i = unit.get(k);
+      current[0] = i;
+      results[i] = get(gets.get(i), context, fetched.get(k).map(TransactionResult::new));
+    }
   }
 
   // Only for a Get with index, the argument `key` is null
@@ -207,8 +319,18 @@ public class CrudHandler {
       TransactionContext context,
       TransactionTableMetadata txMetadata)
       throws CrudException {
+    readUnread(key, get, context, txMetadata, null);
+  }
+
+  private void readUnread(
+      @Nullable Snapshot.Key key,
+      Get get,
+      TransactionContext context,
+      TransactionTableMetadata txMetadata,
+      @Nullable Optional<TransactionResult> prefetched)
+      throws CrudException {
     if (!context.snapshot.containsKeyInGetSet(get)) {
-      read(key, get, context, txMetadata);
+      read(key, get, context, txMetadata, prefetched);
     }
   }
 
@@ -218,6 +340,21 @@ public class CrudHandler {
       Get get,
       TransactionContext context,
       TransactionTableMetadata txMetadata)
+      throws CrudException {
+    return read(originalKey, get, context, txMetadata, null);
+  }
+
+  /**
+   * {@link #read(Snapshot.Key, Get, TransactionContext, TransactionTableMetadata)}, except that the
+   * first attempt uses {@code prefetched}, when not null, instead of reading the record from
+   * storage.
+   */
+  private Optional<TransactionResult> read(
+      @Nullable Snapshot.Key originalKey,
+      Get get,
+      TransactionContext context,
+      TransactionTableMetadata txMetadata,
+      @Nullable Optional<TransactionResult> prefetched)
       throws CrudException {
     TableMetadata metadata = txMetadata.getTableMetadata();
     boolean beforeIndexCheckRequired = requiresBeforeIndexCheck(get, txMetadata);
@@ -240,7 +377,9 @@ public class CrudHandler {
         indexKeyFilteredOut = resolution.indexKeyFilteredOut;
       } else {
         Optional<TransactionResult> fromStorage =
-            getFromStorage(get, metadata, context.transactionId);
+            i == 0 && prefetched != null
+                ? prefetched
+                : getFromStorage(get, metadata, context.transactionId);
         if (fromStorage.isPresent()) {
           RecoveredResult recovered =
               recoverAndFilter(key, get, fromStorage.get(), context, metadata);
