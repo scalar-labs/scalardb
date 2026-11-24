@@ -103,8 +103,8 @@ subprojects {
         // version, and only defines one for v3.
         mariadDbDriverVersion = '3.5.11'
         alloyDbJdbcConnectorVersion = '1.4.1'
-        googleCloudStorageVersion = '2.78.0'
-        spannerDriverVersion = '2.49.0'
+        googleCloudStorageVersion = '2.79.0'
+        spannerDriverVersion = '2.50.0'
         awsAdvancedJdbcWrapperVersion = '4.6.0'
         picocliVersion = '4.7.7'
         commonsTextVersion = '1.15.0'
@@ -119,9 +119,9 @@ subprojects {
         // tests (the pull request CI runs only some of them). See declaredFamilyExclusions in
         // core/build.gradle
         jacksonVersion = '2.23.0'
-        nettyVersion = '4.2.20.Final'
+        nettyVersion = '4.2.21.Final'
         bouncycastleJdk18onVersion = '1.87'
-        micrometerVersion = '1.17.2'
+        micrometerVersion = '1.18.0'
         assertjVersion = '3.27.7'
         mockitoVersion = '4.11.0'
         spotbugsVersion = '4.8.6'

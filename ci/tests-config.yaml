@@ -11,6 +11,8 @@
 #     db_healthcheck: (optional) a bash script that succeed if the database is ready. The script will be run repeatedly with a delay until it succeeds with a 10 minutes timeout. If not provided, it is assumed the database is ready before the run script is executed.
 #     create_test_user: (optional) a bash script to create a non-admin test user with necessary permissions to run the integration test. If not provided, it is assumed that the default user has sufficient permissions.
 #     run: a script to run the test. In Linux runners, the script will be run in bash shell. For Windows runners, it will be run in powershell.
+#     test_groups: (optional) an array of test groups, each with a `label`, a `name`, a `group_commit_enabled` flag and the `tests` classes to run. Each group becomes one matrix entry that runs only its test classes, and the binary results of the groups are aggregated into one test report per group commit flag. With `versions`, each version gets a matrix entry for each group and its own test reports. Instead of `tests`, one group per group commit flag can set `remaining_tests: true` to run the test classes of `test_sources` that the other groups with the same flag do not list; with group commit enabled, only the ConsensusCommit test classes. Cannot be combined with `disable_group_commit`.
+#     test_sources: (optional) with `test_groups`, the source folders of the test classes, relative to the repository root. The CI fails if a test class of these folders is missing from the test groups, if a ConsensusCommit test class is missing from the group commit test groups, or if a test class is listed more than once for the same group commit flag. Required by `remaining_tests`.
 
 blob-storage:
   - label: blob-storage
@@ -315,6 +317,50 @@ jdbc:
         GRANT UPDATE ON *.* TO 'test'@'%%';
         GRANT DELETE ON *.* TO 'test'@'%%';"
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:mysql://localhost:4000 -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test
+    # The ConsensusCommitSpecific test classes take most of the time on TiDB, so each group runs at
+    # most two of them. The groups with remaining_tests run the test classes that no other group
+    # lists, so a new test class needs no change here.
+    # The source folders of the integrationTestJdbc source set in core/build.gradle
+    test_sources:
+      - core/src/integration-test/java/com/scalar/db/storage/jdbc
+      - core/src/integration-test/java/com/scalar/db/transaction/jdbc
+    test_groups:
+      - label: cc_specific_md
+        name: "CC specific (metadata decoupling) & ConditionalMutation"
+        group_commit_enabled: false
+        tests:
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+          - JdbcDatabaseConditionalMutationIntegrationTest
+
+      - label: cc_specific
+        name: "CC specific & MultipleClusteringKeyScan"
+        group_commit_enabled: false
+        tests:
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabase
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+          - JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
+
+      - label: others
+        name: "Other tests"
+        group_commit_enabled: false
+        remaining_tests: true
+
+      - label: cc_specific_md
+        name: "CC specific (metadata decoupling)"
+        group_commit_enabled: true
+        tests:
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+
+      - label: cc_specific_highest_isolation
+        name: "CC specific (highest isolation)"
+        group_commit_enabled: true
+        tests:
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+
+      - label: others
+        name: "CC specific & other tests"
+        group_commit_enabled: true
+        remaining_tests: true
 
   - label: yugabytedb
     display_name: YugabyteDB 2025.2
@@ -329,6 +375,54 @@ jdbc:
         CREATE USER test WITH PASSWORD 'test';
         GRANT CREATE ON DATABASE postgres TO test;\""
     run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:yugabytedb://localhost:5433/postgres?load-balance=any -Dscalardb.jdbc.username=test -Dscalardb.jdbc.password=test -Dscalar.db.jdbc.connection_pool.max_total=12 -Dscalar.db.jdbc.table_metadata.connection_pool.max_total=4 -Dscalar.db.jdbc.admin.connection_pool.max_total=4
+
+  - label: spanner
+    display_name: Spanner
+    setup: docker run -d --name spanner -p 9010:9010 -p 9020:9020 gcr.io/cloud-spanner-emulator/emulator:latest
+    db_healthcheck: curl -sf http://localhost:9020/v1/projects/emulator-project/instances > /dev/null 2>&1
+    run: ./gradlew integrationTestJdbc "-Dscalardb.jdbc.url=jdbc:cloudspanner://localhost:9010/projects/emulator-project/instances/test-instance/databases/test-db;autoConfigEmulator=true;dialect=POSTGRESQL" "-Dscalardb.jdbc.username=" "-Dscalardb.jdbc.password="
+    # Group commit only applies to **.ConsensusCommit** tests, so the group commit groups run only
+    # ConsensusCommit test classes. MultipleClusteringKeyScan, the longest test class, runs alone and
+    # the other groups are sized to finish within its duration. The groups with remaining_tests run
+    # the test classes that no other group lists, so a new test class needs no change here.
+    # The source folders of the integrationTestJdbc source set in core/build.gradle
+    test_sources:
+      - core/src/integration-test/java/com/scalar/db/storage/jdbc
+      - core/src/integration-test/java/com/scalar/db/transaction/jdbc
+    test_groups:
+      - label: mck_scan
+        name: "MultipleClusteringKeyScan"
+        group_commit_enabled: false
+        tests:
+          # Disabled on the Spanner emulator, which runs its WithSpanner subclass
+          - JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
+          - JdbcDatabaseMultipleClusteringKeyScanIntegrationTestWithSpanner
+
+      - label: cond_mutation
+        name: "ConditionalMutation & CC specific (metadata decoupling)"
+        group_commit_enabled: false
+        tests:
+          # Disabled on the Spanner emulator, which runs its WithSpanner subclass
+          - JdbcDatabaseConditionalMutationIntegrationTest
+          - JdbcDatabaseConditionalMutationIntegrationTestWithSpanner
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+
+      - label: others
+        name: "CC specific & other tests"
+        group_commit_enabled: false
+        remaining_tests: true
+
+      - label: cc_specific
+        name: "CC specific (metadata decoupling, highest isolation)"
+        group_commit_enabled: true
+        tests:
+          - ConsensusCommitSpecificWithMetadataDecouplingIntegrationTestWithJdbcDatabase
+          - ConsensusCommitSpecificIntegrationTestWithJdbcDatabaseInHighestIsolation
+
+      - label: others
+        name: "CC specific & other tests"
+        group_commit_enabled: true
+        remaining_tests: true
 
 multi-storage:
   - label: multi-storage
