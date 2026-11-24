@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -49,6 +50,7 @@ public class JdbcDatabaseMultiGetIntegrationTest {
   private static final String TEXT_TABLE = "text_keys";
   private static final String CASE_INSENSITIVE_COLLATION = "scalardb_multi_get_ci";
   private static final String KEY_TABLE_PREFIX = "keys_";
+  private static final String CHAR_TABLE = "char_keys";
 
   private RdbEngineStrategy rdbEngine;
   private DistributedStorageAdmin admin;
@@ -149,6 +151,7 @@ public class JdbcDatabaseMultiGetIntegrationTest {
     for (DataType type : DataType.values()) {
       admin.dropTable(NAMESPACE, KEY_TABLE_PREFIX + type, true);
     }
+    admin.dropTable(NAMESPACE, CHAR_TABLE, true);
     admin.dropNamespace(NAMESPACE, true);
     if (JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcEnv.isYugabyte()) {
       testUtils.executeSql("DROP COLLATION IF EXISTS " + CASE_INSENSITIVE_COLLATION);
@@ -382,5 +385,62 @@ public class JdbcDatabaseMultiGetIntegrationTest {
         throw new AssertionError(type);
     }
     return keys;
+  }
+
+  @Test
+  public void multiGet_ImportedTableWithCharKeyGiven_ShouldRetrieveWhatEachGetRetrievesByItself()
+      throws Exception {
+    if (!(JdbcTestUtils.isPostgresql(rdbEngine) && !JdbcEnv.isYugabyte())
+        && !JdbcTestUtils.isMysql(rdbEngine)
+        && !JdbcTestUtils.isOracle(rdbEngine)
+        && !JdbcTestUtils.isSqlServer(rdbEngine)
+        && !JdbcTestUtils.isDb2(rdbEngine)) {
+      return;
+    }
+
+    // Arrange
+    // A CHAR column holds and returns its values padded with spaces to its length
+    testUtils.executeSql(
+        "CREATE TABLE "
+            + rdbEngine.encloseFullTableName(NAMESPACE, CHAR_TABLE)
+            + " ("
+            + rdbEngine.enclose("p")
+            + " CHAR(5) NOT NULL PRIMARY KEY, "
+            + rdbEngine.enclose("v")
+            + " VARCHAR(10))");
+    admin.importTable(NAMESPACE, CHAR_TABLE, Collections.emptyMap());
+    for (String p : Arrays.asList("a", "bb", "ccc")) {
+      storage.put(
+          Put.newBuilder()
+              .namespace(NAMESPACE)
+              .table(CHAR_TABLE)
+              .partitionKey(Key.ofText("p", p))
+              .textValue("v", "v-" + p)
+              .build());
+    }
+    List<Get> gets = new ArrayList<>();
+    for (String p : Arrays.asList("a", "bb", "ccc", "a ", "zz")) {
+      gets.add(
+          Get.newBuilder()
+              .namespace(NAMESPACE)
+              .table(CHAR_TABLE)
+              .partitionKey(Key.ofText("p", p))
+              .build());
+    }
+
+    // Act
+    List<Optional<Result>> results = storage.multiGet(gets);
+
+    // Assert
+    for (int i = 0; i < gets.size(); i++) {
+      Optional<Result> expected = storage.get(gets.get(i));
+      assertThat(results.get(i).map(r -> r.getText("v")))
+          .as("Get %s", gets.get(i).getPartitionKey())
+          .isEqualTo(expected.map(r -> r.getText("v")));
+    }
+    assertThat(results.get(0).map(r -> r.getText("v"))).hasValue("v-a");
+    assertThat(results.get(1).map(r -> r.getText("v"))).hasValue("v-bb");
+    assertThat(results.get(2).map(r -> r.getText("v"))).hasValue("v-ccc");
+    assertThat(results.get(4)).isEmpty();
   }
 }

@@ -18,6 +18,7 @@ import com.scalar.db.common.checker.OperationChecker;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Column;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.TextColumn;
 import com.scalar.db.storage.jdbc.query.Query;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -27,9 +28,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -198,15 +201,29 @@ public class JdbcCrudService {
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(first);
     List<Column<?>> leadingKeyColumns = keyColumns(first);
     Column<?> lastKeyColumn = leadingKeyColumns.remove(leadingKeyColumns.size() - 1);
-    for (Result result :
+    InListRows rows =
         selectWithInList(
             first,
             tableMetadata,
             leadingKeyColumns,
             new ArrayList<>(indexesByLastKey.keySet()),
-            connection)) {
+            connection);
+    Map<Column<?>, List<Integer>> indexesByMatchKey = indexesByLastKey;
+    if (rows.blankPadded) {
+      // A CHAR column holds and returns its values padded with spaces to its length, and SQL
+      // compares them ignoring trailing spaces, so match them with trailing spaces removed: two
+      // records cannot differ only in trailing spaces
+      indexesByMatchKey = new HashMap<>();
+      for (Map.Entry<Column<?>, List<Integer>> entry : indexesByLastKey.entrySet()) {
+        indexesByMatchKey
+            .computeIfAbsent(withoutTrailingSpaces(entry.getKey()), k -> new ArrayList<>())
+            .addAll(entry.getValue());
+      }
+    }
+    for (Result result : rows.results) {
+      Column<?> value = result.getColumns().get(lastKeyColumn.getName());
       List<Integer> matched =
-          indexesByLastKey.get(result.getColumns().get(lastKeyColumn.getName()));
+          indexesByMatchKey.get(rows.blankPadded ? withoutTrailingSpaces(value) : value);
       if (matched == null) {
         // Equal in SQL but not in value; handled with the Gets that match no record below
         continue;
@@ -237,6 +254,7 @@ public class JdbcCrudService {
         || isExactMatchType(lastKeyColumn.getDataType())
         || (missed.size() > 1
             && selectWithInList(first, tableMetadata, leadingKeyColumns, missed, connection)
+                .results
                 .isEmpty())) {
       return;
     }
@@ -254,7 +272,7 @@ public class JdbcCrudService {
    * whose last primary key column is one of {@code values}, with the IN list padded to a power of
    * two by repeating its last value (IN returns each matching record once).
    */
-  private List<Result> selectWithInList(
+  private InListRows selectWithInList(
       Get get,
       TableMetadata tableMetadata,
       List<Column<?>> leadingKeyColumns,
@@ -273,15 +291,52 @@ public class JdbcCrudService {
     ResultInterpreter interpreter =
         new ResultInterpreter(Collections.emptyList(), tableMetadata, rdbEngine);
     List<Result> results = new ArrayList<>();
+    boolean blankPadded = false;
     try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql())) {
       selectQuery.bind(preparedStatement);
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
         while (resultSet.next()) {
+          if (results.isEmpty()) {
+            blankPadded = isBlankPadded(values.get(0), resultSet);
+          }
           results.add(interpreter.interpret(resultSet));
         }
       }
     }
-    return results;
+    return new InListRows(results, blankPadded);
+  }
+
+  /** The records an IN-list query selects. */
+  private static class InListRows {
+    final List<Result> results;
+    /** Whether the last key column is a CHAR column, whose values are padded with spaces. */
+    final boolean blankPadded;
+
+    InListRows(List<Result> results, boolean blankPadded) {
+      this.results = results;
+      this.blankPadded = blankPadded;
+    }
+  }
+
+  private static boolean isBlankPadded(Column<?> lastKeyColumn, ResultSet resultSet)
+      throws SQLException {
+    if (lastKeyColumn.getDataType() != DataType.TEXT) {
+      return false;
+    }
+    int type = resultSet.getMetaData().getColumnType(resultSet.findColumn(lastKeyColumn.getName()));
+    return type == Types.CHAR || type == Types.NCHAR;
+  }
+
+  private static Column<?> withoutTrailingSpaces(Column<?> column) {
+    String text = column.getTextValue();
+    if (text == null) {
+      return column;
+    }
+    int end = text.length();
+    while (end > 0 && text.charAt(end - 1) == ' ') {
+      end--;
+    }
+    return end == text.length() ? column : TextColumn.of(column.getName(), text.substring(0, end));
   }
 
   /** Whether SQL equality on a column of the type is equality of the values. */
