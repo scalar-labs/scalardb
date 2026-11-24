@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.VirtualTableInfo;
 import com.scalar.db.api.VirtualTableJoinType;
+import com.scalar.db.common.CoreError;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -36,7 +38,9 @@ public class VirtualTableMetadataServiceTest {
   public void setUp() {
     MockitoAnnotations.openMocks(this);
     rdbEngine = new RdbEngineMysql();
-    service = new VirtualTableMetadataService(METADATA_SCHEMA, rdbEngine, false);
+    service =
+        new VirtualTableMetadataService(
+            METADATA_SCHEMA, rdbEngine, rdbEngine.getBinaryTextCollationClause(), false);
     checkTableExistsSql = rdbEngine.internalTableExistsCheckSql();
   }
 
@@ -56,11 +60,11 @@ public class VirtualTableMetadataServiceTest {
     assertThat(createCaptor.getValue())
         .isEqualTo(
             "CREATE TABLE IF NOT EXISTS `scalardb`.`virtual_tables`("
-                + "`full_table_name` VARCHAR(128), "
-                + "`left_source_table_full_table_name` VARCHAR(128), "
-                + "`right_source_table_full_table_name` VARCHAR(128), "
-                + "`join_type` VARCHAR(20), "
-                + "`attributes` LONGTEXT, "
+                + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`left_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`right_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`join_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`attributes` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
                 + "PRIMARY KEY (`full_table_name`))");
   }
 
@@ -82,11 +86,11 @@ public class VirtualTableMetadataServiceTest {
     assertThat(createCaptor.getValue())
         .isEqualTo(
             "CREATE TABLE IF NOT EXISTS `scalardb`.`virtual_tables`("
-                + "`full_table_name` VARCHAR(128), "
-                + "`left_source_table_full_table_name` VARCHAR(128), "
-                + "`right_source_table_full_table_name` VARCHAR(128), "
-                + "`join_type` VARCHAR(20), "
-                + "`attributes` LONGTEXT, "
+                + "`full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`left_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`right_source_table_full_table_name` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`join_type` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
+                + "`attributes` LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin, "
                 + "PRIMARY KEY (`full_table_name`))");
   }
 
@@ -474,5 +478,76 @@ public class VirtualTableMetadataServiceTest {
     verify(connection).prepareStatement(checkTableExistsSql);
     verify(checkPreparedStatement).setString(1, METADATA_SCHEMA);
     verify(checkPreparedStatement).setString(2, "virtual_tables");
+  }
+
+  @Test
+  public void
+      createVirtualTablesTableIfNotExists_OracleRejectsCollationWithOra43929AndTableExists_ShouldNotThrow()
+          throws Exception {
+    // Arrange
+    RdbEngineStrategy oracle = new RdbEngineOracle();
+    VirtualTableMetadataService oracleService =
+        new VirtualTableMetadataService(
+            METADATA_SCHEMA, oracle, oracle.getBinaryTextCollationClause(), false);
+    mockOracleRejectingCreateTable(true);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> oracleService.createVirtualTablesTableIfNotExists(connection));
+
+    // Assert
+    assertThat(thrown).isNull();
+  }
+
+  @Test
+  public void
+      createVirtualTablesTableIfNotExists_OracleRejectsCollationWithOra43929AndTableMissing_ShouldThrowWithMaxStringSizeMessage()
+          throws Exception {
+    // Arrange
+    RdbEngineStrategy oracle = new RdbEngineOracle();
+    VirtualTableMetadataService oracleService =
+        new VirtualTableMetadataService(
+            METADATA_SCHEMA, oracle, oracle.getBinaryTextCollationClause(), false);
+    mockOracleRejectingCreateTable(false);
+
+    // Act
+    Throwable thrown =
+        catchThrowable(() -> oracleService.createVirtualTablesTableIfNotExists(connection));
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(SQLException.class)
+        .hasMessage(CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+  }
+
+  private void mockOracleRejectingCreateTable(boolean tableExists) throws SQLException {
+    Statement createStatement = mock(Statement.class);
+    when(createStatement.execute(anyString()))
+        .thenThrow(new SQLException("ORA-43929", "99999", 43929));
+    when(connection.createStatement()).thenReturn(createStatement);
+    ResultSet resultSet = mock(ResultSet.class);
+    when(resultSet.next()).thenReturn(tableExists);
+    PreparedStatement existsStatement = mock(PreparedStatement.class);
+    when(existsStatement.executeQuery()).thenReturn(resultSet);
+    when(connection.prepareStatement(anyString())).thenReturn(existsStatement);
+  }
+
+  @Test
+  public void
+      createVirtualTablesTableIfNotExists_NoCreatedTextCollationClause_ShouldUseBareTextTypes()
+          throws Exception {
+    // Arrange
+    VirtualTableMetadataService bareService =
+        new VirtualTableMetadataService(METADATA_SCHEMA, rdbEngine, "", false);
+    Statement createStatement = mock(Statement.class);
+    when(connection.createStatement()).thenReturn(createStatement);
+
+    // Act
+    bareService.createVirtualTablesTableIfNotExists(connection);
+
+    // Assert
+    ArgumentCaptor<String> createCaptor = ArgumentCaptor.forClass(String.class);
+    verify(createStatement).execute(createCaptor.capture());
+    assertThat(createCaptor.getValue()).doesNotContain("COLLATE").contains("LONGTEXT");
   }
 }

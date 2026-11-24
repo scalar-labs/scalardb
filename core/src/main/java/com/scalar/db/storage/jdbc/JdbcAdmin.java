@@ -6,6 +6,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -52,6 +54,14 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
   private static final Logger logger = LoggerFactory.getLogger(JdbcAdmin.class);
+
+  /**
+   * The name of a table in the same namespace whose TEXT key columns the new table copies the
+   * collation from, so a join between the two tables on the key compares like collations. ScalarDB
+   * sets this option on its own {@code createTable} calls. It is internal and not for users: its
+   * meaning can change without notice.
+   */
+  public static final String COLLATION_SOURCE_TABLE = "scalardb.internal.collation_source_table";
 
   @VisibleForTesting static final String JDBC_COL_COLUMN_NAME = "COLUMN_NAME";
   @VisibleForTesting static final String JDBC_COL_KEY_SEQ = "KEY_SEQ";
@@ -81,6 +91,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final int MAX_CONFLICT_RETRY_COUNT = 10;
 
   private final RdbEngineStrategy rdbEngine;
+  private final boolean columnCollationEnabled;
+  private final String createdTextCollationClause;
+  // The settings belong to the database, and importTable adds its TEXT transaction metadata
+  // columns one by one, so each table is checked once per admin.
+  private final Set<String> tablesCheckedForDatabaseTextSettings = ConcurrentHashMap.newKeySet();
   private final HikariDataSource dataSource;
   private final String metadataSchema;
   private final TableMetadataService tableMetadataService;
@@ -90,45 +105,43 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Inject
   public JdbcAdmin(DatabaseConfig databaseConfig) {
-    JdbcConfig config = new JdbcConfig(databaseConfig);
-    rdbEngine = RdbEngineFactory.create(config);
-    dataSource = JdbcUtils.initDataSourceForAdmin(config, rdbEngine);
-    metadataSchema = config.getMetadataSchema();
-    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
-    tableMetadataService =
-        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    virtualTableMetadataService =
-        new VirtualTableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    this(new JdbcConfig(databaseConfig));
+  }
+
+  private JdbcAdmin(JdbcConfig config) {
+    this(config, RdbEngineFactory.create(config));
+  }
+
+  private JdbcAdmin(JdbcConfig config, RdbEngineStrategy rdbEngine) {
+    this(config, rdbEngine, JdbcUtils.initDataSourceForAdmin(config, rdbEngine));
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config) {
-    rdbEngine = RdbEngineFactory.create(config);
-    this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema();
-    requiresExplicitCommit = JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine);
-    tableMetadataService =
-        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    virtualTableMetadataService =
-        new VirtualTableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    this(config, RdbEngineFactory.create(config), dataSource);
+  }
+
+  private JdbcAdmin(JdbcConfig config, RdbEngineStrategy rdbEngine, HikariDataSource dataSource) {
+    this(
+        config,
+        rdbEngine,
+        dataSource,
+        JdbcUtils.requiresExplicitCommit(dataSource, rdbEngine),
+        null,
+        null,
+        null);
   }
 
   @SuppressFBWarnings("EI_EXPOSE_REP2")
   public JdbcAdmin(HikariDataSource dataSource, JdbcConfig config, boolean requiresExplicitCommit) {
-    rdbEngine = RdbEngineFactory.create(config);
-    this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema();
-    this.requiresExplicitCommit = requiresExplicitCommit;
-    tableMetadataService =
-        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    virtualTableMetadataService =
-        new VirtualTableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
+    this(
+        config,
+        RdbEngineFactory.create(config),
+        dataSource,
+        requiresExplicitCommit,
+        null,
+        null,
+        null);
   }
 
   @VisibleForTesting
@@ -137,15 +150,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       JdbcConfig config,
       VirtualTableMetadataService virtualTableMetadataService,
       boolean requiresExplicitCommit) {
-    rdbEngine = RdbEngineFactory.create(config);
-    this.dataSource = dataSource;
-    metadataSchema = config.getMetadataSchema();
-    this.requiresExplicitCommit = requiresExplicitCommit;
-    tableMetadataService =
-        new TableMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    namespaceMetadataService =
-        new NamespaceMetadataService(metadataSchema, rdbEngine, requiresExplicitCommit);
-    this.virtualTableMetadataService = virtualTableMetadataService;
+    this(
+        config,
+        RdbEngineFactory.create(config),
+        dataSource,
+        requiresExplicitCommit,
+        null,
+        null,
+        virtualTableMetadataService);
   }
 
   @VisibleForTesting
@@ -156,13 +168,47 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       NamespaceMetadataService namespaceMetadataService,
       VirtualTableMetadataService virtualTableMetadataService,
       boolean requiresExplicitCommit) {
-    rdbEngine = RdbEngineFactory.create(config);
+    this(
+        config,
+        RdbEngineFactory.create(config),
+        dataSource,
+        requiresExplicitCommit,
+        tableMetadataService,
+        namespaceMetadataService,
+        virtualTableMetadataService);
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  private JdbcAdmin(
+      JdbcConfig config,
+      RdbEngineStrategy rdbEngine,
+      HikariDataSource dataSource,
+      boolean requiresExplicitCommit,
+      @Nullable TableMetadataService tableMetadataService,
+      @Nullable NamespaceMetadataService namespaceMetadataService,
+      @Nullable VirtualTableMetadataService virtualTableMetadataService) {
+    this.rdbEngine = rdbEngine;
+    columnCollationEnabled = config.isColumnCollationEnabled();
+    createdTextCollationClause =
+        columnCollationEnabled ? rdbEngine.getBinaryTextCollationClause() : "";
     this.dataSource = dataSource;
     metadataSchema = config.getMetadataSchema();
-    this.tableMetadataService = tableMetadataService;
-    this.namespaceMetadataService = namespaceMetadataService;
-    this.virtualTableMetadataService = virtualTableMetadataService;
     this.requiresExplicitCommit = requiresExplicitCommit;
+    this.tableMetadataService =
+        tableMetadataService != null
+            ? tableMetadataService
+            : new TableMetadataService(
+                metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
+    this.namespaceMetadataService =
+        namespaceMetadataService != null
+            ? namespaceMetadataService
+            : new NamespaceMetadataService(
+                metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
+    this.virtualTableMetadataService =
+        virtualTableMetadataService != null
+            ? virtualTableMetadataService
+            : new VirtualTableMetadataService(
+                metadataSchema, rdbEngine, createdTextCollationClause, requiresExplicitCommit);
   }
 
   private static boolean hasDescClusteringOrder(TableMetadata metadata) {
@@ -218,13 +264,56 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           requiresExplicitCommit,
           connection -> {
             createMetadataSchemaIfNotExists(connection);
-            createTableInternal(connection, namespace, table, metadata, false);
+            createTableInternal(
+                connection,
+                namespace,
+                table,
+                metadata,
+                false,
+                getSourceKeyCollationClauses(connection, namespace, metadata, options));
             addTableMetadata(connection, namespace, table, metadata, true, false);
+            if (columnCollationEnabled
+                && metadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
+              warnAboutDatabaseTextSettings(connection, namespace, table);
+            }
           });
     } catch (SQLException e) {
       throw new ExecutionException(
           "Creating the " + getFullTableName(namespace, table) + " table failed ", e);
     }
+  }
+
+  private Map<String, String> getSourceKeyCollationClauses(
+      Connection connection,
+      String namespace,
+      TableMetadata metadata,
+      @Nullable Map<String, String> options)
+      throws SQLException {
+    String sourceTable = options == null ? null : options.get(COLLATION_SOURCE_TABLE);
+    if (sourceTable == null || engineLacksColumnCollations()) {
+      return ImmutableMap.of();
+    }
+    Map<String, TextColumnCollation> sourceCollations =
+        rdbEngine.getTextColumnCollations(connection, namespace, sourceTable);
+    // A COLLATE clause needs MAX_STRING_SIZE=EXTENDED on Oracle, so a key that already gets the
+    // schema's default collation declares none when the setting is off.
+    String schemaDefault =
+        columnCollationEnabled ? null : rdbEngine.getSchemaDefaultCollation(connection, namespace);
+    ImmutableMap.Builder<String, String> clauses = ImmutableMap.builder();
+    for (String columnName :
+        Iterables.concat(metadata.getPartitionKeyNames(), metadata.getClusteringKeyNames())) {
+      if (metadata.getColumnDataType(columnName) == DataType.TEXT) {
+        TextColumnCollation source = sourceCollations.get(columnName);
+        if (schemaDefault != null
+            && source != null
+            && schemaDefault.equals(source.getCollation())) {
+          clauses.put(columnName, "");
+        } else {
+          clauses.put(columnName, getCollationClauseOrCreated(sourceCollations, columnName));
+        }
+      }
+    }
+    return clauses.build();
   }
 
   @VisibleForTesting
@@ -234,6 +323,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String table,
       TableMetadata metadata,
       boolean ifNotExists)
+      throws SQLException {
+    createTableInternal(connection, schema, table, metadata, ifNotExists, Collections.emptyMap());
+  }
+
+  @VisibleForTesting
+  void createTableInternal(
+      Connection connection,
+      String schema,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> sourceKeyCollationClauses)
       throws SQLException {
     rdbEngine.throwIfInvalidTableName(table);
 
@@ -250,7 +351,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         sortedColumnNames.stream()
             .map(
                 columnName ->
-                    enclose(columnName) + " " + getVendorDbColumnType(metadata, columnName))
+                    enclose(columnName)
+                        + " "
+                        + getVendorDbColumnDefinition(
+                            metadata, columnName, sourceKeyCollationClauses))
             .collect(Collectors.joining(","));
 
     // Add primary key definition
@@ -258,7 +362,14 @@ public class JdbcAdmin implements DistributedStorageAdmin {
         ", "
             + rdbEngine.createTableInternalPrimaryKeyClause(
                 hasDescClusteringOrder(metadata), metadata);
-    createTable(connection, createTableStatement, ifNotExists);
+    createTable(
+        connection,
+        rdbEngine,
+        createTableStatement,
+        ifNotExists,
+        schema,
+        table,
+        requiresExplicitCommit);
     createTableInternalSqlsAfterCreateTable(connection, schema, table, metadata, ifNotExists);
     createIndex(connection, schema, table, metadata, ifNotExists);
   }
@@ -605,7 +716,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               builder.addColumn(columnName, dataType);
             }
 
-            return builder.build();
+            TableMetadata tableMetadata = builder.build();
+            if (columnCollationEnabled) {
+              warnAboutImportedTextColumns(connection, namespace, table, tableMetadata);
+              if (rdbEngine.checksDatabaseEncodingOnImport()
+                  && tableMetadata.getColumnDataTypes().containsValue(DataType.TEXT)) {
+                warnAboutDatabaseTextSettings(connection, namespace, table);
+              }
+            }
+            return tableMetadata;
           });
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -670,6 +789,100 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     return "YES".equalsIgnoreCase(value);
   }
 
+  private void warnAboutImportedTextColumns(
+      Connection connection, String namespace, String table, TableMetadata tableMetadata) {
+    String fullTableName = getFullTableName(namespace, table);
+    try {
+      Map<String, TextColumnCollation> collations =
+          rdbEngine.getTextColumnCollations(connection, namespace, table);
+      buildImportTextColumnWarnings(fullTableName, tableMetadata, collations, rdbEngine)
+          .forEach(logger::warn);
+    } catch (SQLException | RuntimeException e) {
+      logger.debug("Reading the text column collations of the {} table failed", fullTableName, e);
+    }
+  }
+
+  private void warnAboutDatabaseTextSettings(
+      Connection connection, String namespace, String table) {
+    if (!tablesCheckedForDatabaseTextSettings.add(getFullTableName(namespace, table))) {
+      return;
+    }
+    try {
+      for (DatabaseTextIssue issue : rdbEngine.getDatabaseTextIssues(connection)) {
+        logger.warn(buildDatabaseTextWarning(issue, getFullTableName(namespace, table)));
+      }
+    } catch (SQLException | RuntimeException e) {
+      logger.debug("Reading the database text settings failed", e);
+    }
+  }
+
+  @VisibleForTesting
+  static String buildDatabaseTextWarning(DatabaseTextIssue issue, String fullTableName) {
+    switch (issue.getKind()) {
+      case PARTIAL_CHARACTER_SET:
+        return String.format(
+            "The database encoding is %s, so TEXT columns of the %s table cannot store every Unicode character, the database rejects or replaces a value that holds a character outside it, and it can order the values it stores differently from ScalarDB",
+            issue.getSetting(), fullTableName);
+      case ENCODING_BYTE_ORDER:
+        return String.format(
+            "The database encoding is %s, so the database orders the TEXT values of the %s table by the bytes of that encoding, not by Unicode code point like ScalarDB",
+            issue.getSetting(), fullTableName);
+      case NON_BINARY_COLLATION:
+        return String.format(
+            "The database collation is %s, not binary, so the database can order and compare the TEXT values of the %s table differently from ScalarDB",
+            issue.getSetting(), fullTableName);
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  @VisibleForTesting
+  static List<String> buildImportTextColumnWarnings(
+      String fullTableName,
+      TableMetadata metadata,
+      Map<String, TextColumnCollation> collations,
+      RdbEngineStrategy rdbEngine) {
+    List<String> nonBinary = new ArrayList<>();
+    List<String> partialCharset = new ArrayList<>();
+    for (Map.Entry<String, TextColumnCollation> entry : collations.entrySet()) {
+      if (metadata.getColumnDataType(entry.getKey()) != DataType.TEXT) {
+        continue;
+      }
+      TextColumnCollation collation = entry.getValue();
+      TextColumnCollationKind kind = rdbEngine.classify(collation);
+      if (kind != TextColumnCollationKind.CODE_POINT_ORDER) {
+        nonBinary.add(
+            entry.getKey()
+                + " (collation "
+                + collation.getCollation()
+                + (collation.getResolvedDefault() == null
+                    ? ""
+                    : " resolved to " + collation.getResolvedDefault())
+                + (collation.getCharset() == null
+                    ? ""
+                    : ", character set " + collation.getCharset())
+                + ")");
+      }
+      if (kind == TextColumnCollationKind.PARTIAL_CHARACTER_SET) {
+        partialCharset.add(entry.getKey() + " (character set " + collation.getCharset() + ")");
+      }
+    }
+    List<String> warnings = new ArrayList<>();
+    if (!nonBinary.isEmpty()) {
+      warnings.add(
+          String.format(
+              "The %s table has TEXT columns whose collation and character set do not order TEXT values by Unicode code point, so the database can order and compare their values differently from ScalarDB: %s",
+              fullTableName, String.join(", ", nonBinary)));
+    }
+    if (!partialCharset.isEmpty()) {
+      warnings.add(
+          String.format(
+              "The %s table has TEXT columns whose character set cannot store every Unicode character, so the database rejects or replaces a value that holds a character outside it: %s",
+              fullTableName, String.join(", ", partialCharset)));
+    }
+    return warnings;
+  }
+
   @Override
   public void importTable(
       String namespace,
@@ -685,6 +898,11 @@ public class JdbcAdmin implements DistributedStorageAdmin {
           dataSource,
           requiresExplicitCommit,
           connection -> {
+            // The transaction admin adds a TEXT column right after the import, and a registered
+            // table cannot be imported again, so the import fails before registering the table
+            if (columnCollationEnabled) {
+              rdbEngine.throwIfCollationClausesRejected(connection);
+            }
             createMetadataSchemaIfNotExists(connection);
             createNamespacesTableIfNotExists(connection);
             upsertIntoNamespacesTable(connection, namespace);
@@ -739,12 +957,27 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   /**
-   * Get the vendor DB data type that is equivalent to the ScalarDB data type
+   * Get the vendor DB column definition of a column: the vendor DB data type that is equivalent to
+   * the ScalarDB data type, followed by the collation clause for a TEXT column
    *
    * @param metadata a table metadata
    * @param columnName a column name
-   * @return a vendor DB data type
+   * @return a vendor DB column definition
    */
+  private String getVendorDbColumnDefinition(TableMetadata metadata, String columnName) {
+    return getVendorDbColumnDefinition(metadata, columnName, Collections.emptyMap());
+  }
+
+  private String getVendorDbColumnDefinition(
+      TableMetadata metadata, String columnName, Map<String, String> sourceKeyCollationClauses) {
+    String bareType = getVendorDbColumnType(metadata, columnName);
+    if (metadata.getColumnDataType(columnName) != DataType.TEXT) {
+      return bareType;
+    }
+    return appendCollationClause(
+        bareType, sourceKeyCollationClauses.getOrDefault(columnName, createdTextCollationClause));
+  }
+
   private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
     DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
 
@@ -846,7 +1079,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
     String columnDefinition =
         getColumnDefinitionForRedefinition(
-            connection, namespace, table, columnName, dataType, columnTypeForKey);
+            connection, namespace, table, columnName, dataType, dataType, columnTypeForKey);
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnDefinition);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
   }
@@ -868,9 +1101,17 @@ public class JdbcAdmin implements DistributedStorageAdmin {
             table,
             columnName,
             dataType,
+            dataType,
             rdbEngine.getDataTypeForEngine(dataType));
     String[] sqls = rdbEngine.alterColumnTypeSql(namespace, table, columnName, columnDefinition);
     execute(connection, rdbEngine, sqls, requiresExplicitCommit);
+  }
+
+  // Reads the engine's own clause, not the created-column clause, so that turning off the column
+  // collation setting keeps copying source key collations and restating a redefined column's
+  // collation.
+  private boolean engineLacksColumnCollations() {
+    return rdbEngine.getBinaryTextCollationClause().isEmpty();
   }
 
   private String getColumnDefinitionForRedefinition(
@@ -878,11 +1119,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
       String namespace,
       String table,
       String columnName,
-      DataType dataType,
+      DataType currentType,
+      DataType newType,
       String bareType)
       throws SQLException {
+    if (newType != DataType.TEXT || engineLacksColumnCollations()) {
+      return bareType;
+    }
+    if (currentType != DataType.TEXT) {
+      return appendCollationClause(bareType, createdTextCollationClause);
+    }
     String sql = rdbEngine.textColumnCollationSql();
-    if (dataType != DataType.TEXT || sql == null) {
+    if (sql == null) {
       return bareType;
     }
     TextColumnCollation current =
@@ -897,7 +1145,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
               ps.setString(3, columnName);
             },
             rs -> rs.next() ? new TextColumnCollation(rs.getString(1), rs.getString(2)) : null);
-    return current == null ? bareType : bareType + " " + rdbEngine.getCollationClause(current);
+    return current == null
+        ? bareType
+        : appendCollationClause(bareType, rdbEngine.getCollationClause(current));
+  }
+
+  private String getCollationClauseOrCreated(
+      Map<String, TextColumnCollation> collations, String columnName) {
+    TextColumnCollation current = collations.get(columnName);
+    return current == null ? createdTextCollationClause : rdbEngine.getCollationClause(current);
   }
 
   @Override
@@ -1061,9 +1317,12 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     + " ADD "
                     + enclose(columnName)
                     + " "
-                    + getVendorDbColumnType(updatedTableMetadata, columnName);
+                    + getVendorDbColumnDefinition(updatedTableMetadata, columnName);
             execute(connection, rdbEngine, addNewColumnStatement, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
+            if (columnCollationEnabled && columnType == DataType.TEXT) {
+              warnAboutDatabaseTextSettings(connection, namespace, table);
+            }
           });
     } catch (SQLException e) {
       throw new ExecutionException(
@@ -1143,13 +1402,15 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
             String columnDefinition = getVendorDbColumnType(updatedTableMetadata, newColumnName);
             if (rdbEngine.renameColumnRestatesType()) {
+              DataType dataType = currentTableMetadata.getColumnDataType(oldColumnName);
               columnDefinition =
                   getColumnDefinitionForRedefinition(
                       connection,
                       namespace,
                       table,
                       oldColumnName,
-                      currentTableMetadata.getColumnDataType(oldColumnName),
+                      dataType,
+                      dataType,
                       columnDefinition);
             }
             String renameColumnStatement =
@@ -1195,9 +1456,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
                     .removeColumn(columnName)
                     .addColumn(columnName, newColumnType)
                     .build();
-            String newStorageColumnType = getVendorDbColumnType(updatedTableMetadata, columnName);
+            String newStorageColumnDefinition =
+                getColumnDefinitionForRedefinition(
+                    connection,
+                    namespace,
+                    table,
+                    columnName,
+                    currentColumnType,
+                    newColumnType,
+                    getVendorDbColumnType(updatedTableMetadata, columnName));
             String[] alterColumnTypeStatements =
-                rdbEngine.alterColumnTypeSql(namespace, table, columnName, newStorageColumnType);
+                rdbEngine.alterColumnTypeSql(
+                    namespace, table, columnName, newStorageColumnDefinition);
 
             execute(connection, rdbEngine, alterColumnTypeStatements, requiresExplicitCommit);
             addTableMetadata(connection, namespace, table, updatedTableMetadata, false, true);
@@ -1467,6 +1737,41 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  // The join needs source keys with the same collation: SQL Server (Msg 468) and Oracle (ORA-43915)
+  // reject the view otherwise, and PostgreSQL creates it but fails every read
+  private void throwIfSourceKeyCollationsDiffer(
+      Connection connection,
+      String leftSourceNamespace,
+      String leftSourceTable,
+      String rightSourceNamespace,
+      String rightSourceTable,
+      TableMetadata sourceTableMetadata)
+      throws SQLException {
+    if (engineLacksColumnCollations()) {
+      return;
+    }
+    Map<String, TextColumnCollation> leftCollations =
+        rdbEngine.getTextColumnCollations(connection, leftSourceNamespace, leftSourceTable);
+    Map<String, TextColumnCollation> rightCollations =
+        rdbEngine.getTextColumnCollations(connection, rightSourceNamespace, rightSourceTable);
+    for (String key :
+        Iterables.concat(
+            sourceTableMetadata.getPartitionKeyNames(),
+            sourceTableMetadata.getClusteringKeyNames())) {
+      TextColumnCollation left = leftCollations.get(key);
+      TextColumnCollation right = rightCollations.get(key);
+      if (left != null && right != null && !left.getCollation().equals(right.getCollation())) {
+        throw new IllegalArgumentException(
+            CoreError.JDBC_VIRTUAL_TABLE_SOURCE_KEYS_HAVE_DIFFERENT_COLLATIONS.buildMessage(
+                key,
+                getFullTableName(leftSourceNamespace, leftSourceTable),
+                left.getCollation(),
+                getFullTableName(rightSourceNamespace, rightSourceTable),
+                right.getCollation()));
+      }
+    }
+  }
+
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createVirtualTableView(
       Connection connection,
@@ -1483,6 +1788,13 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     TableMetadata rightSourceTableMetadata =
         tableMetadataService.getTableMetadata(connection, rightSourceNamespace, rightSourceTable);
     assert leftSourceTableMetadata != null && rightSourceTableMetadata != null;
+    throwIfSourceKeyCollationsDiffer(
+        connection,
+        leftSourceNamespace,
+        leftSourceTable,
+        rightSourceNamespace,
+        rightSourceTable,
+        leftSourceTableMetadata);
 
     StringBuilder createViewSql = new StringBuilder("CREATE VIEW ");
     createViewSql.append(encloseFullTableName(namespace, table));
@@ -1657,7 +1969,19 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     execute(connection, rdbEngine, sql, requiresExplicitCommit);
   }
 
-  private void createTable(Connection connection, String createTableStatement, boolean ifNotExists)
+  /**
+   * Creates a table. With {@code ifNotExists}, an already existing table is not an error. That
+   * includes Oracle rejecting the column collation of a table that exists, which happens before
+   * Oracle checks for the duplicate name when MAX_STRING_SIZE is STANDARD.
+   */
+  static void createTable(
+      Connection connection,
+      RdbEngineStrategy rdbEngine,
+      String createTableStatement,
+      boolean ifNotExists,
+      String schema,
+      String table,
+      boolean requiresExplicitCommit)
       throws SQLException {
     String stmt = createTableStatement;
     if (ifNotExists) {
@@ -1666,10 +1990,18 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     try {
       execute(connection, rdbEngine, stmt, requiresExplicitCommit);
     } catch (SQLException e) {
-      // Suppress the exception thrown when the table already exists
-      if (!(ifNotExists && rdbEngine.isDuplicateTableError(e))) {
+      if (!ifNotExists) {
         throw e;
       }
+      // Suppress the exception thrown when the table already exists
+      if (rdbEngine.isDuplicateTableError(e)) {
+        return;
+      }
+      if (rdbEngine.isCollationClauseRejectedError(e)
+          && internalTableExists(connection, rdbEngine, schema, table, requiresExplicitCommit)) {
+        return;
+      }
+      throw e;
     }
   }
 
@@ -1752,6 +2084,10 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
+  static String appendCollationClause(String type, String collationClause) {
+    return collationClause.isEmpty() ? type : type + " " + collationClause;
+  }
+
   static void execute(
       Connection connection,
       RdbEngineStrategy rdbEngine,
@@ -1773,15 +2109,20 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
 
     try (Statement stmt = connection.createStatement()) {
-      executeWithConflictRetry(
-          connection,
-          rdbEngine,
-          requiresExplicitCommit,
-          sql,
-          () -> {
-            stmt.execute(sql);
-            return null;
-          });
+      try {
+        executeWithConflictRetry(
+            connection,
+            rdbEngine,
+            requiresExplicitCommit,
+            sql,
+            () -> {
+              stmt.execute(sql);
+              return null;
+            });
+      } catch (SQLException e) {
+        rdbEngine.throwIfCollationClauseRejectedError(e);
+        throw e;
+      }
 
       // Outside the retry region on purpose: the handler runs after the commit has succeeded, so an
       // exception raised here must never trigger a re-execution of an already committed statement.

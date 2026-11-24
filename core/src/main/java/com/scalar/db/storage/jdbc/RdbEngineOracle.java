@@ -15,17 +15,23 @@ import com.scalar.db.storage.jdbc.query.MergeQuery;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.SelectWithFetchFirstNRowsOnly;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,6 +43,7 @@ import org.slf4j.LoggerFactory;
 class RdbEngineOracle extends AbstractRdbEngine {
   private static final Logger logger = LoggerFactory.getLogger(RdbEngineOracle.class);
   private static final String CLUSTERING_ORDER_INDEX_NAME_PREFIX = "index_clustering_order_";
+  private static final String USING_NLS_COMP = "USING_NLS_COMP";
   private final String keyColumnSize;
   private final RdbEngineTimeTypeOracle timeTypeEngine;
 
@@ -211,6 +218,23 @@ class RdbEngineOracle extends AbstractRdbEngine {
   public boolean isDuplicateTableError(SQLException e) {
     // ORA-00955: name is already used by an existing object
     return e.getErrorCode() == 955;
+  }
+
+  @Override
+  public boolean isCollationClauseRejectedError(SQLException e) {
+    // ORA-43929: Collation cannot be used in the current MAX_STRING_SIZE setting
+    return e.getErrorCode() == 43929;
+  }
+
+  @Override
+  public void throwIfCollationClauseRejectedError(SQLException e) throws SQLException {
+    if (isCollationClauseRejectedError(e)) {
+      throw new SQLException(
+          CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage(),
+          e.getSQLState(),
+          e.getErrorCode(),
+          e);
+    }
   }
 
   @Override
@@ -428,6 +452,144 @@ class RdbEngineOracle extends AbstractRdbEngine {
       default:
         throw new AssertionError();
     }
+  }
+
+  // MODIFY without COLLATE keeps the collation, so a restated column needs no clause, see
+  // JdbcAdminCollationIntegrationTest dropIndex_ColumnWithNonBinaryCollation_ShouldKeepCollation.
+  @Nullable
+  @Override
+  public String textColumnCollationSql() {
+    return null;
+  }
+
+  @Override
+  public String getBinaryTextCollationClause() {
+    return "COLLATE BINARY";
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Map<String, TextColumnCollation> getTextColumnCollations(
+      Connection connection, String namespace, String table) throws SQLException {
+    String charset = queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_CHARACTERSET");
+    String nCharset =
+        queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_NCHAR_CHARACTERSET");
+    // ORDER BY follows NLS_SORT whatever NLS_COMP is, and comparisons follow NLS_SORT or binary, so
+    // NLS_SORT alone decides whether a USING_NLS_COMP column orders by code point. See Table 5-3 of
+    // https://docs.oracle.com/en/database/oracle/oracle-database/19/nlspg/linguistic-sorting-and-matching.html
+    String sessionNlsSort = queryNlsParameter(connection, "NLS_SESSION_PARAMETERS", "NLS_SORT");
+    String sql =
+        "SELECT COLUMN_NAME, DATA_TYPE, COLLATION FROM ALL_TAB_COLS"
+            + " WHERE OWNER = ? AND TABLE_NAME = ? AND HIDDEN_COLUMN = 'NO'"
+            + " AND DATA_TYPE IN ('VARCHAR2', 'CHAR', 'CLOB', 'LONG', 'NVARCHAR2', 'NCHAR', 'NCLOB')";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      ps.setString(2, table);
+      try (ResultSet rs = ps.executeQuery()) {
+        Map<String, TextColumnCollation> collations = new LinkedHashMap<>();
+        while (rs.next()) {
+          String collation = nullToUsingNlsComp(rs.getString("COLLATION"));
+          collations.put(
+              rs.getString("COLUMN_NAME"),
+              new TextColumnCollation(
+                  collation,
+                  rs.getString("DATA_TYPE").startsWith("N") ? nCharset : charset,
+                  collation.equals(USING_NLS_COMP) ? sessionNlsSort : null));
+        }
+        return collations;
+      }
+    }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Nullable
+  private static String queryNlsParameter(Connection connection, String view, String parameter)
+      throws SQLException {
+    String sql = "SELECT VALUE FROM " + view + " WHERE PARAMETER = ?";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, parameter);
+      try (ResultSet rs = ps.executeQuery()) {
+        return rs.next() ? rs.getString(1) : null;
+      }
+    }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public void throwIfCollationClausesRejected(Connection connection) throws SQLException {
+    // Every user can read DATABASE_PROPERTIES, unlike V$PARAMETER
+    String sql =
+        "SELECT PROPERTY_VALUE FROM DATABASE_PROPERTIES WHERE PROPERTY_NAME = 'MAX_STRING_SIZE'";
+    try (PreparedStatement ps = connection.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery()) {
+      if (rs.next() && "STANDARD".equals(rs.getString(1))) {
+        throw new SQLException(
+            CoreError.JDBC_ORACLE_EXTENDED_MAX_STRING_SIZE_REQUIRED.buildMessage());
+      }
+    }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Nullable
+  @Override
+  public String getSchemaDefaultCollation(Connection connection, String namespace)
+      throws SQLException {
+    String sql = "SELECT DEFAULT_COLLATION FROM ALL_USERS WHERE USERNAME = ?";
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setString(1, namespace);
+      try (ResultSet rs = ps.executeQuery()) {
+        return rs.next() ? nullToUsingNlsComp(rs.getString(1)) : null;
+      }
+    }
+  }
+
+  // A collation reads as NULL when the database runs with COMPATIBLE below 12.2, which has no
+  // column collations and follows NLS_COMP.
+  private static String nullToUsingNlsComp(@Nullable String collation) {
+    return collation == null ? USING_NLS_COMP : collation;
+  }
+
+  @Override
+  public String getCollationClause(TextColumnCollation collation) {
+    return "COLLATE " + collation.getCollation();
+  }
+
+  @Override
+  public TextColumnCollationKind classify(TextColumnCollation collation) {
+    return TextColumnCollationKind.of(
+        isFullUnicodeCharset(collation), isBinaryCollation(collation));
+  }
+
+  private boolean isBinaryCollation(TextColumnCollation collation) {
+    // AL16UTF16 is UTF-16, and the UTF8 character set is CESU-8, which has the binary order of
+    // UTF-16. Both order by UTF-16 code unit, not by code point.
+    if ("UTF8".equals(collation.getCharset()) || "AL16UTF16".equals(collation.getCharset())) {
+      return false;
+    }
+    String name = collation.getCollation();
+    if (name.equals(USING_NLS_COMP)) {
+      return "BINARY".equals(collation.getResolvedDefault());
+    }
+    return name.equals("BINARY");
+  }
+
+  private boolean isFullUnicodeCharset(TextColumnCollation collation) {
+    String charset = collation.getCharset();
+    return "AL32UTF8".equals(charset) || "UTF8".equals(charset) || "AL16UTF16".equals(charset);
+  }
+
+  @Override
+  public List<DatabaseTextIssue> getDatabaseTextIssues(Connection connection) throws SQLException {
+    String charset = queryNlsParameter(connection, "NLS_DATABASE_PARAMETERS", "NLS_CHARACTERSET");
+    if (charset == null || "AL32UTF8".equals(charset)) {
+      return Collections.emptyList();
+    }
+    return Collections.singletonList(
+        new DatabaseTextIssue(
+            charset,
+            "UTF8".equals(charset)
+                ? DatabaseTextIssue.Kind.ENCODING_BYTE_ORDER
+                : DatabaseTextIssue.Kind.PARTIAL_CHARACTER_SET));
   }
 
   @Override
