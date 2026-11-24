@@ -1,6 +1,6 @@
 # You can see sha256 hash in the following page:
 # - https://hub.docker.com/_/eclipse-temurin/tags
-FROM eclipse-temurin:21.0.13_9-jre-resolute@sha256:556903b1f40c0a0ddc0bd05cf413436a3b2ce48c9ee19fc199434898fd3ea2b9
+FROM eclipse-temurin:21.0.13.1_2-jre-resolute@sha256:4249bd74371ea0e4b7d40da7f1d4354a894be80812abf7e4ea5bdd421dc3f6c8
 
 RUN export DEBIAN_FRONTEND=noninteractive \
  && apt-get update \
