@@ -6029,14 +6029,17 @@ public class JdbcAdminTest {
       getImportTableMetadata_GeneratedAndAutoIncrementColumnsNotDeterminedByJdbcMetadataForXBesidesSqlite_ShouldWorkProperly(
           RdbEngine rdbEngine) throws SQLException, ExecutionException {
     // Arrange
-    RdbEngineStrategy rdbEngineStrategy = getRdbEngineStrategy(rdbEngine);
+    RdbEngineStrategy rdbEngineStrategy = spy(getRdbEngineStrategy(rdbEngine));
+    doReturn(Collections.emptyMap())
+        .when(rdbEngineStrategy)
+        .getTextColumnCollations(any(), anyString(), anyString());
     ResultSet columnResults = prepareImportTableWithNonPrimaryKeyColumn(rdbEngineStrategy);
     // JDBC drivers return an empty string if they cannot determine whether a column is a generated
     // column or an auto-increment column, and some drivers may return null
     when(columnResults.getString(JDBC_COL_IS_GENERATEDCOLUMN)).thenReturn(null).thenReturn("");
     when(columnResults.getString(JDBC_COL_IS_AUTOINCREMENT)).thenReturn(null).thenReturn("");
     stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
-    JdbcAdmin admin = createJdbcAdminFor(rdbEngine);
+    JdbcAdmin admin = createJdbcAdminFor(rdbEngineStrategy);
 
     // Act
     TableMetadata actual = admin.getImportTableMetadata(NAMESPACE, TABLE, Collections.emptyMap());
@@ -8226,6 +8229,7 @@ public class JdbcAdminTest {
     when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
     when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
     doThrow(failure)
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), anyString(), anyString());
@@ -8281,6 +8285,7 @@ public class JdbcAdminTest {
     when(columnResults.getString(JDBC_COL_TYPE_NAME)).thenReturn("varchar");
     when(metadata.getPrimaryKeys(any(), any(), eq(TABLE))).thenReturn(primaryKeyResults);
     when(metadata.getColumns(any(), any(), eq(TABLE), eq("%"))).thenReturn(columnResults);
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
     doReturn(Collections.emptyMap())
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), anyString(), anyString());
@@ -8722,6 +8727,7 @@ public class JdbcAdminTest {
     when(metadata.getPrimaryKeys(NAMESPACE, NAMESPACE, TABLE)).thenReturn(primaryKeyResults);
     when(metadata.getColumns(NAMESPACE, NAMESPACE, TABLE, "%")).thenReturn(columnResults);
     RdbEngineStrategy rdbEngineStrategy = spy(new RdbEngineMysql());
+    stubImportColumnAttributesQuery(rdbEngineStrategy, mock(ResultSet.class));
     doReturn(Collections.emptyMap())
         .when(rdbEngineStrategy)
         .getTextColumnCollations(any(), anyString(), anyString());
