@@ -23,6 +23,7 @@ import com.scalar.db.api.VirtualTableJoinType;
 import com.scalar.db.common.StorageInfoImpl;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -1594,7 +1596,14 @@ public abstract class ConsensusCommitAdminTestBase {
     verify(distributedStorageAdmin).importTable(NAMESPACE, TABLE, options, overrideColumnsType);
     verify(distributedStorageAdmin).getTableMetadata(NAMESPACE, TABLE);
     verify(distributedStorageAdmin)
-        .createTable(NAMESPACE, TABLE + "_tx_metadata", expectedTxMetadataTableMetadata, options);
+        .createTable(
+            NAMESPACE,
+            TABLE + "_tx_metadata",
+            expectedTxMetadataTableMetadata,
+            ImmutableMap.<String, String>builder()
+                .putAll(options)
+                .put(JdbcAdmin.COLLATION_SOURCE_TABLE, TABLE)
+                .build());
     verify(distributedStorageAdmin)
         .createVirtualTable(
             NAMESPACE,
@@ -1605,6 +1614,68 @@ public abstract class ConsensusCommitAdminTestBase {
             TABLE + "_tx_metadata",
             VirtualTableJoinType.LEFT_OUTER,
             options);
+  }
+
+  @Test
+  public void importTable_WithDecoupling_ShouldPassKeyCollationSourceTableToMetadataTableCreation()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata dataTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.INT)
+            .addPartitionKey("pk")
+            .build();
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+    when(distributedStorageAdmin.getTableMetadata(NAMESPACE, TABLE)).thenReturn(dataTableMetadata);
+
+    // Act
+    admin.importTable(NAMESPACE, TABLE, options, Collections.emptyMap());
+
+    // Assert
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, String>> optionsCaptor = ArgumentCaptor.forClass(Map.class);
+    verify(distributedStorageAdmin)
+        .createTable(
+            eq(NAMESPACE),
+            eq(TABLE + "_tx_metadata"),
+            any(TableMetadata.class),
+            optionsCaptor.capture());
+    assertThat(optionsCaptor.getValue())
+        .containsEntry(JdbcAdmin.COLLATION_SOURCE_TABLE, TABLE)
+        .containsEntry(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    assertThat(options).doesNotContainKey(JdbcAdmin.COLLATION_SOURCE_TABLE);
+  }
+
+  @Test
+  public void createTable_WithDecoupling_ShouldNotPassKeyCollationSourceTable()
+      throws ExecutionException {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("pk", DataType.TEXT)
+            .addColumn("col", DataType.INT)
+            .addPartitionKey("pk")
+            .build();
+    Map<String, String> options =
+        ImmutableMap.of(ConsensusCommitAdmin.TRANSACTION_METADATA_DECOUPLING, "true");
+    StorageInfo storageInfo =
+        new StorageInfoImpl("jdbc", MutationAtomicityUnit.STORAGE, Integer.MAX_VALUE, true);
+    when(distributedStorageAdmin.getStorageInfo(NAMESPACE)).thenReturn(storageInfo);
+
+    // Act
+    admin.createTable(NAMESPACE, TABLE, tableMetadata, options);
+
+    // Assert
+    verify(distributedStorageAdmin)
+        .createTable(eq(NAMESPACE), eq(TABLE + "_data"), any(TableMetadata.class), eq(options));
+    verify(distributedStorageAdmin)
+        .createTable(
+            eq(NAMESPACE), eq(TABLE + "_tx_metadata"), any(TableMetadata.class), eq(options));
   }
 
   @Test
