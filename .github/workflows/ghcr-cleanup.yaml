@@ -1,0 +1,31 @@
+# The name of the workflow says "list" and "dry run" because nothing is deleted yet. It is the same
+# as the name of the reusable workflow. Rename it when the actual deletion is added there.
+name: List untagged images (dry run)
+
+# Every SNAPSHOT push moves its tag and leaves the previous image behind untagged. ghcr.io never
+# collects them by itself, so this workflow is meant to delete them.
+#
+# The work is done by the reusable workflow in scalar-labs/actions. Its header explains why a blanket
+# "delete untagged" is unsafe, what the token needs, and what to check in the log of a dry run.
+#
+# For now the reusable workflow only runs as a dry run: it lists what it would delete and deletes
+# nothing. That is why this workflow has no schedule and only runs manually. Add the schedule only
+# after a dry run has shown that the children of the tagged images are protected and the actual
+# deletion has been added to the reusable workflow.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ghcr-cleanup:
+    uses: scalar-labs/actions/.github/workflows/ghcr-cleanup-reusable.yaml@main
+    # The reusable workflow asks for these permissions, and a called workflow cannot have more than
+    # the calling job. CR_PAT does not depend on packages: read, but the calling job has to grant it.
+    permissions:
+      contents: read
+      packages: read
+    secrets:
+      TOKEN: ${{ secrets.CR_PAT }}
+    with:
+      packages: '["scalardb-schema-loader", "scalardb-data-loader-cli"]'
