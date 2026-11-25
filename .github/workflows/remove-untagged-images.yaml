@@ -1,27 +1,94 @@
-# When we push a new SNAPSHOT image, the old SNAPSHOT image remains as an untagged
-# image in GitHub Packages. We remove those untagged images by using this workflow.
-
 name: Remove untagged images
 
+# Every SNAPSHOT push moves its tag and leaves the previous image behind untagged. ghcr.io never
+# collects them by itself, so this workflow deletes them.
+#
+# A blanket "delete untagged" is not an option here. An image pushed by our workflows is an OCI index
+# whose platform and attestation manifests are untagged by construction; they are the image's
+# contents, and deleting them makes the tag impossible to pull. snok/container-retention-policy reads
+# the index of every tagged version and leaves its children alone, which is what makes this safe.
+# Tagged versions are never selected at all, so release tags and the live SNAPSHOT tags stay.
+#
+# For now this workflow only runs manually and only as a dry run: it lists what it would delete and
+# deletes nothing. Add the schedule and the actual deletion only after a dry run has shown that the
+# children of the tagged images are protected.
+#
+# "No child is listed for deletion" is not enough to conclude that. If the tool fails to read the
+# tagged indexes, it clears every deletion candidate of that package and still exits 0, so the log
+# lists nothing and the job is green. In the log of each package, check all of the following:
+#
+# - There is no WARN line, in particular no "Failed to fetch multi-arch manifests, skipping deletion
+#   for this package".
+# - "Protected N multi-arch child digest(s) from deletion" is there. It is logged only when N is 1
+#   or more, so it needs a tagged image whose children are older than the cut-off.
+# - "dry-run: Would have deleted ..." lines are there, and none of them is a child of a tagged image.
+#
+# The last point cannot be read off the log alone. A "Would have deleted" line shows only
+# "<package>:<untagged>" and package_version, the numeric ID of the package version; it does not
+# show the digest. Compare the two sides by digest:
+#
+# - The digest of a listed version is the "name" of that package version (needs the read:packages
+#   scope):
+#     gh api /orgs/scalar-labs/packages/container/<package>/versions/<package_version> --jq .name
+# - The digests of the children of a tagged image are the ones its index references:
+#     docker buildx imagetools inspect --raw ghcr.io/scalar-labs/<package>:<tag> | jq -r '.manifests[]?.digest'
+#
+# No digest from the first list may appear in the second, for any tagged image.
 on:
-  schedule:
-    # UTC
-    - cron: '0 3 * * 1'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remove-untagged-images
+  cancel-in-progress: false
 
 jobs:
   remove-untagged-container-images:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - scalardb-schema-loader
+          - scalardb-data-loader-cli
 
     steps:
-      - name: scalardb-schema-loader
-        uses: camargo/delete-untagged-action@v1
+      # snok/container-retention-policy v3.1.0, run as its container by digest rather than through
+      # its action. The action pins only its metadata: its action.yaml starts the container by the
+      # tag v3.1.0, which can be moved, and the container holds CR_PAT. A swapped container could
+      # delete or replace a release image.
+      #
+      # The digest is the one the v3.1.0 tag pointed to on 2026-11-25. The arguments mirror the args
+      # block of that release's action.yaml, one per input. To move to a newer release, take the new
+      # tag's index digest and re-check the arguments against its action.yaml. Dependabot cannot do
+      # this; it does not update docker:// references.
+      #
+      # --image-names: one package per job, so that each package has its own log to check against
+      #   the criteria above. The tool also accepts several packages in one run as a comma-separated
+      #   list. A space-separated list cannot be written here, because the args string is split on
+      #   whitespace.
+      # --tag-selection=untagged: tagged versions are never candidates.
+      # --cut-off=1d: a push uploads the platform and attestation manifests before the index that
+      #   references them, and a run landing in between would see them unreferenced. Only versions
+      #   a day old are considered; no push takes that long.
+      # --dry-run=true: fixed for now, so no run can delete anything.
+      - name: List untagged versions of ${{ matrix.package }} that would be deleted
+        uses: docker://ghcr.io/snok/container-retention-policy@sha256:884037f146d6ef574b61fbcc59bef490f887322e6b9dc2eefcf364cb4e9b4112
+        env:
+          RUST_LOG: container_retention_policy=INFO
         with:
-          github-token: ${{ secrets.CR_PAT }}
-          package-name: scalardb-schema-loader
-
-      - name: scalardb-data-loader-cli
-        uses: camargo/delete-untagged-action@v1
-        with:
-          github-token: ${{ secrets.CR_PAT }}
-          package-name: scalardb-data-loader-cli
+          args: >-
+            --account=scalar-labs
+            --token=${{ secrets.CR_PAT }}
+            --image-names=${{ matrix.package }}
+            --image-tags=
+            --shas-to-skip=
+            --tag-selection=untagged
+            --keep-n-most-recent=0
+            --timestamp-to-use=updated_at
+            --cut-off=1d
+            --dry-run=true
