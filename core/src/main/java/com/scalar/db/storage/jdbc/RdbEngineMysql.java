@@ -683,10 +683,15 @@ class RdbEngineMysql extends AbstractRdbEngine {
               getFullTableName(namespace, table), columnName));
     }
     if (attributes.contains("on update")) {
+      // The database applies ON UPDATE only when the statement does not assign the column. Commit
+      // and roll-forward update only the transaction metadata columns, so the database updates the
+      // column then. Rollback writes the before image back to the column, so it does not
       logger.warn(
           "The column has the ON UPDATE attribute, so the underlying database updates its value "
-              + "whenever ScalarDB updates the record, including when ScalarDB commits, rolls "
-              + "back, or recovers a transaction: {} {}",
+              + "whenever ScalarDB updates the record without specifying a value for the column, "
+              + "including when ScalarDB commits a transaction or rolls a record forward during "
+              + "recovery. A value written to the column in a transaction can be overwritten "
+              + "with the time when ScalarDB commits the record: {} {}",
           getFullTableName(namespace, table),
           columnName);
     }
